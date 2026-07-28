@@ -9,11 +9,10 @@ use Smithy\Core\Serde\Schema;
 use Smithy\Core\Serde\ShapeType;
 
 /**
- * Named helper for the `resolveTarget()` recursive-reference test. Schema
- * dispatches to `($targetClass)::schema()` when it holds a lazy stub, so
- * the test needs an actual class with a static `schema()` method — an
- * inline anonymous class doesn't work here because we need its FQCN as a
- * string to hand to the Schema constructor.
+ * Named helper for the `resolveTarget()` recursive-reference test. Schema dispatches to
+ * `($targetClass)::schema()` when it holds a lazy stub, so the test needs an actual class with a
+ * static `schema()` method, an inline anonymous class doesn't work here because we need its FQCN as
+ * a string to hand to the Schema constructor.
  */
 final class SchemaTestTarget
 {
@@ -37,13 +36,12 @@ final class SchemaTestTarget
 }
 
 /**
- * `Schema` is the load-bearing runtime type: every codec, every generated
- * shape, and every hot-path dispatch reads from it. The BC contract on the
- * class docblock — properties `$id`/`$type`/`$memberName`/`$memberIndex`/
- * `$targetClass`, plus `getMember*`, `hasTrait`, `getTrait`, `getWireName`,
- * `isRequired`, `resolveTarget`, `withMembers` — is what the tests below
- * pin. Extension slot behavior is separately covered by
- * {@see SchemaExtensionTest} and is intentionally out of scope here.
+ * `Schema` is the load-bearing runtime type: every codec, every generated shape, and every hot-path
+ * dispatch reads from it. The BC contract on the class docblock, properties
+ * `$id`/`$type`/`$memberName`/`$memberIndex`/ `$targetClass`, plus `getMember*`, `hasTrait`,
+ * `getTrait`, `getWireName`, `isRequired`, `resolveTarget`, `withMembers`, is what the tests below
+ * pin. Extension slot behavior is separately covered by {@see SchemaExtensionTest} and is
+ * intentionally out of scope here.
  */
 final class SchemaTest extends TestCase
 {
@@ -60,7 +58,10 @@ final class SchemaTest extends TestCase
 
     public function testRootSchemaIsNotAMember(): void
     {
-        $schema = new Schema(id: 'com.example#Root', type: ShapeType::Structure);
+        $schema = new Schema(
+            id: 'com.example#Root',
+            type: ShapeType::Structure,
+        );
 
         $this->assertNull($schema->memberName);
         $this->assertNull($schema->memberIndex);
@@ -84,7 +85,7 @@ final class SchemaTest extends TestCase
     public function testMembersAreIndexedByMemberNameNotByListOrder(): void
     {
         // The constructor accepts `$members` in any order and keys by the
-        // member's own `memberIndex` — not the foreach position. Pass
+        // member's own `memberIndex`, not the foreach position. Pass
         // members deliberately out of positional order to ensure the
         // implementation is really consulting `memberIndex`.
         $first = new Schema(
@@ -114,7 +115,10 @@ final class SchemaTest extends TestCase
 
     public function testGetMemberReturnsNullForUnknownName(): void
     {
-        $schema = new Schema(id: 'com.example#Empty', type: ShapeType::Structure);
+        $schema = new Schema(
+            id: 'com.example#Empty',
+            type: ShapeType::Structure,
+        );
 
         $this->assertNull($schema->getMember('missing'));
         $this->assertNull($schema->getMemberByIndex(99));
@@ -144,8 +148,18 @@ final class SchemaTest extends TestCase
             id: 'com.example#Pair',
             type: ShapeType::Structure,
             members: [
-                new Schema(id: 'a', type: ShapeType::String_, memberName: 'a', memberIndex: 0),
-                new Schema(id: 'b', type: ShapeType::String_, memberName: 'b', memberIndex: 1),
+                new Schema(
+                    id: 'a',
+                    type: ShapeType::String_,
+                    memberName: 'a',
+                    memberIndex: 0,
+                ),
+                new Schema(
+                    id: 'b',
+                    type: ShapeType::String_,
+                    memberName: 'b',
+                    memberIndex: 1,
+                ),
             ],
         );
 
@@ -157,7 +171,10 @@ final class SchemaTest extends TestCase
 
     public function testEmptyStructureHasZeroMembers(): void
     {
-        $schema = new Schema(id: 'com.example#Unit', type: ShapeType::Structure);
+        $schema = new Schema(
+            id: 'com.example#Unit',
+            type: ShapeType::Structure,
+        );
 
         $this->assertSame(0, $schema->getMemberCount());
         $this->assertSame([], $schema->getMembers());
@@ -165,7 +182,10 @@ final class SchemaTest extends TestCase
 
     public function testExposesCollectionMemberForListShapes(): void
     {
-        $item = new Schema(id: 'com.example#StringList$member', type: ShapeType::String_);
+        $item = new Schema(
+            id: 'com.example#StringList$member',
+            type: ShapeType::String_,
+        );
         $list = new Schema(
             id: 'com.example#StringList',
             type: ShapeType::List_,
@@ -180,7 +200,10 @@ final class SchemaTest extends TestCase
     public function testExposesMapKeyAndValueSchemas(): void
     {
         $key = new Schema(id: 'com.example#Map$key', type: ShapeType::String_);
-        $value = new Schema(id: 'com.example#Map$value', type: ShapeType::Integer);
+        $value = new Schema(
+            id: 'com.example#Map$value',
+            type: ShapeType::Integer,
+        );
         $map = new Schema(
             id: 'com.example#Map',
             type: ShapeType::Map,
@@ -282,18 +305,21 @@ final class SchemaTest extends TestCase
 
     public function testWireNameReturnsEmptyStringForRootSchemaWithNoJsonName(): void
     {
-        // A root shape has no memberName; without an @jsonName trait,
+        // A root shape has no memberName, without an @jsonName trait,
         // `getWireName()` returns '' rather than raising. Codecs are
         // responsible for never asking a root schema for a wire name,
         // but the guard is still worth pinning.
-        $root = new Schema(id: 'com.example#Root', type: ShapeType::Structure);
+        $root = new Schema(
+            id: 'com.example#Root',
+            type: ShapeType::Structure,
+        );
 
         $this->assertSame('', $root->getWireName());
     }
 
     public function testResolveTargetReturnsSelfForFullyPopulatedSchema(): void
     {
-        // No `targetClass` means this is not a recursive stub; the
+        // No `targetClass` means this is not a recursive stub, the
         // schema is its own resolution.
         $schema = new Schema(id: 'com.example#Leaf', type: ShapeType::String_);
 
@@ -305,7 +331,7 @@ final class SchemaTest extends TestCase
         // A stub schema references its target by FQCN. `resolveTarget()`
         // calls `($targetClass)::schema()` to get the fully-populated
         // graph. This is what breaks the cycle in recursive shape
-        // references — the stub sits in the constructor, the real
+        // references, the stub sits in the constructor, the real
         // graph is fetched on demand.
         $stub = new Schema(
             id: 'test#TargetRef',
@@ -322,7 +348,7 @@ final class SchemaTest extends TestCase
 
     public function testWithMembersReturnsFilteredCopy(): void
     {
-        // Protocol layer uses this to build a body-only schema —
+        // Protocol layer uses this to build a body-only schema, 
         // strips HTTP-bound members while keeping every other property
         // intact. The result is a fresh Schema, not a mutation.
         $a = new Schema(
@@ -361,7 +387,7 @@ final class SchemaTest extends TestCase
         $this->assertSame($a, $filtered->getMemberByIndex(0));
         $this->assertNull($filtered->getMemberByIndex(1));
         $this->assertSame($c, $filtered->getMemberByIndex(2));
-        // Traits are copied through — filtering the body must not
+        // Traits are copied through, filtering the body must not
         // silently drop @required/@sensitive/etc.
         $this->assertSame([Schema::T_REQUIRED => true], $filtered->getTraits());
     }
@@ -369,7 +395,7 @@ final class SchemaTest extends TestCase
     public function testWithMembersSilentlySkipsUnknownIndices(): void
     {
         // Requesting an index that isn't in the source schema is a
-        // no-op for that index — the filter is a "keep these" operation,
+        // no-op for that index, the filter is a "keep these" operation,
         // not a "these must exist" invariant.
         $only = new Schema(
             id: 'com.example#S$only',

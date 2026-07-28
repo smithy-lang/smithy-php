@@ -28,7 +28,9 @@ class BigDecimalTest extends TestCase
         yield 'exponent uppercase' => ['1.5E10'];
         yield 'exponent positive sign' => ['1.5e+10'];
         yield 'exponent negative sign' => ['1.5e-10'];
-        yield 'long fractional' => ['3.141592653589793238462643383279502884197'];
+        yield 'long fractional' => [
+            '3.141592653589793238462643383279502884197',
+        ];
     }
 
     #[DataProvider('invalidValues')]
