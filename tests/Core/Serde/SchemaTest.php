@@ -28,9 +28,9 @@ final class SchemaTestTarget
                     id: 'test#Target$leaf',
                     type: ShapeType::String_,
                     memberName: 'leaf',
-                    memberIndex: 0,
-                ),
-            ],
+                    memberIndex: 0
+                )
+            ]
         );
     }
 }
@@ -60,7 +60,7 @@ final class SchemaTest extends TestCase
     {
         $schema = new Schema(
             id: 'com.example#Root',
-            type: ShapeType::Structure,
+            type: ShapeType::Structure
         );
 
         $this->assertNull($schema->memberName);
@@ -74,7 +74,7 @@ final class SchemaTest extends TestCase
             id: 'com.example#Root$field',
             type: ShapeType::String_,
             memberName: 'field',
-            memberIndex: 3,
+            memberIndex: 3
         );
 
         $this->assertTrue($member->isMember());
@@ -92,13 +92,13 @@ final class SchemaTest extends TestCase
             id: 'com.example#S$alpha',
             type: ShapeType::String_,
             memberName: 'alpha',
-            memberIndex: 0,
+            memberIndex: 0
         );
         $second = new Schema(
             id: 'com.example#S$beta',
             type: ShapeType::Integer,
             memberName: 'beta',
-            memberIndex: 1,
+            memberIndex: 1
         );
 
         $schema = new Schema(
@@ -117,7 +117,7 @@ final class SchemaTest extends TestCase
     {
         $schema = new Schema(
             id: 'com.example#Empty',
-            type: ShapeType::Structure,
+            type: ShapeType::Structure
         );
 
         $this->assertNull($schema->getMember('missing'));
@@ -130,12 +130,12 @@ final class SchemaTest extends TestCase
             id: 'com.example#S$only',
             type: ShapeType::String_,
             memberName: 'only',
-            memberIndex: 0,
+            memberIndex: 0
         );
         $schema = new Schema(
             id: 'com.example#S',
             type: ShapeType::Structure,
-            members: [$member],
+            members: [$member]
         );
 
         $this->assertSame(['only' => $member], $schema->getMembers());
@@ -152,15 +152,15 @@ final class SchemaTest extends TestCase
                     id: 'a',
                     type: ShapeType::String_,
                     memberName: 'a',
-                    memberIndex: 0,
+                    memberIndex: 0
                 ),
                 new Schema(
                     id: 'b',
                     type: ShapeType::String_,
                     memberName: 'b',
-                    memberIndex: 1,
-                ),
-            ],
+                    memberIndex: 1
+                )
+            ]
         );
 
         // Memoized on first call.
@@ -173,7 +173,7 @@ final class SchemaTest extends TestCase
     {
         $schema = new Schema(
             id: 'com.example#Unit',
-            type: ShapeType::Structure,
+            type: ShapeType::Structure
         );
 
         $this->assertSame(0, $schema->getMemberCount());
@@ -184,12 +184,12 @@ final class SchemaTest extends TestCase
     {
         $item = new Schema(
             id: 'com.example#StringList$member',
-            type: ShapeType::String_,
+            type: ShapeType::String_
         );
         $list = new Schema(
             id: 'com.example#StringList',
             type: ShapeType::List_,
-            listMember: $item,
+            listMember: $item
         );
 
         $this->assertSame($item, $list->getListMember());
@@ -202,13 +202,13 @@ final class SchemaTest extends TestCase
         $key = new Schema(id: 'com.example#Map$key', type: ShapeType::String_);
         $value = new Schema(
             id: 'com.example#Map$value',
-            type: ShapeType::Integer,
+            type: ShapeType::Integer
         );
         $map = new Schema(
             id: 'com.example#Map',
             type: ShapeType::Map,
             mapKey: $key,
-            mapValue: $value,
+            mapValue: $value
         );
 
         $this->assertSame($key, $map->getMapKey());
@@ -230,8 +230,8 @@ final class SchemaTest extends TestCase
             traits: [
                 Schema::T_REQUIRED => true,
                 Schema::T_JSON_NAME => 'name_out',
-                Schema::T_XML_ATTRIBUTE => true,
-            ],
+                Schema::T_XML_ATTRIBUTE => true
+            ]
         );
 
         $this->assertTrue($member->hasTrait(Schema::T_REQUIRED));
@@ -247,12 +247,12 @@ final class SchemaTest extends TestCase
     {
         $traits = [
             Schema::T_REQUIRED => true,
-            Schema::T_SENSITIVE => true,
+            Schema::T_SENSITIVE => true
         ];
         $schema = new Schema(
             id: 'com.example#S',
             type: ShapeType::String_,
-            traits: $traits,
+            traits: $traits
         );
 
         $this->assertSame($traits, $schema->getTraits());
@@ -265,13 +265,13 @@ final class SchemaTest extends TestCase
             type: ShapeType::String_,
             memberName: 'r',
             memberIndex: 0,
-            traits: [Schema::T_REQUIRED => true],
+            traits: [Schema::T_REQUIRED => true]
         );
         $optional = new Schema(
             id: 'com.example#S$o',
             type: ShapeType::String_,
             memberName: 'o',
-            memberIndex: 1,
+            memberIndex: 1
         );
 
         $this->assertTrue($required->isRequired());
@@ -285,7 +285,7 @@ final class SchemaTest extends TestCase
             type: ShapeType::String_,
             memberName: 'foo',
             memberIndex: 0,
-            traits: [Schema::T_JSON_NAME => 'Foo'],
+            traits: [Schema::T_JSON_NAME => 'Foo']
         );
 
         $this->assertSame('Foo', $member->getWireName());
@@ -297,7 +297,7 @@ final class SchemaTest extends TestCase
             id: 'com.example#S$foo',
             type: ShapeType::String_,
             memberName: 'foo',
-            memberIndex: 0,
+            memberIndex: 0
         );
 
         $this->assertSame('foo', $member->getWireName());
@@ -311,7 +311,7 @@ final class SchemaTest extends TestCase
         // but the guard is still worth pinning.
         $root = new Schema(
             id: 'com.example#Root',
-            type: ShapeType::Structure,
+            type: ShapeType::Structure
         );
 
         $this->assertSame('', $root->getWireName());
@@ -336,7 +336,7 @@ final class SchemaTest extends TestCase
         $stub = new Schema(
             id: 'test#TargetRef',
             type: ShapeType::Structure,
-            targetClass: SchemaTestTarget::class,
+            targetClass: SchemaTestTarget::class
         );
 
         $resolved = $stub->resolveTarget();
@@ -355,26 +355,26 @@ final class SchemaTest extends TestCase
             id: 'com.example#S$a',
             type: ShapeType::String_,
             memberName: 'a',
-            memberIndex: 0,
+            memberIndex: 0
         );
         $b = new Schema(
             id: 'com.example#S$b',
             type: ShapeType::String_,
             memberName: 'b',
-            memberIndex: 1,
+            memberIndex: 1
         );
         $c = new Schema(
             id: 'com.example#S$c',
             type: ShapeType::String_,
             memberName: 'c',
-            memberIndex: 2,
+            memberIndex: 2
         );
 
         $full = new Schema(
             id: 'com.example#S',
             type: ShapeType::Structure,
             members: [$a, $b, $c],
-            traits: [Schema::T_REQUIRED => true],
+            traits: [Schema::T_REQUIRED => true]
         );
 
         $filtered = $full->withMembers([0, 2]);
@@ -401,12 +401,12 @@ final class SchemaTest extends TestCase
             id: 'com.example#S$only',
             type: ShapeType::String_,
             memberName: 'only',
-            memberIndex: 0,
+            memberIndex: 0
         );
         $full = new Schema(
             id: 'com.example#S',
             type: ShapeType::Structure,
-            members: [$only],
+            members: [$only]
         );
 
         $filtered = $full->withMembers([0, 5, 99]);

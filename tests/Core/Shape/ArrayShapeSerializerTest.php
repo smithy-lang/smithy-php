@@ -325,7 +325,8 @@ final class ArrayShapeSerializerScalarFixture extends AbstractArrayShapeSerializ
         public readonly string $name,
         public readonly int $count,
         public readonly ?bool $active = null
-    ) {
+    )
+    {
     }
 
     public static function schema(): Schema
@@ -468,7 +469,8 @@ final class ArrayShapeSerializerV3CompatFixture extends AbstractArrayShapeSerial
     public function __construct(
         public readonly string $name,
         public readonly int $count
-    ) {
+    )
+    {
     }
 
     public static function schema(): Schema

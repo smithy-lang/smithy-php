@@ -16,8 +16,8 @@ final class TimestampFormatTest extends TestCase
             ['EpochSeconds', 'DateTime', 'HttpDate'],
             array_map(
                 static fn(TimestampFormat $c): string => $c->name,
-                TimestampFormat::cases(),
-            ),
+                TimestampFormat::cases()
+            )
         );
     }
 
@@ -39,7 +39,7 @@ final class TimestampFormatTest extends TestCase
         return [
             'EpochSeconds = 0' => ['EpochSeconds', 0],
             'DateTime = 1' => ['DateTime', 1],
-            'HttpDate = 2' => ['HttpDate', 2],
+            'HttpDate = 2' => ['HttpDate', 2]
         ];
     }
 
@@ -50,7 +50,7 @@ final class TimestampFormatTest extends TestCase
         // Reference: 2024-01-15T10:30:00Z is epoch 1705314600.
         $this->assertSame(
             '2024-01-15T10:30:00Z',
-            TimestampFormat::DateTime->format(1705314600.0),
+            TimestampFormat::DateTime->format(1705314600.0)
         );
     }
 
@@ -59,7 +59,7 @@ final class TimestampFormatTest extends TestCase
         // 2024-01-15T10:30:00Z falls on a Monday.
         $this->assertSame(
             'Mon, 15 Jan 2024 10:30:00 GMT',
-            TimestampFormat::HttpDate->format(1705314600.0),
+            TimestampFormat::HttpDate->format(1705314600.0)
         );
     }
 
@@ -67,7 +67,7 @@ final class TimestampFormatTest extends TestCase
     {
         $this->assertSame(
             '1705314600',
-            TimestampFormat::EpochSeconds->format(1705314600.0),
+            TimestampFormat::EpochSeconds->format(1705314600.0)
         );
     }
 
@@ -77,7 +77,7 @@ final class TimestampFormatTest extends TestCase
         // prints a float verbatim when adding zero preserves the fraction.
         $this->assertSame(
             '1705314600.5',
-            TimestampFormat::EpochSeconds->format(1705314600.5),
+            TimestampFormat::EpochSeconds->format(1705314600.5)
         );
     }
 
@@ -87,7 +87,7 @@ final class TimestampFormatTest extends TestCase
     {
         $this->assertSame(
             1705314600.0,
-            (float) TimestampFormat::DateTime->parse('2024-01-15T10:30:00Z'),
+            (float) TimestampFormat::DateTime->parse('2024-01-15T10:30:00Z')
         );
     }
 
@@ -96,8 +96,8 @@ final class TimestampFormatTest extends TestCase
         $this->assertSame(
             1705314600.0,
             (float) TimestampFormat::HttpDate->parse(
-                'Mon, 15 Jan 2024 10:30:00 GMT',
-            ),
+                'Mon, 15 Jan 2024 10:30:00 GMT'
+            )
         );
     }
 
@@ -105,7 +105,7 @@ final class TimestampFormatTest extends TestCase
     {
         $this->assertSame(
             1705314600.0,
-            TimestampFormat::EpochSeconds->parse('1705314600'),
+            TimestampFormat::EpochSeconds->parse('1705314600')
         );
     }
 
@@ -130,7 +130,7 @@ final class TimestampFormatTest extends TestCase
     #[DataProvider('traitStringMappings')]
     public function testFromTraitStringResolvesKnownTraitValues(
         ?string $trait,
-        ?TimestampFormat $expected,
+        ?TimestampFormat $expected
     ): void {
         $this->assertSame($expected, TimestampFormat::fromTraitString($trait));
     }
@@ -146,7 +146,7 @@ final class TimestampFormatTest extends TestCase
             'epoch-seconds' => ['epoch-seconds', TimestampFormat::EpochSeconds],
             'unknown trait -> null' => ['bogus', null],
             'empty trait -> null' => ['', null],
-            'null trait -> null (caller decides default)' => [null, null],
+            'null trait -> null (caller decides default)' => [null, null]
         ];
     }
 }

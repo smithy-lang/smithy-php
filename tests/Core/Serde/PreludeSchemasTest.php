@@ -18,10 +18,10 @@ use Smithy\Core\Serde\ShapeType;
  * a case, dropping one, or drifting the ShapeType mapping silently corrupts every serialized
  * primitive.
  *
- * The tests here pin: (1) that the eager init on file load actually populated the singletons, (2)
- * that each `get()` returns the exact same Schema instance every time (identity, not equality,
- * that's what the hot-path relies on), (3) that the shape-id → ShapeType mapping is stable, and (4)
- * the `isPreludeShape()` predicate's positive/negative behaviors.
+ * The tests here pin: (1) that the eager init on file load actually populated the singletons,
+ * (2) that each `get()` returns the exact same Schema instance every time (identity, not equality,
+ * that's what the hot-path relies on), (3) that the shape-id → ShapeType mapping is stable, and
+ * (4) the `isPreludeShape()` predicate's positive/negative behaviors.
  */
 final class PreludeSchemasTest extends TestCase
 {
@@ -63,14 +63,14 @@ final class PreludeSchemasTest extends TestCase
     #[DataProvider('preludeShapeMappings')]
     public function testGetReturnsExpectedShapeIdAndType(
         string $shapeId,
-        ShapeType $type,
+        ShapeType $type
     ): void
     {
         $schema = PreludeSchemas::get($shapeId);
 
         $this->assertNotNull(
             $schema,
-            "Expected a prelude schema for {$shapeId}",
+            "Expected a prelude schema for {$shapeId}"
         );
         $this->assertSame($shapeId, $schema->id);
         // Schema stores the int-encoded discriminant, unwrap for readability.
@@ -88,7 +88,7 @@ final class PreludeSchemasTest extends TestCase
         // contents would still miss any object-identity cache.
         $this->assertSame(
             PreludeSchemas::get($shapeId),
-            PreludeSchemas::get($shapeId),
+            PreludeSchemas::get($shapeId)
         );
     }
 
@@ -99,7 +99,7 @@ final class PreludeSchemasTest extends TestCase
 
     public function testGetReturnsNullForNonPreludeNamespace(): void
     {
-        // A well-formed but non-prelude shape id must not resolve, 
+        // A well-formed but non-prelude shape id must not resolve,
         // otherwise a service model shape that happens to share a name
         // with a prelude type would be silently replaced by the
         // singleton, corrupting its members.
@@ -112,7 +112,7 @@ final class PreludeSchemasTest extends TestCase
     #[DataProvider('preludeShapeMappings')]
     public function testIsPreludeShapeReturnsTrueForKnownPreludeShapes(
         string $shapeId,
-        ShapeType $type,
+        ShapeType $type
     ): void
     {
         $this->assertTrue(PreludeSchemas::isPreludeShape($shapeId));
@@ -129,7 +129,7 @@ final class PreludeSchemasTest extends TestCase
     public function testIsPreludeShapeReturnsFalseForForeignNamespace(): void
     {
         $this->assertFalse(
-            PreludeSchemas::isPreludeShape('com.example#String'),
+            PreludeSchemas::isPreludeShape('com.example#String')
         );
     }
 
@@ -151,7 +151,7 @@ final class PreludeSchemasTest extends TestCase
             'Timestamp' => ['smithy.api#Timestamp', ShapeType::Timestamp],
             'BigInteger' => ['smithy.api#BigInteger', ShapeType::BigInteger],
             'BigDecimal' => ['smithy.api#BigDecimal', ShapeType::BigDecimal],
-            'Document' => ['smithy.api#Document', ShapeType::Document],
+            'Document' => ['smithy.api#Document', ShapeType::Document]
         ];
     }
 }

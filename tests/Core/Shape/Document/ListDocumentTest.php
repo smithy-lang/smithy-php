@@ -25,6 +25,7 @@ final class ListDocumentTest extends TestCase
     {
         $items = [
             AbstractDocument::ofString('a'),
+            null,
             AbstractDocument::ofInteger(1)
         ];
         $this->assertSame($items, (new ListDocument($items))->asList());

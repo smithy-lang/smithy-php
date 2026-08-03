@@ -25,6 +25,7 @@ final class MapDocumentTest extends TestCase
     {
         $entries = [
             'a' => AbstractDocument::ofString('x'),
+            'missing' => null,
             'b' => AbstractDocument::ofInteger(1)
         ];
         $this->assertSame($entries, (new MapDocument($entries))->asMap());
@@ -46,6 +47,11 @@ final class MapDocumentTest extends TestCase
     public function testGetMemberReturnsNullForMissingKey(): void
     {
         $this->assertNull((new MapDocument([]))->getMember('missing'));
+    }
+
+    public function testGetMemberReturnsNullForExplicitNullValue(): void
+    {
+        $this->assertNull((new MapDocument(['a' => null]))->getMember('a'));
     }
 
     public function testSerializeDispatchesToSerializeMap(): void
