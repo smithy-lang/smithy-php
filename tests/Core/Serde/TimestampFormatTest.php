@@ -43,8 +43,6 @@ final class TimestampFormatTest extends TestCase
         ];
     }
 
-    // ---- format() ------------------------------------------------------
-
     public function testFormatDateTimeProducesIso8601UtcString(): void
     {
         // Reference: 2024-01-15T10:30:00Z is epoch 1705314600.
@@ -80,8 +78,6 @@ final class TimestampFormatTest extends TestCase
             TimestampFormat::EpochSeconds->format(1705314600.5)
         );
     }
-
-    // ---- parse() ------------------------------------------------------
 
     public function testParseDateTimeRoundTripsIsoString(): void
     {
@@ -125,7 +121,15 @@ final class TimestampFormatTest extends TestCase
         $this->assertSame(1705314600.0, (float) $result);
     }
 
-    // ---- fromTraitString() --------------------------------------------
+    public function testParseDateTimeThrowsWhenFallbackParseFails(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage(
+            "Invalid DateTime timestamp 'not-a-timestamp'."
+        );
+
+        TimestampFormat::DateTime->parse('not-a-timestamp');
+    }
 
     #[DataProvider('traitStringMappings')]
     public function testFromTraitStringResolvesKnownTraitValues(
