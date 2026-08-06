@@ -7,33 +7,7 @@ namespace Smithy\Tests\Core\Serde;
 use PHPUnit\Framework\TestCase;
 use Smithy\Core\Serde\Schema;
 use Smithy\Core\Serde\ShapeType;
-
-/**
- * Named helper for the `resolveTarget()` recursive-reference test. Schema dispatches to
- * `($targetClass)::schema()` when it holds a lazy stub, so the test needs an actual class with a
- * static `schema()` method, an inline anonymous class doesn't work here because we need its FQCN as
- * a string to hand to the Schema constructor.
- */
-final class SchemaTestTarget
-{
-    public static Schema $canonical;
-
-    public static function schema(): Schema
-    {
-        return self::$canonical ??= new Schema(
-            id: 'test#Target',
-            type: ShapeType::Structure,
-            members: [
-                new Schema(
-                    id: 'test#Target$leaf',
-                    type: ShapeType::String_,
-                    memberName: 'leaf',
-                    memberIndex: 0
-                )
-            ]
-        );
-    }
-}
+use Smithy\Tests\Core\Serde\Utils\SchemaTestTargetFixture;
 
 /**
  * `Schema` is the load-bearing runtime type: every codec, every generated shape, and every hot-path
@@ -347,12 +321,12 @@ final class SchemaTest extends TestCase
         $stub = new Schema(
             id: 'test#TargetRef',
             type: ShapeType::Structure,
-            targetClass: SchemaTestTarget::class
+            targetClass: SchemaTestTargetFixture::class
         );
 
         $resolved = $stub->resolveTarget();
 
-        $this->assertSame(SchemaTestTarget::schema(), $resolved);
+        $this->assertSame(SchemaTestTargetFixture::schema(), $resolved);
         $this->assertSame('test#Target', $resolved->id);
         $this->assertNotNull($resolved->getMember('leaf'));
     }
