@@ -24,9 +24,9 @@ final class MapDocumentTest extends TestCase
     public function testAsMapReturnsStoredEntries(): void
     {
         $entries = [
-            'a' => AbstractDocument::ofString('x'),
+            'a' => AbstractDocument::fromString('x'),
             'missing' => null,
-            'b' => AbstractDocument::ofInteger(1)
+            'b' => AbstractDocument::fromInteger(1)
         ];
         $this->assertSame($entries, (new MapDocument($entries))->asMap());
     }
@@ -39,7 +39,7 @@ final class MapDocumentTest extends TestCase
 
     public function testGetMemberReturnsMatchingEntry(): void
     {
-        $entry = AbstractDocument::ofString('x');
+        $entry = AbstractDocument::fromString('x');
         $doc = new MapDocument(['a' => $entry]);
         $this->assertSame($entry, $doc->getMember('a'));
     }
@@ -56,7 +56,7 @@ final class MapDocumentTest extends TestCase
 
     public function testSerializeDispatchesToSerializeMap(): void
     {
-        $entries = ['a' => AbstractDocument::ofString('x')];
+        $entries = ['a' => AbstractDocument::fromString('x')];
         $schema = new Schema(
             id: 'com.example#Attributes',
             type: ShapeType::Map
