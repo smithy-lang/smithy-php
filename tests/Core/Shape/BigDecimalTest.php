@@ -29,7 +29,7 @@ class BigDecimalTest extends TestCase
         yield 'exponent positive sign' => ['1.5e+10'];
         yield 'exponent negative sign' => ['1.5e-10'];
         yield 'long fractional' => [
-            '3.141592653589793238462643383279502884197',
+            '3.141592653589793238462643383279502884197'
         ];
     }
 

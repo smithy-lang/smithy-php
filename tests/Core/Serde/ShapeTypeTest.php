@@ -34,14 +34,14 @@ final class ShapeTypeTest extends TestCase
     #[DataProvider('shapeTypeIntegerBackings')]
     public function testEachCaseHasStableIntegerBackingValue(
         string $name,
-        int $expectedValue,
+        int $expectedValue
     ): void
     {
         // These int values are literal-inlined into serializer switch arms.
         // Reassigning any of them is an ABI break for every codec.
         $this->assertSame(
             $expectedValue,
-            ShapeType::from($expectedValue)->value,
+            ShapeType::from($expectedValue)->value
         );
         $this->assertSame($name, ShapeType::from($expectedValue)->name);
     }
@@ -73,7 +73,7 @@ final class ShapeTypeTest extends TestCase
             'Document = 19' => ['Document', 19],
             'Operation = 20' => ['Operation', 20],
             'Service = 21' => ['Service', 21],
-            'Resource = 22' => ['Resource', 22],
+            'Resource = 22' => ['Resource', 22]
         ];
     }
 }

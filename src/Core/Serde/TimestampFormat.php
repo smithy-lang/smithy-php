@@ -61,6 +61,7 @@ enum TimestampFormat: int
      *
      * @return float Epoch seconds. Integer values are returned via PHP's int→float widening,
      *               fractional-second variants keep their fractional component.
+     * @throws \InvalidArgumentException When the value cannot be parsed in this format.
      */
     public function parse(string $value): float
     {
@@ -94,14 +95,14 @@ enum TimestampFormat: int
                                 . \substr(
                                     $value,
                                     $dotPos + 1,
-                                    $len - $dotPos - 2,
+                                    $len - $dotPos - 2
                                 )
                             );
                     }
                 }
                 // Offset variants: strtotime is fast on numeric offsets
                 // (it is only slow on trailing-Z strings: 11.4us vs ~0.7us).
-                return \strtotime($value);
+                return self::parseWithStrtotime($value, $this);
 
             case 2:
                 // "Thu, 15 Jan 2024 10:30:00 GMT". Day-epoch memo keyed on
@@ -117,14 +118,38 @@ enum TimestampFormat: int
     }
 
     /**
+     * Parse a timestamp string with `strtotime()` and throw on failure.
+     *
+     * @param string $value Wire timestamp string.
+     * @param self $format Expected timestamp format.
+     *
+     * @return int Parsed Unix timestamp.
+     * @throws \InvalidArgumentException When `strtotime()` cannot parse `$value`.
+     */
+    private static function parseWithStrtotime(
+        string $value,
+        self $format
+    ): int
+    {
+        $parsed = \strtotime($value);
+        if ($parsed !== false) {
+            return $parsed;
+        }
+
+        throw new \InvalidArgumentException(
+            "Invalid {$format->name} timestamp '{$value}'."
+        );
+    }
+
+    /**
      * Return the "YYYY-MM" → epoch-seconds table for ISO date-time parsing.
      *
      * Epoch seconds at the start of each month, keyed "YYYY-MM" (1970-2199). Built once per process
      * (~2.8k entries, opcache-free static). Codegen could emit these as a const instead to share
      * via opcache.
      *
-     * @return array<string, int> Map of "YYYY-MM" → epoch seconds at UTC midnight on the first of
-     *                       that month.
+     * @return array<string, int> Map of "YYYY-MM" → epoch seconds at UTC midnight on the first
+     *                            of that month.
      */
     private static function monthStartIso(): array
     {
@@ -139,8 +164,8 @@ enum TimestampFormat: int
      * Same data as {@see monthStartIso} keyed by month abbreviation and year (e.g. "Jan 2024") to
      * match the RFC 7231 wire form.
      *
-     * @return array<string, int> Map of "Mon YYYY" → epoch seconds at UTC midnight on the first of
-     *                       that month.
+     * @return array<string, int> Map of "Mon YYYY" → epoch seconds at UTC midnight on the first
+     *                            of that month.
      */
     private static function monthStartHd(): array
     {
@@ -150,7 +175,7 @@ enum TimestampFormat: int
             $names = [
                 1 => 'Jan', 2 => 'Feb', 3 => 'Mar', 4 => 'Apr',
                 5 => 'May', 6 => 'Jun', 7 => 'Jul', 8 => 'Aug',
-                9 => 'Sep', 10 => 'Oct', 11 => 'Nov', 12 => 'Dec',
+                9 => 'Sep', 10 => 'Oct', 11 => 'Nov', 12 => 'Dec'
             ];
             foreach (self::buildMonthTable('%04d %02d') as $k => $secs) {
                 $month = $names[(int) \substr($k, 5, 2)];
@@ -169,8 +194,8 @@ enum TimestampFormat: int
      * @param string $keyFmt `sprintf` format string that will be called with `(int $year, int
      *               $month)` and used as the table key.
      *
-     * @return array<string, int> Map of formatted key → epoch seconds at UTC midnight on the first
-     *                       of that month.
+     * @return array<string, int> Map of formatted key → epoch seconds at UTC midnight on the
+     *                            first of that month.
      */
     private static function buildMonthTable(string $keyFmt): array
     {

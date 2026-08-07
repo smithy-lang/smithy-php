@@ -7,33 +7,7 @@ namespace Smithy\Tests\Core\Serde;
 use PHPUnit\Framework\TestCase;
 use Smithy\Core\Serde\Schema;
 use Smithy\Core\Serde\ShapeType;
-
-/**
- * Named helper for the `resolveTarget()` recursive-reference test. Schema dispatches to
- * `($targetClass)::schema()` when it holds a lazy stub, so the test needs an actual class with a
- * static `schema()` method, an inline anonymous class doesn't work here because we need its FQCN as
- * a string to hand to the Schema constructor.
- */
-final class SchemaTestTarget
-{
-    public static Schema $canonical;
-
-    public static function schema(): Schema
-    {
-        return self::$canonical ??= new Schema(
-            id: 'test#Target',
-            type: ShapeType::Structure,
-            members: [
-                new Schema(
-                    id: 'test#Target$leaf',
-                    type: ShapeType::String_,
-                    memberName: 'leaf',
-                    memberIndex: 0,
-                ),
-            ],
-        );
-    }
-}
+use Smithy\Tests\Core\Serde\Utils\SchemaTestTargetFixture;
 
 /**
  * `Schema` is the load-bearing runtime type: every codec, every generated shape, and every hot-path
@@ -45,6 +19,17 @@ final class SchemaTestTarget
  */
 final class SchemaTest extends TestCase
 {
+    public function testTraitIndexesRemainStable(): void
+    {
+        $this->assertSame(21, Schema::T_HTTP_CHECKSUM_REQUIRED);
+        $this->assertSame(22, Schema::T_REQUEST_COMPRESSION);
+        $this->assertSame(23, Schema::T_ERROR);
+        $this->assertSame(24, Schema::T_READ_ONLY);
+        $this->assertSame(25, Schema::T_IDEMPOTENT);
+        $this->assertSame(26, Schema::T_RETRYABLE);
+        $this->assertSame(27, Schema::T_EC2_QUERY_NAME);
+    }
+
     public function testStoresIdAndUnwrapsShapeTypeToInt(): void
     {
         // `$type` is declared as `int`, not ShapeType, so codec switches
@@ -60,7 +45,7 @@ final class SchemaTest extends TestCase
     {
         $schema = new Schema(
             id: 'com.example#Root',
-            type: ShapeType::Structure,
+            type: ShapeType::Structure
         );
 
         $this->assertNull($schema->memberName);
@@ -74,7 +59,7 @@ final class SchemaTest extends TestCase
             id: 'com.example#Root$field',
             type: ShapeType::String_,
             memberName: 'field',
-            memberIndex: 3,
+            memberIndex: 3
         );
 
         $this->assertTrue($member->isMember());
@@ -92,13 +77,13 @@ final class SchemaTest extends TestCase
             id: 'com.example#S$alpha',
             type: ShapeType::String_,
             memberName: 'alpha',
-            memberIndex: 0,
+            memberIndex: 0
         );
         $second = new Schema(
             id: 'com.example#S$beta',
             type: ShapeType::Integer,
             memberName: 'beta',
-            memberIndex: 1,
+            memberIndex: 1
         );
 
         $schema = new Schema(
@@ -117,7 +102,7 @@ final class SchemaTest extends TestCase
     {
         $schema = new Schema(
             id: 'com.example#Empty',
-            type: ShapeType::Structure,
+            type: ShapeType::Structure
         );
 
         $this->assertNull($schema->getMember('missing'));
@@ -130,12 +115,12 @@ final class SchemaTest extends TestCase
             id: 'com.example#S$only',
             type: ShapeType::String_,
             memberName: 'only',
-            memberIndex: 0,
+            memberIndex: 0
         );
         $schema = new Schema(
             id: 'com.example#S',
             type: ShapeType::Structure,
-            members: [$member],
+            members: [$member]
         );
 
         $this->assertSame(['only' => $member], $schema->getMembers());
@@ -152,15 +137,15 @@ final class SchemaTest extends TestCase
                     id: 'a',
                     type: ShapeType::String_,
                     memberName: 'a',
-                    memberIndex: 0,
+                    memberIndex: 0
                 ),
                 new Schema(
                     id: 'b',
                     type: ShapeType::String_,
                     memberName: 'b',
-                    memberIndex: 1,
-                ),
-            ],
+                    memberIndex: 1
+                )
+            ]
         );
 
         // Memoized on first call.
@@ -173,7 +158,7 @@ final class SchemaTest extends TestCase
     {
         $schema = new Schema(
             id: 'com.example#Unit',
-            type: ShapeType::Structure,
+            type: ShapeType::Structure
         );
 
         $this->assertSame(0, $schema->getMemberCount());
@@ -184,12 +169,12 @@ final class SchemaTest extends TestCase
     {
         $item = new Schema(
             id: 'com.example#StringList$member',
-            type: ShapeType::String_,
+            type: ShapeType::String_
         );
         $list = new Schema(
             id: 'com.example#StringList',
             type: ShapeType::List_,
-            listMember: $item,
+            listMember: $item
         );
 
         $this->assertSame($item, $list->getListMember());
@@ -202,13 +187,13 @@ final class SchemaTest extends TestCase
         $key = new Schema(id: 'com.example#Map$key', type: ShapeType::String_);
         $value = new Schema(
             id: 'com.example#Map$value',
-            type: ShapeType::Integer,
+            type: ShapeType::Integer
         );
         $map = new Schema(
             id: 'com.example#Map',
             type: ShapeType::Map,
             mapKey: $key,
-            mapValue: $value,
+            mapValue: $value
         );
 
         $this->assertSame($key, $map->getMapKey());
@@ -230,8 +215,8 @@ final class SchemaTest extends TestCase
             traits: [
                 Schema::T_REQUIRED => true,
                 Schema::T_JSON_NAME => 'name_out',
-                Schema::T_XML_ATTRIBUTE => true,
-            ],
+                Schema::T_XML_ATTRIBUTE => true
+            ]
         );
 
         $this->assertTrue($member->hasTrait(Schema::T_REQUIRED));
@@ -247,12 +232,12 @@ final class SchemaTest extends TestCase
     {
         $traits = [
             Schema::T_REQUIRED => true,
-            Schema::T_SENSITIVE => true,
+            Schema::T_SENSITIVE => true
         ];
         $schema = new Schema(
             id: 'com.example#S',
             type: ShapeType::String_,
-            traits: $traits,
+            traits: $traits
         );
 
         $this->assertSame($traits, $schema->getTraits());
@@ -265,13 +250,13 @@ final class SchemaTest extends TestCase
             type: ShapeType::String_,
             memberName: 'r',
             memberIndex: 0,
-            traits: [Schema::T_REQUIRED => true],
+            traits: [Schema::T_REQUIRED => true]
         );
         $optional = new Schema(
             id: 'com.example#S$o',
             type: ShapeType::String_,
             memberName: 'o',
-            memberIndex: 1,
+            memberIndex: 1
         );
 
         $this->assertTrue($required->isRequired());
@@ -285,7 +270,7 @@ final class SchemaTest extends TestCase
             type: ShapeType::String_,
             memberName: 'foo',
             memberIndex: 0,
-            traits: [Schema::T_JSON_NAME => 'Foo'],
+            traits: [Schema::T_JSON_NAME => 'Foo']
         );
 
         $this->assertSame('Foo', $member->getWireName());
@@ -297,7 +282,7 @@ final class SchemaTest extends TestCase
             id: 'com.example#S$foo',
             type: ShapeType::String_,
             memberName: 'foo',
-            memberIndex: 0,
+            memberIndex: 0
         );
 
         $this->assertSame('foo', $member->getWireName());
@@ -311,7 +296,7 @@ final class SchemaTest extends TestCase
         // but the guard is still worth pinning.
         $root = new Schema(
             id: 'com.example#Root',
-            type: ShapeType::Structure,
+            type: ShapeType::Structure
         );
 
         $this->assertSame('', $root->getWireName());
@@ -336,12 +321,12 @@ final class SchemaTest extends TestCase
         $stub = new Schema(
             id: 'test#TargetRef',
             type: ShapeType::Structure,
-            targetClass: SchemaTestTarget::class,
+            targetClass: SchemaTestTargetFixture::class
         );
 
         $resolved = $stub->resolveTarget();
 
-        $this->assertSame(SchemaTestTarget::schema(), $resolved);
+        $this->assertSame(SchemaTestTargetFixture::schema(), $resolved);
         $this->assertSame('test#Target', $resolved->id);
         $this->assertNotNull($resolved->getMember('leaf'));
     }
@@ -355,26 +340,26 @@ final class SchemaTest extends TestCase
             id: 'com.example#S$a',
             type: ShapeType::String_,
             memberName: 'a',
-            memberIndex: 0,
+            memberIndex: 0
         );
         $b = new Schema(
             id: 'com.example#S$b',
             type: ShapeType::String_,
             memberName: 'b',
-            memberIndex: 1,
+            memberIndex: 1
         );
         $c = new Schema(
             id: 'com.example#S$c',
             type: ShapeType::String_,
             memberName: 'c',
-            memberIndex: 2,
+            memberIndex: 2
         );
 
         $full = new Schema(
             id: 'com.example#S',
             type: ShapeType::Structure,
             members: [$a, $b, $c],
-            traits: [Schema::T_REQUIRED => true],
+            traits: [Schema::T_REQUIRED => true]
         );
 
         $filtered = $full->withMembers([0, 2]);
@@ -401,12 +386,12 @@ final class SchemaTest extends TestCase
             id: 'com.example#S$only',
             type: ShapeType::String_,
             memberName: 'only',
-            memberIndex: 0,
+            memberIndex: 0
         );
         $full = new Schema(
             id: 'com.example#S',
             type: ShapeType::Structure,
-            members: [$only],
+            members: [$only]
         );
 
         $filtered = $full->withMembers([0, 5, 99]);
