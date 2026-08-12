@@ -25,12 +25,12 @@ final class XmlCodec extends AbstractCodec
     /**
      * @param list<string> $wrapperElements Top-level wrapper element names to
      *                                      skip during deserialization.
-     * @param string|null  $defaultNamespace Default XML namespace URI applied
-     *                                       to root elements.
+     * @param string|null  $defaultXmlNamespace Default XML namespace URI
+     *                                          applied to root elements.
      */
     public function __construct(
         private readonly array $wrapperElements = [],
-        private readonly ?string $defaultNamespace = null
+        private readonly ?string $defaultXmlNamespace = null
     ) {}
 
     /**
@@ -42,7 +42,7 @@ final class XmlCodec extends AbstractCodec
         $writer->openMemory();
 
         return new XmlSerializer(
-            $this->defaultNamespace,
+            $this->defaultXmlNamespace,
             $writer,
             $this->writerPool
         );
