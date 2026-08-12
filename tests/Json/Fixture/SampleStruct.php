@@ -18,9 +18,6 @@ final class SampleStruct implements SerializableStructInterface
 {
     private static ?Schema $SCHEMA = null;
 
-    /**
-     * Create the sample JSON fixture shape.
-     */
     public function __construct(
         public readonly ?string $name = null,
         public readonly ?int $count = null,
@@ -32,7 +29,7 @@ final class SampleStruct implements SerializableStructInterface
     ) {}
 
     /**
-     * Return the fixture schema used by the JSON tests.
+     * Return the fixture schema.
      */
     public static function schema(): Schema
     {
@@ -117,7 +114,7 @@ final class SampleStruct implements SerializableStructInterface
     }
 
     /**
-     * Serialize the fixture as a structure member.
+     * Serialize this fixture.
      *
      * @return void
      */
@@ -127,7 +124,7 @@ final class SampleStruct implements SerializableStructInterface
     }
 
     /**
-     * Serialize the fixture's declared members.
+     * Serialize populated members.
      *
      * @return void
      */
@@ -147,8 +144,7 @@ final class SampleStruct implements SerializableStructInterface
             $serializer->serializeList(
                 $members[3],
                 $this->tags,
-                3,
-                ShapeType::String_
+                3
             );
         }
         if ($this->scores !== null) {
@@ -157,7 +153,7 @@ final class SampleStruct implements SerializableStructInterface
     }
 
     /**
-     * Return the fixture value for the requested member.
+     * Return a member value by index.
      */
     public function getMemberValue(Schema $member): mixed
     {
@@ -172,9 +168,9 @@ final class SampleStruct implements SerializableStructInterface
     }
 
     /**
-     * Rehydrate the fixture from positional members.
+     * Rehydrate this fixture.
      *
-     * @param array<int, mixed> $fields
+     * @param array<int, mixed> $fields Positional members.
      */
     public static function fromMembers(array $fields): static
     {

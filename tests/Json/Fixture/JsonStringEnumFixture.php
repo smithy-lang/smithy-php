@@ -18,15 +18,12 @@ final class JsonStringEnumFixture implements EnumInterface
     /** @var array<string, self> */
     private static array $known = [];
 
-    /**
-     * Create a string-enum fixture value.
-     */
     private function __construct(
         private readonly string $value
     ) {}
 
     /**
-     * Return the known `open` enum value.
+     * Return the `open` value.
      */
     public static function open(): self
     {
@@ -34,7 +31,7 @@ final class JsonStringEnumFixture implements EnumInterface
     }
 
     /**
-     * Return the known `closed` enum value.
+     * Return the `closed` value.
      */
     public static function closed(): self
     {
@@ -42,7 +39,7 @@ final class JsonStringEnumFixture implements EnumInterface
     }
 
     /**
-     * Rehydrate the enum fixture from a wire value.
+     * Rehydrate this enum.
      */
     public static function fromValue(string $value): self
     {
@@ -54,7 +51,7 @@ final class JsonStringEnumFixture implements EnumInterface
     }
 
     /**
-     * Return the enum's backing value.
+     * Return the backing value.
      */
     public function getValue(): string|int
     {
@@ -62,7 +59,7 @@ final class JsonStringEnumFixture implements EnumInterface
     }
 
     /**
-     * Return the enum fixture schema.
+     * Return the fixture schema.
      */
     public static function schema(): Schema
     {
@@ -74,7 +71,7 @@ final class JsonStringEnumFixture implements EnumInterface
     }
 
     /**
-     * Serialize the enum fixture.
+     * Serialize this enum.
      *
      * @return void
      */

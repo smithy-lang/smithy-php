@@ -7,11 +7,13 @@ namespace Smithy\Tests\Json;
 use PHPUnit\Framework\TestCase;
 use Smithy\Core\Serde\{
     Schema,
-    ShapeType
+    ShapeType,
+    TimestampFormat
 };
 use Smithy\Core\Shape\{
     BigDecimal,
-    BigInteger
+    BigInteger,
+    Document\AbstractDocument
 };
 use Smithy\Json\JsonSerializer;
 
@@ -47,8 +49,7 @@ final class JsonSerializerTest extends TestCase
         $serializer->serializeList(
             $schema,
             [new BigInteger('0001'), new BigInteger('-0002')],
-            0,
-            ShapeType::BigInteger
+            0
         );
 
         self::assertSame('[1,-2]', $serializer->flush());
@@ -102,11 +103,41 @@ final class JsonSerializerTest extends TestCase
         $serializer->serializeList(
             $outer,
             [[new BigInteger('0001'), new BigInteger('002')]],
-            0,
-            ShapeType::List_
+            0
         );
 
         self::assertSame('[[1,2]]', $serializer->flush());
+    }
+
+    public function testSerializeTimestampPrefersSchemaResolvedFormat(): void
+    {
+        $member = new Schema(
+            id: 'smithy.test#Event$createdAt',
+            type: ShapeType::Timestamp,
+            memberName: 'createdAt',
+            memberIndex: 0,
+            traits: [Schema::T_TIMESTAMP_FORMAT => 'http-date']
+        );
+        $schema = new Schema(
+            id: 'smithy.test#Event',
+            type: ShapeType::Structure,
+            members: [$member]
+        );
+
+        $serializer = new JsonSerializer();
+        $serializer->beginStruct($schema, 0);
+        $serializer->serializeTimestamp(
+            $member,
+            100.0,
+            0,
+            TimestampFormat::DateTime
+        );
+        $serializer->endStruct();
+
+        self::assertSame(
+            '{"createdAt":"Thu, 01 Jan 1970 00:01:40 GMT"}',
+            $serializer->flush()
+        );
     }
 
     public function testNestedBigNumberMapsUseInlineSerializationPath(): void
@@ -141,5 +172,44 @@ final class JsonSerializerTest extends TestCase
         );
 
         self::assertSame('{"outer":{"a":1.25}}', $serializer->flush());
+    }
+
+    public function testSerializesNestedDocumentValuesAndNulls(): void
+    {
+        $document = AbstractDocument::fromValue([
+            'foo' => 'bar',
+            'items' => [true, null, 1],
+            'nested' => ['value' => null]
+        ]);
+        self::assertNotNull($document);
+
+        $serializer = new JsonSerializer();
+        $document->serialize($serializer, 0);
+
+        self::assertSame(
+            '{"foo":"bar","items":[true,null,1],"nested":{"value":null}}',
+            $serializer->flush()
+        );
+    }
+
+    public function testTopLevelDocumentListWithBigIntegersUsesNumberTokens(): void
+    {
+        $schema = new Schema(
+            id: 'smithy.test#DocumentList',
+            type: ShapeType::List_,
+            listMember: new Schema(
+                id: 'smithy.test#DocumentList$member',
+                type: ShapeType::Document
+            )
+        );
+
+        $serializer = new JsonSerializer();
+        $serializer->serializeList(
+            $schema,
+            [AbstractDocument::fromValue(new BigInteger('0001'))],
+            0
+        );
+
+        self::assertSame('[1]', $serializer->flush());
     }
 }

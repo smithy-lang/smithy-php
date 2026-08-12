@@ -10,58 +10,58 @@ use Smithy\Core\Serde\ShapeSerializerInterface;
 
 /**
  * Provide JSON serialization and deserialization for Smithy shapes.
- *
- * Reuses one {@see JsonSerializer} per codec instance and applies the
- * configured `@jsonName` policy to both serialization and deserialization.
  */
 final class JsonCodec extends AbstractCodec
 {
-    /**
-     * Lazily-instantiated pooled serializer. `null` until the first call
-     * to {@see createSerializer}; retained and reset between calls
-     * thereafter.
-     */
-    private ?ShapeSerializerInterface $serializer = null;
+    /** @var list<JsonSerializer> Reusable internal serializers. */
+    private array $serializerPool = [];
 
-    /**
-     * Create a JSON codec for the requested `@jsonName` policy.
-     */
     public function __construct(
         /**
-         * Whether the codec should honor `smithy.api#jsonName` when
-         * resolving wire member names on the way out (serialize) and
-         * back in (deserialize). `true` matches `restJson1` semantics;
-         * `false` (used by the awsJson1.x family) directs the codec at
-         * the raw `memberName`-keyed lookup arrays precomputed on
-         * {@see JsonSchemaExtension}.
-         *
-         * Consulted once per struct-open by the serializer and
-         * deserializer, so the emit / dispatch fast path stays
-         * branchless.
+         * Honor `smithy.api#jsonName` when encoding and decoding member
+         * names.
          */
         private readonly bool $honorJsonName = true
     ) {}
 
     /**
-     * Return a reusable JSON serializer instance.
+     * Create a JSON serializer.
      */
     public function createSerializer(): ShapeSerializerInterface
     {
-        if ($this->serializer === null) {
-            $this->serializer = new JsonSerializer($this->honorJsonName);
-        } else {
-            // Clear the previous operation's frame stack / accumulated
-            // root so the same instance behaves like a fresh construct.
-            $this->serializer->reset();
-        }
-        return $this->serializer;
+        return new JsonSerializer($this->honorJsonName);
     }
 
     /**
-     * Create a JSON deserializer for the supplied wire body.
+     * Create a JSON deserializer.
      */
     public function createDeserializer(string $source): ShapeDeserializerInterface
     {
         return new JsonDeserializer($source, $this->honorJsonName);
+    }
+
+    /**
+     * Borrow a reusable serializer.
+     *
+     * @internal
+     */
+    public function acquireSerializer(): JsonSerializer
+    {
+        $serializer = \array_pop($this->serializerPool)
+            ?? new JsonSerializer($this->honorJsonName);
+        $serializer->reset();
+
+        return $serializer;
+    }
+
+    /**
+     * Return a borrowed serializer to the pool.
+     *
+     * @internal
+     */
+    public function releaseSerializer(JsonSerializer $serializer): void
+    {
+        $serializer->reset();
+        $this->serializerPool[] = $serializer;
     }
 }

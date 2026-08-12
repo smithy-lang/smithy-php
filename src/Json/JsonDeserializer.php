@@ -15,30 +15,19 @@ use Smithy\Core\Shape\Document\AbstractDocument;
 
 /**
  * Deserialize JSON into Smithy shapes.
- *
- * Decodes the payload once, then traverses the resulting PHP value with
- * schema-guided member dispatch.
  */
 final class JsonDeserializer implements ShapeDeserializerInterface
 {
     /**
-     * Decoded body, structured as nested PHP arrays/scalars. `null` when
-     * the wire body was empty or `"null"`.
+     * Decoded wire body.
      */
     private mixed $parsed;
 
     /**
-     * Whether to honor `smithy.api#jsonName` when translating incoming
-     * JSON keys to member indices. `true` matches `restJson1`; `false`
-     * (used by `awsJson1_x`) directs the lookup at the extension's
-     * `raw*` maps instead. Consulted only at struct-open time so the
-     * per-key fast path stays a single hash probe.
+     * Honor `smithy.api#jsonName` when decoding member names.
      */
     private readonly bool $honorJsonName;
 
-    /**
-     * Parse a JSON wire body for schema-driven deserialization.
-     */
     public function __construct(string $source, bool $honorJsonName = true)
     {
         $this->honorJsonName = $honorJsonName;
@@ -67,9 +56,7 @@ final class JsonDeserializer implements ShapeDeserializerInterface
         if ($this->parsed === null) {
             return;
         }
-        // @httpPayload union bodies: the entire JSON document is the union.
-        // `readUnion` returns the hydrated variant instance; the protocol
-        // layer reads $members[0] and drops it into the payload slot.
+        // @httpPayload unions treat the whole document as the union value.
         if ($schema->type === ShapeType::Union->value) {
             if (\is_array($this->parsed) && $this->parsed !== []) {
                 $member = new Schema(
@@ -84,8 +71,7 @@ final class JsonDeserializer implements ShapeDeserializerInterface
         }
 
         if (!\is_array($this->parsed)) {
-            // A non-object top-level body (a JSON number or string) cannot
-            // populate a struct. Leave $members untouched.
+            // Only JSON objects can populate a struct.
             return;
         }
         $this->readStruct($schema, $this->parsed, $members);
@@ -99,10 +85,7 @@ final class JsonDeserializer implements ShapeDeserializerInterface
      */
     private function readStruct(Schema $schema, array $object, array &$members): void
     {
-        // Local-static cache of the extension key. See
-        // JsonSerializer::beginStruct for the rationale: it collapses
-        // per-call method dispatch to a single null-coalesce on an
-        // already-populated method-local.
+        // Cache the extension key in the hot path.
         static $extKey = null;
         $extKey ??= JsonSchemaExtensionProvider::key();
         /** @var JsonSchemaExtension|null $info */
@@ -111,50 +94,28 @@ final class JsonDeserializer implements ShapeDeserializerInterface
             return;
         }
 
-        // Wire-name map pick: honor `@jsonName` (restJson1) or ignore it
-        // (awsJson1_x) by choosing between the default and `raw*` variants
-        // once per struct-open. Both the ordered fast-path list and the
-        // hash-map fallback are picked in lockstep so the lookup shape is
-        // identical from the loop's perspective.
+        // Pick the wire-name tables once per struct.
         $ordered = $this->honorJsonName
             ? $info->orderedMembers
             : $info->rawOrderedMembers;
         $memberDecodeByWireName = $this->honorJsonName
             ? $info->memberDecodeByWireName
             : $info->rawMemberDecodeByWireName;
-        // Speculative in-order lookup fast path (borrowed from smithy-java's
-        // `SmithyMemberLookup` `expectedNext` hint): when JSON keys arrive in
-        // schema declaration order — the common case for AWS responses,
-        // since codegen emits members in declaration order and servers
-        // typically emit fields that way — the next expected member matches
-        // with a single string compare against `$ordered[$hint][0]`. On miss
-        // we fall back to the hashmap probe, then try to nudge the hint
-        // forward with a bounded scan so a single out-of-order key doesn't
-        // poison the rest of the loop.
+        // Favor in-order keys, then fall back to the hash lookup.
         $orderedCount = $info->orderedMemberCount;
         $hint = 0;
         foreach ($object as $key => $value) {
-            // Fast path: speculative match against the next expected member.
+            // Fast path for in-order keys.
             if ($hint < $orderedCount && $ordered[$hint][0] === $key) {
                 $entry = $ordered[$hint][1];
                 $hint++;
             } else {
-                // Skip wire keys the schema doesn't know about — forward-compat
-                // with newer service versions adding members. `isset` is a
-                // direct C-level hash probe against the precomputed
-                // wire-name-to-member-schema map, so we resolve the member
-                // in one lookup instead of the previous two-step
-                // (index lookup + `getMemberByIndex`).
+                // Ignore unknown wire keys.
                 $entry = $memberDecodeByWireName[$key] ?? null;
                 if ($entry === null) {
                     continue;
                 }
-                // Try to advance the hint past the matched member so
-                // subsequent in-order keys continue hitting the fast path.
-                // Bounded scan matches the XML deserializer's approach —
-                // the common "one out-of-order key" case resolves in a
-                // handful of comparisons; a fully-scrambled document just
-                // pays the full-lookup cost on every key.
+                // Nudge the hint forward after an out-of-order match.
                 $scanLimit = $hint + 4 < $orderedCount
                     ? $hint + 4
                     : $orderedCount;
@@ -172,100 +133,18 @@ final class JsonDeserializer implements ShapeDeserializerInterface
                 continue;
             }
 
-            switch ($entry[1]) {
-                case 10: // String_
-                    $members[$idx] = (string) $value;
-                    break;
-                case 17: // Enum
-                    $t = $entry[2];
-                    $members[$idx] = $t !== null
-                        ? $t::fromValue((string) $value)
-                        : (string) $value;
-                    break;
-                case 1: // Boolean
-                    $members[$idx] = (bool) $value;
-                    break;
-                case 4: // Integer
-                case 5: // Long
-                case 3: // Short
-                case 2: // Byte
-                    $members[$idx] = (int) $value;
-                    break;
-                case 18: // IntEnum
-                    $t = $entry[2];
-                    $intValue = (int) $value;
-                    $members[$idx] = $t !== null
-                        ? $t::fromValue($intValue)
-                        : $intValue;
-                    break;
-                case 6: // Float_
-                case 7: // Double
-                    $members[$idx] = match ($value) {
-                        'NaN' => \NAN,
-                        'Infinity' => \INF,
-                        '-Infinity' => -\INF,
-                        default => (float) $value,
-                    };
-                    break;
-                case 8: // BigInteger
-                    $members[$idx] = new BigInteger((string) $value);
-                    break;
-                case 9: // BigDecimal
-                    $members[$idx] = new BigDecimal((string) $value);
-                    break;
-                case 11: // Blob
-                    $members[$idx] =
-                        \base64_decode((string) $value, true) ?: '';
-                    break;
-                case 12: // Timestamp
-                    $fmt = $entry[2];
-                    $members[$idx] = $fmt === TimestampFormat::EpochSeconds
-                        ? ((\is_int($value) || \is_float($value))
-                            ? (float) $value
-                            : (float) (string) $value)
-                        : $fmt->parse((string) $value);
-                    break;
-                case 15: // Structure
-                    $members[$idx] = $this->readNestedStruct($entry[2], $value);
-                    break;
-                case 16: // Union
-                    $members[$idx] = $this->readUnion($entry[2], $value);
-                    break;
-                case 13: // List_
-                    $members[$idx] = $this->readList($entry[2], $value);
-                    break;
-                case 14: // Map
-                    $members[$idx] = $this->readMap($entry[2], $value);
-                    break;
-                case 19: // Document
-                    $members[$idx] = AbstractDocument::fromValue($value);
-                    break;
-                default:
-                    $members[$idx] = $value;
-                    break;
-            }
+            $members[$idx] = $this->readValue(
+                $entry[1],
+                $value,
+                $entry[2] ?? null
+            );
         }
     }
     /**
-     * Hydrate a nested struct into a typed shape instance. `fromMembers`
-     * is a `new self(...$members)` spread now, so this method owns the
-     * lift from the dense positional array to the typed object.
+     * Hydrate a nested struct.
      *
-     * # Fast-path shape
-     *
-     * `$member` here is typically the member schema for a struct-typed
-     * field. Member schemas rendered by codegen carry the full member list
-     * inline, so the extension's `memberCount > 0` is the common case and
-     * the `resolveTarget()` call is only taken for recursive stub
-     * references (member with `targetClass` but no inline members).
-     *
-     * The pre-built `$membersTemplate` on the resolved schema's extension
-     * lets us skip the `getMemberCount()` + `array_fill(0, N, null)` on
-     * every read. PHP arrays are copy-on-write, so assigning the template
-     * and then having `readStruct` write into `$members` triggers exactly
-     * one copy — same allocation cost as `array_fill` but with the fill
-     * itself hoisted to provider time and shared across all reads of the
-     * same struct type. Mirrors {@see \Smithy\Xml\XmlDeserializer::readNestedStructFromElement}.
+     * Uses the prebuilt member template when available. Resolve the
+     * target only for stub schemas.
      */
     private function readNestedStruct(
         Schema $member,
@@ -278,11 +157,7 @@ final class JsonDeserializer implements ShapeDeserializerInterface
         static $extKey = null;
         $extKey ??= JsonSchemaExtensionProvider::key();
 
-        // Resolve recursive stub references via the extension's cached
-        // `$memberCount`. Reading a readonly int property beats the
-        // `getMemberCount()` method dispatch + count() + `??=` cache on
-        // every nested-struct frame — even though that method is cheap,
-        // this path fires on every deeply-nested list item.
+        // Resolve the target only for stub schemas.
         /** @var JsonSchemaExtension|null $info */
         $info = $member->getExtension($extKey);
         if ($info === null || $info->memberCount === 0) {
@@ -292,11 +167,7 @@ final class JsonDeserializer implements ShapeDeserializerInterface
             $targetSchema = $member;
         }
 
-        // `$info` should be non-null for a struct/union target after
-        // the resolveTarget() fallback; the provider builds a struct info
-        // for both. Fall back to the old `array_fill` path defensively
-        // for the "no extension" corner (shouldn't happen — the codec
-        // only calls this for struct-typed fields).
+        // Fall back to a fresh member array if no extension is present.
         if ($info !== null) {
             $members = $info->membersTemplate;
         } else {
@@ -312,54 +183,21 @@ final class JsonDeserializer implements ShapeDeserializerInterface
 
 
     /**
-     * Hydrate a union wire value into a typed variant instance via the
-     * generated `create($tag, $value)` / `unknown($tag, $value)` factory.
+     * Hydrate a union wire value.
      */
     private function readUnion(Schema $member, mixed $value): ?SerializableShapeInterface
     {
         if (!\is_array($value) || $value === []) {
             return null;
         }
-        // Local-static extension key. Hot on any nested-union walk
-        // (readMap → decodeItem → readUnion recursion for DynamoDB-style
-        // AttributeValue trees).
-        //
-        // The member's own extension carries two pre-resolved fields
-        // populated by {@see JsonSchemaExtensionProvider} at build time:
-        //
-        //   - `resolvedTargetClass`  — the factory FQCN to call
-        //     `::create()` / `::unknown()` on.
-        //   - `resolvedTargetSchema` — the canonical target Schema (used
-        //     for the fallback `unknown()` factory call that expects
-        //     `->targetClass` on the canonical shape, and for the
-        //     target-extension lookup below).
-        //
-        // The target's own {@see JsonSchemaExtension} — which carries
-        // the wire-name maps for the union's variants — is fetched
-        // lazily and memoized in a method-local static keyed by target
-        // schema `id`. The eager version (fetching the target extension
-        // inside `provide()`) cycles on mutually-recursive schema
-        // graphs where two shape stubs point at each other; deferring
-        // to first `readUnion` invocation avoids the re-entrance,
-        // because the outer `Schema::getExtension` `??=` slot is
-        // populated by the time we get here.
-        //
-        // The old code paid a second `$unionSchema->getExtension($extKey)`
-        // per union instance to fetch the target's wire-name maps. On
-        // DynamoDB `GetItemOutput_L` that's ~830 samples of pure overhead
-        // per response — the pattern this cache eliminates. After the
-        // first union of each type is decoded, subsequent instances hit
-        // the local-static array with an int-keyed offset probe.
+        // Memoize target union extensions by schema id.
         static $extKey = null;
         static $targetInfoById = [];
         $extKey ??= JsonSchemaExtensionProvider::key();
         /** @var JsonSchemaExtension|null $memberInfo */
         $memberInfo = $member->getExtension($extKey);
         if ($memberInfo === null) {
-            // Synthetic runtime schema with no cached extension — walk
-            // `resolveTarget()` on the slow path. Never fires on codegen
-            // output; only reachable when a test builds a union member
-            // schema without going through the provider.
+            // Synthetic schemas may not have precomputed extensions.
             $unionSchema = $member->resolveTarget();
             $targetClass = $unionSchema->targetClass;
             if ($targetClass === null) {
@@ -372,9 +210,7 @@ final class JsonDeserializer implements ShapeDeserializerInterface
                 return null;
             }
             $unionSchema = $memberInfo->resolvedTargetSchema ?? $member;
-            // When the member schema IS the canonical target (it carries
-            // the full member list inline), its own extension already has
-            // the wire-name maps — no second fetch needed.
+            // Canonical member schemas already carry the union tables.
             if ($unionSchema === $member) {
                 $info = $memberInfo;
             } else {
@@ -384,8 +220,7 @@ final class JsonDeserializer implements ShapeDeserializerInterface
             }
         }
 
-        // Same wire-name pick as `readStruct`: honor `@jsonName` under
-        // restJson1, ignore it under awsJson1_x.
+        // Pick the union wire-name table once.
         $unionDecodeByWireName = $info === null
             ? []
             : ($this->honorJsonName
@@ -393,17 +228,11 @@ final class JsonDeserializer implements ShapeDeserializerInterface
                 : $info->rawUnionDecodeByWireName);
 
         foreach ($value as $wireKey => $wireValue) {
-            // restJson1 `__type` is a server-side discriminator; clients
-            // ignore it.
+            // Ignore restJson1's synthetic discriminator.
             if ($wireKey === '__type') {
                 continue;
             }
-            // Servers are allowed to send `variantName: null` for every
-            // absent variant (see the `AwsJson10DeserializeAllowNulls` and
-            // `AwsJson11DeserializeAllowNulls` compliance cases). A union
-            // variant is only "present" when the wire value is non-null;
-            // otherwise skip and keep looking for the real variant. This
-            // also mirrors the smithy-lang reference SDKs.
+            // Null union entries are absent variants.
             if ($wireValue === null) {
                 continue;
             }
@@ -413,138 +242,98 @@ final class JsonDeserializer implements ShapeDeserializerInterface
                 return $targetClass::unknown((string) $wireKey, $wireValue);
             }
 
-            switch ($entry[1]) {
-                case 10:
-                    return $targetClass::create($entry[0], (string) $wireValue);
-
-                case 17:
-                    $t = $entry[2] ?? null;
-                    return $targetClass::create(
-                        $entry[0],
-                        $t !== null
-                            ? $t::fromValue((string) $wireValue)
-                            : (string) $wireValue
-                    );
-
-                case 1:
-                    return $targetClass::create($entry[0], (bool) $wireValue);
-
-                case 4:
-                case 5:
-                case 3:
-                case 2:
-                    return $targetClass::create($entry[0], (int) $wireValue);
-
-                case 18:
-                    $t = $entry[2] ?? null;
-                    return $targetClass::create(
-                        $entry[0],
-                        $t !== null
-                            ? $t::fromValue((int) $wireValue)
-                            : (int) $wireValue
-                    );
-
-                case 6:
-                case 7:
-                    return $targetClass::create(
-                        $entry[0],
-                        match ($wireValue) {
-                            'NaN' => \NAN,
-                            'Infinity' => \INF,
-                            '-Infinity' => -\INF,
-                            default => (float) $wireValue,
-                        },
-                    );
-
-                case 8:
-                    return $targetClass::create(
-                        $entry[0],
-                        new BigInteger((string) $wireValue)
-                    );
-
-                case 9:
-                    return $targetClass::create(
-                        $entry[0],
-                        new BigDecimal((string) $wireValue)
-                    );
-
-                case 11:
-                    return $targetClass::create(
-                        $entry[0],
-                        \base64_decode((string) $wireValue, true) ?: ''
-                    );
-
-                case 12:
-                    $fmt = $entry[2] ?? TimestampFormat::EpochSeconds;
-                    return $targetClass::create(
-                        $entry[0],
-                        $fmt === TimestampFormat::EpochSeconds
-                            ? ((\is_int($wireValue) || \is_float($wireValue))
-                                ? (float) $wireValue
-                                : (float) (string) $wireValue)
-                            : $fmt->parse((string) $wireValue),
-                    );
-
-                case 15:
-                    return $targetClass::create(
-                        $entry[0],
-                        $this->readNestedStruct($entry[2], $wireValue)
-                    );
-
-                case 16:
-                    return $targetClass::create(
-                        $entry[0],
-                        $this->readUnion($entry[2], $wireValue)
-                    );
-
-                case 13:
-                    return $targetClass::create(
-                        $entry[0],
-                        $this->readList($entry[2], $wireValue)
-                    );
-
-                case 14:
-                    return $targetClass::create(
-                        $entry[0],
-                        $this->readMap($entry[2], $wireValue)
-                    );
-
-                case 19:
-                    return $targetClass::create(
-                        $entry[0],
-                        AbstractDocument::fromValue($wireValue)
-                    );
-
-                default:
-                    return $targetClass::create($entry[0], $wireValue);
-            }
+            return $targetClass::create(
+                $entry[0],
+                $this->readValue(
+                    $entry[1],
+                    $wireValue,
+                    $entry[2] ?? null
+                )
+            );
         }
         return null;
     }
 
+    /**
+     * Read one wire value using a ShapeType-directed dispatch.
+     */
+    private function readValue(int $type, mixed $value, mixed $context = null): mixed
+    {
+        switch ($type) {
+            case ShapeType::String_->value:
+                return (string) $value;
+
+            case ShapeType::Enum->value:
+                return $context !== null
+                    ? $context::fromValue((string) $value)
+                    : (string) $value;
+
+            case ShapeType::Boolean->value:
+                return (bool) $value;
+
+            case ShapeType::Integer->value:
+            case ShapeType::Long->value:
+            case ShapeType::Short->value:
+            case ShapeType::Byte->value:
+                return (int) $value;
+
+            case ShapeType::IntEnum->value:
+                $intValue = (int) $value;
+                return $context !== null
+                    ? $context::fromValue($intValue)
+                    : $intValue;
+
+            case ShapeType::Float_->value:
+            case ShapeType::Double->value:
+                return match ($value) {
+                    'NaN' => \NAN,
+                    'Infinity' => \INF,
+                    '-Infinity' => -\INF,
+                    default => (float) $value,
+                };
+
+            case ShapeType::BigInteger->value:
+                return new BigInteger((string) $value);
+
+            case ShapeType::BigDecimal->value:
+                return new BigDecimal((string) $value);
+
+            case ShapeType::Blob->value:
+                return \base64_decode((string) $value, true) ?: '';
+
+            case ShapeType::Timestamp->value:
+                $fmt = $context ?? TimestampFormat::EpochSeconds;
+                return $fmt === TimestampFormat::EpochSeconds
+                    ? ((\is_int($value) || \is_float($value))
+                        ? (float) $value
+                        : (float) (string) $value)
+                    : $fmt->parse((string) $value);
+
+            case ShapeType::Structure->value:
+                return $this->readNestedStruct($context, $value);
+
+            case ShapeType::Union->value:
+                return $this->readUnion($context, $value);
+
+            case ShapeType::List_->value:
+                return $this->readList($context, $value);
+
+            case ShapeType::Map->value:
+                return $this->readMap($context, $value);
+
+            case ShapeType::Document->value:
+                return AbstractDocument::fromValue($value);
+
+            default:
+                return $value;
+        }
+    }
+
 
     /**
-     * Deserialize a JSON array under `$member` (a list-typed member schema).
+     * Deserialize a JSON list.
      *
-     * # Fast-path shape
-     *
-     * The list's inner shape type is precomputed on the member's
-     * {@see JsonSchemaExtension::$listMemberType} at provider time, so
-     * scalar-item lists (strings, ints, floats, booleans, timestamps,
-     * blobs, enums, intEnums, bignums) take a literal-int dispatch to
-     * specialized inline loops that skip the `decodeItem` method-call
-     * frame entirely. Nested list/map/struct/union/document items also
-     * route directly to their dedicated helpers; any unknown synthetic
-     * inner type falls back to raw passthrough.
-     *
-     * Timestamp lists are the biggest win: the format was resolved once
-     * by the provider (default epoch-seconds per Smithy JSON spec) and
-     * hangs off the outer list's extension as
-     * {@see JsonSchemaExtension::$listMemberTimestampFormat}. That skips
-     * the per-element `TimestampFormat::fromTraitString(...) ??` chain
-     * in `readTimestampStandalone` for every element of large timestamp
-     * lists — same pattern the XML deserializer uses for
-     * `GetMetricDataResult.Timestamps`.
+     * Uses extension metadata for the member type and timestamp format.
      */
     private function readList(Schema $member, mixed $value): array
     {
@@ -553,8 +342,7 @@ final class JsonDeserializer implements ShapeDeserializerInterface
         }
         $itemSchema = $member->listMember;
         if ($itemSchema === null) {
-            // No inner schema — pass through unchanged (defensive for
-            // synthetic schemas built at runtime).
+            // Synthetic schemas without a member schema pass through.
             return $value;
         }
 
@@ -562,9 +350,7 @@ final class JsonDeserializer implements ShapeDeserializerInterface
         $extKey ??= JsonSchemaExtensionProvider::key();
         /** @var JsonSchemaExtension|null $info */
         $info = $member->getExtension($extKey);
-        // Fall back to reading the inner shape type off the item schema
-        // when no extension is available (synthetic list schemas without
-        // an inner member trait).
+        // Synthetic schemas may not have extension metadata.
         $memberType = $info?->listMemberType ?? $itemSchema->type;
 
         $out = [];
@@ -607,10 +393,7 @@ final class JsonDeserializer implements ShapeDeserializerInterface
                 break;
 
             case 12: // ShapeType::Timestamp
-                // Dedicated timestamp fast-loop. The format is resolved
-                // once by the provider (default epoch-seconds); the loop
-                // body specializes on the epoch branch so no format check
-                // fires per element.
+                // Timestamp lists reuse the precomputed format.
                 $fmt = $info?->listMemberTimestampFormat
                     ?? TimestampFormat::EpochSeconds;
                 if ($fmt === TimestampFormat::EpochSeconds) {
@@ -624,7 +407,6 @@ final class JsonDeserializer implements ShapeDeserializerInterface
                             : (float) (string) $item;
                     }
                 } else {
-                    // http-date / date-time strings.
                     foreach ($value as $item) {
                         $out[] = $item === null
                             ? null
@@ -736,9 +518,7 @@ final class JsonDeserializer implements ShapeDeserializerInterface
 
     private function readMap(Schema $member, mixed $value): array
     {
-        // `json_decode($source, true)` (used by the constructor) always
-        // hydrates JSON objects as PHP arrays — never `stdClass`. The
-        // associative-array branch is the only path we ever take.
+        // `json_decode(..., true)` always returns arrays for objects.
         if (!\is_array($value)) {
             return [];
         }

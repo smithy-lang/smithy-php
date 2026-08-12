@@ -31,7 +31,7 @@ final class JsonRoundTripTest extends TestCase
         $decoded = \json_decode($json, true);
 
         self::assertSame('alpha', $decoded['name']);
-        // count maps to "Count" via @jsonName.
+        // count uses its @jsonName wire key.
         self::assertSame(42, $decoded['Count']);
         self::assertTrue($decoded['active']);
         self::assertSame(['one', 'two'], $decoded['tags']);
@@ -86,7 +86,6 @@ final class JsonRoundTripTest extends TestCase
 
     public function testNullMembersAreOmittedFromOutput(): void
     {
-        // Only `name` is set; the codec must skip all other members.
         $struct = new SampleStruct(name: 'just-the-name');
 
         $codec = new JsonCodec();
@@ -100,8 +99,7 @@ final class JsonRoundTripTest extends TestCase
 
     public function testUnknownWireKeysAreIgnoredOnDeserialize(): void
     {
-        // A future service version adds a `metadata` field the client doesn't
-        // model. Deserialization must skip it without erroring.
+        // Unknown wire keys should be ignored.
         $wire = \json_encode([
             'name' => 'alpha',
             'metadata' => ['region' => 'us-west-2']
@@ -119,9 +117,7 @@ final class JsonRoundTripTest extends TestCase
 
     public function testEmptyMapsSerializeAsObjects(): void
     {
-        // PHP `[]` is ambiguous between list and object — the codec must
-        // emit `{}` for empty maps so the wire shape matches the Smithy
-        // map type semantics.
+        // Empty maps must render as `{}`.
         $struct = new SampleStruct(scores: []);
         $codec = new JsonCodec();
         $serializer = $codec->createSerializer();

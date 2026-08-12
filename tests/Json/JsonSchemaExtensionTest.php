@@ -32,8 +32,6 @@ final class JsonSchemaExtensionTest extends TestCase
                     memberName: 'name',
                     memberIndex: 0
                 ),
-                // `@jsonName` overrides the wire key without changing the
-                // positional member index.
                 new Schema(
                     id: 'smithy.example#Foo$age',
                     type: ShapeType::Integer,
@@ -64,14 +62,12 @@ final class JsonSchemaExtensionTest extends TestCase
             id: 'smithy.example#Events',
             type: ShapeType::Structure,
             members: [
-                // No @timestampFormat → restJson1 default of epoch-seconds.
                 new Schema(
                     id: 'smithy.example#Events$createdAt',
                     type: ShapeType::Timestamp,
                     memberName: 'createdAt',
                     memberIndex: 0
                 ),
-                // Explicit @timestampFormat overrides the default.
                 new Schema(
                     id: 'smithy.example#Events$lastSeen',
                     type: ShapeType::Timestamp,
@@ -94,8 +90,6 @@ final class JsonSchemaExtensionTest extends TestCase
 
     public function testNonStructSchemasReturnNull(): void
     {
-        // Scalar schemas still return null. The JSON codec only builds
-        // extensions for shapes it dispatches on directly.
         $scalarSchema = new Schema(
             id: 'smithy.example#JustAString',
             type: ShapeType::String_
@@ -108,10 +102,6 @@ final class JsonSchemaExtensionTest extends TestCase
 
     public function testListSchemasCarryListMemberInfo(): void
     {
-        // List schemas get a lightweight extension carrying the
-        // pre-resolved inner shape type + timestamp format for the
-        // deserializer's `readList` fast-path dispatch. Non-timestamp
-        // lists leave `listMemberTimestampFormat` null.
         $listSchema = new Schema(
             id: 'smithy.example#StringList',
             type: ShapeType::List_,
@@ -132,9 +122,6 @@ final class JsonSchemaExtensionTest extends TestCase
 
     public function testTimestampListCarriesResolvedFormat(): void
     {
-        // Timestamp-typed list members resolve the format at provider
-        // time. Absent an explicit `@timestampFormat`, the default is
-        // epoch-seconds per the Smithy JSON timestamp default.
         $listSchema = new Schema(
             id: 'smithy.example#TimestampList',
             type: ShapeType::List_,

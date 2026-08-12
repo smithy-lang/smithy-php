@@ -18,15 +18,12 @@ final class JsonIntEnumFixture implements EnumInterface
     /** @var array<int, self> */
     private static array $known = [];
 
-    /**
-     * Create an int-enum fixture value.
-     */
     private function __construct(
         private readonly int $value
     ) {}
 
     /**
-     * Return the known `7` enum value.
+     * Return the `7` value.
      */
     public static function seven(): self
     {
@@ -34,7 +31,7 @@ final class JsonIntEnumFixture implements EnumInterface
     }
 
     /**
-     * Return the known `9` enum value.
+     * Return the `9` value.
      */
     public static function nine(): self
     {
@@ -42,7 +39,7 @@ final class JsonIntEnumFixture implements EnumInterface
     }
 
     /**
-     * Rehydrate the enum fixture from a wire value.
+     * Rehydrate this enum.
      */
     public static function fromValue(int $value): self
     {
@@ -54,7 +51,7 @@ final class JsonIntEnumFixture implements EnumInterface
     }
 
     /**
-     * Return the enum's backing value.
+     * Return the backing value.
      */
     public function getValue(): string|int
     {
@@ -62,7 +59,7 @@ final class JsonIntEnumFixture implements EnumInterface
     }
 
     /**
-     * Return the int-enum fixture schema.
+     * Return the fixture schema.
      */
     public static function schema(): Schema
     {
@@ -74,7 +71,7 @@ final class JsonIntEnumFixture implements EnumInterface
     }
 
     /**
-     * Serialize the enum fixture.
+     * Serialize this enum.
      *
      * @return void
      */

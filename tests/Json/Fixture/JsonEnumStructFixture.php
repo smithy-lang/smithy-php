@@ -13,12 +13,6 @@ final class JsonEnumStructFixture
 {
     private static ?Schema $SCHEMA = null;
 
-    /**
-     * Create an enum-carrier fixture from deserialized members.
-     *
-     * @param list<JsonStringEnumFixture>|null $statuses
-     * @param array<string, JsonIntEnumFixture>|null $priorities
-     */
     public function __construct(
         public readonly JsonStringEnumFixture|string|null $status = null,
         public readonly JsonIntEnumFixture|int|null $priority = null,
@@ -27,7 +21,7 @@ final class JsonEnumStructFixture
     ) {}
 
     /**
-     * Return the fixture schema used by enum hydration tests.
+     * Return the fixture schema.
      */
     public static function schema(): Schema
     {
@@ -98,9 +92,9 @@ final class JsonEnumStructFixture
     }
 
     /**
-     * Rehydrate the fixture from positional members.
+     * Rehydrate this fixture.
      *
-     * @param array<int, mixed> $fields
+     * @param array<int, mixed> $fields Positional members.
      */
     public static function fromMembers(array $fields): static
     {

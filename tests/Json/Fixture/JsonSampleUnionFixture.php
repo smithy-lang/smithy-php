@@ -15,16 +15,13 @@ final class JsonSampleUnionFixture implements UnionInterface
 {
     private static ?Schema $SCHEMA = null;
 
-    /**
-     * Create a union fixture value.
-     */
     public function __construct(
         private readonly string $activeTag,
         private readonly mixed $activeValue
     ) {}
 
     /**
-     * Return the union fixture schema.
+     * Return the fixture schema.
      */
     public static function schema(): Schema
     {
@@ -57,7 +54,7 @@ final class JsonSampleUnionFixture implements UnionInterface
     }
 
     /**
-     * Serialize the union fixture.
+     * Serialize this union.
      *
      * @return void
      */
@@ -67,7 +64,7 @@ final class JsonSampleUnionFixture implements UnionInterface
     }
 
     /**
-     * Return the active union tag.
+     * Return the active tag.
      */
     public function tag(): string
     {
@@ -75,7 +72,7 @@ final class JsonSampleUnionFixture implements UnionInterface
     }
 
     /**
-     * Return the active union value.
+     * Return the active value.
      */
     public function value(): mixed
     {
@@ -83,7 +80,7 @@ final class JsonSampleUnionFixture implements UnionInterface
     }
 
     /**
-     * Create a known union variant.
+     * Create a known variant.
      */
     public static function create(string $tag, mixed $value): self
     {
@@ -91,7 +88,7 @@ final class JsonSampleUnionFixture implements UnionInterface
     }
 
     /**
-     * Create an unknown union variant.
+     * Create an unknown variant.
      */
     public static function unknown(string $tag, mixed $value): self
     {

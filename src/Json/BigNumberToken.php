@@ -5,25 +5,19 @@ declare(strict_types=1);
 namespace Smithy\Json;
 
 /**
- * Wrap big-number values for JSON serialization.
- *
- * Marks arbitrary-precision numbers so `flush()` can emit them as JSON
- * number tokens instead of strings.
+ * Wrap a big number for JSON serialization.
  */
 final class BigNumberToken implements \JsonSerializable
 {
     public const ENCODED_PREFIX = '__SMITHY_BIGNUM__';
 
-    /**
-     * Create a wrapped big-number token.
-     */
-    public function __construct(public readonly string $digits) {}
+    public function __construct(public readonly string $number) {}
 
     /**
-     * Return the sentinel-prefixed digit string for `json_encode()`.
+     * Return the sentinel-prefixed JSON value.
      */
     public function jsonSerialize(): string
     {
-        return self::ENCODED_PREFIX . $this->digits;
+        return self::ENCODED_PREFIX . $this->number;
     }
 }
