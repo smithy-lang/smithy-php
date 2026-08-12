@@ -136,8 +136,7 @@ final class XmlSerializerTest extends TestCase
         $serializer->serializeList(
             $schema,
             [100.0, 200.0],
-            0,
-            ShapeType::Timestamp
+            0
         );
 
         self::assertSame(
@@ -233,6 +232,6 @@ final class XmlSerializerTest extends TestCase
         $writer = new \XMLWriter();
         $writer->openMemory();
 
-        return new XmlSerializer($writer);
+        return new XmlSerializer(null, $writer);
     }
 }

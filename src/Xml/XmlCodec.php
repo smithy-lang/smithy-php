@@ -11,22 +11,18 @@ use Smithy\Core\Serde\ShapeSerializerInterface;
 /**
  * Provide XML serialization and deserialization for Smithy shapes.
  *
- * Owns parser and writer creation. Reuses one {@see XmlSerializer} and
- * {@see \XMLWriter} pair per codec instance so repeated operations do not
- * pay fresh allocation cost.
+ * Owns parser creation and pools inactive {@see \XMLWriter} instances so
+ * fresh {@see XmlSerializer} objects can reuse writer allocations without
+ * sharing live serializer state across callers.
  */
 final class XmlCodec extends AbstractCodec
 {
     /**
-     * The pooled writer + serializer, or null before first use. Both
-     * live for the lifetime of this codec instance.
+     * Idle XML writers available for reuse.
      */
-    private ?\XMLWriter $writer = null;
-    private ?XmlSerializer $serializer = null;
+    private array $writerPool = [];
 
     /**
-     * Create an XML codec.
-     *
      * @param list<string> $wrapperElements Top-level wrapper element names to
      *                                      skip during deserialization.
      * @param string|null  $defaultNamespace Default XML namespace URI applied
@@ -42,25 +38,14 @@ final class XmlCodec extends AbstractCodec
      */
     public function createSerializer(): ShapeSerializerInterface
     {
-        // Lazy init once per codec instance. `openMemory()` fully resets
-        // the writer's internal document buffer so subsequent calls get a
-        // clean slate, so there is no need to construct a new writer each
-        // time.
-        if ($this->serializer === null) {
-            $this->writer = new \XMLWriter();
-            $this->writer->openMemory();
-            $this->serializer = new XmlSerializer(
-                $this->writer,
-                $this->defaultNamespace
-            );
-        } else {
-            // Same writer, fresh document. openMemory rewinds the internal
-            // buffer to position 0 and clears any pending element stack,
-            // effectively `writer->reset()`.
-            $this->writer->openMemory();
-        }
+        $writer = \array_pop($this->writerPool) ?? new \XMLWriter();
+        $writer->openMemory();
 
-        return $this->serializer;
+        return new XmlSerializer(
+            $this->defaultNamespace,
+            $writer,
+            $this->writerPool
+        );
     }
 
     /**

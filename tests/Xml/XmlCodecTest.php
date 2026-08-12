@@ -14,7 +14,7 @@ use Smithy\Tests\Xml\Utils\XmlNestedStructFixture;
 
 final class XmlCodecTest extends TestCase
 {
-    public function testCreateSerializerReusesInstanceAndResetsBuffer(): void
+    public function testCreateSerializerReturnsFreshIndependentInstances(): void
     {
         $codec = new XmlCodec();
 
@@ -26,13 +26,10 @@ final class XmlCodecTest extends TestCase
             new XmlNestedStructFixture('alpha'),
             0
         );
-        self::assertSame(
-            '<NestedStruct><value>alpha</value></NestedStruct>',
-            $first->flush()
-        );
 
         $second = $codec->createSerializer();
-        self::assertSame($first, $second);
+        self::assertInstanceOf(XmlSerializer::class, $second);
+        self::assertNotSame($first, $second);
 
         $second->serializeStruct(
             XmlNestedStructFixture::schema(),
@@ -43,6 +40,28 @@ final class XmlCodecTest extends TestCase
             '<NestedStruct><value>beta</value></NestedStruct>',
             $second->flush()
         );
+        self::assertSame(
+            '<NestedStruct><value>alpha</value></NestedStruct>',
+            $first->flush()
+        );
+    }
+
+    public function testSerializerReturnsWriterToCodecPoolOnDestruction(): void
+    {
+        $codec = new XmlCodec();
+        $pool = new \ReflectionProperty(XmlCodec::class, 'writerPool');
+
+        $serializer = $codec->createSerializer();
+        self::assertCount(0, $pool->getValue($codec));
+
+        unset($serializer);
+
+        self::assertCount(1, $pool->getValue($codec));
+
+        $serializer = $codec->createSerializer();
+
+        self::assertCount(0, $pool->getValue($codec));
+        unset($serializer);
     }
 
     public function testCreateDeserializerDescendsThroughConfiguredWrappers(): void

@@ -383,16 +383,14 @@ final class XmlSampleStructFixture implements SerializableStructInterface
             $serializer->serializeList(
                 $members[12],
                 $this->tags,
-                12,
-                ShapeType::String_
+                12
             );
         }
         if ($this->flatTags !== null) {
             $serializer->serializeList(
                 $members[13],
                 $this->flatTags,
-                13,
-                ShapeType::String_
+                13
             );
         }
         if ($this->scores !== null) {
@@ -416,8 +414,7 @@ final class XmlSampleStructFixture implements SerializableStructInterface
             $serializer->serializeList(
                 $members[18],
                 $values,
-                18,
-                ShapeType::Enum
+                18
             );
         }
         if ($this->milestones !== null) {
@@ -432,16 +429,14 @@ final class XmlSampleStructFixture implements SerializableStructInterface
             $serializer->serializeList(
                 $members[20],
                 $values,
-                20,
-                ShapeType::IntEnum
+                20
             );
         }
         if ($this->checkpoints !== null) {
             $serializer->serializeList(
                 $members[21],
                 $this->checkpoints,
-                21,
-                ShapeType::Timestamp
+                21
             );
         }
     }

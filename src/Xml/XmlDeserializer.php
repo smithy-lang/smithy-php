@@ -25,8 +25,6 @@ use Smithy\Core\Shape\BigInteger;
 final class XmlDeserializer implements ShapeDeserializerInterface
 {
     /**
-     * Construct the deserializer.
-     *
      * @param \SimpleXMLElement $element Parsed XML root element.
      */
     public function __construct(
@@ -42,7 +40,7 @@ final class XmlDeserializer implements ShapeDeserializerInterface
      */
     public function deserialize(Schema $schema, array &$members): void
     {
-        if ($schema->type === 16) { // ShapeType::Union
+        if ($schema->type === ShapeType::Union->value) {
             // httpPayload union bodies use the current root as the union payload.
             $members[0] = $this->readUnionFromElement($this->element, $schema);
 
@@ -85,34 +83,34 @@ final class XmlDeserializer implements ShapeDeserializerInterface
                         $memberSchema = $info->attributeMembers[$attrName]
                             ?? null;
                         switch ($entry[2]) {
-                            case 1: // ShapeType::Boolean
+                            case ShapeType::Boolean->value:
                                 $out[$idx] = $value === 'true'
                                     || $value === '1';
                                 break;
-                            case 4: // ShapeType::Integer
-                            case 5: // ShapeType::Long
-                            case 3: // ShapeType::Short
-                            case 2: // ShapeType::Byte
+                            case ShapeType::Integer->value:
+                            case ShapeType::Long->value:
+                            case ShapeType::Short->value:
+                            case ShapeType::Byte->value:
                                 $out[$idx] = (int) $value;
                                 break;
-                            case 18: // ShapeType::IntEnum
+                            case ShapeType::IntEnum->value:
                                 $intValue = (int) $value;
                                 $targetClass = $memberSchema?->targetClass;
                                 $out[$idx] = $targetClass !== null
                                     ? $targetClass::fromValue($intValue)
                                     : $intValue;
                                 break;
-                            case 6: // ShapeType::Float_
-                            case 7: // ShapeType::Double
+                            case ShapeType::Float_->value:
+                            case ShapeType::Double->value:
                                 $out[$idx] = (float) $value;
                                 break;
-                            case 12: // ShapeType::Timestamp
+                            case ShapeType::Timestamp->value:
                                 $out[$idx] = $entry[3]->parse($value);
                                 break;
-                            case 11: // ShapeType::Blob
+                            case ShapeType::Blob->value:
                                 $out[$idx] = \base64_decode($value, true) ?: '';
                                 break;
-                            case 17: // ShapeType::Enum
+                            case ShapeType::Enum->value:
                                 $targetClass = $memberSchema?->targetClass;
                                 $out[$idx] = $targetClass !== null
                                     ? $targetClass::fromValue($value)
@@ -153,35 +151,35 @@ final class XmlDeserializer implements ShapeDeserializerInterface
                 case 0:
                     $idx = $entry[1];
                     switch ($entry[3]) {
-                        case 10:  // ShapeType::String_
+                        case ShapeType::String_->value:
                             $out[$idx] = (string) $child;
                             break;
-                        case 17:  // ShapeType::Enum
+                        case ShapeType::Enum->value:
                             $value = (string) $child;
                             $targetClass = $entry[2]->targetClass;
                             $out[$idx] = $targetClass !== null
                                 ? $targetClass::fromValue($value)
                                 : $value;
                             break;
-                        case 4:  // ShapeType::Integer
-                        case 5:  // ShapeType::Long
-                        case 3: // ShapeType::Short
-                        case 2: // ShapeType::Byte
+                        case ShapeType::Integer->value:
+                        case ShapeType::Long->value:
+                        case ShapeType::Short->value:
+                        case ShapeType::Byte->value:
                             $out[$idx] = (int) (string) $child;
                             break;
-                        case 18:  // ShapeType::IntEnum
+                        case ShapeType::IntEnum->value:
                             $value = (int) (string) $child;
                             $targetClass = $entry[2]->targetClass;
                             $out[$idx] = $targetClass !== null
                                 ? $targetClass::fromValue($value)
                                 : $value;
                             break;
-                        case 1: // ShapeType::Boolean
+                        case ShapeType::Boolean->value:
                             $s = (string) $child;
                             $out[$idx] = $s === 'true' || $s === '1';
                             break;
-                        case 6: // ShapeType::Float_
-                        case 7: // ShapeType::Double
+                        case ShapeType::Float_->value:
+                        case ShapeType::Double->value:
                             $s = (string) $child;
                             $out[$idx] = match ($s) {
                                 'NaN' => NAN,
@@ -190,34 +188,34 @@ final class XmlDeserializer implements ShapeDeserializerInterface
                                 default => (float) $s
                             };
                             break;
-                        case 11: // ShapeType::Blob
+                        case ShapeType::Blob->value:
                             $out[$idx] = \base64_decode(
                                 (string) $child,
                                 true
                             ) ?: '';
                             break;
-                        case 12: // ShapeType::Timestamp
+                        case ShapeType::Timestamp->value:
                             $out[$idx] = $entry[4]->parse((string) $child);
                             break;
-                        case 15: // ShapeType::Structure
+                        case ShapeType::Structure->value:
                             $out[$idx] = $this->readNestedStructFromElement(
                                 $child,
                                 $entry[2]
                             );
                             break;
-                        case 16: // ShapeType::Union
+                        case ShapeType::Union->value:
                             $out[$idx] = $this->readUnionFromElement(
                                 $child,
                                 $entry[2]
                             );
                             break;
-                        case 13: // ShapeType::List_
+                        case ShapeType::List_->value:
                             $out[$idx] = $this->readListFromElement(
                                 $child,
                                 $entry[2]
                             );
                             break;
-                        case 14: // ShapeType::Map
+                        case ShapeType::Map->value:
                             $out[$idx] = $this->readMapFromElement(
                                 $child,
                                 $entry[2]
@@ -275,48 +273,48 @@ final class XmlDeserializer implements ShapeDeserializerInterface
         $result = [];
 
         switch ($memberType) {
-            case 10:  // ShapeType::String_
+            case ShapeType::String_->value:
                 foreach ($element->{$memberName} as $child) {
                     $result[] = (string) $child;
                 }
                 break;
-            case 17:  // ShapeType::Enum
+            case ShapeType::Enum->value:
                 $class = $listMember->targetClass;
                 foreach ($element->{$memberName} as $child) {
                     $result[] = $class::fromValue((string) $child);
                 }
                 break;
-            case 4:  // ShapeType::Integer
-            case 5:  // ShapeType::Long
-            case 3: // ShapeType::Short
-            case 2: // ShapeType::Byte
+            case ShapeType::Integer->value:
+            case ShapeType::Long->value:
+            case ShapeType::Short->value:
+            case ShapeType::Byte->value:
                 foreach ($element->{$memberName} as $child) {
                     $result[] = (int) (string) $child;
                 }
                 break;
-            case 18:  // ShapeType::IntEnum
+            case ShapeType::IntEnum->value:
                 $class = $listMember->targetClass;
                 foreach ($element->{$memberName} as $child) {
                     $result[] = $class::fromValue((int) (string) $child);
                 }
                 break;
-            case 8: // ShapeType::BigInteger
+            case ShapeType::BigInteger->value:
                 foreach ($element->{$memberName} as $child) {
                     $result[] = new BigInteger((string) $child);
                 }
                 break;
-            case 9: // ShapeType::BigDecimal
+            case ShapeType::BigDecimal->value:
                 foreach ($element->{$memberName} as $child) {
                     $result[] = new BigDecimal((string) $child);
                 }
                 break;
-            case 1: // ShapeType::Boolean
+            case ShapeType::Boolean->value:
                 foreach ($element->{$memberName} as $child) {
                     $result[] = ($s = (string) $child) === 'true' || $s === '1';
                 }
                 break;
-            case 6: // ShapeType::Float_
-            case 7: // ShapeType::Double
+            case ShapeType::Float_->value:
+            case ShapeType::Double->value:
                 foreach ($element->{$memberName} as $child) {
                     $s = (string) $child;
                     $result[] = match ($s) {
@@ -327,13 +325,13 @@ final class XmlDeserializer implements ShapeDeserializerInterface
                     };
                 }
                 break;
-            case 12: // ShapeType::Timestamp
+            case ShapeType::Timestamp->value:
                 $fmt = $info->listMemberTimestampFormat;
                 foreach ($element->{$memberName} as $child) {
                     $result[] = $fmt->parse((string) $child);
                 }
                 break;
-            case 15: // ShapeType::Structure
+            case ShapeType::Structure->value:
                 $memberInfo = $info->listMemberExtension;
                 foreach ($element->{$memberName} as $child) {
                     $result[] = $this->readNestedStructFromElement(
@@ -343,7 +341,7 @@ final class XmlDeserializer implements ShapeDeserializerInterface
                     );
                 }
                 break;
-            case 16: // ShapeType::Union
+            case ShapeType::Union->value:
                 $memberInfo = $info->listMemberExtension;
                 foreach ($element->{$memberName} as $child) {
                     $result[] = $this->readUnionFromElement(
@@ -389,7 +387,7 @@ final class XmlDeserializer implements ShapeDeserializerInterface
         $entryName = $info->mapEntryName;
         $result = [];
 
-        if ($mapValue !== null && $mapValue->type === 12) {
+        if ($mapValue !== null && $mapValue->type === ShapeType::Timestamp->value) {
             $fmt = $info->mapValueTimestampFormat;
             foreach ($element->{$entryName} as $entry) {
                 $key = isset($entry->{$keyName})
@@ -475,26 +473,26 @@ final class XmlDeserializer implements ShapeDeserializerInterface
         }
 
         switch ($schema->type) {
-            case 10:  // ShapeType::String_
+            case ShapeType::String_->value:
                 return (string) $element;
-            case 17:  // ShapeType::Enum
+            case ShapeType::Enum->value:
                 return $schema->targetClass::fromValue((string) $element);
-            case 4:  // ShapeType::Integer
-            case 5:  // ShapeType::Long
-            case 3: // ShapeType::Short
-            case 2: // ShapeType::Byte
+            case ShapeType::Integer->value:
+            case ShapeType::Long->value:
+            case ShapeType::Short->value:
+            case ShapeType::Byte->value:
                 return (int) (string) $element;
-            case 18:  // ShapeType::IntEnum
+            case ShapeType::IntEnum->value:
                 return $schema->targetClass::fromValue((int) (string) $element);
-            case 8: // ShapeType::BigInteger
+            case ShapeType::BigInteger->value:
                 return new BigInteger((string) $element);
-            case 9: // ShapeType::BigDecimal
+            case ShapeType::BigDecimal->value:
                 return new BigDecimal((string) $element);
-            case 1: // ShapeType::Boolean
+            case ShapeType::Boolean->value:
                 $s = (string) $element;
                 return $s === 'true' || $s === '1';
-            case 6: // ShapeType::Float_
-            case 7: // ShapeType::Double
+            case ShapeType::Float_->value:
+            case ShapeType::Double->value:
                 $s = (string) $element;
                 return match ($s) {
                     'NaN' => NAN,
@@ -502,20 +500,20 @@ final class XmlDeserializer implements ShapeDeserializerInterface
                     '-Infinity' => -INF,
                     default => (float) $s
                 };
-            case 11: // ShapeType::Blob
+            case ShapeType::Blob->value:
                 return \base64_decode((string) $element, true) ?: '';
-            case 12: // ShapeType::Timestamp
+            case ShapeType::Timestamp->value:
                 return (
                     $schema->getExtension($extKey)?->timestampFormat
                         ?? TimestampFormat::DateTime
                 )->parse((string) $element);
-            case 15: // ShapeType::Structure
+            case ShapeType::Structure->value:
                 return $this->readNestedStructFromElement($element, $schema);
-            case 16: // ShapeType::Union
+            case ShapeType::Union->value:
                 return $this->readUnionFromElement($element, $schema);
-            case 13: // ShapeType::List_
+            case ShapeType::List_->value:
                 return $this->readListFromElement($element, $schema);
-            case 14: // ShapeType::Map
+            case ShapeType::Map->value:
                 return $this->readMapFromElement($element, $schema);
             default:
                 return (string) $element;
