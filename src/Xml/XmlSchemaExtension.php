@@ -30,9 +30,6 @@ final class XmlSchemaExtension
     public const COMPONENT_ATTRIBUTE = 1;
     public const COMPONENT_ELEMENT_WITH_NAMESPACE = 2;
 
-    /**
-     * Create an XML schema extension.
-     */
     public function __construct(
         // --- Struct info ---
         /** Resolved element name for this struct (xmlName ?? shape name) */

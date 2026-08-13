@@ -40,6 +40,26 @@ final class XmlSerializer implements ShapeSerializerInterface
     /** @var array<int, TimestampFormat> memberIndex -> TimestampFormat enum */
     private array $tsFormats = [];
 
+    private bool $writerReleased = false;
+
+    /** @var list<\XMLWriter> */
+    private array $writerPool;
+
+    /**
+     * @param string|null      $defaultNamespace Default namespace for
+     *                                           unqualified structs.
+     * @param \XMLWriter       $writer Backing XML writer.
+     * @param list<\XMLWriter> $writerPool Idle codec-owned writers available
+     *                                     for reuse.
+     */
+    public function __construct(
+        private readonly ?string $defaultNamespace,
+        private readonly \XMLWriter $writer,
+        array &$writerPool = []
+    ) {
+        $this->writerPool =& $writerPool;
+    }
+
     /**
      * Serialize a boolean member.
      *
@@ -156,11 +176,11 @@ final class XmlSerializer implements ShapeSerializerInterface
     {
         // String members are the only scalar path that can carry a member namespace.
         $ct = $this->memberComponentTypes[$idx];
-        if ($ct === 0) {
+        if ($ct === XmlSchemaExtension::COMPONENT_ELEMENT) {
             $this->writer->writeElement($this->wireNames[$idx], $value);
             return;
         }
-        if ($ct === 1) {
+        if ($ct === XmlSchemaExtension::COMPONENT_ATTRIBUTE) {
             $this->writer->writeAttribute($this->wireNames[$idx], $value);
             return;
         }
@@ -198,7 +218,10 @@ final class XmlSerializer implements ShapeSerializerInterface
         ?TimestampFormat $format = null
     ): void
     {
-        $formatted = ($format ?? TimestampFormat::DateTime)->format($value);
+        $resolved = $this->tsFormats[$idx]
+            ?? $format
+            ?? TimestampFormat::DateTime;
+        $formatted = $resolved->format($value);
 
         if ($this->memberComponentTypes[$idx]) {
             $this->writer->writeAttribute($this->wireNames[$idx], $formatted);
@@ -217,8 +240,7 @@ final class XmlSerializer implements ShapeSerializerInterface
     public function serializeList(
         Schema $schema,
         array $list,
-        int $idx,
-        ShapeType $memberType
+        int $idx
     ): void
     {
         // Cache the XML extension key once per method.
@@ -240,27 +262,29 @@ final class XmlSerializer implements ShapeSerializerInterface
         $memberNs = $info->listMemberNamespace;
         $nsUri = $memberNs['uri'] ?? null;
         $nsPrefix = $memberNs['prefix'] ?? null;
+        $memberType = $info->listMemberType
+            ?? $listMember?->type
+            ?? ShapeType::Document->value;
 
-        switch ($memberType->value) {
-            case 10:  // ShapeType::String_
-            case 17:  // ShapeType::Enum
+        switch ($memberType) {
+            case ShapeType::String_->value:
+            case ShapeType::Enum->value:
                 $this->writeStringItems($list, $itemName, $nsUri, $nsPrefix);
                 break;
-            case 4:  // ShapeType::Integer
-
-            case 5:  // ShapeType::Long
-            case 3: // ShapeType::Short
-            case 2: // ShapeType::Byte
+            case ShapeType::Integer->value:
+            case ShapeType::Long->value:
+            case ShapeType::Short->value:
+            case ShapeType::Byte->value:
                 $this->writeIntItems($list, $itemName, $nsUri, $nsPrefix);
                 break;
-            case 1: // ShapeType::Boolean
+            case ShapeType::Boolean->value:
                 $this->writeBoolItems($list, $itemName, $nsUri, $nsPrefix);
                 break;
-            case 6: // ShapeType::Float_
-            case 7: // ShapeType::Double
+            case ShapeType::Float_->value:
+            case ShapeType::Double->value:
                 $this->writeFloatItems($list, $itemName, $nsUri, $nsPrefix);
                 break;
-            case 12: // ShapeType::Timestamp
+            case ShapeType::Timestamp->value:
                 $timestampFormat = $info->listMemberTimestampFormat
                     ?? $this->tsFormats[$idx]
                     ?? TimestampFormat::DateTime;
@@ -272,26 +296,38 @@ final class XmlSerializer implements ShapeSerializerInterface
                     $nsPrefix
                 );
                 break;
-            case 11: // ShapeType::Blob
+            case ShapeType::Blob->value:
                 $this->writeBlobItems($list, $itemName, $nsUri, $nsPrefix);
                 break;
-            case 15: // ShapeType::Structure
+            case ShapeType::Structure->value:
                 $this->writeStructItems($list, $itemName, $listMember);
                 break;
-            case 13: // ShapeType::List_
-                $this->writeListItems($list, $itemName, $listMember);
+            case ShapeType::List_->value:
+                if ($listMember !== null) {
+                    $this->writeListItems($list, $itemName, $listMember);
+                    break;
+                }
+                $this->writeStringItems($list, $itemName, $nsUri, $nsPrefix);
                 break;
-            case 14: // ShapeType::Map
-                $this->writeMapItems($list, $itemName, $listMember);
+            case ShapeType::Map->value:
+                if ($listMember !== null) {
+                    $this->writeMapItems($list, $itemName, $listMember);
+                    break;
+                }
+                $this->writeStringItems($list, $itemName, $nsUri, $nsPrefix);
                 break;
             default:
-                $this->writeGenericItems(
-                    $list,
-                    $itemName,
-                    $listMember,
-                    $nsUri,
-                    $nsPrefix
-                );
+                if ($listMember !== null) {
+                    $this->writeGenericItems(
+                        $list,
+                        $itemName,
+                        $listMember,
+                        $nsUri,
+                        $nsPrefix
+                    );
+                    break;
+                }
+                $this->writeStringItems($list, $itemName, $nsUri, $nsPrefix);
                 break;
         }
 
@@ -570,21 +606,31 @@ final class XmlSerializer implements ShapeSerializerInterface
         ));
     }
 
-    /**
-     * Construct the serializer.
-     *
-     * @param \XMLWriter $writer Backing XML writer.
-     * @param string|null $defaultNamespace Default namespace for unqualified structs.
-     */
-    public function __construct(
-        private readonly \XMLWriter $writer,
-        private readonly ?string $defaultNamespace = null
-    ) {}
+    public function __destruct()
+    {
+        $this->releaseWriter();
+    }
 
     /** Flush the XML buffer. */
     public function flush(): string
     {
         return $this->writer->outputMemory();
+    }
+
+    /**
+     * Return the owned writer to the codec pool once the serializer is done.
+     *
+     * @return void
+     */
+    private function releaseWriter(): void
+    {
+        if ($this->writerReleased) {
+            return;
+        }
+
+        $this->writerReleased = true;
+        $this->writer->openMemory();
+        $this->writerPool[] = $this->writer;
     }
 
 
@@ -949,46 +995,45 @@ final class XmlSerializer implements ShapeSerializerInterface
     {
         $idx = $memberSchema->memberIndex;
         switch ($memberSchema->type) {
-            case 15: // ShapeType::Structure
+            case ShapeType::Structure->value:
                 $this->serializeStruct($memberSchema, $value, $idx);
                 return;
-            case 13: // ShapeType::List_
+            case ShapeType::List_->value:
                 $this->serializeList(
                     $memberSchema,
                     $value,
-                    $idx,
-                    ShapeType::from($memberSchema->listMember->type)
+                    $idx
                 );
                 return;
-            case 14: // ShapeType::Map
+            case ShapeType::Map->value:
                 $this->serializeMap($memberSchema, $value, $idx);
                 return;
-            case 1: // ShapeType::Boolean
+            case ShapeType::Boolean->value:
                 $this->serializeBoolean($memberSchema, $value, $idx);
                 return;
-            case 4:  // ShapeType::Integer
-            case 5:  // ShapeType::Long
-            case 3: // ShapeType::Short
-            case 2: // ShapeType::Byte
+            case ShapeType::Integer->value:
+            case ShapeType::Long->value:
+            case ShapeType::Short->value:
+            case ShapeType::Byte->value:
                 $this->serializeInteger($memberSchema, $value, $idx);
                 return;
-            case 6: // ShapeType::Float_
-            case 7: // ShapeType::Double
+            case ShapeType::Float_->value:
+            case ShapeType::Double->value:
                 $this->serializeFloat($memberSchema, $value, $idx);
                 return;
-            case 8: // ShapeType::BigInteger
+            case ShapeType::BigInteger->value:
                 $this->serializeBigInteger($memberSchema, $value, $idx);
                 return;
-            case 9: // ShapeType::BigDecimal
+            case ShapeType::BigDecimal->value:
                 $this->serializeBigDecimal($memberSchema, $value, $idx);
                 return;
-            case 11: // ShapeType::Blob
+            case ShapeType::Blob->value:
                 $this->serializeBlob($memberSchema, $value, $idx);
                 return;
-            case 12: // ShapeType::Timestamp
+            case ShapeType::Timestamp->value:
                 $this->serializeTimestamp($memberSchema, $value, $idx);
                 return;
-            case 10: // ShapeType::String_
+            case ShapeType::String_->value:
                 $this->serializeString(
                     $memberSchema,
                     $value instanceof EnumInterface
@@ -997,7 +1042,7 @@ final class XmlSerializer implements ShapeSerializerInterface
                     $idx
                 );
                 return;
-            case 18: // ShapeType::IntEnum
+            case ShapeType::IntEnum->value:
                 $this->serializeInteger(
                     $memberSchema,
                     $value instanceof EnumInterface
@@ -1006,7 +1051,7 @@ final class XmlSerializer implements ShapeSerializerInterface
                     $idx
                 );
                 return;
-            case 16: // ShapeType::Union
+            case ShapeType::Union->value:
                 $this->serializeUnion($memberSchema, $value, $idx);
                 return;
             default:
@@ -1023,23 +1068,23 @@ final class XmlSerializer implements ShapeSerializerInterface
     private function writeScalarOrNested(Schema $schema, mixed $value, int $type): void
     {
         switch ($type) {
-            case 15: // ShapeType::Structure
+            case ShapeType::Structure->value:
                 $this->writeStructInline($schema, $value);
                 return;
-            case 13: // ShapeType::List_
+            case ShapeType::List_->value:
                 $this->writeNestedList($schema, $value);
                 return;
-            case 14: // ShapeType::Map
+            case ShapeType::Map->value:
                 $this->writeNestedMap($schema, $value);
                 return;
-            case 1: // ShapeType::Boolean
+            case ShapeType::Boolean->value:
                 $this->writer->text($value ? 'true' : 'false');
                 return;
-            case 4:  // ShapeType::Integer
-            case 5:  // ShapeType::Long
-            case 3: // ShapeType::Short
-            case 2: // ShapeType::Byte
-            case 18:  // ShapeType::IntEnum
+            case ShapeType::Integer->value:
+            case ShapeType::Long->value:
+            case ShapeType::Short->value:
+            case ShapeType::Byte->value:
+            case ShapeType::IntEnum->value:
                 $this->writer->text(
                     (string) (
                         $value instanceof EnumInterface
@@ -1048,18 +1093,18 @@ final class XmlSerializer implements ShapeSerializerInterface
                     )
                 );
                 return;
-            case 6: // ShapeType::Float_
-            case 7: // ShapeType::Double
+            case ShapeType::Float_->value:
+            case ShapeType::Double->value:
                 $this->writer->text((string) $value);
                 return;
-            case 8: // ShapeType::BigInteger
-            case 9: // ShapeType::BigDecimal
+            case ShapeType::BigInteger->value:
+            case ShapeType::BigDecimal->value:
                 $this->writer->text($value->value);
                 return;
-            case 11: // ShapeType::Blob
+            case ShapeType::Blob->value:
                 $this->writer->text(\base64_encode($value));
                 return;
-            case 12: // ShapeType::Timestamp
+            case ShapeType::Timestamp->value:
                 $this->writer->text(
                     (
                         $this->tsFormats[$schema->memberIndex]
@@ -1067,7 +1112,7 @@ final class XmlSerializer implements ShapeSerializerInterface
                     )->format($value)
                 );
                 return;
-            case 17: // ShapeType::Enum
+            case ShapeType::Enum->value:
                 $this->writer->text(
                     $value instanceof EnumInterface
                         ? (string) $value->getValue()

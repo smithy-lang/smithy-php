@@ -328,7 +328,7 @@ final class XmlSchemaExtensionProvider
                         0,
                         $idx,
                         $memberSchema,
-                        12,
+                        ShapeType::Timestamp->value,
                         $resolvedTimestampFormat,
                     ];
                 } else {

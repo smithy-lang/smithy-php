@@ -44,7 +44,7 @@ final class ListDocumentTest extends TestCase
         $serializer = $this->createMock(ShapeSerializerInterface::class);
         $serializer->expects($this->once())
             ->method('serializeList')
-            ->with($schema, $items, 0, ShapeType::Document);
+            ->with($schema, $items, 0);
 
         (new ListDocument($items, $schema))->serialize($serializer, 0);
     }
@@ -62,8 +62,7 @@ final class ListDocumentTest extends TestCase
                     return $s->id === 'smithy.api#List';
                 }),
                 [],
-                0,
-                ShapeType::Document
+                0
             );
 
         (new ListDocument([]))->serialize($serializer, 0);
