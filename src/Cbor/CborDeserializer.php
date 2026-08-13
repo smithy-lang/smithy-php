@@ -8,6 +8,7 @@ use Smithy\Core\Serde\Schema;
 use Smithy\Core\Serde\SerializableShapeInterface;
 use Smithy\Core\Serde\ShapeDeserializerInterface;
 use Smithy\Core\Serde\ShapeType;
+use Smithy\Core\Serde\TimestampFormat;
 use Smithy\Core\Shape\BigDecimal;
 use Smithy\Core\Shape\BigInteger;
 
@@ -24,6 +25,8 @@ use Smithy\Core\Shape\BigInteger;
  */
 final class CborDeserializer implements ShapeDeserializerInterface
 {
+    private readonly CborCodecSettings $settings;
+
     private const MAJOR_POSINT = 0;
     private const MAJOR_NEGINT = 1;
     private const MAJOR_BYTESTRING = 2;
@@ -63,11 +66,16 @@ final class CborDeserializer implements ShapeDeserializerInterface
 
     /**
      * @param string $source Encoded CBOR payload.
+     * @param CborCodecSettings|null $settings Codec behavior overrides.
      */
-    public function __construct(string $source)
+    public function __construct(
+        string $source,
+        ?CborCodecSettings $settings = null
+    )
     {
         $this->payload = $source;
         $this->length = \strlen($source);
+        $this->settings = $settings ?? new CborCodecSettings();
     }
 
     /**
@@ -803,11 +811,34 @@ final class CborDeserializer implements ShapeDeserializerInterface
                 return $this->readBigDecimal();
 
             case ShapeType::Timestamp->value:
-                $tagInfo = $this->readInitialByte() & 0x1F;
-                $this->readLengthFromInfo($tagInfo);
-                return (float) $this->readNumericFromInitial(
-                    $this->readInitialByte()
-                );
+                $initial = $this->readInitialByte();
+                $major = $initial >> 5;
+                if ($major === self::MAJOR_TAG) {
+                    $tag = $this->readLengthFromInfo($initial & 0x1F);
+                    if ($tag !== self::TAG_EPOCH) {
+                        $this->malformed();
+                    }
+
+                    return (float) $this->readNumericFromInitial(
+                        $this->readInitialByte()
+                    );
+                }
+
+                if ($major === self::MAJOR_TEXTSTRING) {
+                    $format = TimestampFormat::fromTraitString(
+                        $schema->getTrait(Schema::T_TIMESTAMP_FORMAT)
+                    ) ?? $this->settings->defaultTimestampFormat;
+
+                    return $format->parse($this->readStringFromInitial($initial));
+                }
+
+                return match ($major) {
+                    self::MAJOR_POSINT,
+                    self::MAJOR_NEGINT,
+                    self::MAJOR_SIMPLE =>
+                        (float) $this->readNumericFromInitial($initial),
+                    default => $this->malformed(),
+                };
 
             case ShapeType::Structure->value:
                 if (!$resolvedTargetClass) {

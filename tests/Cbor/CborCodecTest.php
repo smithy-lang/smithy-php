@@ -7,12 +7,14 @@ namespace Smithy\Tests\Cbor;
 use PHPUnit\Framework\TestCase;
 use Smithy\Cbor\{
     CborCodec,
+    CborCodecSettings,
     CborDeserializer,
     CborSerializer
 };
 use Smithy\Core\Serde\{
     Schema,
-    ShapeType
+    ShapeType,
+    TimestampFormat
 };
 
 /**
@@ -118,5 +120,43 @@ final class CborCodecTest extends TestCase
         self::assertSame('alpha', $fields[0]);
         self::assertSame(42, $fields[1]);
         self::assertTrue($fields[2]);
+    }
+
+    public function testCodecSettingsControlDefaultTimestampFormat(): void
+    {
+        $schema = new Schema(
+            id: 'smithy.test#TimestampWrap',
+            type: ShapeType::Structure,
+            members: [
+                new Schema(
+                    id: 'smithy.test#TimestampWrap$v',
+                    type: ShapeType::Timestamp,
+                    memberName: 'v',
+                    memberIndex: 0
+                )
+            ]
+        );
+        $member = $schema->getMembersByIndex()[0];
+        $codec = new CborCodec(
+            new CborCodecSettings(
+                defaultTimestampFormat: TimestampFormat::DateTime
+            )
+        );
+
+        $serializer = $codec->createSerializer();
+        $serializer->beginStruct($schema, 0);
+        $serializer->serializeTimestamp($member, 100.0, 0);
+        $serializer->endStruct();
+
+        $wire = $serializer->flush();
+        self::assertSame(
+            \bin2hex("\xA1\x61\x76\x74" . '1970-01-01T00:01:40Z'),
+            \bin2hex($wire)
+        );
+
+        $fields = [null];
+        $codec->createDeserializer($wire)->deserialize($schema, $fields);
+
+        self::assertSame(100.0, $fields[0]);
     }
 }

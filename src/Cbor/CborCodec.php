@@ -13,15 +13,25 @@ use Smithy\Core\Serde\ShapeSerializerInterface;
  */
 final class CborCodec extends AbstractCodec
 {
+    private readonly CborCodecSettings $settings;
+
     /** @var list<CborSerializer> Reusable internal serializers. */
     private array $serializerPool = [];
+
+    /**
+     * @param CborCodecSettings|null $settings Codec behavior overrides.
+     */
+    public function __construct(?CborCodecSettings $settings = null)
+    {
+        $this->settings = $settings ?? new CborCodecSettings();
+    }
 
     /**
      * Create a CBOR serializer.
      */
     public function createSerializer(): ShapeSerializerInterface
     {
-        return new CborSerializer();
+        return new CborSerializer($this->settings);
     }
 
     /**
@@ -29,7 +39,7 @@ final class CborCodec extends AbstractCodec
      */
     public function createDeserializer(string $source): ShapeDeserializerInterface
     {
-        return new CborDeserializer($source);
+        return new CborDeserializer($source, $this->settings);
     }
 
     /**
@@ -40,7 +50,7 @@ final class CborCodec extends AbstractCodec
     public function acquireSerializer(): CborSerializer
     {
         $serializer = \array_pop($this->serializerPool)
-            ?? new CborSerializer();
+            ?? new CborSerializer($this->settings);
         $serializer->reset();
 
         return $serializer;
