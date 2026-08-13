@@ -12,10 +12,12 @@ use Smithy\Core\Shape\Utils\ArrayShapeSerializer;
 use Smithy\Tests\Core\Shape\Utils\Utils\{
     ArrayShapeSerializerBigNumberFixture,
     ArrayShapeSerializerDocumentFixture,
+    ArrayShapeSerializerEmptyFixture,
     ArrayShapeSerializerFloatFixture,
     ArrayShapeSerializerListFixture,
     ArrayShapeSerializerScalarFixture,
     ArrayShapeSerializerTimestampFixture,
+    ArrayShapeSerializerUnionFixture,
     ArrayShapeSerializerV3CompatFixture
 };
 
@@ -73,6 +75,40 @@ final class ArrayShapeSerializerTest extends TestCase
             ['name' => 'sam', 'count' => 1, 'active' => null]
         );
         $this->assertNull($obj->active);
+    }
+
+    public function testFromArrayRejectsUnsupportedClass(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage(
+            'ArrayShapeSerializer::fromArray() expects a class implementing '
+            . 'Smithy\Core\Serde\SerializableStructInterface or '
+            . 'Smithy\Core\Shape\UnionInterface; got '
+            . 'Smithy\Core\Shape\Document\StringDocument.'
+        );
+
+        ArrayShapeSerializer::fromArray(StringDocument::class, []);
+    }
+
+    public function testFromArraySupportsEmptyStructSchema(): void
+    {
+        $obj = ArrayShapeSerializer::fromArray(
+            ArrayShapeSerializerEmptyFixture::class,
+            []
+        );
+
+        $this->assertInstanceOf(ArrayShapeSerializerEmptyFixture::class, $obj);
+    }
+
+    public function testFromArraySupportsUnionClass(): void
+    {
+        /** @var ArrayShapeSerializerUnionFixture $obj */
+        $obj = ArrayShapeSerializer::fromArray(
+            ArrayShapeSerializerUnionFixture::class,
+            ['foo' => 'bar']
+        );
+
+        $this->assertSame('bar', $obj->foo);
     }
 
     public function testRoundTripRetainsValues(): void
