@@ -75,7 +75,7 @@ final class JsonSerializer implements ShapeSerializerInterface
         /**
          * Honor `smithy.api#jsonName` when encoding member names.
          */
-        private readonly bool $honorJsonName = true
+        private readonly bool $honorJsonName
     ) {}
 
     /**
@@ -165,13 +165,11 @@ final class JsonSerializer implements ShapeSerializerInterface
     public function serializeTimestamp(
         Schema $schema,
         float $value,
-        int $idx,
-        ?TimestampFormat $format = null
+        int $idx
     ): void
     {
         // Prefer the frame's precomputed member format.
         $resolved = $this->timestampFormats[$idx]
-            ?? $format
             ?? TimestampFormat::EpochSeconds;
 
         if ($resolved === TimestampFormat::EpochSeconds) {

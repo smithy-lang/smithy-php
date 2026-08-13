@@ -7,8 +7,7 @@ namespace Smithy\Tests\Json;
 use PHPUnit\Framework\TestCase;
 use Smithy\Core\Serde\{
     Schema,
-    ShapeType,
-    TimestampFormat
+    ShapeType
 };
 use Smithy\Core\Shape\{
     BigDecimal,
@@ -21,7 +20,7 @@ final class JsonSerializerTest extends TestCase
 {
     public function testSerializeTopLevelBigIntegerNormalizesLeadingZeros(): void
     {
-        $serializer = new JsonSerializer();
+        $serializer = new JsonSerializer(true);
         $serializer->serializeBigInteger(
             new Schema(
                 id: 'smithy.test#BigIntegerValue',
@@ -45,7 +44,7 @@ final class JsonSerializerTest extends TestCase
             )
         );
 
-        $serializer = new JsonSerializer();
+        $serializer = new JsonSerializer(true);
         $serializer->serializeList(
             $schema,
             [new BigInteger('0001'), new BigInteger('-0002')],
@@ -70,7 +69,7 @@ final class JsonSerializerTest extends TestCase
             )
         );
 
-        $serializer = new JsonSerializer();
+        $serializer = new JsonSerializer(true);
         $serializer->serializeMap(
             $schema,
             [
@@ -99,7 +98,7 @@ final class JsonSerializerTest extends TestCase
             listMember: $inner
         );
 
-        $serializer = new JsonSerializer();
+        $serializer = new JsonSerializer(true);
         $serializer->serializeList(
             $outer,
             [[new BigInteger('0001'), new BigInteger('002')]],
@@ -124,13 +123,12 @@ final class JsonSerializerTest extends TestCase
             members: [$member]
         );
 
-        $serializer = new JsonSerializer();
+        $serializer = new JsonSerializer(true);
         $serializer->beginStruct($schema, 0);
         $serializer->serializeTimestamp(
             $member,
             100.0,
-            0,
-            TimestampFormat::DateTime
+            0
         );
         $serializer->endStruct();
 
@@ -164,7 +162,7 @@ final class JsonSerializerTest extends TestCase
             mapValue: $inner
         );
 
-        $serializer = new JsonSerializer();
+        $serializer = new JsonSerializer(true);
         $serializer->serializeMap(
             $outer,
             ['outer' => ['a' => new BigDecimal('1.25')]],
@@ -183,7 +181,7 @@ final class JsonSerializerTest extends TestCase
         ]);
         self::assertNotNull($document);
 
-        $serializer = new JsonSerializer();
+        $serializer = new JsonSerializer(true);
         $document->serialize($serializer, 0);
 
         self::assertSame(
@@ -203,7 +201,7 @@ final class JsonSerializerTest extends TestCase
             )
         );
 
-        $serializer = new JsonSerializer();
+        $serializer = new JsonSerializer(true);
         $serializer->serializeList(
             $schema,
             [AbstractDocument::fromValue(new BigInteger('0001'))],

@@ -28,7 +28,7 @@ final class JsonDeserializer implements ShapeDeserializerInterface
      */
     private readonly bool $honorJsonName;
 
-    public function __construct(string $source, bool $honorJsonName = true)
+    public function __construct(string $source, bool $honorJsonName)
     {
         $this->honorJsonName = $honorJsonName;
         if ($source === '') {
@@ -58,15 +58,7 @@ final class JsonDeserializer implements ShapeDeserializerInterface
         }
         // @httpPayload unions treat the whole document as the union value.
         if ($schema->type === ShapeType::Union->value) {
-            if (\is_array($this->parsed) && $this->parsed !== []) {
-                $member = new Schema(
-                    id: $schema->id,
-                    type: ShapeType::Union,
-                    members: [],
-                    targetClass: $schema->targetClass
-                );
-                $members[0] = $this->readUnion($member, $this->parsed);
-            }
+            $members[0] = $this->readUnion($schema, $this->parsed);
             return;
         }
 
@@ -74,6 +66,7 @@ final class JsonDeserializer implements ShapeDeserializerInterface
             // Only JSON objects can populate a struct.
             return;
         }
+
         $this->readStruct($schema, $this->parsed, $members);
     }
 
@@ -351,167 +344,22 @@ final class JsonDeserializer implements ShapeDeserializerInterface
         /** @var JsonSchemaExtension|null $info */
         $info = $member->getExtension($extKey);
         // Synthetic schemas may not have extension metadata.
-        $memberType = $info?->listMemberType ?? $itemSchema->type;
+        $itemType = $info?->listMemberType ?? $itemSchema->type;
+        $context = match ($itemType) {
+            ShapeType::Timestamp->value => $info?->listMemberTimestampFormat
+                ?? TimestampFormat::EpochSeconds,
+            ShapeType::Enum->value,
+            ShapeType::IntEnum->value => $info?->listMemberResolvedTargetClass,
+            default => $itemSchema,
+        };
 
         $out = [];
-        switch ($memberType) {
-            case 10:  // ShapeType::String_
-                foreach ($value as $item) {
-                    $out[] = $item === null ? null : (string) $item;
-                }
-                break;
-
-            case 4:  // ShapeType::Integer
-            case 5:  // ShapeType::Long
-            case 3: // ShapeType::Short
-            case 2: // ShapeType::Byte
-                foreach ($value as $item) {
-                    $out[] = $item === null ? null : (int) $item;
-                }
-                break;
-
-            case 1: // ShapeType::Boolean
-                foreach ($value as $item) {
-                    $out[] = $item === null ? null : (bool) $item;
-                }
-                break;
-
-            case 6: // ShapeType::Float_
-            case 7: // ShapeType::Double
-                foreach ($value as $item) {
-                    if ($item === null) {
-                        $out[] = null;
-                        continue;
-                    }
-                    $out[] = match ($item) {
-                            'NaN' => \NAN,
-                            'Infinity' => \INF,
-                            '-Infinity' => -\INF,
-                            default => (float) $item,
-                        };
-                }
-                break;
-
-            case 12: // ShapeType::Timestamp
-                // Timestamp lists reuse the precomputed format.
-                $fmt = $info?->listMemberTimestampFormat
-                    ?? TimestampFormat::EpochSeconds;
-                if ($fmt === TimestampFormat::EpochSeconds) {
-                    foreach ($value as $item) {
-                        if ($item === null) {
-                            $out[] = null;
-                            continue;
-                        }
-                        $out[] = \is_int($item) || \is_float($item)
-                            ? (float) $item
-                            : (float) (string) $item;
-                    }
-                } else {
-                    foreach ($value as $item) {
-                        $out[] = $item === null
-                            ? null
-                            : $fmt->parse((string) $item);
-                    }
-                }
-                break;
-
-            case 11: // ShapeType::Blob
-                foreach ($value as $item) {
-                    $out[] = $item === null
-                        ? null
-                        : (\base64_decode((string) $item, true) ?: '');
-                }
-                break;
-
-            case 17: // ShapeType::Enum
-                $target = $info?->listMemberResolvedTargetClass;
-                if ($target === null) {
-                    foreach ($value as $item) {
-                        $out[] = $item === null ? null : (string) $item;
-                    }
-                } else {
-                    foreach ($value as $item) {
-                        $out[] = $item === null
-                            ? null
-                            : $target::fromValue((string) $item);
-                    }
-                }
-                break;
-
-            case 18: // ShapeType::IntEnum
-                $target = $info?->listMemberResolvedTargetClass;
-                if ($target === null) {
-                    foreach ($value as $item) {
-                        $out[] = $item === null ? null : (int) $item;
-                    }
-                } else {
-                    foreach ($value as $item) {
-                        $out[] = $item === null
-                            ? null
-                            : $target::fromValue((int) $item);
-                    }
-                }
-                break;
-
-            case 8: // ShapeType::BigInteger
-                foreach ($value as $item) {
-                    $out[] = $item === null
-                        ? null
-                        : new BigInteger((string) $item);
-                }
-                break;
-
-            case 9: // ShapeType::BigDecimal
-                foreach ($value as $item) {
-                    $out[] = $item === null
-                        ? null
-                        : new BigDecimal((string) $item);
-                }
-                break;
-
-            case 15: // ShapeType::Structure
-                foreach ($value as $item) {
-                    $out[] = $item === null
-                        ? null
-                        : $this->readNestedStruct($itemSchema, $item);
-                }
-                break;
-
-            case 16: // ShapeType::Union
-                foreach ($value as $item) {
-                    $out[] = $item === null
-                        ? null
-                        : $this->readUnion($itemSchema, $item);
-                }
-                break;
-
-            case 13: // ShapeType::List_
-                foreach ($value as $item) {
-                    $out[] = $item === null
-                        ? null
-                        : $this->readList($itemSchema, $item);
-                }
-                break;
-
-            case 14: // ShapeType::Map
-                foreach ($value as $item) {
-                    $out[] = $item === null
-                        ? null
-                        : $this->readMap($itemSchema, $item);
-                }
-                break;
-
-            case 19: // ShapeType::Document
-                foreach ($value as $item) {
-                    $out[] = $item === null
-                        ? null
-                        : AbstractDocument::fromValue($item);
-                }
-                break;
-
-            default:
-                return $value;
+        foreach ($value as $item) {
+            $out[] = $item === null
+                ? null
+                : $this->readValue($itemType, $item, $context);
         }
+
         return $out;
     }
 
@@ -533,164 +381,19 @@ final class JsonDeserializer implements ShapeDeserializerInterface
         /** @var JsonSchemaExtension|null $info */
         $info = $member->getExtension($extKey);
         $valueType = $info?->mapValueType ?? $valueSchema->type;
+        $context = match ($valueType) {
+            ShapeType::Timestamp->value => $info?->mapValueTimestampFormat
+                ?? TimestampFormat::EpochSeconds,
+            ShapeType::Enum->value,
+            ShapeType::IntEnum->value => $info?->mapValueResolvedTargetClass,
+            default => $valueSchema,
+        };
 
         $out = [];
-        switch ($valueType) {
-            case 10: // ShapeType::String_
-                foreach ($value as $key => $v) {
-                    $out[$key] = $v === null ? null : (string) $v;
-                }
-                break;
-
-            case 4: // ShapeType::Integer
-            case 5: // ShapeType::Long
-            case 3: // ShapeType::Short
-            case 2: // ShapeType::Byte
-                foreach ($value as $key => $v) {
-                    $out[$key] = $v === null ? null : (int) $v;
-                }
-                break;
-
-            case 1: // ShapeType::Boolean
-                foreach ($value as $key => $v) {
-                    $out[$key] = $v === null ? null : (bool) $v;
-                }
-                break;
-
-            case 6: // ShapeType::Float_
-            case 7: // ShapeType::Double
-                foreach ($value as $key => $v) {
-                    if ($v === null) {
-                        $out[$key] = null;
-                        continue;
-                    }
-                    $out[$key] = match ($v) {
-                        'NaN' => \NAN,
-                        'Infinity' => \INF,
-                        '-Infinity' => -\INF,
-                        default => (float) $v,
-                    };
-                }
-                break;
-
-            case 12: // ShapeType::Timestamp
-                $fmt = $info?->mapValueTimestampFormat
-                    ?? TimestampFormat::EpochSeconds;
-                if ($fmt === TimestampFormat::EpochSeconds) {
-                    foreach ($value as $key => $v) {
-                        if ($v === null) {
-                            $out[$key] = null;
-                            continue;
-                        }
-                        $out[$key] = \is_int($v) || \is_float($v)
-                            ? (float) $v
-                            : (float) (string) $v;
-                    }
-                } else {
-                    foreach ($value as $key => $v) {
-                        $out[$key] = $v === null
-                            ? null
-                            : $fmt->parse((string) $v);
-                    }
-                }
-                break;
-
-            case 11: // ShapeType::Blob
-                foreach ($value as $key => $v) {
-                    $out[$key] = $v === null
-                        ? null
-                        : (\base64_decode((string) $v, true) ?: '');
-                }
-                break;
-
-            case 17: // ShapeType::Enum
-                $target = $info?->mapValueResolvedTargetClass;
-                if ($target === null) {
-                    foreach ($value as $key => $v) {
-                        $out[$key] = $v === null ? null : (string) $v;
-                    }
-                } else {
-                    foreach ($value as $key => $v) {
-                        $out[$key] = $v === null
-                            ? null
-                            : $target::fromValue((string) $v);
-                    }
-                }
-                break;
-
-            case 18: // ShapeType::IntEnum
-                $target = $info?->mapValueResolvedTargetClass;
-                if ($target === null) {
-                    foreach ($value as $key => $v) {
-                        $out[$key] = $v === null ? null : (int) $v;
-                    }
-                } else {
-                    foreach ($value as $key => $v) {
-                        $out[$key] = $v === null
-                            ? null
-                            : $target::fromValue((int) $v);
-                    }
-                }
-                break;
-
-            case 8: // ShapeType::BigInteger
-                foreach ($value as $key => $v) {
-                    $out[$key] = $v === null
-                        ? null
-                        : new BigInteger((string) $v);
-                }
-                break;
-
-            case 9: // ShapeType::BigDecimal
-                foreach ($value as $key => $v) {
-                    $out[$key] = $v === null
-                        ? null
-                        : new BigDecimal((string) $v);
-                }
-                break;
-
-            case 15: // ShapeType::Structure
-                foreach ($value as $key => $v) {
-                    $out[$key] = $v === null
-                        ? null
-                        : $this->readNestedStruct($valueSchema, $v);
-                }
-                break;
-
-            case 16: // ShapeType::Union
-                foreach ($value as $key => $v) {
-                    $out[$key] = $v === null
-                        ? null
-                        : $this->readUnion($valueSchema, $v);
-                }
-                break;
-
-            case 13: // ShapeType::List_
-                foreach ($value as $key => $v) {
-                    $out[$key] = $v === null
-                        ? null
-                        : $this->readList($valueSchema, $v);
-                }
-                break;
-
-            case 14: // ShapeType::Map
-                foreach ($value as $key => $v) {
-                    $out[$key] = $v === null
-                        ? null
-                        : $this->readMap($valueSchema, $v);
-                }
-                break;
-
-            case 19: // ShapeType::Document
-                foreach ($value as $key => $v) {
-                    $out[$key] = $v === null
-                        ? null
-                        : AbstractDocument::fromValue($v);
-                }
-                break;
-
-            default:
-                return $value;
+        foreach ($value as $key => $item) {
+            $out[$key] = $item === null
+                ? null
+                : $this->readValue($valueType, $item, $context);
         }
 
         return $out;
