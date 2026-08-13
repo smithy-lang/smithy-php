@@ -2,7 +2,7 @@
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
-[Smithy](https://smithy.io/2.0/index.html) code generators for clients, servers, and shapes for [PHP](https://www.php.net/.
+[Smithy](https://smithy.io/2.0/index.html) code generators for clients, servers, and shapes for [PHP](https://www.php.net/).
 
 > [!IMPORTANT]
 > All interfaces are subject to change.
