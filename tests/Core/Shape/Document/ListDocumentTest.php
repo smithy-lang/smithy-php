@@ -24,9 +24,9 @@ final class ListDocumentTest extends TestCase
     public function testAsListReturnsStoredItems(): void
     {
         $items = [
-            AbstractDocument::ofString('a'),
+            AbstractDocument::fromString('a'),
             null,
-            AbstractDocument::ofInteger(1)
+            AbstractDocument::fromInteger(1)
         ];
         $this->assertSame($items, (new ListDocument($items))->asList());
     }
@@ -39,7 +39,7 @@ final class ListDocumentTest extends TestCase
 
     public function testSerializeDispatchesToSerializeList(): void
     {
-        $items = [AbstractDocument::ofString('a')];
+        $items = [AbstractDocument::fromString('a')];
         $schema = new Schema(id: 'com.example#Names', type: ShapeType::List_);
         $serializer = $this->createMock(ShapeSerializerInterface::class);
         $serializer->expects($this->once())

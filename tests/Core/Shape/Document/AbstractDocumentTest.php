@@ -29,170 +29,186 @@ use Smithy\Core\Shape\Document\TimestampDocument;
 use Smithy\Core\Shape\Document\TimestampValue;
 
 /**
- * Covers `AbstractDocument`'s factory routing, `ofObject()` recursive coercion, schema attachment,
- * and unsupported-type rejection. Per-concrete accessor and serialization behavior lives in each
- * concrete's own test file.
+ * Covers `AbstractDocument`'s factory routing, `fromValue()` recursive coercion, schema
+ * attachment, and unsupported-type rejection. Per-concrete accessor and serialization behavior
+ * lives in each concrete's own test file.
  */
 #[CoversClass(AbstractDocument::class)]
 final class AbstractDocumentTest extends TestCase
 {
-    public function testOfStringReturnsStringDocument(): void
+    public function testFromStringReturnsStringDocument(): void
     {
         $this->assertInstanceOf(
             StringDocument::class,
-            AbstractDocument::ofString('hello')
+            AbstractDocument::fromString('hello')
         );
     }
 
-    public function testOfBooleanReturnsBooleanDocument(): void
+    public function testFromBooleanReturnsBooleanDocument(): void
     {
         $this->assertInstanceOf(
             BooleanDocument::class,
-            AbstractDocument::ofBoolean(true)
+            AbstractDocument::fromBoolean(true)
         );
     }
 
-    public function testOfIntegerReturnsIntegerDocument(): void
+    public function testFromIntegerReturnsIntegerDocument(): void
     {
         $this->assertInstanceOf(
             IntegerDocument::class,
-            AbstractDocument::ofInteger(42)
+            AbstractDocument::fromInteger(42)
         );
     }
 
-    public function testOfLongReturnsLongDocument(): void
+    public function testFromLongReturnsLongDocument(): void
     {
         $this->assertInstanceOf(
             LongDocument::class,
-            AbstractDocument::ofLong(2_147_483_648)
+            AbstractDocument::fromLong(2_147_483_648)
         );
     }
 
-    public function testOfShortReturnsShortDocument(): void
+    public function testFromShortReturnsShortDocument(): void
     {
         $this->assertInstanceOf(
             ShortDocument::class,
-            AbstractDocument::ofShort(100)
+            AbstractDocument::fromShort(100)
         );
     }
 
-    public function testOfByteReturnsByteDocument(): void
+    public function testFromByteReturnsByteDocument(): void
     {
         $this->assertInstanceOf(
             ByteDocument::class,
-            AbstractDocument::ofByte(7)
+            AbstractDocument::fromByte(7)
         );
     }
 
-    public function testOfFloatReturnsFloatDocument(): void
+    public function testFromFloatReturnsFloatDocument(): void
     {
         $this->assertInstanceOf(
             FloatDocument::class,
-            AbstractDocument::ofFloat(3.14)
+            AbstractDocument::fromFloat(3.14)
         );
     }
 
-    public function testOfDoubleReturnsDoubleDocument(): void
+    public function testFromDoubleReturnsDoubleDocument(): void
     {
         $this->assertInstanceOf(
             DoubleDocument::class,
-            AbstractDocument::ofDouble(2.71828)
+            AbstractDocument::fromDouble(2.71828)
         );
     }
 
-    public function testOfBigIntegerReturnsBigIntegerDocument(): void
+    public function testFromBigIntegerReturnsBigIntegerDocument(): void
     {
-        $doc = AbstractDocument::ofBigInteger(
+        $doc = AbstractDocument::fromBigInteger(
             new BigInteger('12345678901234567890')
         );
         $this->assertInstanceOf(BigIntegerDocument::class, $doc);
     }
 
-    public function testOfBigDecimalReturnsBigDecimalDocument(): void
+    public function testFromBigDecimalReturnsBigDecimalDocument(): void
     {
-        $doc = AbstractDocument::ofBigDecimal(
+        $doc = AbstractDocument::fromBigDecimal(
             new BigDecimal('3.14159265358979323846')
         );
         $this->assertInstanceOf(BigDecimalDocument::class, $doc);
     }
 
-    public function testOfBlobReturnsBlobDocument(): void
+    public function testFromBlobReturnsBlobDocument(): void
     {
         $this->assertInstanceOf(
             BlobDocument::class,
-            AbstractDocument::ofBlob("\x00\x01\x02")
+            AbstractDocument::fromBlob("\x00\x01\x02")
         );
     }
 
-    public function testOfTimestampReturnsTimestampDocument(): void
+    public function testFromBlobAcceptsBlobValue(): void
+    {
+        $doc = AbstractDocument::fromBlob(new BlobValue("\x00\x01\x02"));
+        $this->assertInstanceOf(BlobDocument::class, $doc);
+        $this->assertSame("\x00\x01\x02", $doc->asBlob());
+    }
+
+    public function testFromTimestampReturnsTimestampDocument(): void
     {
         $this->assertInstanceOf(
             TimestampDocument::class,
-            AbstractDocument::ofTimestamp(1_700_000_000)
+            AbstractDocument::fromTimestamp(1_700_000_000)
         );
     }
 
-    public function testOfNullReturnsNull(): void
+    public function testFromTimestampAcceptsTimestampValue(): void
     {
-        $this->assertNull(AbstractDocument::ofObject(null));
+        $doc = AbstractDocument::fromTimestamp(
+            new TimestampValue(1_700_000_000)
+        );
+        $this->assertInstanceOf(TimestampDocument::class, $doc);
+        $this->assertSame(1_700_000_000.0, $doc->asTimestamp());
     }
 
-    public function testOfListReturnsListDocument(): void
+    public function testFromValueNullReturnsNull(): void
+    {
+        $this->assertNull(AbstractDocument::fromValue(null));
+    }
+
+    public function testFromListReturnsListDocument(): void
     {
         $this->assertInstanceOf(
             ListDocument::class,
-            AbstractDocument::ofList([])
+            AbstractDocument::fromList([])
         );
     }
 
-    public function testOfMapReturnsMapDocument(): void
+    public function testFromMapReturnsMapDocument(): void
     {
         $this->assertInstanceOf(
             MapDocument::class,
-            AbstractDocument::ofMap([])
+            AbstractDocument::fromMap([])
         );
     }
 
-    public function testOfObjectFromString(): void
+    public function testFromValueFromString(): void
     {
         $this->assertInstanceOf(
             StringDocument::class,
-            AbstractDocument::ofObject('hello')
+            AbstractDocument::fromValue('hello')
         );
     }
 
-    public function testOfObjectFromInt(): void
+    public function testFromValueFromInt(): void
     {
         $this->assertInstanceOf(
             IntegerDocument::class,
-            AbstractDocument::ofObject(42)
+            AbstractDocument::fromValue(42)
         );
     }
 
-    public function testOfObjectFromFloatGivesDouble(): void
+    public function testFromValueFromFloatGivesDouble(): void
     {
         $this->assertInstanceOf(
             DoubleDocument::class,
-            AbstractDocument::ofObject(3.14)
+            AbstractDocument::fromValue(3.14)
         );
     }
 
-    public function testOfObjectFromBool(): void
+    public function testFromValueFromBool(): void
     {
         $this->assertInstanceOf(
             BooleanDocument::class,
-            AbstractDocument::ofObject(true)
+            AbstractDocument::fromValue(true)
         );
     }
 
-    public function testOfObjectFromNull(): void
+    public function testFromValueFromNull(): void
     {
-        $this->assertNull(AbstractDocument::ofObject(null));
+        $this->assertNull(AbstractDocument::fromValue(null));
     }
 
-    public function testOfObjectFromListArrayGivesList(): void
+    public function testFromValueFromListArrayGivesList(): void
     {
-        $doc = AbstractDocument::ofObject(['a', 'b', 1]);
+        $doc = AbstractDocument::fromValue(['a', 'b', 1]);
         $this->assertInstanceOf(ListDocument::class, $doc);
         $items = $doc->asList();
         $this->assertCount(3, $items);
@@ -200,26 +216,26 @@ final class AbstractDocumentTest extends TestCase
         $this->assertSame(1, $items[2]->asInteger());
     }
 
-    public function testOfObjectFromAssocArrayGivesMap(): void
+    public function testFromValueFromAssocArrayGivesMap(): void
     {
-        $doc = AbstractDocument::ofObject(['name' => 'Sam', 'age' => 40]);
+        $doc = AbstractDocument::fromValue(['name' => 'Sam', 'age' => 40]);
         $this->assertInstanceOf(MapDocument::class, $doc);
         $this->assertSame('Sam', $doc->getMember('name')->asString());
         $this->assertSame(40, $doc->getMember('age')->asInteger());
     }
 
-    public function testOfObjectFromStdClass(): void
+    public function testFromValueFromStdClass(): void
     {
-        $doc = AbstractDocument::ofObject(
+        $doc = AbstractDocument::fromValue(
             (object) ['name' => 'Sam', 'age' => 40]
         );
         $this->assertInstanceOf(MapDocument::class, $doc);
         $this->assertSame('Sam', $doc->getMember('name')->asString());
     }
 
-    public function testOfObjectRecursesIntoNestedStructure(): void
+    public function testFromValueRecursesIntoNestedStructure(): void
     {
-        $doc = AbstractDocument::ofObject([
+        $doc = AbstractDocument::fromValue([
             'tags' => ['x', null, 'y'],
             'meta' => ['active' => true, 'version' => 3, 'note' => null]
         ]);
@@ -233,73 +249,73 @@ final class AbstractDocumentTest extends TestCase
         $this->assertNull($meta->getMember('note'));
     }
 
-    public function testOfObjectRecognizesBlobValueWrapper(): void
+    public function testFromValueRecognizesBlobValueWrapper(): void
     {
-        $doc = AbstractDocument::ofObject(new BlobValue("\x00\x01"));
+        $doc = AbstractDocument::fromValue(new BlobValue("\x00\x01"));
         $this->assertInstanceOf(BlobDocument::class, $doc);
         $this->assertSame("\x00\x01", $doc->asBlob());
     }
 
-    public function testOfObjectRecognizesTimestampValueWrapper(): void
+    public function testFromValueRecognizesTimestampValueWrapper(): void
     {
-        $doc = AbstractDocument::ofObject(new TimestampValue(1_700_000_000));
+        $doc = AbstractDocument::fromValue(new TimestampValue(1_700_000_000));
         $this->assertInstanceOf(TimestampDocument::class, $doc);
         $this->assertSame(1_700_000_000.0, $doc->asTimestamp());
     }
 
-    public function testOfObjectRecognizesBigInteger(): void
+    public function testFromValueRecognizesBigInteger(): void
     {
-        $doc = AbstractDocument::ofObject(
+        $doc = AbstractDocument::fromValue(
             new BigInteger('99999999999999999999999')
         );
         $this->assertInstanceOf(BigIntegerDocument::class, $doc);
     }
 
-    public function testOfObjectRecognizesBigDecimal(): void
+    public function testFromValueRecognizesBigDecimal(): void
     {
-        $doc = AbstractDocument::ofObject(new BigDecimal('1.234e-10'));
+        $doc = AbstractDocument::fromValue(new BigDecimal('1.234e-10'));
         $this->assertInstanceOf(BigDecimalDocument::class, $doc);
     }
 
-    public function testOfObjectReturnsExistingDocumentUnchanged(): void
+    public function testFromValueReturnsExistingDocumentUnchanged(): void
     {
-        $existing = AbstractDocument::ofString('hello');
-        $this->assertSame($existing, AbstractDocument::ofObject($existing));
+        $existing = AbstractDocument::fromString('hello');
+        $this->assertSame($existing, AbstractDocument::fromValue($existing));
     }
 
-    public function testOfObjectRejectsResource(): void
+    public function testFromValueRejectsResource(): void
     {
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessageMatches(
             '/Cannot build a document from value of type/'
         );
-        AbstractDocument::ofObject(\fopen('php://memory', 'r'));
+        AbstractDocument::fromValue(\fopen('php://memory', 'r'));
     }
 
-    public function testOfObjectRejectsUnknownObjectClass(): void
+    public function testFromValueRejectsUnknownObjectClass(): void
     {
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessageMatches(
             '/Cannot build a document from value of class/'
         );
-        AbstractDocument::ofObject(new \DateTimeImmutable());
+        AbstractDocument::fromValue(new \DateTimeImmutable());
     }
 
     public function testSchemaIsCarriedForward(): void
     {
         $schema = new Schema(id: 'com.example#Foo', type: ShapeType::String_);
-        $doc = AbstractDocument::ofString('hello', $schema);
+        $doc = AbstractDocument::fromString('hello', $schema);
         $this->assertSame($schema, $doc->schema());
         $this->assertSame('com.example#Foo', $doc->discriminator());
     }
 
     public function testDiscriminatorIsNullForUntypedDocuments(): void
     {
-        $this->assertNull(AbstractDocument::ofString('hello')->discriminator());
+        $this->assertNull(AbstractDocument::fromString('hello')->discriminator());
     }
 
     public function testSchemaAccessorReturnsNullWhenAbsent(): void
     {
-        $this->assertNull(AbstractDocument::ofString('hello')->schema());
+        $this->assertNull(AbstractDocument::fromString('hello')->schema());
     }
 }
