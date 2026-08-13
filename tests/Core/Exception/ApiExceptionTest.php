@@ -54,7 +54,7 @@ final class ApiExceptionTest extends TestCase
         $exception = new ApiException(
             message: 'request failed',
             fault: ErrorFault::Server,
-            previous: $previous,
+            previous: $previous
         );
 
         $this->assertSame('request failed', $exception->getMessage());

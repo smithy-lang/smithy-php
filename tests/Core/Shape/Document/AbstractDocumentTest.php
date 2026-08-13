@@ -23,7 +23,6 @@ use Smithy\Core\Shape\Document\IntegerDocument;
 use Smithy\Core\Shape\Document\ListDocument;
 use Smithy\Core\Shape\Document\LongDocument;
 use Smithy\Core\Shape\Document\MapDocument;
-use Smithy\Core\Shape\Document\NullDocument;
 use Smithy\Core\Shape\Document\ShortDocument;
 use Smithy\Core\Shape\Document\StringDocument;
 use Smithy\Core\Shape\Document\TimestampDocument;
@@ -135,12 +134,9 @@ final class AbstractDocumentTest extends TestCase
         );
     }
 
-    public function testOfNullReturnsNullDocument(): void
+    public function testOfNullReturnsNull(): void
     {
-        $this->assertInstanceOf(
-            NullDocument::class,
-            AbstractDocument::ofNull()
-        );
+        $this->assertNull(AbstractDocument::ofObject(null));
     }
 
     public function testOfListReturnsListDocument(): void
@@ -195,10 +191,7 @@ final class AbstractDocumentTest extends TestCase
 
     public function testOfObjectFromNull(): void
     {
-        $this->assertInstanceOf(
-            NullDocument::class,
-            AbstractDocument::ofObject(null)
-        );
+        $this->assertNull(AbstractDocument::ofObject(null));
     }
 
     public function testOfObjectFromListArrayGivesList(): void
@@ -231,15 +224,17 @@ final class AbstractDocumentTest extends TestCase
     public function testOfObjectRecursesIntoNestedStructure(): void
     {
         $doc = AbstractDocument::ofObject([
-            'tags' => ['x', 'y'],
-            'meta' => ['active' => true, 'version' => 3]
+            'tags' => ['x', null, 'y'],
+            'meta' => ['active' => true, 'version' => 3, 'note' => null]
         ]);
         $tags = $doc->getMember('tags');
         $this->assertInstanceOf(ListDocument::class, $tags);
-        $this->assertSame('y', $tags->asList()[1]->asString());
+        $this->assertNull($tags->asList()[1]);
+        $this->assertSame('y', $tags->asList()[2]->asString());
         $meta = $doc->getMember('meta');
         $this->assertInstanceOf(MapDocument::class, $meta);
         $this->assertTrue($meta->getMember('active')->asBoolean());
+        $this->assertNull($meta->getMember('note'));
     }
 
     public function testOfObjectRecognizesBlobValueWrapper(): void
