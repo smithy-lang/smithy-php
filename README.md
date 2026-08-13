@@ -28,7 +28,7 @@ The [Codegen](./Codegen) namespace contains the source code for generating clien
 If this is your first time using Smithy, follow the [Smithy Quickstart guide](https://smithy.io/2.0/quickstart.html)
 to learn the basics and create a simple Smithy model.
 
-For a guided introduction to this project, see the **TODO:** write quickstart guide.
+For a guided introduction to this project, see the (**TODO:** write quickstart guide)
 
 ## Core modules and Interfaces
 
