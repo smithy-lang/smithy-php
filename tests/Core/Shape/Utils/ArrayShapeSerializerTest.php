@@ -5,15 +5,19 @@ declare(strict_types=1);
 namespace Smithy\Tests\Core\Shape\Utils;
 
 use PHPUnit\Framework\TestCase;
-use Smithy\Core\Serde\Schema;
-use Smithy\Core\Serde\SerializableStructInterface;
-use Smithy\Core\Serde\ShapeSerializerInterface;
-use Smithy\Core\Serde\ShapeType;
 use Smithy\Core\Shape\BigInteger;
-use Smithy\Core\Shape\Document\AbstractDocument;
 use Smithy\Core\Shape\Document\IntegerDocument;
 use Smithy\Core\Shape\Document\StringDocument;
 use Smithy\Core\Shape\Utils\ArrayShapeSerializer;
+use Smithy\Tests\Core\Shape\Utils\Utils\{
+    ArrayShapeSerializerBigNumberFixture,
+    ArrayShapeSerializerDocumentFixture,
+    ArrayShapeSerializerFloatFixture,
+    ArrayShapeSerializerListFixture,
+    ArrayShapeSerializerScalarFixture,
+    ArrayShapeSerializerTimestampFixture,
+    ArrayShapeSerializerV3CompatFixture
+};
 
 final class ArrayShapeSerializerTest extends TestCase
 {
@@ -261,230 +265,5 @@ final class ArrayShapeSerializerTest extends TestCase
             ['doc' => $doc]
         );
         $this->assertSame($doc, $obj->doc);
-    }
-}
-
-abstract class AbstractArrayShapeSerializerFixture implements SerializableStructInterface
-{
-    public function serialize(ShapeSerializerInterface $serializer, int $idx): void
-    {
-        // Not exercised by these tests — ArrayShapeSerializer drives the
-        // schema-walk path, not the codec dispatch path.
-    }
-
-    public function serializeMembers(ShapeSerializerInterface $serializer): void {}
-
-    public function getMemberValue(Schema $member): mixed
-    {
-        return null;
-    }
-
-    public static function fromMembers(array $fields): static
-    {
-        throw new \BadMethodCallException('Not used in these tests.');
-    }
-}
-
-final class ArrayShapeSerializerScalarFixture extends AbstractArrayShapeSerializerFixture
-{
-    private static Schema $SCHEMA;
-
-    public function __construct(
-        public readonly string $name,
-        public readonly int $count,
-        public readonly ?bool $active = null
-    )
-    {
-    }
-
-    public static function schema(): Schema
-    {
-        return self::$SCHEMA ??= new Schema(
-            id: 'test#ArrayShapeSerializerScalarFixture',
-            type: ShapeType::Structure,
-            members: [
-                new Schema(
-                    id: 'smithy.api#String',
-                    type: ShapeType::String_,
-                    memberName: 'name',
-                    memberIndex: 0
-                ),
-                new Schema(
-                    id: 'smithy.api#Integer',
-                    type: ShapeType::Integer,
-                    memberName: 'count',
-                    memberIndex: 1
-                ),
-                new Schema(
-                    id: 'smithy.api#Boolean',
-                    type: ShapeType::Boolean,
-                    memberName: 'active',
-                    memberIndex: 2
-                )
-            ],
-            targetClass: self::class
-        );
-    }
-}
-
-final class ArrayShapeSerializerBigNumberFixture extends AbstractArrayShapeSerializerFixture
-{
-    private static Schema $SCHEMA;
-
-    public function __construct(public readonly BigInteger $big) {}
-
-    public static function schema(): Schema
-    {
-        return self::$SCHEMA ??= new Schema(
-            id: 'test#ArrayShapeSerializerBigNumberFixture',
-            type: ShapeType::Structure,
-            members: [
-                new Schema(
-                    id: 'smithy.api#BigInteger',
-                    type: ShapeType::BigInteger,
-                    memberName: 'big',
-                    memberIndex: 0
-                )
-            ],
-            targetClass: self::class
-        );
-    }
-}
-
-final class ArrayShapeSerializerListFixture extends AbstractArrayShapeSerializerFixture
-{
-    private static Schema $SCHEMA;
-
-    /**
-     * @param list<BigInteger> $big
-     */
-    public function __construct(public readonly array $big) {}
-
-    public static function schema(): Schema
-    {
-        return self::$SCHEMA ??= new Schema(
-            id: 'test#ArrayShapeSerializerListFixture',
-            type: ShapeType::Structure,
-            members: [
-                new Schema(
-                    id: 'test#bigList',
-                    type: ShapeType::List_,
-                    memberName: 'big',
-                    memberIndex: 0,
-                    listMember: new Schema(
-                        id: 'smithy.api#BigInteger',
-                        type: ShapeType::BigInteger
-                    )
-                )
-            ],
-            targetClass: self::class
-        );
-    }
-}
-
-final class ArrayShapeSerializerFloatFixture extends AbstractArrayShapeSerializerFixture
-{
-    private static Schema $SCHEMA;
-
-    public function __construct(public readonly float $v) {}
-
-    public static function schema(): Schema
-    {
-        return self::$SCHEMA ??= new Schema(
-            id: 'test#ArrayShapeSerializerFloatFixture',
-            type: ShapeType::Structure,
-            members: [
-                new Schema(
-                    id: 'smithy.api#Float',
-                    type: ShapeType::Float_,
-                    memberName: 'v',
-                    memberIndex: 0
-                )
-            ],
-            targetClass: self::class
-        );
-    }
-}
-
-final class ArrayShapeSerializerTimestampFixture extends AbstractArrayShapeSerializerFixture
-{
-    private static Schema $SCHEMA;
-
-    public function __construct(public readonly float $t) {}
-
-    public static function schema(): Schema
-    {
-        return self::$SCHEMA ??= new Schema(
-            id: 'test#ArrayShapeSerializerTimestampFixture',
-            type: ShapeType::Structure,
-            members: [
-                new Schema(
-                    id: 'smithy.api#Timestamp',
-                    type: ShapeType::Timestamp,
-                    memberName: 't',
-                    memberIndex: 0
-                )
-            ],
-            targetClass: self::class
-        );
-    }
-}
-
-final class ArrayShapeSerializerV3CompatFixture extends AbstractArrayShapeSerializerFixture
-{
-    private static Schema $SCHEMA;
-
-    public function __construct(
-        public readonly string $name,
-        public readonly int $count
-    )
-    {
-    }
-
-    public static function schema(): Schema
-    {
-        return self::$SCHEMA ??= new Schema(
-            id: 'test#ArrayShapeSerializerV3CompatFixture',
-            type: ShapeType::Structure,
-            members: [
-                new Schema(
-                    id: 'smithy.api#String',
-                    type: ShapeType::String_,
-                    memberName: 'name',
-                    memberIndex: 0
-                ),
-                new Schema(
-                    id: 'smithy.api#Integer',
-                    type: ShapeType::Integer,
-                    memberName: 'count',
-                    memberIndex: 1
-                )
-            ],
-            targetClass: self::class
-        );
-    }
-}
-
-final class ArrayShapeSerializerDocumentFixture extends AbstractArrayShapeSerializerFixture
-{
-    private static Schema $SCHEMA;
-
-    public function __construct(public readonly ?AbstractDocument $doc = null) {}
-
-    public static function schema(): Schema
-    {
-        return self::$SCHEMA ??= new Schema(
-            id: 'test#ArrayShapeSerializerDocumentFixture',
-            type: ShapeType::Structure,
-            members: [
-                new Schema(
-                    id: 'smithy.api#Document',
-                    type: ShapeType::Document,
-                    memberName: 'doc',
-                    memberIndex: 0
-                )
-            ],
-            targetClass: self::class
-        );
     }
 }
