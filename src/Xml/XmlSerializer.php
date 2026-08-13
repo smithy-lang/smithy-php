@@ -46,14 +46,14 @@ final class XmlSerializer implements ShapeSerializerInterface
     private array $writerPool;
 
     /**
-     * @param string|null      $defaultNamespace Default namespace for
-     *                                           unqualified structs.
+     * @param string|null      $defaultXmlNamespace Default XML namespace for
+     *                                              unqualified structs.
      * @param \XMLWriter       $writer Backing XML writer.
      * @param list<\XMLWriter> $writerPool Idle codec-owned writers available
      *                                     for reuse.
      */
     public function __construct(
-        private readonly ?string $defaultNamespace,
+        private readonly ?string $defaultXmlNamespace,
         private readonly \XMLWriter $writer,
         array &$writerPool = []
     ) {
@@ -435,8 +435,8 @@ final class XmlSerializer implements ShapeSerializerInterface
             } else {
                 $this->writer->writeAttribute('xmlns', $ns['uri']);
             }
-        } elseif ($this->defaultNamespace && $schema->memberName) {
-            $this->writer->writeAttribute('xmlns', $this->defaultNamespace);
+        } elseif ($this->defaultXmlNamespace && $schema->memberName) {
+            $this->writer->writeAttribute('xmlns', $this->defaultXmlNamespace);
         }
 
         $prevWireNames = $this->wireNames;
@@ -514,8 +514,8 @@ final class XmlSerializer implements ShapeSerializerInterface
             } else {
                 $this->writer->writeAttribute('xmlns', $ns['uri']);
             }
-        } elseif ($this->defaultNamespace && $schema->memberName) {
-            $this->writer->writeAttribute('xmlns', $this->defaultNamespace);
+        } elseif ($this->defaultXmlNamespace && $schema->memberName) {
+            $this->writer->writeAttribute('xmlns', $this->defaultXmlNamespace);
         }
 
         $this->wireNames = $info->memberWireNames;
