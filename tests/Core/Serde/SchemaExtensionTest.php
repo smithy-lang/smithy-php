@@ -36,9 +36,12 @@ class SchemaExtensionTest extends TestCase
     {
         $callCount = 0;
 
-        $provider = new class($callCount) implements SchemaExtensionProviderInterface {
+        $provider = new class($callCount) implements
+            SchemaExtensionProviderInterface
+        {
             public function __construct(private int &$count) {}
-            public function provide(Schema $schema): mixed {
+            public function provide(Schema $schema): mixed
+            {
                 $this->count++;
                 return 'computed_' . $schema->id;
             }

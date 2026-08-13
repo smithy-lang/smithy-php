@@ -11,20 +11,17 @@ use Smithy\Core\Serde\Schema;
 use Smithy\Core\Serde\ShapeType;
 
 /**
- * The prelude schema table is a static singleton cache that is eagerly
- * initialized on file load. Every member-schema target that resolves to a
- * `smithy.api#*` primitive short-circuits through {@see PreludeSchemas::get()}
- * instead of allocating a fresh Schema, so both the identity and the
- * `(shapeId, ShapeType)` pairing of each singleton are load-bearing for
- * codec correctness. Renaming a case, dropping one, or drifting the
- * ShapeType mapping silently corrupts every serialized primitive.
+ * The prelude schema table is a static singleton cache that is eagerly initialized on file load.
+ * Every member-schema target that resolves to a `smithy.api#*` primitive short-circuits through
+ * {@see PreludeSchemas::get()} instead of allocating a fresh Schema, so both the identity and the
+ * `(shapeId, ShapeType)` pairing of each singleton are load-bearing for codec correctness. Renaming
+ * a case, dropping one, or drifting the ShapeType mapping silently corrupts every serialized
+ * primitive.
  *
- * The tests here pin: (1) that the eager init on file load actually
- * populated the singletons, (2) that each `get()` returns the exact same
- * Schema instance every time (identity, not equality — that's what the
- * hot-path relies on), (3) that the shape-id → ShapeType mapping is
- * stable, and (4) the `isPreludeShape()` predicate's positive/negative
- * behaviors.
+ * The tests here pin: (1) that the eager init on file load actually populated the singletons, (2)
+ * that each `get()` returns the exact same Schema instance every time (identity, not equality,
+ * that's what the hot-path relies on), (3) that the shape-id → ShapeType mapping is stable, and (4)
+ * the `isPreludeShape()` predicate's positive/negative behaviors.
  */
 final class PreludeSchemasTest extends TestCase
 {
@@ -32,7 +29,7 @@ final class PreludeSchemasTest extends TestCase
     {
         // The file-load `PreludeSchemas::init()` call at the bottom of the
         // source file means these public statics are guaranteed populated
-        // by the time any test — or any consumer — runs. If the eager
+        // by the time any test, or any consumer, runs. If the eager
         // init line is ever removed, the next assertion catches it before
         // a downstream NPE does.
         $this->assertInstanceOf(Schema::class, PreludeSchemas::$STRING);
@@ -53,7 +50,7 @@ final class PreludeSchemasTest extends TestCase
     public function testInitIsIdempotent(): void
     {
         // Calling init() explicitly after eager init should be a no-op
-        // that returns the same instances — the hot path assumes prelude
+        // that returns the same instances, the hot path assumes prelude
         // Schema identity is stable for the lifetime of the process.
         $before = PreludeSchemas::$STRING;
         PreludeSchemas::init();
@@ -64,13 +61,19 @@ final class PreludeSchemasTest extends TestCase
      * @param non-empty-string $shapeId
      */
     #[DataProvider('preludeShapeMappings')]
-    public function testGetReturnsExpectedShapeIdAndType(string $shapeId, ShapeType $type): void
+    public function testGetReturnsExpectedShapeIdAndType(
+        string $shapeId,
+        ShapeType $type,
+    ): void
     {
         $schema = PreludeSchemas::get($shapeId);
 
-        $this->assertNotNull($schema, "Expected a prelude schema for {$shapeId}");
+        $this->assertNotNull(
+            $schema,
+            "Expected a prelude schema for {$shapeId}",
+        );
         $this->assertSame($shapeId, $schema->id);
-        // Schema stores the int-encoded discriminant; unwrap for readability.
+        // Schema stores the int-encoded discriminant, unwrap for readability.
         $this->assertSame($type->value, $schema->type);
     }
 
@@ -80,10 +83,13 @@ final class PreludeSchemasTest extends TestCase
     #[DataProvider('preludeShapeMappings')]
     public function testGetReturnsSingletonInstance(string $shapeId, ShapeType $type): void
     {
-        // Identity across calls — codec hot paths compare Schemas by
+        // Identity across calls, codec hot paths compare Schemas by
         // reference. Two separately-allocated Schemas with matching
         // contents would still miss any object-identity cache.
-        $this->assertSame(PreludeSchemas::get($shapeId), PreludeSchemas::get($shapeId));
+        $this->assertSame(
+            PreludeSchemas::get($shapeId),
+            PreludeSchemas::get($shapeId),
+        );
     }
 
     public function testGetReturnsNullForUnknownPreludeShape(): void
@@ -93,7 +99,7 @@ final class PreludeSchemasTest extends TestCase
 
     public function testGetReturnsNullForNonPreludeNamespace(): void
     {
-        // A well-formed but non-prelude shape id must not resolve —
+        // A well-formed but non-prelude shape id must not resolve, 
         // otherwise a service model shape that happens to share a name
         // with a prelude type would be silently replaced by the
         // singleton, corrupting its members.
@@ -104,14 +110,17 @@ final class PreludeSchemasTest extends TestCase
      * @param non-empty-string $shapeId
      */
     #[DataProvider('preludeShapeMappings')]
-    public function testIsPreludeShapeReturnsTrueForKnownPreludeShapes(string $shapeId, ShapeType $type): void
+    public function testIsPreludeShapeReturnsTrueForKnownPreludeShapes(
+        string $shapeId,
+        ShapeType $type,
+    ): void
     {
         $this->assertTrue(PreludeSchemas::isPreludeShape($shapeId));
     }
 
     public function testIsPreludeShapeReturnsFalseForUnknownPreludeName(): void
     {
-        // The namespace check succeeds but the lookup misses — this is
+        // The namespace check succeeds but the lookup misses, this is
         // the branch that guards against silently promoting a not-yet-
         // implemented prelude type into "yes it's fine, use null".
         $this->assertFalse(PreludeSchemas::isPreludeShape('smithy.api#Unit'));
@@ -119,7 +128,9 @@ final class PreludeSchemasTest extends TestCase
 
     public function testIsPreludeShapeReturnsFalseForForeignNamespace(): void
     {
-        $this->assertFalse(PreludeSchemas::isPreludeShape('com.example#String'));
+        $this->assertFalse(
+            PreludeSchemas::isPreludeShape('com.example#String'),
+        );
     }
 
     /**

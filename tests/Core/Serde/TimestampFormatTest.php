@@ -13,8 +13,11 @@ final class TimestampFormatTest extends TestCase
     public function testExposesThreeStableCases(): void
     {
         $this->assertSame(
-            ['DateTime', 'HttpDate', 'EpochSeconds'],
-            array_map(static fn(TimestampFormat $c): string => $c->name, TimestampFormat::cases()),
+            ['EpochSeconds', 'DateTime', 'HttpDate'],
+            array_map(
+                static fn(TimestampFormat $c): string => $c->name,
+                TimestampFormat::cases(),
+            ),
         );
     }
 
@@ -22,7 +25,7 @@ final class TimestampFormatTest extends TestCase
     public function testIntegerBackingIsStable(string $name, int $value): void
     {
         // The int backings are literal-inlined into hot-path switches in
-        // `format()` and `parse()` and downstream serializers — reassigning
+        // `format()` and `parse()` and downstream serializers, reassigning
         // any of them is an ABI break.
         $this->assertSame($value, TimestampFormat::from($value)->value);
         $this->assertSame($name, TimestampFormat::from($value)->name);
@@ -34,9 +37,9 @@ final class TimestampFormatTest extends TestCase
     public static function backingValuePairs(): array
     {
         return [
-            'DateTime = 0' => ['DateTime', 0],
-            'HttpDate = 1' => ['HttpDate', 1],
-            'EpochSeconds = 2' => ['EpochSeconds', 2],
+            'EpochSeconds = 0' => ['EpochSeconds', 0],
+            'DateTime = 1' => ['DateTime', 1],
+            'HttpDate = 2' => ['HttpDate', 2],
         ];
     }
 
@@ -62,34 +65,48 @@ final class TimestampFormatTest extends TestCase
 
     public function testFormatEpochSecondsPrintsRawFloatValue(): void
     {
-        $this->assertSame('1705314600', TimestampFormat::EpochSeconds->format(1705314600.0));
+        $this->assertSame(
+            '1705314600',
+            TimestampFormat::EpochSeconds->format(1705314600.0),
+        );
     }
 
     public function testFormatEpochSecondsPreservesFractionalPart(): void
     {
-        // Fractional seconds should render via loose-typed `$value + 0` — PHP
+        // Fractional seconds should render via loose-typed `$value + 0`. PHP
         // prints a float verbatim when adding zero preserves the fraction.
-        $this->assertSame('1705314600.5', TimestampFormat::EpochSeconds->format(1705314600.5));
+        $this->assertSame(
+            '1705314600.5',
+            TimestampFormat::EpochSeconds->format(1705314600.5),
+        );
     }
 
     // ---- parse() ------------------------------------------------------
 
     public function testParseDateTimeRoundTripsIsoString(): void
     {
-        $this->assertSame(1705314600.0, (float) TimestampFormat::DateTime->parse('2024-01-15T10:30:00Z'));
+        $this->assertSame(
+            1705314600.0,
+            (float) TimestampFormat::DateTime->parse('2024-01-15T10:30:00Z'),
+        );
     }
 
     public function testParseHttpDateRoundTripsRfc7231String(): void
     {
         $this->assertSame(
             1705314600.0,
-            (float) TimestampFormat::HttpDate->parse('Mon, 15 Jan 2024 10:30:00 GMT'),
+            (float) TimestampFormat::HttpDate->parse(
+                'Mon, 15 Jan 2024 10:30:00 GMT',
+            ),
         );
     }
 
     public function testParseEpochSecondsCoercesNumericString(): void
     {
-        $this->assertSame(1705314600.0, TimestampFormat::EpochSeconds->parse('1705314600'));
+        $this->assertSame(
+            1705314600.0,
+            TimestampFormat::EpochSeconds->parse('1705314600'),
+        );
     }
 
     public function testParseDateTimeHandlesFractionalSecondsBeforeZ(): void
@@ -102,7 +119,7 @@ final class TimestampFormatTest extends TestCase
 
     public function testParseDateTimeHandlesTimezoneOffsetVariant(): void
     {
-        // Offset-bearing strings route to strtotime; 2024-01-15T10:30:00+00:00
+        // Offset-bearing strings route to strtotime, 2024-01-15T10:30:00+00:00
         // is the same instant as ...Z (epoch 1705314600).
         $result = TimestampFormat::DateTime->parse('2024-01-15T10:30:00+00:00');
         $this->assertSame(1705314600.0, (float) $result);
