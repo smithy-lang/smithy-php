@@ -26,7 +26,7 @@ final class CborDeserializerSampleStructFixture
         /** @var list<?string>|null */
         public readonly ?array $tags = null,
         /** @var array<string, ?int>|null */
-        public readonly ?array $scores = null,
+        public readonly ?array $scores = null
     ) {}
 
     public static function schema(): Schema
@@ -39,19 +39,19 @@ final class CborDeserializerSampleStructFixture
             id: 'smithy.test#Tags$member',
             type: ShapeType::String_,
             memberName: 'member',
-            memberIndex: 0,
+            memberIndex: 0
         );
         $mapKey = new Schema(
             id: 'smithy.test#Scores$key',
             type: ShapeType::String_,
             memberName: 'key',
-            memberIndex: 0,
+            memberIndex: 0
         );
         $mapValue = new Schema(
             id: 'smithy.test#Scores$value',
             type: ShapeType::Integer,
             memberName: 'value',
-            memberIndex: 1,
+            memberIndex: 1
         );
 
         self::$SCHEMA = new Schema(
@@ -117,7 +117,7 @@ final class CborDeserializerSampleStructFixture
             count: $fields[1] ?? null,
             active: $fields[2] ?? null,
             tags: $fields[3] ?? null,
-            scores: $fields[4] ?? null,
+            scores: $fields[4] ?? null
         );
     }
 }

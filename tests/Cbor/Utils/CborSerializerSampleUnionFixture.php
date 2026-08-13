@@ -20,7 +20,7 @@ final class CborSerializerSampleUnionFixture implements UnionInterface
 
     public function __construct(
         private readonly string $activeTag,
-        private readonly mixed $activeValue,
+        private readonly mixed $activeValue
     ) {}
 
     public static function schema(): Schema
@@ -38,15 +38,15 @@ final class CborSerializerSampleUnionFixture implements UnionInterface
                     id: 'smithy.test#SampleUnion$value',
                     type: ShapeType::String_,
                     memberName: 'value',
-                    memberIndex: 0,
+                    memberIndex: 0
                 ),
                 new Schema(
                     id: 'smithy.test#SampleUnion$count',
                     type: ShapeType::Integer,
                     memberName: 'count',
-                    memberIndex: 1,
-                ),
-            ],
+                    memberIndex: 1
+                )
+            ]
         );
 
         return self::$SCHEMA;

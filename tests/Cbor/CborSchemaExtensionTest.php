@@ -26,7 +26,7 @@ final class CborSchemaExtensionTest extends TestCase
             id: 'smithy.example#Foo$name',
             type: ShapeType::String_,
             memberName: 'name',
-            memberIndex: 0,
+            memberIndex: 0
         );
 
         /** @var CborSchemaExtension $info */
@@ -45,16 +45,16 @@ final class CborSchemaExtensionTest extends TestCase
                     id: 'smithy.example#Foo$name',
                     type: ShapeType::String_,
                     memberName: 'name',
-                    memberIndex: 0,
+                    memberIndex: 0
                 ),
                 new Schema(
                     id: 'smithy.example#Foo$age',
                     type: ShapeType::Integer,
                     memberName: 'age',
-                    memberIndex: 1,
-                ),
+                    memberIndex: 1
+                )
             ],
-            targetClass: CborSchemaFixture::class,
+            targetClass: CborSchemaFixture::class
         );
 
         /** @var CborSchemaExtension $info */
@@ -68,20 +68,20 @@ final class CborSchemaExtensionTest extends TestCase
         self::assertSame($schema, $info->resolvedTargetSchema);
         self::assertSame(
             ['name', 'age'],
-            $info->orderedMemberNameBytes,
+            $info->orderedMemberNameBytes
         );
         self::assertSame([4, 3], $info->orderedMemberNameLengths);
         self::assertSame(
             ['name', 'age'],
             [
                 $info->orderedMemberSchemas[0]->memberName,
-                $info->orderedMemberSchemas[1]->memberName,
-            ],
+                $info->orderedMemberSchemas[1]->memberName
+            ]
         );
         self::assertCount(2, $info->orderedMemberNameHashes);
         self::assertNotSame(
             $info->orderedMemberNameHashes[0],
-            $info->orderedMemberNameHashes[1],
+            $info->orderedMemberNameHashes[1]
         );
     }
 
@@ -94,9 +94,9 @@ final class CborSchemaExtensionTest extends TestCase
                 id: 'smithy.example#Names$member',
                 type: ShapeType::String_,
                 memberName: 'member',
-                memberIndex: 0,
+                memberIndex: 0
             ),
-            traits: [Schema::T_SPARSE => true],
+            traits: [Schema::T_SPARSE => true]
         );
 
         /** @var CborSchemaExtension $info */
@@ -114,13 +114,13 @@ final class CborSchemaExtensionTest extends TestCase
             type: ShapeType::Map,
             mapKey: new Schema(
                 id: 'smithy.example#Tags$key',
-                type: ShapeType::String_,
+                type: ShapeType::String_
             ),
             mapValue: new Schema(
                 id: 'smithy.example#Tags$value',
-                type: ShapeType::Boolean,
+                type: ShapeType::Boolean
             ),
-            traits: [Schema::T_SPARSE => true],
+            traits: [Schema::T_SPARSE => true]
         );
 
         /** @var CborSchemaExtension $info */
@@ -136,7 +136,7 @@ final class CborSchemaExtensionTest extends TestCase
     {
         $schema = new Schema(
             id: 'smithy.example#Scalar',
-            type: ShapeType::String_,
+            type: ShapeType::String_
         );
 
         self::assertNull(

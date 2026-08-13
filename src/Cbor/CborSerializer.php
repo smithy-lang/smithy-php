@@ -16,7 +16,7 @@ use Smithy\Core\Shape\EnumInterface;
 use Smithy\Core\Shape\UnionInterface;
 
 /**
- * Serialize Smithy shapes directly into CBOR bytes.
+ * Serialize Smithy shapes into definite-length CBOR bytes.
  */
 final class CborSerializer implements ShapeSerializerInterface
 {
@@ -29,9 +29,6 @@ final class CborSerializer implements ShapeSerializerInterface
     private const TOKEN_TAG_DECIMAL = "\xC4";
     private const TOKEN_FLOAT32 = "\xFA";
     private const TOKEN_FLOAT64 = "\xFB";
-    private const TOKEN_INDEFINITE_ARRAY = "\x9F";
-    private const TOKEN_INDEFINITE_MAP = "\xBF";
-    private const TOKEN_BREAK = "\xFF";
 
     /**
      * Common small integer encodings.
@@ -72,16 +69,6 @@ final class CborSerializer implements ShapeSerializerInterface
 
     /** @var array<int, string>|null */
     private ?array $currentFieldNameTable = null;
-    private readonly bool $useIndefiniteLengthContainers;
-
-    /**
-     * @param bool $useIndefiniteLengthContainers Encode modeled aggregates
-     *                                            without fixed lengths.
-     */
-    public function __construct(bool $useIndefiniteLengthContainers = false)
-    {
-        $this->useIndefiniteLengthContainers = $useIndefiniteLengthContainers;
-    }
 
     /**
      * Serialize a boolean value.
@@ -143,11 +130,6 @@ final class CborSerializer implements ShapeSerializerInterface
                 $this->buffer .= \pack('G', $value);
                 return;
 
-            case ShapeType::Double->value:
-                $this->buffer .= self::TOKEN_FLOAT64;
-                $this->buffer .= \pack('E', $value);
-                return;
-
             default:
                 $this->buffer .= self::TOKEN_FLOAT64;
                 $this->buffer .= \pack('E', $value);
@@ -171,7 +153,54 @@ final class CborSerializer implements ShapeSerializerInterface
             }
         }
 
-        $this->writeBigIntegerString($value->value);
+        $value = $value->value;
+        if ($this->fitsSignedInt64($value)) {
+            $this->writeIntegerValue((int) $value);
+
+            return;
+        }
+
+        $negative = $value[0] === '-';
+        $digits = $negative ? \substr($value, 1) : $value;
+        $digits = \ltrim($digits, '0');
+        if ($digits === '') {
+            $this->buffer .= "\x00";
+
+            return;
+        }
+
+        if ($negative) {
+            $this->buffer .= self::TOKEN_TAG_NEG_BIGINT;
+            $digits = $this->decrementUnsignedDecimalString($digits);
+        } else {
+            $this->buffer .= self::TOKEN_TAG_POS_BIGINT;
+        }
+
+        $value = $this->unsignedDecimalStringToBytes($digits);
+        $length = \strlen($value);
+        if ($length < 24) {
+            $this->buffer .= \chr(0x40 | $length) . $value;
+
+            return;
+        }
+
+        switch (true) {
+            case $length <= 0xFF:
+                $this->buffer .= "\x58" . \chr($length) . $value;
+                return;
+
+            case $length <= 0xFFFF:
+                $this->buffer .= "\x59" . \pack('n', $length) . $value;
+                return;
+
+            case $length <= 0xFFFF_FFFF:
+                $this->buffer .= "\x5A" . \pack('N', $length) . $value;
+                return;
+        }
+
+        $high = ($length >> 32) & 0xFFFF_FFFF;
+        $low = $length & 0xFFFF_FFFF;
+        $this->buffer .= "\x5B" . \pack('NN', $high, $low) . $value;
     }
 
     /**
@@ -190,7 +219,163 @@ final class CborSerializer implements ShapeSerializerInterface
             }
         }
 
-        $this->writeBigDecimalString($value->value);
+        $value = $value->value;
+        $negative = $value[0] === '-';
+        $offset = $negative ? 1 : 0;
+
+        $exponentPos = \strpos($value, 'e', $offset);
+        if ($exponentPos === false) {
+            $exponentPos = \strpos($value, 'E', $offset);
+        }
+
+        if ($exponentPos === false) {
+            $significand = $negative ? \substr($value, 1) : $value;
+            $explicitExponent = '0';
+        } else {
+            $significand = \substr($value, $offset, $exponentPos - $offset);
+            $explicitExponent = \substr($value, $exponentPos + 1);
+        }
+
+        $dotPos = \strpos($significand, '.');
+        if ($dotPos === false) {
+            $fractionLength = 0;
+            $mantissaDigits = $significand;
+        } else {
+            $fractionLength = \strlen($significand) - $dotPos - 1;
+            $mantissaDigits = \substr($significand, 0, $dotPos)
+                . \substr($significand, $dotPos + 1);
+        }
+
+        $mantissaDigits = \ltrim($mantissaDigits, '0');
+        if ($mantissaDigits === '') {
+            $mantissa = '0';
+        } else {
+            $mantissa = $negative ? '-' . $mantissaDigits : $mantissaDigits;
+        }
+
+        $adjustedExponent = $this->subtractSmallFromSignedDecimalString(
+            $explicitExponent,
+            $fractionLength
+        );
+
+        $this->buffer .= self::TOKEN_TAG_DECIMAL;
+        $this->buffer .= "\x82";
+
+        if ($this->fitsSignedInt64($adjustedExponent)) {
+            $this->writeIntegerValue((int) $adjustedExponent);
+        } else {
+            $adjustedExponentNegative = $adjustedExponent[0] === '-';
+            $adjustedExponentDigits = $adjustedExponentNegative
+                ? \substr($adjustedExponent, 1)
+                : $adjustedExponent;
+            $adjustedExponentDigits = \ltrim($adjustedExponentDigits, '0');
+            if ($adjustedExponentDigits === '') {
+                $this->buffer .= "\x00";
+            } else {
+                if ($adjustedExponentNegative) {
+                    $this->buffer .= self::TOKEN_TAG_NEG_BIGINT;
+                    $adjustedExponentDigits =
+                        $this->decrementUnsignedDecimalString(
+                            $adjustedExponentDigits
+                        );
+                } else {
+                    $this->buffer .= self::TOKEN_TAG_POS_BIGINT;
+                }
+
+                $adjustedExponentValue = $this->unsignedDecimalStringToBytes(
+                    $adjustedExponentDigits
+                );
+                $adjustedExponentLength = \strlen($adjustedExponentValue);
+                if ($adjustedExponentLength < 24) {
+                    $this->buffer .= \chr(0x40 | $adjustedExponentLength)
+                        . $adjustedExponentValue;
+                } else {
+                    switch (true) {
+                        case $adjustedExponentLength <= 0xFF:
+                            $this->buffer .= "\x58"
+                                . \chr($adjustedExponentLength)
+                                . $adjustedExponentValue;
+                            break;
+
+                        case $adjustedExponentLength <= 0xFFFF:
+                            $this->buffer .= "\x59"
+                                . \pack('n', $adjustedExponentLength)
+                                . $adjustedExponentValue;
+                            break;
+
+                        case $adjustedExponentLength <= 0xFFFF_FFFF:
+                            $this->buffer .= "\x5A"
+                                . \pack('N', $adjustedExponentLength)
+                                . $adjustedExponentValue;
+                            break;
+
+                        default:
+                            $high = ($adjustedExponentLength >> 32)
+                                & 0xFFFF_FFFF;
+                            $low = $adjustedExponentLength & 0xFFFF_FFFF;
+                            $this->buffer .= "\x5B"
+                                . \pack('NN', $high, $low)
+                                . $adjustedExponentValue;
+                            break;
+                    }
+                }
+            }
+        }
+
+        if ($this->fitsSignedInt64($mantissa)) {
+            $this->writeIntegerValue((int) $mantissa);
+
+            return;
+        }
+
+        $mantissaNegative = $mantissa[0] === '-';
+        $mantissaDigits = $mantissaNegative ? \substr($mantissa, 1) : $mantissa;
+        $mantissaDigits = \ltrim($mantissaDigits, '0');
+        if ($mantissaDigits === '') {
+            $this->buffer .= "\x00";
+
+            return;
+        }
+
+        if ($mantissaNegative) {
+            $this->buffer .= self::TOKEN_TAG_NEG_BIGINT;
+            $mantissaDigits =
+                $this->decrementUnsignedDecimalString($mantissaDigits);
+        } else {
+            $this->buffer .= self::TOKEN_TAG_POS_BIGINT;
+        }
+
+        $mantissaValue = $this->unsignedDecimalStringToBytes($mantissaDigits);
+        $mantissaLength = \strlen($mantissaValue);
+        if ($mantissaLength < 24) {
+            $this->buffer .= \chr(0x40 | $mantissaLength) . $mantissaValue;
+
+            return;
+        }
+
+        switch (true) {
+            case $mantissaLength <= 0xFF:
+                $this->buffer .= "\x58"
+                    . \chr($mantissaLength)
+                    . $mantissaValue;
+                return;
+
+            case $mantissaLength <= 0xFFFF:
+                $this->buffer .= "\x59"
+                    . \pack('n', $mantissaLength)
+                    . $mantissaValue;
+                return;
+
+            case $mantissaLength <= 0xFFFF_FFFF:
+                $this->buffer .= "\x5A"
+                    . \pack('N', $mantissaLength)
+                    . $mantissaValue;
+                return;
+        }
+
+        $high = ($mantissaLength >> 32) & 0xFFFF_FFFF;
+        $low = $mantissaLength & 0xFFFF_FFFF;
+        $this->buffer .= "\x5B" . \pack('NN', $high, $low) . $mantissaValue;
     }
 
     /**
@@ -252,7 +437,20 @@ final class CborSerializer implements ShapeSerializerInterface
             }
         }
 
-        $this->writeTimestampValue($value);
+        $this->buffer .= self::TOKEN_TAG_EPOCH;
+
+        $integral = (int) $value;
+        if ($value == $integral
+            && $value <= PHP_INT_MAX
+            && $value >= PHP_INT_MIN
+        ) {
+            $this->writeIntegerValue($integral);
+
+            return;
+        }
+
+        $this->buffer .= self::TOKEN_FLOAT64;
+        $this->buffer .= \pack('E', $value);
     }
 
     /**
@@ -283,14 +481,11 @@ final class CborSerializer implements ShapeSerializerInterface
         $sparse = $info?->sparse ?? false;
         if ($memberSchema === null) {
             $this->writeArrayStart(0);
-            $this->writeContainerEnd();
 
             return;
         }
 
-        $count = $this->useIndefiniteLengthContainers
-            ? 0
-            : $this->countListItems($list, $sparse);
+        $count = $this->countListItems($list, $sparse);
         $this->writeArrayStart($count);
 
         if ($sparse) {
@@ -303,8 +498,6 @@ final class CborSerializer implements ShapeSerializerInterface
                 $this->writeValue($memberSchema, $item);
             }
 
-            $this->writeContainerEnd();
-
             return;
         }
 
@@ -314,7 +507,6 @@ final class CborSerializer implements ShapeSerializerInterface
             }
         }
 
-        $this->writeContainerEnd();
     }
 
     /**
@@ -341,14 +533,11 @@ final class CborSerializer implements ShapeSerializerInterface
         $sparse = $info?->sparse ?? false;
         if ($valueSchema === null) {
             $this->writeMapStart(0);
-            $this->writeContainerEnd();
 
             return;
         }
 
-        $count = $this->useIndefiniteLengthContainers
-            ? 0
-            : $this->countMapEntries($map, $sparse);
+        $count = $this->countMapEntries($map, $sparse);
         $this->writeMapStart($count);
 
         if ($sparse) {
@@ -393,8 +582,6 @@ final class CborSerializer implements ShapeSerializerInterface
                 $this->writeValue($valueSchema, $value);
             }
 
-            $this->writeContainerEnd();
-
             return;
         }
 
@@ -434,7 +621,6 @@ final class CborSerializer implements ShapeSerializerInterface
             $this->writeValue($valueSchema, $value);
         }
 
-        $this->writeContainerEnd();
     }
 
     /**
@@ -585,19 +771,233 @@ final class CborSerializer implements ShapeSerializerInterface
                 return;
 
             case ShapeType::BigInteger->value:
-                $this->writeBigIntegerString(
-                    $value instanceof BigInteger
-                        ? $value->value
-                        : (string) $value
-                );
+                $value = $value instanceof BigInteger
+                    ? $value->value
+                    : (string) $value;
+                if ($this->fitsSignedInt64($value)) {
+                    $this->writeIntegerValue((int) $value);
+                    return;
+                }
+
+                $negative = $value[0] === '-';
+                $digits = $negative ? \substr($value, 1) : $value;
+                $digits = \ltrim($digits, '0');
+                if ($digits === '') {
+                    $this->buffer .= "\x00";
+                    return;
+                }
+
+                if ($negative) {
+                    $this->buffer .= self::TOKEN_TAG_NEG_BIGINT;
+                    $digits = $this->decrementUnsignedDecimalString($digits);
+                } else {
+                    $this->buffer .= self::TOKEN_TAG_POS_BIGINT;
+                }
+
+                $value = $this->unsignedDecimalStringToBytes($digits);
+                $length = \strlen($value);
+                if ($length < 24) {
+                    $this->buffer .= \chr(0x40 | $length) . $value;
+                    return;
+                }
+
+                switch (true) {
+                    case $length <= 0xFF:
+                        $this->buffer .= "\x58" . \chr($length) . $value;
+                        return;
+
+                    case $length <= 0xFFFF:
+                        $this->buffer .= "\x59" . \pack('n', $length) . $value;
+                        return;
+
+                    case $length <= 0xFFFF_FFFF:
+                        $this->buffer .= "\x5A" . \pack('N', $length) . $value;
+                        return;
+                }
+
+                $high = ($length >> 32) & 0xFFFF_FFFF;
+                $low = $length & 0xFFFF_FFFF;
+                $this->buffer .= "\x5B" . \pack('NN', $high, $low) . $value;
                 return;
 
             case ShapeType::BigDecimal->value:
-                $this->writeBigDecimalString(
-                    $value instanceof BigDecimal
-                        ? $value->value
-                        : (string) $value
+                $value = $value instanceof BigDecimal
+                    ? $value->value
+                    : (string) $value;
+                $negative = $value[0] === '-';
+                $offset = $negative ? 1 : 0;
+
+                $exponentPos = \strpos($value, 'e', $offset);
+                if ($exponentPos === false) {
+                    $exponentPos = \strpos($value, 'E', $offset);
+                }
+
+                if ($exponentPos === false) {
+                    $significand = $negative ? \substr($value, 1) : $value;
+                    $explicitExponent = '0';
+                } else {
+                    $significand = \substr(
+                        $value,
+                        $offset,
+                        $exponentPos - $offset
+                    );
+                    $explicitExponent = \substr($value, $exponentPos + 1);
+                }
+
+                $dotPos = \strpos($significand, '.');
+                if ($dotPos === false) {
+                    $fractionLength = 0;
+                    $mantissaDigits = $significand;
+                } else {
+                    $fractionLength = \strlen($significand) - $dotPos - 1;
+                    $mantissaDigits = \substr($significand, 0, $dotPos)
+                        . \substr($significand, $dotPos + 1);
+                }
+
+                $mantissaDigits = \ltrim($mantissaDigits, '0');
+                if ($mantissaDigits === '') {
+                    $mantissa = '0';
+                } else {
+                    $mantissa = $negative
+                        ? '-' . $mantissaDigits
+                        : $mantissaDigits;
+                }
+
+                $adjustedExponent = $this->subtractSmallFromSignedDecimalString(
+                    $explicitExponent,
+                    $fractionLength
                 );
+
+                $this->buffer .= self::TOKEN_TAG_DECIMAL;
+                $this->buffer .= "\x82";
+
+                if ($this->fitsSignedInt64($adjustedExponent)) {
+                    $this->writeIntegerValue((int) $adjustedExponent);
+                } else {
+                    $adjustedExponentNegative = $adjustedExponent[0] === '-';
+                    $adjustedExponentDigits = $adjustedExponentNegative
+                        ? \substr($adjustedExponent, 1)
+                        : $adjustedExponent;
+                    $adjustedExponentDigits = \ltrim(
+                        $adjustedExponentDigits,
+                        '0'
+                    );
+                    if ($adjustedExponentDigits === '') {
+                        $this->buffer .= "\x00";
+                    } else {
+                        if ($adjustedExponentNegative) {
+                            $this->buffer .= self::TOKEN_TAG_NEG_BIGINT;
+                            $adjustedExponentDigits =
+                                $this->decrementUnsignedDecimalString(
+                                    $adjustedExponentDigits
+                                );
+                        } else {
+                            $this->buffer .= self::TOKEN_TAG_POS_BIGINT;
+                        }
+
+                        $adjustedExponentValue =
+                            $this->unsignedDecimalStringToBytes(
+                                $adjustedExponentDigits
+                            );
+                        $adjustedExponentLength = \strlen(
+                            $adjustedExponentValue
+                        );
+                        if ($adjustedExponentLength < 24) {
+                            $this->buffer .= \chr(0x40 | $adjustedExponentLength)
+                                . $adjustedExponentValue;
+                        } else {
+                            switch (true) {
+                                case $adjustedExponentLength <= 0xFF:
+                                    $this->buffer .= "\x58"
+                                        . \chr($adjustedExponentLength)
+                                        . $adjustedExponentValue;
+                                    break;
+
+                                case $adjustedExponentLength <= 0xFFFF:
+                                    $this->buffer .= "\x59"
+                                        . \pack('n', $adjustedExponentLength)
+                                        . $adjustedExponentValue;
+                                    break;
+
+                                case $adjustedExponentLength <= 0xFFFF_FFFF:
+                                    $this->buffer .= "\x5A"
+                                        . \pack('N', $adjustedExponentLength)
+                                        . $adjustedExponentValue;
+                                    break;
+
+                                default:
+                                    $high = ($adjustedExponentLength >> 32)
+                                        & 0xFFFF_FFFF;
+                                    $low =
+                                        $adjustedExponentLength & 0xFFFF_FFFF;
+                                    $this->buffer .= "\x5B"
+                                        . \pack('NN', $high, $low)
+                                        . $adjustedExponentValue;
+                                    break;
+                            }
+                        }
+                    }
+                }
+
+                if ($this->fitsSignedInt64($mantissa)) {
+                    $this->writeIntegerValue((int) $mantissa);
+                    return;
+                }
+
+                $mantissaNegative = $mantissa[0] === '-';
+                $mantissaDigits = $mantissaNegative
+                    ? \substr($mantissa, 1)
+                    : $mantissa;
+                $mantissaDigits = \ltrim($mantissaDigits, '0');
+                if ($mantissaDigits === '') {
+                    $this->buffer .= "\x00";
+                    return;
+                }
+
+                if ($mantissaNegative) {
+                    $this->buffer .= self::TOKEN_TAG_NEG_BIGINT;
+                    $mantissaDigits = $this->decrementUnsignedDecimalString(
+                        $mantissaDigits
+                    );
+                } else {
+                    $this->buffer .= self::TOKEN_TAG_POS_BIGINT;
+                }
+
+                $mantissaValue = $this->unsignedDecimalStringToBytes(
+                    $mantissaDigits
+                );
+                $mantissaLength = \strlen($mantissaValue);
+                if ($mantissaLength < 24) {
+                    $this->buffer .= \chr(0x40 | $mantissaLength)
+                        . $mantissaValue;
+                    return;
+                }
+
+                switch (true) {
+                    case $mantissaLength <= 0xFF:
+                        $this->buffer .= "\x58"
+                            . \chr($mantissaLength)
+                            . $mantissaValue;
+                        return;
+
+                    case $mantissaLength <= 0xFFFF:
+                        $this->buffer .= "\x59"
+                            . \pack('n', $mantissaLength)
+                            . $mantissaValue;
+                        return;
+
+                    case $mantissaLength <= 0xFFFF_FFFF:
+                        $this->buffer .= "\x5A"
+                            . \pack('N', $mantissaLength)
+                            . $mantissaValue;
+                        return;
+                }
+
+                $high = ($mantissaLength >> 32) & 0xFFFF_FFFF;
+                $low = $mantissaLength & 0xFFFF_FFFF;
+                $this->buffer .= "\x5B"
+                    . \pack('NN', $high, $low)
+                    . $mantissaValue;
                 return;
 
             case ShapeType::String_->value:
@@ -661,7 +1061,21 @@ final class CborSerializer implements ShapeSerializerInterface
                 if ($value instanceof \DateTimeInterface) {
                     $value = (float) $value->format('U.u');
                 }
-                $this->writeTimestampValue((float) $value);
+                $this->buffer .= self::TOKEN_TAG_EPOCH;
+
+                $value = (float) $value;
+                $integral = (int) $value;
+                if ($value == $integral
+                    && $value <= PHP_INT_MAX
+                    && $value >= PHP_INT_MIN
+                ) {
+                    $this->writeIntegerValue($integral);
+
+                    return;
+                }
+
+                $this->buffer .= self::TOKEN_FLOAT64;
+                $this->buffer .= \pack('E', $value);
                 return;
 
             case ShapeType::List_->value:
@@ -672,9 +1086,7 @@ final class CborSerializer implements ShapeSerializerInterface
                 $memberSchema = $listInfo?->listMemberSchema
                     ?? $schema->listMember;
                 $sparse = $listInfo?->sparse ?? false;
-                $count = $this->useIndefiniteLengthContainers
-                    ? 0
-                    : $this->countListItems($value, $sparse);
+                $count = $this->countListItems($value, $sparse);
                 $this->writeArrayStart($count);
 
                 if ($memberSchema !== null) {
@@ -688,8 +1100,6 @@ final class CborSerializer implements ShapeSerializerInterface
                             $this->writeValue($memberSchema, $item);
                         }
 
-                        $this->writeContainerEnd();
-
                         return;
                     }
 
@@ -699,8 +1109,6 @@ final class CborSerializer implements ShapeSerializerInterface
                         }
                     }
                 }
-                $this->writeContainerEnd();
-
                 return;
 
             case ShapeType::Map->value:
@@ -710,9 +1118,7 @@ final class CborSerializer implements ShapeSerializerInterface
                 $mapInfo = $schema->getExtension($mapExtKey);
                 $valueSchema = $mapInfo?->mapValueSchema ?? $schema->mapValue;
                 $sparse = $mapInfo?->sparse ?? false;
-                $count = $this->useIndefiniteLengthContainers
-                    ? 0
-                    : $this->countMapEntries($value, $sparse);
+                $count = $this->countMapEntries($value, $sparse);
                 $this->writeMapStart($count);
 
                 if ($valueSchema !== null) {
@@ -760,8 +1166,6 @@ final class CborSerializer implements ShapeSerializerInterface
                             $this->writeValue($valueSchema, $mapValue);
                         }
 
-                        $this->writeContainerEnd();
-
                         return;
                     }
 
@@ -807,8 +1211,6 @@ final class CborSerializer implements ShapeSerializerInterface
                         $this->writeValue($valueSchema, $mapValue);
                     }
                 }
-                $this->writeContainerEnd();
-
                 return;
 
             case ShapeType::Structure->value:
@@ -878,7 +1280,6 @@ final class CborSerializer implements ShapeSerializerInterface
             }
             if ($tag === null) {
                 $this->writeMapStart(0);
-                $this->writeContainerEnd();
 
                 return;
             }
@@ -897,7 +1298,6 @@ final class CborSerializer implements ShapeSerializerInterface
         if ($variantSchema !== null) {
             $this->buffer .= $this->resolveMemberNameBytes($variantSchema);
             $this->writeValue($variantSchema, $value);
-            $this->writeContainerEnd();
 
             return;
         }
@@ -931,7 +1331,6 @@ final class CborSerializer implements ShapeSerializerInterface
         $length = \strlen($value);
         if ($length < 24) {
             $this->buffer .= \chr(0x60 | $length) . $value;
-            $this->writeContainerEnd();
 
             return;
         }
@@ -939,19 +1338,16 @@ final class CborSerializer implements ShapeSerializerInterface
         switch (true) {
             case $length <= 0xFF:
                 $this->buffer .= "\x78" . \chr($length) . $value;
-                $this->writeContainerEnd();
 
                 return;
 
             case $length <= 0xFFFF:
                 $this->buffer .= "\x79" . \pack('n', $length) . $value;
-                $this->writeContainerEnd();
 
                 return;
 
             case $length <= 0xFFFF_FFFF:
                 $this->buffer .= "\x7A" . \pack('N', $length) . $value;
-                $this->writeContainerEnd();
 
                 return;
         }
@@ -959,7 +1355,6 @@ final class CborSerializer implements ShapeSerializerInterface
         $high = ($length >> 32) & 0xFFFF_FFFF;
         $low = $length & 0xFFFF_FFFF;
         $this->buffer .= "\x7B" . \pack('NN', $high, $low) . $value;
-        $this->writeContainerEnd();
     }
 
     /**
@@ -994,30 +1389,6 @@ final class CborSerializer implements ShapeSerializerInterface
         $this->buffer = \array_pop($this->bufferStack) ?? '';
         $this->writeMapStart($memberCount);
         $this->buffer .= $encodedMembers;
-        $this->writeContainerEnd();
-    }
-
-    /**
-     * Write an epoch timestamp value.
-     *
-     * @return void
-     */
-    private function writeTimestampValue(float $value): void
-    {
-        $this->buffer .= self::TOKEN_TAG_EPOCH;
-
-        $integral = (int) $value;
-        if ($value == $integral
-            && $value <= PHP_INT_MAX
-            && $value >= PHP_INT_MIN
-        ) {
-            $this->writeIntegerValue($integral);
-
-            return;
-        }
-
-        $this->buffer .= self::TOKEN_FLOAT64;
-        $this->buffer .= \pack('E', $value);
     }
 
     /**
@@ -1053,12 +1424,6 @@ final class CborSerializer implements ShapeSerializerInterface
      */
     private function writeArrayStart(int $count): void
     {
-        if ($this->useIndefiniteLengthContainers) {
-            $this->buffer .= self::TOKEN_INDEFINITE_ARRAY;
-
-            return;
-        }
-
         $this->writeUnsignedWithMajor(0x80, $count);
     }
 
@@ -1069,25 +1434,7 @@ final class CborSerializer implements ShapeSerializerInterface
      */
     private function writeMapStart(int $count): void
     {
-        if ($this->useIndefiniteLengthContainers) {
-            $this->buffer .= self::TOKEN_INDEFINITE_MAP;
-
-            return;
-        }
-
         $this->writeUnsignedWithMajor(0xA0, $count);
-    }
-
-    /**
-     * Write the break token for indefinite-length containers.
-     *
-     * @return void
-     */
-    private function writeContainerEnd(): void
-    {
-        if ($this->useIndefiniteLengthContainers) {
-            $this->buffer .= self::TOKEN_BREAK;
-        }
     }
 
     /**
@@ -1196,110 +1543,6 @@ final class CborSerializer implements ShapeSerializerInterface
         $this->buffer .= \chr($majorBase | 27)
             . \pack('NN', $high, $low)
             . $value;
-    }
-
-    /**
-     * Write a Smithy BigInteger in CBOR form.
-     *
-     * @return void
-     */
-    private function writeBigIntegerString(string $value): void
-    {
-        if ($this->fitsSignedInt64($value)) {
-            $this->writeIntegerValue((int) $value);
-            return;
-        }
-
-        $negative = $value[0] === '-';
-        $digits = $negative ? \substr($value, 1) : $value;
-        $digits = \ltrim($digits, '0');
-        if ($digits === '') {
-            $this->buffer .= "\x00";
-            return;
-        }
-
-        if ($negative) {
-            $this->buffer .= self::TOKEN_TAG_NEG_BIGINT;
-            $digits = $this->decrementUnsignedDecimalString($digits);
-        } else {
-            $this->buffer .= self::TOKEN_TAG_POS_BIGINT;
-        }
-
-        $value = $this->unsignedDecimalStringToBytes($digits);
-        $length = \strlen($value);
-        if ($length < 24) {
-            $this->buffer .= \chr(0x40 | $length) . $value;
-            return;
-        }
-
-        switch (true) {
-            case $length <= 0xFF:
-                $this->buffer .= "\x58" . \chr($length) . $value;
-                return;
-
-            case $length <= 0xFFFF:
-                $this->buffer .= "\x59" . \pack('n', $length) . $value;
-                return;
-
-            case $length <= 0xFFFF_FFFF:
-                $this->buffer .= "\x5A" . \pack('N', $length) . $value;
-                return;
-        }
-
-        $high = ($length >> 32) & 0xFFFF_FFFF;
-        $low = $length & 0xFFFF_FFFF;
-        $this->buffer .= "\x5B" . \pack('NN', $high, $low) . $value;
-    }
-
-    /**
-     * Write a Smithy BigDecimal in CBOR decimal-fraction form.
-     *
-     * @return void
-     */
-    private function writeBigDecimalString(string $value): void
-    {
-        $negative = $value[0] === '-';
-        $offset = $negative ? 1 : 0;
-
-        $exponentPos = \strpos($value, 'e', $offset);
-        if ($exponentPos === false) {
-            $exponentPos = \strpos($value, 'E', $offset);
-        }
-
-        if ($exponentPos === false) {
-            $significand = $negative ? \substr($value, 1) : $value;
-            $explicitExponent = '0';
-        } else {
-            $significand = \substr($value, $offset, $exponentPos - $offset);
-            $explicitExponent = \substr($value, $exponentPos + 1);
-        }
-
-        $dotPos = \strpos($significand, '.');
-        if ($dotPos === false) {
-            $fractionLength = 0;
-            $mantissaDigits = $significand;
-        } else {
-            $fractionLength = \strlen($significand) - $dotPos - 1;
-            $mantissaDigits = \substr($significand, 0, $dotPos)
-                . \substr($significand, $dotPos + 1);
-        }
-
-        $mantissaDigits = \ltrim($mantissaDigits, '0');
-        if ($mantissaDigits === '') {
-            $mantissa = '0';
-        } else {
-            $mantissa = $negative ? '-' . $mantissaDigits : $mantissaDigits;
-        }
-
-        $adjustedExponent = $this->subtractSmallFromSignedDecimalString(
-            $explicitExponent,
-            $fractionLength
-        );
-
-        $this->buffer .= self::TOKEN_TAG_DECIMAL;
-        $this->buffer .= "\x82";
-        $this->writeBigIntegerString($adjustedExponent);
-        $this->writeBigIntegerString($mantissa);
     }
 
     /**

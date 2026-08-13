@@ -32,7 +32,7 @@ final class CborSerializerTest extends TestCase
             count: 1,
             active: true,
             tags: ['x', null, 'y'],
-            scores: ['a' => 1, 'b' => null],
+            scores: ['a' => 1, 'b' => null]
         );
 
         $serializer->serializeStruct(
@@ -45,45 +45,6 @@ final class CborSerializerTest extends TestCase
             . '647461677382617861796673636f726573a1616101';
         self::assertSame(
             $expected,
-            \bin2hex($serializer->flush())
-        );
-    }
-
-    public function testSerializesIndefiniteLengthContainers(): void
-    {
-        $serializer = new CborSerializer(
-            useIndefiniteLengthContainers: true
-        );
-        $value = new CborSerializerSampleStructFixture(
-            name: 'abc',
-            count: 1,
-            active: true,
-            tags: ['x', null, 'y'],
-            scores: ['a' => 1, 'b' => null]
-        );
-
-        $serializer->serializeStruct(
-            CborSerializerSampleStructFixture::schema(),
-            $value,
-            0
-        );
-
-        $expected = 'bf646e616d656361626365636f756e740166616374697665f5'
-            . '64746167739f61786179ff6673636f726573bf616101ffff';
-        self::assertSame(
-            $expected,
-            \bin2hex($serializer->flush())
-        );
-
-        $serializer->reset();
-        $serializer->serializeUnion(
-            CborSerializerSampleUnionFixture::schema(),
-            new CborSerializerSampleUnionFixture('count', 2),
-            0
-        );
-
-        self::assertSame(
-            'bf65636f756e7402ff',
             \bin2hex($serializer->flush())
         );
     }

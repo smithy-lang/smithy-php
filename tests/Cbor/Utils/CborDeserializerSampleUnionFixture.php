@@ -20,7 +20,7 @@ final class CborDeserializerSampleUnionFixture implements UnionInterface
 
     public function __construct(
         private readonly string $activeTag,
-        private readonly mixed $activeValue,
+        private readonly mixed $activeValue
     ) {}
 
     public static function schema(): Schema

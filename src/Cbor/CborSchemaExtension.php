@@ -11,9 +11,6 @@ use Smithy\Core\Serde\Schema;
  */
 final class CborSchemaExtension
 {
-    /**
-     * Create cached CBOR metadata for a schema.
-     */
     public function __construct(
         /** Encoded CBOR member name, or null for non-members. */
         public readonly ?string $memberNameBytes = null,
