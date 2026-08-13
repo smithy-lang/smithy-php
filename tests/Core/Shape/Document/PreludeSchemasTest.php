@@ -7,6 +7,7 @@ namespace Smithy\Tests\Core\Shape\Document;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use Smithy\Core\Serde\Schema;
 use Smithy\Core\Serde\ShapeType;
 use Smithy\Core\Shape\Document\PreludeSchemas;
 
@@ -41,6 +42,32 @@ final class PreludeSchemasTest extends TestCase
             PreludeSchemas::for($type),
             PreludeSchemas::for($type)
         );
+    }
+
+    public function testListSchemaDescribesSparseDocumentMembers(): void
+    {
+        $schema = PreludeSchemas::for(ShapeType::List_);
+
+        $this->assertSame(
+            PreludeSchemas::for(ShapeType::Document),
+            $schema->listMember
+        );
+        $this->assertTrue($schema->hasTrait(Schema::T_SPARSE));
+    }
+
+    public function testMapSchemaDescribesSparseDocumentValues(): void
+    {
+        $schema = PreludeSchemas::for(ShapeType::Map);
+
+        $this->assertSame(
+            PreludeSchemas::for(ShapeType::String_),
+            $schema->mapKey
+        );
+        $this->assertSame(
+            PreludeSchemas::for(ShapeType::Document),
+            $schema->mapValue
+        );
+        $this->assertTrue($schema->hasTrait(Schema::T_SPARSE));
     }
 
     /**

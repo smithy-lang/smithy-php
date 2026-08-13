@@ -45,6 +45,17 @@ final class SchemaTestTarget
  */
 final class SchemaTest extends TestCase
 {
+    public function testTraitIndexesRemainStable(): void
+    {
+        $this->assertSame(21, Schema::T_HTTP_CHECKSUM_REQUIRED);
+        $this->assertSame(22, Schema::T_REQUEST_COMPRESSION);
+        $this->assertSame(23, Schema::T_ERROR);
+        $this->assertSame(24, Schema::T_READ_ONLY);
+        $this->assertSame(25, Schema::T_IDEMPOTENT);
+        $this->assertSame(26, Schema::T_RETRYABLE);
+        $this->assertSame(27, Schema::T_EC2_QUERY_NAME);
+    }
+
     public function testStoresIdAndUnwrapsShapeTypeToInt(): void
     {
         // `$type` is declared as `int`, not ShapeType, so codec switches
