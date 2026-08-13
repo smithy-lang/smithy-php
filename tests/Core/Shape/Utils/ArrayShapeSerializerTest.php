@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Smithy\Tests\Core\Shape;
+namespace Smithy\Tests\Core\Shape\Utils;
 
 use PHPUnit\Framework\TestCase;
 use Smithy\Core\Serde\Schema;
@@ -13,7 +13,7 @@ use Smithy\Core\Shape\BigInteger;
 use Smithy\Core\Shape\Document\AbstractDocument;
 use Smithy\Core\Shape\Document\IntegerDocument;
 use Smithy\Core\Shape\Document\StringDocument;
-use Smithy\Core\Shape\ArrayShapeSerializer;
+use Smithy\Core\Shape\Utils\ArrayShapeSerializer;
 
 final class ArrayShapeSerializerTest extends TestCase
 {
@@ -43,7 +43,7 @@ final class ArrayShapeSerializerTest extends TestCase
     {
         /** @var ArrayShapeSerializerScalarFixture $obj */
         $obj = ArrayShapeSerializer::fromArray(
-            ArrayShapeSerializerScalarFixture::schema(),
+            ArrayShapeSerializerScalarFixture::class,
             ['name' => 'sam', 'count' => 42, 'active' => true]
         );
         $this->assertSame('sam', $obj->name);
@@ -55,7 +55,7 @@ final class ArrayShapeSerializerTest extends TestCase
     {
         /** @var ArrayShapeSerializerScalarFixture $obj */
         $obj = ArrayShapeSerializer::fromArray(
-            ArrayShapeSerializerScalarFixture::schema(),
+            ArrayShapeSerializerScalarFixture::class,
             ['name' => 'sam', 'count' => 1]
         );
         $this->assertNull($obj->active);
@@ -65,7 +65,7 @@ final class ArrayShapeSerializerTest extends TestCase
     {
         /** @var ArrayShapeSerializerScalarFixture $obj */
         $obj = ArrayShapeSerializer::fromArray(
-            ArrayShapeSerializerScalarFixture::schema(),
+            ArrayShapeSerializerScalarFixture::class,
             ['name' => 'sam', 'count' => 1, 'active' => null]
         );
         $this->assertNull($obj->active);
@@ -75,27 +75,11 @@ final class ArrayShapeSerializerTest extends TestCase
     {
         $original = ['name' => 'sam', 'count' => 42, 'active' => false];
         $obj = ArrayShapeSerializer::fromArray(
-            ArrayShapeSerializerScalarFixture::schema(),
+            ArrayShapeSerializerScalarFixture::class,
             $original
         );
         $this->assertSame($original, ArrayShapeSerializer::toArray($obj));
     }
-
-    public function testFromArrayThrowsWhenSchemaHasNoTargetClass(): void
-    {
-        $rootless = new Schema(
-            id: 'test#NoTargetClass',
-            type: ShapeType::Structure,
-            members: []
-        );
-        $this->expectException(\LogicException::class);
-        $this->expectExceptionMessage(
-            'requires a schema with a non-null targetClass'
-        );
-        ArrayShapeSerializer::fromArray($rootless, []);
-    }
-
-    // -- BigInteger ------------------------------------------------------------
 
     public function testToArrayUnwrapsBigInteger(): void
     {
@@ -112,7 +96,7 @@ final class ArrayShapeSerializerTest extends TestCase
     {
         /** @var ArrayShapeSerializerBigNumberFixture $obj */
         $obj = ArrayShapeSerializer::fromArray(
-            ArrayShapeSerializerBigNumberFixture::schema(),
+            ArrayShapeSerializerBigNumberFixture::class,
             ['big' => '12345']
         );
         $this->assertInstanceOf(BigInteger::class, $obj->big);
@@ -124,13 +108,11 @@ final class ArrayShapeSerializerTest extends TestCase
         $bi = new BigInteger('12345');
         /** @var ArrayShapeSerializerBigNumberFixture $obj */
         $obj = ArrayShapeSerializer::fromArray(
-            ArrayShapeSerializerBigNumberFixture::schema(),
+            ArrayShapeSerializerBigNumberFixture::class,
             ['big' => $bi]
         );
         $this->assertSame($bi, $obj->big);
     }
-
-    // -- Lists -----------------------------------------------------------------
 
     public function testToArrayUnwrapsListOfBigIntegers(): void
     {
@@ -147,34 +129,32 @@ final class ArrayShapeSerializerTest extends TestCase
     {
         /** @var ArrayShapeSerializerListFixture $obj */
         $obj = ArrayShapeSerializer::fromArray(
-            ArrayShapeSerializerListFixture::schema(),
+            ArrayShapeSerializerListFixture::class,
             ['big' => ['1', '2', '3']]
         );
         $this->assertCount(3, $obj->big);
         $this->assertSame('2', $obj->big[1]->value);
     }
 
-    // -- Float / Timestamp -----------------------------------------------------
-
     public function testFromArrayCoercesFloatNanInfinityFromString(): void
     {
         /** @var ArrayShapeSerializerFloatFixture $obj */
         $obj = ArrayShapeSerializer::fromArray(
-            ArrayShapeSerializerFloatFixture::schema(),
+            ArrayShapeSerializerFloatFixture::class,
             ['v' => 'NaN']
         );
         $this->assertNan($obj->v);
 
         /** @var ArrayShapeSerializerFloatFixture $obj */
         $obj = ArrayShapeSerializer::fromArray(
-            ArrayShapeSerializerFloatFixture::schema(),
+            ArrayShapeSerializerFloatFixture::class,
             ['v' => 'Infinity']
         );
         $this->assertSame(\INF, $obj->v);
 
         /** @var ArrayShapeSerializerFloatFixture $obj */
         $obj = ArrayShapeSerializer::fromArray(
-            ArrayShapeSerializerFloatFixture::schema(),
+            ArrayShapeSerializerFloatFixture::class,
             ['v' => '-Infinity']
         );
         $this->assertSame(-\INF, $obj->v);
@@ -185,7 +165,7 @@ final class ArrayShapeSerializerTest extends TestCase
         $dt = new \DateTimeImmutable('@1700000000');
         /** @var ArrayShapeSerializerTimestampFixture $obj */
         $obj = ArrayShapeSerializer::fromArray(
-            ArrayShapeSerializerTimestampFixture::schema(),
+            ArrayShapeSerializerTimestampFixture::class,
             ['t' => $dt]
         );
         $this->assertSame(1700000000.0, $obj->t);
@@ -195,25 +175,30 @@ final class ArrayShapeSerializerTest extends TestCase
     {
         /** @var ArrayShapeSerializerTimestampFixture $obj */
         $obj = ArrayShapeSerializer::fromArray(
-            ArrayShapeSerializerTimestampFixture::schema(),
+            ArrayShapeSerializerTimestampFixture::class,
             ['t' => '2024-01-01T00:00:00Z']
         );
         $this->assertSame(1704067200.0, $obj->t);
     }
 
-    // -- V3-compat coercion ---------------------------------------------------
-    //
-    // V3's Validator was lenient about input types (numeric strings into
-    // integer members, ints/floats/stringables into string members, raw
-    // arrays/scalars into document members). The serializer coerces at the
-    // boundary so V3-shaped input doesn't TypeError at the strict-typed
-    // constructor parameters.
+    public function testFromArrayThrowsWhenTimestampStringCannotBeParsed(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage(
+            "Invalid timestamp value 'not-a-timestamp' for schema 't'."
+        );
+
+        ArrayShapeSerializer::fromArray(
+            ArrayShapeSerializerTimestampFixture::class,
+            ['t' => 'not-a-timestamp']
+        );
+    }
 
     public function testFromArrayCoercesNumericStringIntoIntegerMember(): void
     {
         /** @var ArrayShapeSerializerV3CompatFixture $obj */
         $obj = ArrayShapeSerializer::fromArray(
-            ArrayShapeSerializerV3CompatFixture::schema(),
+            ArrayShapeSerializerV3CompatFixture::class,
             ['name' => 'sam', 'count' => '42']
         );
         $this->assertSame(42, $obj->count);
@@ -223,7 +208,7 @@ final class ArrayShapeSerializerTest extends TestCase
     {
         /** @var ArrayShapeSerializerV3CompatFixture $obj */
         $obj = ArrayShapeSerializer::fromArray(
-            ArrayShapeSerializerV3CompatFixture::schema(),
+            ArrayShapeSerializerV3CompatFixture::class,
             ['name' => 12345, 'count' => 1]
         );
         $this->assertSame('12345', $obj->name);
@@ -239,27 +224,17 @@ final class ArrayShapeSerializerTest extends TestCase
         };
         /** @var ArrayShapeSerializerV3CompatFixture $obj */
         $obj = ArrayShapeSerializer::fromArray(
-            ArrayShapeSerializerV3CompatFixture::schema(),
+            ArrayShapeSerializerV3CompatFixture::class,
             ['name' => $stringable, 'count' => 1]
         );
         $this->assertSame('sam', $obj->name);
-    }
-
-    public function testFromArrayCoercesScalarIntoBlobMember(): void
-    {
-        /** @var ArrayShapeSerializerBlobFixture $obj */
-        $obj = ArrayShapeSerializer::fromArray(
-            ArrayShapeSerializerBlobFixture::schema(),
-            ['payload' => 12345]
-        );
-        $this->assertSame('12345', $obj->payload);
     }
 
     public function testFromArrayWrapsScalarIntoDocumentMember(): void
     {
         /** @var ArrayShapeSerializerDocumentFixture $obj */
         $obj = ArrayShapeSerializer::fromArray(
-            ArrayShapeSerializerDocumentFixture::schema(),
+            ArrayShapeSerializerDocumentFixture::class,
             ['doc' => 'hello']
         );
         $this->assertInstanceOf(StringDocument::class, $obj->doc);
@@ -270,7 +245,7 @@ final class ArrayShapeSerializerTest extends TestCase
     {
         /** @var ArrayShapeSerializerDocumentFixture $obj */
         $obj = ArrayShapeSerializer::fromArray(
-            ArrayShapeSerializerDocumentFixture::schema(),
+            ArrayShapeSerializerDocumentFixture::class,
             ['doc' => 42]
         );
         $this->assertInstanceOf(IntegerDocument::class, $obj->doc);
@@ -282,19 +257,12 @@ final class ArrayShapeSerializerTest extends TestCase
         $doc = new StringDocument('hello');
         /** @var ArrayShapeSerializerDocumentFixture $obj */
         $obj = ArrayShapeSerializer::fromArray(
-            ArrayShapeSerializerDocumentFixture::schema(),
+            ArrayShapeSerializerDocumentFixture::class,
             ['doc' => $doc]
         );
         $this->assertSame($doc, $obj->doc);
     }
 }
-
-// -- fixtures -----------------------------------------------------------------
-//
-// Each fixture mirrors the shape of a generated structure: an interface that
-// makes it eligible for the toArray() signature, a `schema()` factory carrying
-// its own targetClass, and a constructor that's invoked via named-args
-// spreading from ArrayShapeSerializer::fromArray().
 
 abstract class AbstractArrayShapeSerializerFixture implements SerializableStructInterface
 {
@@ -490,30 +458,6 @@ final class ArrayShapeSerializerV3CompatFixture extends AbstractArrayShapeSerial
                     type: ShapeType::Integer,
                     memberName: 'count',
                     memberIndex: 1
-                )
-            ],
-            targetClass: self::class
-        );
-    }
-}
-
-final class ArrayShapeSerializerBlobFixture extends AbstractArrayShapeSerializerFixture
-{
-    private static Schema $SCHEMA;
-
-    public function __construct(public readonly string $payload) {}
-
-    public static function schema(): Schema
-    {
-        return self::$SCHEMA ??= new Schema(
-            id: 'test#ArrayShapeSerializerBlobFixture',
-            type: ShapeType::Structure,
-            members: [
-                new Schema(
-                    id: 'smithy.api#Blob',
-                    type: ShapeType::Blob,
-                    memberName: 'payload',
-                    memberIndex: 0
                 )
             ],
             targetClass: self::class

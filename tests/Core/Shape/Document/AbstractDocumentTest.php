@@ -36,8 +36,6 @@ use Smithy\Core\Shape\Document\TimestampValue;
 #[CoversClass(AbstractDocument::class)]
 final class AbstractDocumentTest extends TestCase
 {
-    // -- Static factories dispatch to the right concrete ---------------------
-
     public function testOfStringReturnsStringDocument(): void
     {
         $this->assertInstanceOf(
@@ -154,8 +152,6 @@ final class AbstractDocumentTest extends TestCase
             AbstractDocument::ofMap([])
         );
     }
-
-    // -- ofObject dispatch on PHP runtime type -------------------------------
 
     public function testOfObjectFromString(): void
     {
@@ -288,8 +284,6 @@ final class AbstractDocumentTest extends TestCase
         );
         AbstractDocument::ofObject(new \DateTimeImmutable());
     }
-
-    // -- Schema attachment forwards to discriminator -------------------------
 
     public function testSchemaIsCarriedForward(): void
     {
