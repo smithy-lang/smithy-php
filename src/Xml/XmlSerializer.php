@@ -28,6 +28,8 @@ use Smithy\Core\Shape\UnionInterface;
  */
 final class XmlSerializer implements ShapeSerializerInterface
 {
+    private readonly XmlCodecSettings $settings;
+
     /** @var array<int, string> memberIndex -> XML wire name */
     private array $wireNames = [];
 
@@ -46,17 +48,16 @@ final class XmlSerializer implements ShapeSerializerInterface
     private array $writerPool;
 
     /**
-     * @param string|null      $defaultXmlNamespace Default XML namespace for
-     *                                              unqualified structs.
      * @param \XMLWriter       $writer Backing XML writer.
      * @param list<\XMLWriter> $writerPool Idle codec-owned writers available
      *                                     for reuse.
      */
     public function __construct(
-        private readonly ?string $defaultXmlNamespace,
         private readonly \XMLWriter $writer,
+        ?XmlCodecSettings $settings = null,
         array &$writerPool = []
     ) {
+        $this->settings = $settings ?? new XmlCodecSettings();
         $this->writerPool =& $writerPool;
     }
 
@@ -220,7 +221,7 @@ final class XmlSerializer implements ShapeSerializerInterface
     {
         $resolved = $this->tsFormats[$idx]
             ?? $format
-            ?? TimestampFormat::DateTime;
+            ?? $this->settings->defaultTimestampFormat;
         $formatted = $resolved->format($value);
 
         if ($this->memberComponentTypes[$idx]) {
@@ -287,7 +288,7 @@ final class XmlSerializer implements ShapeSerializerInterface
             case ShapeType::Timestamp->value:
                 $timestampFormat = $info->listMemberTimestampFormat
                     ?? $this->tsFormats[$idx]
-                    ?? TimestampFormat::DateTime;
+                    ?? $this->settings->defaultTimestampFormat;
                 $this->writeTimestampItems(
                     $list,
                     $itemName,
@@ -435,8 +436,11 @@ final class XmlSerializer implements ShapeSerializerInterface
             } else {
                 $this->writer->writeAttribute('xmlns', $ns['uri']);
             }
-        } elseif ($this->defaultXmlNamespace && $schema->memberName) {
-            $this->writer->writeAttribute('xmlns', $this->defaultXmlNamespace);
+        } elseif ($this->settings->defaultXmlNamespace && $schema->memberName) {
+            $this->writer->writeAttribute(
+                'xmlns',
+                $this->settings->defaultXmlNamespace
+            );
         }
 
         $prevWireNames = $this->wireNames;
@@ -514,8 +518,11 @@ final class XmlSerializer implements ShapeSerializerInterface
             } else {
                 $this->writer->writeAttribute('xmlns', $ns['uri']);
             }
-        } elseif ($this->defaultXmlNamespace && $schema->memberName) {
-            $this->writer->writeAttribute('xmlns', $this->defaultXmlNamespace);
+        } elseif ($this->settings->defaultXmlNamespace && $schema->memberName) {
+            $this->writer->writeAttribute(
+                'xmlns',
+                $this->settings->defaultXmlNamespace
+            );
         }
 
         $this->wireNames = $info->memberWireNames;
@@ -1108,7 +1115,7 @@ final class XmlSerializer implements ShapeSerializerInterface
                 $this->writer->text(
                     (
                         $this->tsFormats[$schema->memberIndex]
-                        ?? TimestampFormat::DateTime
+                        ?? $this->settings->defaultTimestampFormat
                     )->format($value)
                 );
                 return;

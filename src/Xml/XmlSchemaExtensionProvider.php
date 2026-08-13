@@ -115,7 +115,7 @@ final class XmlSchemaExtensionProvider
             ) {
                 $listTsFmt = TimestampFormat::fromTraitString(
                     $listMember->getTrait(Schema::T_TIMESTAMP_FORMAT)
-                ) ?? TimestampFormat::DateTime;
+                );
             }
 
             $listMemberExtension = $listMember !== null
@@ -151,7 +151,7 @@ final class XmlSchemaExtensionProvider
             ) {
                 $mapValueTsFmt = TimestampFormat::fromTraitString(
                     $mapValue->getTrait(Schema::T_TIMESTAMP_FORMAT),
-                ) ?? TimestampFormat::DateTime;
+                );
             }
             $mapValueExtension = $mapValue !== null
                 ? $this->provide($mapValue)
@@ -252,8 +252,7 @@ final class XmlSchemaExtensionProvider
                 if ($explicitTimestampFormat !== null) {
                     $tsFormats[$idx] = $explicitTimestampFormat;
                 }
-                $resolvedTimestampFormat = $explicitTimestampFormat
-                    ?? TimestampFormat::DateTime;
+                $resolvedTimestampFormat = $explicitTimestampFormat;
             }
 
             if ($memberSchema->hasTrait(Schema::T_XML_ATTRIBUTE)) {
@@ -442,7 +441,7 @@ final class XmlSchemaExtensionProvider
         ) {
             $listTsFmt = TimestampFormat::fromTraitString(
                 $listMember->getTrait(Schema::T_TIMESTAMP_FORMAT)
-            ) ?? TimestampFormat::DateTime;
+            );
         }
 
         $listMemberExtension = $listMember !== null
@@ -495,7 +494,7 @@ final class XmlSchemaExtensionProvider
         ) {
             $mapValueTsFmt = TimestampFormat::fromTraitString(
                 $mapValue->getTrait(Schema::T_TIMESTAMP_FORMAT),
-            ) ?? TimestampFormat::DateTime;
+            );
         }
         $mapValueExtension = $mapValue !== null
             ? $this->provide($mapValue)

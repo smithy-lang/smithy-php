@@ -24,12 +24,14 @@ use Smithy\Core\Shape\BigInteger;
  */
 final class XmlDeserializer implements ShapeDeserializerInterface
 {
-    /**
-     * @param \SimpleXMLElement $element Parsed XML root element.
-     */
+    private readonly XmlCodecSettings $settings;
+
     public function __construct(
-        private \SimpleXMLElement $element
-    ) {}
+        private \SimpleXMLElement $element,
+        ?XmlCodecSettings $settings = null
+    ) {
+        $this->settings = $settings ?? new XmlCodecSettings();
+    }
 
     /**
      * Deserialize an XML payload into members.
@@ -105,7 +107,9 @@ final class XmlDeserializer implements ShapeDeserializerInterface
                                 $out[$idx] = (float) $value;
                                 break;
                             case ShapeType::Timestamp->value:
-                                $out[$idx] = $entry[3]->parse($value);
+                                $out[$idx] = ($entry[3]
+                                    ?? $this->settings->defaultTimestampFormat)
+                                    ->parse($value);
                                 break;
                             case ShapeType::Blob->value:
                                 $out[$idx] = \base64_decode($value, true) ?: '';
@@ -195,7 +199,9 @@ final class XmlDeserializer implements ShapeDeserializerInterface
                             ) ?: '';
                             break;
                         case ShapeType::Timestamp->value:
-                            $out[$idx] = $entry[4]->parse((string) $child);
+                            $out[$idx] = ($entry[4]
+                                ?? $this->settings->defaultTimestampFormat)
+                                ->parse((string) $child);
                             break;
                         case ShapeType::Structure->value:
                             $out[$idx] = $this->readNestedStructFromElement(
@@ -326,7 +332,8 @@ final class XmlDeserializer implements ShapeDeserializerInterface
                 }
                 break;
             case ShapeType::Timestamp->value:
-                $fmt = $info->listMemberTimestampFormat;
+                $fmt = $info->listMemberTimestampFormat
+                    ?? $this->settings->defaultTimestampFormat;
                 foreach ($element->{$memberName} as $child) {
                     $result[] = $fmt->parse((string) $child);
                 }
@@ -388,7 +395,8 @@ final class XmlDeserializer implements ShapeDeserializerInterface
         $result = [];
 
         if ($mapValue !== null && $mapValue->type === ShapeType::Timestamp->value) {
-            $fmt = $info->mapValueTimestampFormat;
+        $fmt = $info->mapValueTimestampFormat
+            ?? $this->settings->defaultTimestampFormat;
             foreach ($element->{$entryName} as $entry) {
                 $key = isset($entry->{$keyName})
                     ? (string) $entry->{$keyName}
@@ -505,7 +513,7 @@ final class XmlDeserializer implements ShapeDeserializerInterface
             case ShapeType::Timestamp->value:
                 return (
                     $schema->getExtension($extKey)?->timestampFormat
-                        ?? TimestampFormat::DateTime
+                        ?? $this->settings->defaultTimestampFormat
                 )->parse((string) $element);
             case ShapeType::Structure->value:
                 return $this->readNestedStructFromElement($element, $schema);

@@ -7,6 +7,7 @@ namespace Smithy\Tests\Xml;
 use PHPUnit\Framework\TestCase;
 use Smithy\Xml\{
     XmlCodec,
+    XmlCodecSettings,
     XmlDeserializer,
     XmlSerializer
 };
@@ -66,7 +67,9 @@ final class XmlCodecTest extends TestCase
 
     public function testCreateDeserializerDescendsThroughConfiguredWrappers(): void
     {
-        $codec = new XmlCodec(['Response']);
+        $codec = new XmlCodec(
+            new XmlCodecSettings(wrapperElements: ['Response'])
+        );
         $deserializer = $codec->createDeserializer(
             '<Envelope><Response><NestedStruct><value>alpha</value>'
             . '</NestedStruct></Response></Envelope>',

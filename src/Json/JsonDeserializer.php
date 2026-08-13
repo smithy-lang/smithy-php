@@ -18,19 +18,19 @@ use Smithy\Core\Shape\Document\AbstractDocument;
  */
 final class JsonDeserializer implements ShapeDeserializerInterface
 {
+    private readonly JsonCodecSettings $settings;
+
     /**
      * Decoded wire body.
      */
     private mixed $parsed;
 
-    /**
-     * Honor `smithy.api#jsonName` when decoding member names.
-     */
-    private readonly bool $honorJsonName;
-
-    public function __construct(string $source, bool $honorJsonName)
+    public function __construct(
+        string $source,
+        ?JsonCodecSettings $settings = null
+    )
     {
-        $this->honorJsonName = $honorJsonName;
+        $this->settings = $settings ?? new JsonCodecSettings();
         if ($source === '') {
             $this->parsed = null;
             return;
@@ -88,10 +88,10 @@ final class JsonDeserializer implements ShapeDeserializerInterface
         }
 
         // Pick the wire-name tables once per struct.
-        $ordered = $this->honorJsonName
+        $ordered = $this->settings->honorJsonName
             ? $info->orderedMembers
             : $info->rawOrderedMembers;
-        $memberDecodeByWireName = $this->honorJsonName
+        $memberDecodeByWireName = $this->settings->honorJsonName
             ? $info->memberDecodeByWireName
             : $info->rawMemberDecodeByWireName;
         // Favor in-order keys, then fall back to the hash lookup.
@@ -216,7 +216,7 @@ final class JsonDeserializer implements ShapeDeserializerInterface
         // Pick the union wire-name table once.
         $unionDecodeByWireName = $info === null
             ? []
-            : ($this->honorJsonName
+            : ($this->settings->honorJsonName
                 ? $info->unionDecodeByWireName
                 : $info->rawUnionDecodeByWireName);
 
@@ -295,7 +295,7 @@ final class JsonDeserializer implements ShapeDeserializerInterface
                 return \base64_decode((string) $value, true) ?: '';
 
             case ShapeType::Timestamp->value:
-                $fmt = $context ?? TimestampFormat::EpochSeconds;
+                $fmt = $context ?? $this->settings->defaultTimestampFormat;
                 return $fmt === TimestampFormat::EpochSeconds
                     ? ((\is_int($value) || \is_float($value))
                         ? (float) $value
@@ -346,8 +346,7 @@ final class JsonDeserializer implements ShapeDeserializerInterface
         // Synthetic schemas may not have extension metadata.
         $itemType = $info?->listMemberType ?? $itemSchema->type;
         $context = match ($itemType) {
-            ShapeType::Timestamp->value => $info?->listMemberTimestampFormat
-                ?? TimestampFormat::EpochSeconds,
+            ShapeType::Timestamp->value => $info?->listMemberTimestampFormat,
             ShapeType::Enum->value,
             ShapeType::IntEnum->value => $info?->listMemberResolvedTargetClass,
             default => $itemSchema,
@@ -382,8 +381,7 @@ final class JsonDeserializer implements ShapeDeserializerInterface
         $info = $member->getExtension($extKey);
         $valueType = $info?->mapValueType ?? $valueSchema->type;
         $context = match ($valueType) {
-            ShapeType::Timestamp->value => $info?->mapValueTimestampFormat
-                ?? TimestampFormat::EpochSeconds,
+            ShapeType::Timestamp->value => $info?->mapValueTimestampFormat,
             ShapeType::Enum->value,
             ShapeType::IntEnum->value => $info?->mapValueResolvedTargetClass,
             default => $valueSchema,

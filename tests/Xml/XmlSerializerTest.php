@@ -20,7 +20,10 @@ use Smithy\Tests\Xml\Utils\{
     XmlSampleStructFixture,
     XmlSampleUnionFixture
 };
-use Smithy\Xml\XmlSerializer;
+use Smithy\Xml\{
+    XmlCodecSettings,
+    XmlSerializer
+};
 
 final class XmlSerializerTest extends TestCase
 {
@@ -227,11 +230,13 @@ final class XmlSerializerTest extends TestCase
         $serializer->serializeDocument($schema, null, 0);
     }
 
-    private function createSerializer(): XmlSerializer
+    private function createSerializer(
+        ?XmlCodecSettings $settings = null
+    ): XmlSerializer
     {
         $writer = new \XMLWriter();
         $writer->openMemory();
 
-        return new XmlSerializer(null, $writer);
+        return new XmlSerializer($writer, $settings);
     }
 }

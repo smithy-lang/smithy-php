@@ -96,9 +96,9 @@ final class JsonSchemaExtensionProvider
                 $resolved = TimestampFormat::fromTraitString(
                     $member->getTrait(Schema::T_TIMESTAMP_FORMAT)
                 );
-                // JSON timestamps default to epoch-seconds.
-                $resolved ??= TimestampFormat::EpochSeconds;
-                $timestampFormats[$idx] = $resolved;
+                if ($resolved !== null) {
+                    $timestampFormats[$idx] = $resolved;
+                }
                 $decodeEntry = [$idx, 12, $resolved];
             } elseif (
                 $member->type === 13
@@ -185,12 +185,11 @@ final class JsonSchemaExtensionProvider
         $inner = $schema->listMember;
         $innerType = $inner?->type;
 
-        // JSON timestamps default to epoch-seconds.
         $listTsFmt = null;
         if ($inner !== null && $innerType === ShapeType::Timestamp->value) {
             $listTsFmt = TimestampFormat::fromTraitString(
                 $inner->getTrait(Schema::T_TIMESTAMP_FORMAT)
-            ) ?? TimestampFormat::EpochSeconds;
+            );
         }
 
         $listMemberResolvedTargetClass = null;
@@ -242,7 +241,7 @@ final class JsonSchemaExtensionProvider
         if ($value !== null && $valueType === ShapeType::Timestamp->value) {
             $mapTsFmt = TimestampFormat::fromTraitString(
                 $value->getTrait(Schema::T_TIMESTAMP_FORMAT)
-            ) ?? TimestampFormat::EpochSeconds;
+            );
         }
 
         $mapValueResolvedTargetClass = null;
@@ -289,7 +288,7 @@ final class JsonSchemaExtensionProvider
     {
         $fmt = TimestampFormat::fromTraitString(
             $schema->getTrait(Schema::T_TIMESTAMP_FORMAT)
-        ) ?? TimestampFormat::EpochSeconds;
+        );
 
         return new JsonSchemaExtension(
             memberIndexByWireName: [],
