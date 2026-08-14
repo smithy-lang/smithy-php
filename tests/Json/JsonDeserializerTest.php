@@ -160,4 +160,33 @@ final class JsonDeserializerTest extends TestCase
 
         self::assertSame(100.0, $fields[0]);
     }
+
+    public function testDeserializerCanIgnoreTimestampFormatTrait(): void
+    {
+        $schema = new Schema(
+            id: 'smithy.test#Event',
+            type: ShapeType::Structure,
+            members: [
+                new Schema(
+                    id: 'smithy.test#Event$createdAt',
+                    type: ShapeType::Timestamp,
+                    memberName: 'createdAt',
+                    memberIndex: 0,
+                    traits: [Schema::T_TIMESTAMP_FORMAT => 'date-time']
+                )
+            ]
+        );
+
+        $codec = new JsonCodec(
+            new JsonCodecSettings(
+                defaultTimestampFormat: TimestampFormat::EpochSeconds,
+                honorTimestampFormatTrait: false
+            )
+        );
+        $fields = [null];
+        $codec->createDeserializer('{"createdAt":100}')
+            ->deserialize($schema, $fields);
+
+        self::assertSame(100.0, $fields[0]);
+    }
 }

@@ -20,6 +20,8 @@ final class JsonDeserializer implements ShapeDeserializerInterface
 {
     private readonly JsonCodecSettings $settings;
 
+    private readonly bool $honorTimestampFormatTrait;
+
     /**
      * Decoded wire body.
      */
@@ -31,6 +33,8 @@ final class JsonDeserializer implements ShapeDeserializerInterface
     )
     {
         $this->settings = $settings ?? new JsonCodecSettings();
+        $this->honorTimestampFormatTrait =
+            $this->settings->honorTimestampFormatTrait;
         if ($source === '') {
             $this->parsed = null;
             return;
@@ -295,7 +299,10 @@ final class JsonDeserializer implements ShapeDeserializerInterface
                 return \base64_decode((string) $value, true) ?: '';
 
             case ShapeType::Timestamp->value:
-                $fmt = $context ?? $this->settings->defaultTimestampFormat;
+                $fmt = ($this->honorTimestampFormatTrait
+                    ? $context
+                    : null
+                ) ?? $this->settings->defaultTimestampFormat;
                 return $fmt === TimestampFormat::EpochSeconds
                     ? ((\is_int($value) || \is_float($value))
                         ? (float) $value

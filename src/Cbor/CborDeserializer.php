@@ -27,6 +27,8 @@ final class CborDeserializer implements ShapeDeserializerInterface
 {
     private readonly CborCodecSettings $settings;
 
+    private readonly bool $honorTimestampFormatTrait;
+
     private const MAJOR_POSINT = 0;
     private const MAJOR_NEGINT = 1;
     private const MAJOR_BYTESTRING = 2;
@@ -76,6 +78,8 @@ final class CborDeserializer implements ShapeDeserializerInterface
         $this->payload = $source;
         $this->length = \strlen($source);
         $this->settings = $settings ?? new CborCodecSettings();
+        $this->honorTimestampFormatTrait =
+            $this->settings->honorTimestampFormatTrait;
     }
 
     /**
@@ -825,8 +829,11 @@ final class CborDeserializer implements ShapeDeserializerInterface
                 }
 
                 if ($major === self::MAJOR_TEXTSTRING) {
-                    $format = TimestampFormat::fromTraitString(
-                        $schema->getTrait(Schema::T_TIMESTAMP_FORMAT)
+                    $format = ($this->honorTimestampFormatTrait
+                        ? TimestampFormat::fromTraitString(
+                            $schema->getTrait(Schema::T_TIMESTAMP_FORMAT)
+                        )
+                        : null
                     ) ?? $this->settings->defaultTimestampFormat;
 
                     return $format->parse($this->readStringFromInitial($initial));

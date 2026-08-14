@@ -25,10 +25,21 @@ final class FormUrlEncodedSerializer implements ShapeSerializerInterface
 {
     private readonly FormUrlEncodedCodecSettings $settings;
 
+    private readonly bool $honorTimestampFormatTrait;
+
+    private readonly bool $honorXmlName;
+
+    private readonly bool $capitalizeResolvedWireNames;
+
     public function __construct(
         ?FormUrlEncodedCodecSettings $settings = null
     ) {
         $this->settings = $settings ?? new FormUrlEncodedCodecSettings();
+        $this->honorTimestampFormatTrait =
+            $this->settings->honorTimestampFormatTrait;
+        $this->honorXmlName = $this->settings->honorXmlName;
+        $this->capitalizeResolvedWireNames =
+            $this->settings->capitalizeResolvedWireNames;
     }
 
     /**
@@ -220,9 +231,10 @@ final class FormUrlEncodedSerializer implements ShapeSerializerInterface
         ?TimestampFormat $format = null
     ): void
     {
-        $fmt = $this->tsFormats[$idx]
-            ?? $format
-            ?? $this->settings->defaultTimestampFormat;
+        $fmt = ($this->honorTimestampFormatTrait
+            ? ($this->tsFormats[$idx] ?? $format)
+            : null
+        ) ?? $this->settings->defaultTimestampFormat;
         $this->buffer .= $this->prefix
             . $this->wireNames[$idx]
             . '='
@@ -258,9 +270,7 @@ final class FormUrlEncodedSerializer implements ShapeSerializerInterface
         $info = $schema->getExtension($extKey);
 
         $containerName = $this->wireNames[$idx] ?? '';
-        $precomputedItemPrefix = $this->settings->useAlternateWireNames
-            ? $info?->ec2MemberListPrefix
-            : $info?->memberListPrefix;
+        $precomputedItemPrefix = $this->selectMemberListPrefix($info);
         if ($precomputedItemPrefix !== null) {
             $itemPrefix = $this->prefix . $precomputedItemPrefix;
         } else {
@@ -269,7 +279,9 @@ final class FormUrlEncodedSerializer implements ShapeSerializerInterface
             if ($flattened) {
                 $itemPrefix = $this->prefix . $containerName . '.';
             } else {
-                $memberName = $info?->listMemberName ?? 'member';
+                $memberName = $this->honorXmlName
+                    ? $info?->listMemberName ?? 'member'
+                    : 'member';
                 $itemPrefix = $this->prefix . $containerName . '.'
                     . $memberName . '.';
             }
@@ -301,8 +313,10 @@ final class FormUrlEncodedSerializer implements ShapeSerializerInterface
             case ShapeType::BigInteger->value:
             case ShapeType::BigDecimal->value:
                 $fmt = $mt === ShapeType::Timestamp->value
-                    ? ($info?->listMemberTimestampFormat
-                        ?? $this->settings->defaultTimestampFormat)
+                    ? (($this->honorTimestampFormatTrait
+                        ? $info?->listMemberTimestampFormat
+                        : null
+                    ) ?? $this->settings->defaultTimestampFormat)
                     : null;
                 $counter = 1;
                 foreach ($list as $item) {
@@ -525,9 +539,7 @@ final class FormUrlEncodedSerializer implements ShapeSerializerInterface
         $info = $schema->getExtension($extKey);
 
         $this->prefix = '';
-        $this->wireNames = $this->settings->useAlternateWireNames
-            ? ($info?->ec2MemberWireNames ?? [])
-            : ($info?->memberWireNames ?? []);
+        $this->wireNames = $this->resolveMemberWireNames($schema, $info);
         $this->tsFormats = $info?->tsFormats ?? [];
     }
 
@@ -554,9 +566,7 @@ final class FormUrlEncodedSerializer implements ShapeSerializerInterface
             $this->prefix .= $this->wireNames[$idx] . '.';
         }
 
-        $this->wireNames = $this->settings->useAlternateWireNames
-            ? ($info?->ec2MemberWireNames ?? [])
-            : ($info?->memberWireNames ?? []);
+        $this->wireNames = $this->resolveMemberWireNames($schema, $info);
         $this->tsFormats = $info?->tsFormats ?? [];
     }
 
@@ -603,15 +613,11 @@ final class FormUrlEncodedSerializer implements ShapeSerializerInterface
         $savedWireNames = $this->wireNames;
         $savedTsFormats = $this->tsFormats;
         $variantIdx = $variantSchema->memberIndex;
-        $variantWire = $this->settings->useAlternateWireNames
-            ? (
-                ($info?->ec2UnionMemberWireNames[$tag] ?? null)
-                ?? $variantSchema->memberName
-            )
-            : (
-                ($info?->unionMemberWireNames[$tag] ?? null)
-                ?? $variantSchema->memberName
-            );
+        $variantWire = $this->resolveUnionVariantWireName(
+            $variantSchema,
+            $info,
+            $tag
+        );
         $this->wireNames = [$variantIdx => $variantWire];
         $this->tsFormats = [];
         $variantTsFmt = $info->unionMemberTsFormats[$tag] ?? null;
@@ -753,8 +759,10 @@ final class FormUrlEncodedSerializer implements ShapeSerializerInterface
                 $this->buffer .= $key . '=' . \rawurlencode($number) . '&';
                 return;
             case ShapeType::Timestamp->value:
-                $fmt = $timestampFormat
-                    ?? $this->settings->defaultTimestampFormat;
+                $fmt = ($this->honorTimestampFormatTrait
+                    ? $timestampFormat
+                    : null
+                ) ?? $this->settings->defaultTimestampFormat;
                 $this->buffer .= $key . '='
                     . \rawurlencode($fmt->format((float) $value))
                     . '&';
@@ -777,4 +785,66 @@ final class FormUrlEncodedSerializer implements ShapeSerializerInterface
         );
     }
 
+    /**
+     * Resolve direct member wire names for the active frame.
+     *
+     * @return array<int, string>
+     */
+    private function resolveMemberWireNames(
+        Schema $schema,
+        ?FormUrlEncodedSchemaExtension $info
+    ): array
+    {
+        if ($this->honorXmlName) {
+            return $this->capitalizeResolvedWireNames
+                ? ($info?->ec2MemberWireNames ?? [])
+                : ($info?->memberWireNames ?? []);
+        }
+
+        $wireNames = [];
+        foreach ($schema->getMembers() as $memberSchema) {
+            $name = (string) $memberSchema->memberName;
+            if ($this->capitalizeResolvedWireNames) {
+                $name = \ucfirst($name);
+            }
+            $wireNames[$memberSchema->memberIndex] = \rawurlencode($name);
+        }
+
+        return $wireNames;
+    }
+
+    private function selectMemberListPrefix(
+        ?FormUrlEncodedSchemaExtension $info
+    ): ?string
+    {
+        if (!$this->honorXmlName) {
+            return null;
+        }
+
+        return $this->capitalizeResolvedWireNames
+            ? $info?->ec2MemberListPrefix
+            : $info?->memberListPrefix;
+    }
+
+    private function resolveUnionVariantWireName(
+        Schema $variantSchema,
+        ?FormUrlEncodedSchemaExtension $info,
+        string $tag
+    ): string
+    {
+        if ($this->honorXmlName) {
+            return $this->capitalizeResolvedWireNames
+                ? (($info?->ec2UnionMemberWireNames[$tag] ?? null)
+                    ?? $variantSchema->memberName)
+                : (($info?->unionMemberWireNames[$tag] ?? null)
+                    ?? $variantSchema->memberName);
+        }
+
+        $name = (string) $variantSchema->memberName;
+        if ($this->capitalizeResolvedWireNames) {
+            $name = \ucfirst($name);
+        }
+
+        return \rawurlencode($name);
+    }
 }

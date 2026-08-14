@@ -85,6 +85,25 @@ final class CborSerializerTest extends TestCase
         );
     }
 
+    public function testCanIgnoreTimestampFormatTrait(): void
+    {
+        $schema = new Schema(
+            id: 'smithy.test#T',
+            type: ShapeType::Timestamp,
+            traits: [Schema::T_TIMESTAMP_FORMAT => 'date-time']
+        );
+        $serializer = new CborSerializer(
+            new CborCodecSettings(
+                defaultTimestampFormat: TimestampFormat::EpochSeconds,
+                honorTimestampFormatTrait: false
+            )
+        );
+
+        $serializer->serializeTimestamp($schema, 100.0, 0);
+
+        self::assertSame('c11864', \bin2hex($serializer->flush()));
+    }
+
     public function testSerializesFloatUsingSchemaWidth(): void
     {
         $floatSchema = new Schema(id: 'smithy.test#F', type: ShapeType::Float_);

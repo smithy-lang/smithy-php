@@ -13,16 +13,25 @@ use Smithy\Core\Serde\TimestampFormat;
 final class XmlCodecSettings extends AbstractCodecSettings
 {
     /**
+     * @param string|null $serviceNamespace Service namespace for codec consumers.
+     * @param TimestampFormat $defaultTimestampFormat Fallback timestamp format.
      * @param list<string> $wrapperElements Top-level wrapper element
      *     names to skip during deserialization.
+     * @param string|null $defaultXmlNamespace Default XML namespace URI.
+     * @param bool $honorTimestampFormatTrait Whether to honor `timestampFormat`.
      */
     public function __construct(
         ?string $serviceNamespace = null,
         TimestampFormat $defaultTimestampFormat
             = TimestampFormat::DateTime,
         public readonly array $wrapperElements = [],
-        public readonly ?string $defaultXmlNamespace = null
+        public readonly ?string $defaultXmlNamespace = null,
+        bool $honorTimestampFormatTrait = true
     ) {
-        parent::__construct($serviceNamespace, $defaultTimestampFormat);
+        parent::__construct(
+            $serviceNamespace,
+            $defaultTimestampFormat,
+            $honorTimestampFormatTrait
+        );
     }
 }

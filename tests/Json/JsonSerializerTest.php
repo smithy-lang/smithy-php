@@ -243,4 +243,32 @@ final class JsonSerializerTest extends TestCase
             $serializer->flush()
         );
     }
+
+    public function testSerializeTimestampCanIgnoreTimestampFormatTrait(): void
+    {
+        $member = new Schema(
+            id: 'smithy.test#Event$createdAt',
+            type: ShapeType::Timestamp,
+            memberName: 'createdAt',
+            memberIndex: 0,
+            traits: [Schema::T_TIMESTAMP_FORMAT => 'date-time']
+        );
+        $schema = new Schema(
+            id: 'smithy.test#Event',
+            type: ShapeType::Structure,
+            members: [$member]
+        );
+
+        $serializer = new JsonSerializer(
+            new JsonCodecSettings(
+                defaultTimestampFormat: TimestampFormat::EpochSeconds,
+                honorTimestampFormatTrait: false
+            )
+        );
+        $serializer->beginStruct($schema, 0);
+        $serializer->serializeTimestamp($member, 100.0, 0);
+        $serializer->endStruct();
+
+        self::assertSame('{"createdAt":100}', $serializer->flush());
+    }
 }

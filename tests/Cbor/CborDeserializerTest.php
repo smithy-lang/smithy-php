@@ -181,6 +181,35 @@ final class CborDeserializerTest extends TestCase
         self::assertSame(100.0, $members[0]);
     }
 
+    public function testCanIgnoreTimestampFormatTrait(): void
+    {
+        $members = [null];
+        (new CborDeserializer(
+            "\xA1\x61\x76\x63" . '100',
+            new CborCodecSettings(
+                defaultTimestampFormat: TimestampFormat::EpochSeconds,
+                honorTimestampFormatTrait: false
+            )
+        ))->deserialize(
+            new Schema(
+                id: 'smithy.test#TimestampWrap',
+                type: ShapeType::Structure,
+                members: [
+                    new Schema(
+                        id: 'smithy.test#TimestampWrap$v',
+                        type: ShapeType::Timestamp,
+                        memberName: 'v',
+                        memberIndex: 0,
+                        traits: [Schema::T_TIMESTAMP_FORMAT => 'date-time']
+                    )
+                ]
+            ),
+            $members
+        );
+
+        self::assertSame(100.0, $members[0]);
+    }
+
     public function testDeserializesBigIntegerAndBigDecimal(): void
     {
         $members = [null, null];

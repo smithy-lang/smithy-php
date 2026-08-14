@@ -22,6 +22,8 @@ final class CborSerializer implements ShapeSerializerInterface
 {
     private readonly CborCodecSettings $settings;
 
+    private readonly bool $honorTimestampFormatTrait;
+
     private const TOKEN_FALSE = "\xF4";
     private const TOKEN_TRUE = "\xF5";
     private const TOKEN_NULL = "\xF6";
@@ -78,6 +80,8 @@ final class CborSerializer implements ShapeSerializerInterface
     public function __construct(?CborCodecSettings $settings = null)
     {
         $this->settings = $settings ?? new CborCodecSettings();
+        $this->honorTimestampFormatTrait =
+            $this->settings->honorTimestampFormatTrait;
     }
 
     /**
@@ -447,11 +451,12 @@ final class CborSerializer implements ShapeSerializerInterface
             }
         }
 
-        $resolved = $format
-            ?? TimestampFormat::fromTraitString(
+        $resolved = ($this->honorTimestampFormatTrait
+            ? ($format ?? TimestampFormat::fromTraitString(
                 $schema->getTrait(Schema::T_TIMESTAMP_FORMAT)
-            )
-            ?? $this->settings->defaultTimestampFormat;
+            ))
+            : null
+        ) ?? $this->settings->defaultTimestampFormat;
         if ($resolved !== TimestampFormat::EpochSeconds) {
             $this->writeBytesWithMajor(0x60, $resolved->format($value));
 
@@ -1083,8 +1088,11 @@ final class CborSerializer implements ShapeSerializerInterface
                     $value = (float) $value->format('U.u');
                 }
                 $value = (float) $value;
-                $resolved = TimestampFormat::fromTraitString(
-                    $schema->getTrait(Schema::T_TIMESTAMP_FORMAT)
+                $resolved = ($this->honorTimestampFormatTrait
+                    ? TimestampFormat::fromTraitString(
+                        $schema->getTrait(Schema::T_TIMESTAMP_FORMAT)
+                    )
+                    : null
                 ) ?? $this->settings->defaultTimestampFormat;
                 if ($resolved !== TimestampFormat::EpochSeconds) {
                     $this->writeBytesWithMajor(0x60, $resolved->format($value));

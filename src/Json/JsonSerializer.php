@@ -21,6 +21,8 @@ final class JsonSerializer implements ShapeSerializerInterface
 {
     private readonly JsonCodecSettings $settings;
 
+    private readonly bool $honorTimestampFormatTrait;
+
     /**
      * Root output for the current payload.
      */
@@ -76,6 +78,8 @@ final class JsonSerializer implements ShapeSerializerInterface
     public function __construct(?JsonCodecSettings $settings = null)
     {
         $this->settings = $settings ?? new JsonCodecSettings();
+        $this->honorTimestampFormatTrait =
+            $this->settings->honorTimestampFormatTrait;
     }
 
     /**
@@ -165,12 +169,15 @@ final class JsonSerializer implements ShapeSerializerInterface
     public function serializeTimestamp(
         Schema $schema,
         float $value,
-        int $idx
+        int $idx,
+        ?TimestampFormat $format = null
     ): void
     {
         // Prefer the frame's precomputed member format.
-        $resolved = $this->timestampFormats[$idx]
-            ?? $this->settings->defaultTimestampFormat;
+        $resolved = ($this->honorTimestampFormatTrait
+            ? ($this->timestampFormats[$idx] ?? $format)
+            : null
+        ) ?? $this->settings->defaultTimestampFormat;
 
         if ($resolved === TimestampFormat::EpochSeconds) {
             $this->emit($value, $idx);
@@ -659,8 +666,10 @@ final class JsonSerializer implements ShapeSerializerInterface
         $extKey ??= JsonSchemaExtensionProvider::key();
         /** @var JsonSchemaExtension|null $info */
         $info = $memberSchema->getExtension($extKey);
-        $resolved = $info?->memberTimestampFormat
-            ?? $this->settings->defaultTimestampFormat;
+        $resolved = ($this->honorTimestampFormatTrait
+            ? $info?->memberTimestampFormat
+            : null
+        ) ?? $this->settings->defaultTimestampFormat;
 
         $epoch = $value;
 
@@ -728,7 +737,10 @@ final class JsonSerializer implements ShapeSerializerInterface
                     return $this->renderTimestamp($context, $value);
                 }
 
-                $resolved = $context ?? $this->settings->defaultTimestampFormat;
+                $resolved = ($this->honorTimestampFormatTrait
+                    ? $context
+                    : null
+                ) ?? $this->settings->defaultTimestampFormat;
                 $epoch = $value;
                 if ($value instanceof \DateTimeInterface) {
                     $epoch = (float) $value->format('U.u');

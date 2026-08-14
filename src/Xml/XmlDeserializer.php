@@ -26,11 +26,15 @@ final class XmlDeserializer implements ShapeDeserializerInterface
 {
     private readonly XmlCodecSettings $settings;
 
+    private readonly bool $honorTimestampFormatTrait;
+
     public function __construct(
         private \SimpleXMLElement $element,
         ?XmlCodecSettings $settings = null
     ) {
         $this->settings = $settings ?? new XmlCodecSettings();
+        $this->honorTimestampFormatTrait =
+            $this->settings->honorTimestampFormatTrait;
     }
 
     /**
@@ -107,9 +111,12 @@ final class XmlDeserializer implements ShapeDeserializerInterface
                                 $out[$idx] = (float) $value;
                                 break;
                             case ShapeType::Timestamp->value:
-                                $out[$idx] = ($entry[3]
-                                    ?? $this->settings->defaultTimestampFormat)
-                                    ->parse($value);
+                                $out[$idx] = (
+                                    ($this->honorTimestampFormatTrait
+                                        ? $entry[3] ?? null
+                                        : null
+                                    ) ?? $this->settings->defaultTimestampFormat
+                                )->parse($value);
                                 break;
                             case ShapeType::Blob->value:
                                 $out[$idx] = \base64_decode($value, true) ?: '';
@@ -199,9 +206,12 @@ final class XmlDeserializer implements ShapeDeserializerInterface
                             ) ?: '';
                             break;
                         case ShapeType::Timestamp->value:
-                            $out[$idx] = ($entry[4]
-                                ?? $this->settings->defaultTimestampFormat)
-                                ->parse((string) $child);
+                            $out[$idx] = (
+                                ($this->honorTimestampFormatTrait
+                                    ? $entry[4] ?? null
+                                    : null
+                                ) ?? $this->settings->defaultTimestampFormat
+                            )->parse((string) $child);
                             break;
                         case ShapeType::Structure->value:
                             $out[$idx] = $this->readNestedStructFromElement(
@@ -332,8 +342,10 @@ final class XmlDeserializer implements ShapeDeserializerInterface
                 }
                 break;
             case ShapeType::Timestamp->value:
-                $fmt = $info->listMemberTimestampFormat
-                    ?? $this->settings->defaultTimestampFormat;
+                $fmt = ($this->honorTimestampFormatTrait
+                    ? $info->listMemberTimestampFormat
+                    : null
+                ) ?? $this->settings->defaultTimestampFormat;
                 foreach ($element->{$memberName} as $child) {
                     $result[] = $fmt->parse((string) $child);
                 }
@@ -395,8 +407,10 @@ final class XmlDeserializer implements ShapeDeserializerInterface
         $result = [];
 
         if ($mapValue !== null && $mapValue->type === ShapeType::Timestamp->value) {
-        $fmt = $info->mapValueTimestampFormat
-            ?? $this->settings->defaultTimestampFormat;
+            $fmt = ($this->honorTimestampFormatTrait
+                ? $info->mapValueTimestampFormat
+                : null
+            ) ?? $this->settings->defaultTimestampFormat;
             foreach ($element->{$entryName} as $entry) {
                 $key = isset($entry->{$keyName})
                     ? (string) $entry->{$keyName}
@@ -512,8 +526,10 @@ final class XmlDeserializer implements ShapeDeserializerInterface
                 return \base64_decode((string) $element, true) ?: '';
             case ShapeType::Timestamp->value:
                 return (
-                    $schema->getExtension($extKey)?->timestampFormat
-                        ?? $this->settings->defaultTimestampFormat
+                    ($this->honorTimestampFormatTrait
+                        ? $schema->getExtension($extKey)?->timestampFormat
+                        : null
+                    ) ?? $this->settings->defaultTimestampFormat
                 )->parse((string) $element);
             case ShapeType::Structure->value:
                 return $this->readNestedStructFromElement($element, $schema);

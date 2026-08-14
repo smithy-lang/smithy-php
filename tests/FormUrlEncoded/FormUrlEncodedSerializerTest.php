@@ -88,7 +88,7 @@ final class FormUrlEncodedSerializerTest extends TestCase
     {
         $serializer = new FormUrlEncodedSerializer(
             new FormUrlEncodedCodecSettings(
-                useAlternateWireNames: true,
+                capitalizeResolvedWireNames: true,
                 alwaysFlattenLists: true,
                 supportsMaps: false
             )
@@ -114,6 +114,26 @@ final class FormUrlEncodedSerializerTest extends TestCase
         );
     }
 
+    public function testCanIgnoreXmlNameTraits(): void
+    {
+        $serializer = new FormUrlEncodedSerializer(
+            new FormUrlEncodedCodecSettings(honorXmlName: false)
+        );
+        $serializer->beginRootStruct(
+            FormUrlEncodedSampleStructFixture::schema()
+        );
+
+        (new FormUrlEncodedSampleStructFixture(
+            renamed: 'beta',
+            notes: 'memo'
+        ))->serializeMembers($serializer);
+
+        self::assertSame(
+            'renamed=beta&notes=memo',
+            $serializer->flush()
+        );
+    }
+
     public function testAwsQueryEmptyListEmitsBareContainer(): void
     {
         $serializer = new FormUrlEncodedSerializer();
@@ -131,7 +151,7 @@ final class FormUrlEncodedSerializerTest extends TestCase
     {
         $serializer = new FormUrlEncodedSerializer(
             new FormUrlEncodedCodecSettings(
-                useAlternateWireNames: true,
+                capitalizeResolvedWireNames: true,
                 alwaysFlattenLists: true,
                 supportsMaps: false
             )

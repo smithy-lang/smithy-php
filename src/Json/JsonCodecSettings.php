@@ -12,12 +12,23 @@ use Smithy\Core\Serde\TimestampFormat;
  */
 final class JsonCodecSettings extends AbstractCodecSettings
 {
+    /**
+     * @param string|null $serviceNamespace Service namespace for codec consumers.
+     * @param TimestampFormat $defaultTimestampFormat Fallback timestamp format.
+     * @param bool $honorJsonName Whether to honor `jsonName`.
+     * @param bool $honorTimestampFormatTrait Whether to honor `timestampFormat`.
+     */
     public function __construct(
         ?string $serviceNamespace = null,
         TimestampFormat $defaultTimestampFormat
             = TimestampFormat::EpochSeconds,
-        public readonly bool $honorJsonName = true
+        public readonly bool $honorJsonName = true,
+        bool $honorTimestampFormatTrait = true
     ) {
-        parent::__construct($serviceNamespace, $defaultTimestampFormat);
+        parent::__construct(
+            $serviceNamespace,
+            $defaultTimestampFormat,
+            $honorTimestampFormatTrait
+        );
     }
 }

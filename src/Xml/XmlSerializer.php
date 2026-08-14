@@ -30,6 +30,8 @@ final class XmlSerializer implements ShapeSerializerInterface
 {
     private readonly XmlCodecSettings $settings;
 
+    private readonly bool $honorTimestampFormatTrait;
+
     /** @var array<int, string> memberIndex -> XML wire name */
     private array $wireNames = [];
 
@@ -58,6 +60,8 @@ final class XmlSerializer implements ShapeSerializerInterface
         array &$writerPool = []
     ) {
         $this->settings = $settings ?? new XmlCodecSettings();
+        $this->honorTimestampFormatTrait =
+            $this->settings->honorTimestampFormatTrait;
         $this->writerPool =& $writerPool;
     }
 
@@ -219,9 +223,10 @@ final class XmlSerializer implements ShapeSerializerInterface
         ?TimestampFormat $format = null
     ): void
     {
-        $resolved = $this->tsFormats[$idx]
-            ?? $format
-            ?? $this->settings->defaultTimestampFormat;
+        $resolved = ($this->honorTimestampFormatTrait
+            ? ($this->tsFormats[$idx] ?? $format)
+            : null
+        ) ?? $this->settings->defaultTimestampFormat;
         $formatted = $resolved->format($value);
 
         if ($this->memberComponentTypes[$idx]) {
@@ -286,9 +291,12 @@ final class XmlSerializer implements ShapeSerializerInterface
                 $this->writeFloatItems($list, $itemName, $nsUri, $nsPrefix);
                 break;
             case ShapeType::Timestamp->value:
-                $timestampFormat = $info->listMemberTimestampFormat
-                    ?? $this->tsFormats[$idx]
-                    ?? $this->settings->defaultTimestampFormat;
+                $timestampFormat = ($this->honorTimestampFormatTrait
+                    ? ($info->listMemberTimestampFormat
+                        ?? $this->tsFormats[$idx]
+                        ?? null)
+                    : null
+                ) ?? $this->settings->defaultTimestampFormat;
                 $this->writeTimestampItems(
                     $list,
                     $itemName,
@@ -1113,10 +1121,11 @@ final class XmlSerializer implements ShapeSerializerInterface
                 return;
             case ShapeType::Timestamp->value:
                 $this->writer->text(
-                    (
-                        $this->tsFormats[$schema->memberIndex]
-                        ?? $this->settings->defaultTimestampFormat
-                    )->format($value)
+                    (($this->honorTimestampFormatTrait
+                        ? $this->tsFormats[$schema->memberIndex] ?? null
+                        : null
+                    ) ?? $this->settings->defaultTimestampFormat)
+                        ->format($value)
                 );
                 return;
             case ShapeType::Enum->value:
