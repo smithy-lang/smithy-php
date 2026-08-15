@@ -84,10 +84,6 @@ final class FormUrlEncodedSerializer implements ShapeSerializerInterface
      */
     private array $frameStack = [];
 
-    // -----------------------------------------------------------------
-    // Scalar write paths
-    // -----------------------------------------------------------------
-    //
     // Each of these looks up the current wire name in one array offset,
     // concatenates the prefix + wire name + '=' + urlencoded value +
     // '&', and appends to the buffer in a single `.=`. The hot path for
@@ -241,11 +237,6 @@ final class FormUrlEncodedSerializer implements ShapeSerializerInterface
             . \rawurlencode($fmt->format($value))
             . '&';
     }
-
-
-    // -----------------------------------------------------------------
-    // Aggregate write paths (list / map)
-    // -----------------------------------------------------------------
 
     /**
      * Serialize a list member.
@@ -504,11 +495,6 @@ final class FormUrlEncodedSerializer implements ShapeSerializerInterface
         $this->wireNames = $savedWireNames;
         $this->tsFormats = $savedTsFormats;
     }
-
-
-    // -----------------------------------------------------------------
-    // Struct / union entry points
-    // -----------------------------------------------------------------
 
     /**
      * Serialize a structure member.

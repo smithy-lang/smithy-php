@@ -17,8 +17,6 @@ use Smithy\Core\Serde\TimestampFormat;
 final class FormUrlEncodedSchemaExtension
 {
     public function __construct(
-        // --- Struct / union info ---
-
         /**
          * `memberIndex → wire key segment` for every direct member of
          * this struct / union schema. Resolution follows the awsQuery
@@ -71,8 +69,6 @@ final class FormUrlEncodedSchemaExtension
          */
         public readonly array $tsFormats = [],
 
-        // --- Member-level info (for scalar write paths) ---
-
         /**
          * Precomputed {@see TimestampFormat} for a timestamp-typed
          * *member* schema, or null when the member isn't a timestamp
@@ -81,8 +77,6 @@ final class FormUrlEncodedSchemaExtension
          * on the enum directly.
          */
         public readonly ?TimestampFormat $timestampFormat = null,
-
-        // --- List info ---
 
         /**
          * Wire key segment for list items, resolved once per list
@@ -152,9 +146,6 @@ final class FormUrlEncodedSchemaExtension
          * schemas that are not member-shaped lists.
          */
         public readonly ?string $ec2MemberListPrefix = null,
-
-
-        // --- Map info ---
 
         /**
          * Wire key segment for a map's key entries, resolved once per
@@ -227,9 +218,6 @@ final class FormUrlEncodedSchemaExtension
          */
         public readonly ?string $memberMapEntryPrefix = null,
 
-
-        // --- Union info ---
-
         /**
          * `memberName → memberSchema` lookup for union variants, used
          * by the serializer to resolve the active variant's member
@@ -272,7 +260,6 @@ final class FormUrlEncodedSchemaExtension
          */
         public readonly array $unionMemberTsFormats = [],
 
-        // --- Resolved target (member schemas) ---
         /**
          * Pre-resolved target class FQCN for enum / intEnum / struct /
          * union member schemas, resolved by the provider at build time

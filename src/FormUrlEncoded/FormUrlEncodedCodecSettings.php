@@ -14,7 +14,7 @@ final class FormUrlEncodedCodecSettings extends AbstractCodecSettings
 {
     /**
      * @param string|null $serviceNamespace Service namespace for codec consumers.
-     * @param TimestampFormat $defaultTimestampFormat Fallback timestamp format.
+     * @param TimestampFormat|null $defaultTimestampFormat Fallback timestamp format.
      * @param bool $honorXmlName Whether to honor `xmlName` traits.
      * @param bool $capitalizeResolvedWireNames Whether to capitalize
      *     resolved wire names.
@@ -24,8 +24,7 @@ final class FormUrlEncodedCodecSettings extends AbstractCodecSettings
      */
     public function __construct(
         ?string $serviceNamespace = null,
-        TimestampFormat $defaultTimestampFormat
-            = TimestampFormat::DateTime,
+        ?TimestampFormat $defaultTimestampFormat = null,
         public readonly bool $honorXmlName = true,
         public readonly bool $capitalizeResolvedWireNames = false,
         public readonly bool $alwaysFlattenLists = false,

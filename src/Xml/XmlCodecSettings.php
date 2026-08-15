@@ -14,7 +14,7 @@ final class XmlCodecSettings extends AbstractCodecSettings
 {
     /**
      * @param string|null $serviceNamespace Service namespace for codec consumers.
-     * @param TimestampFormat $defaultTimestampFormat Fallback timestamp format.
+     * @param TimestampFormat|null $defaultTimestampFormat Fallback timestamp format.
      * @param list<string> $wrapperElements Top-level wrapper element
      *     names to skip during deserialization.
      * @param string|null $defaultXmlNamespace Default XML namespace URI.
@@ -22,8 +22,7 @@ final class XmlCodecSettings extends AbstractCodecSettings
      */
     public function __construct(
         ?string $serviceNamespace = null,
-        TimestampFormat $defaultTimestampFormat
-            = TimestampFormat::DateTime,
+        ?TimestampFormat $defaultTimestampFormat = null,
         public readonly array $wrapperElements = [],
         public readonly ?string $defaultXmlNamespace = null,
         bool $honorTimestampFormatTrait = true

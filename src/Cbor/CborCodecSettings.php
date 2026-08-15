@@ -14,14 +14,13 @@ final class CborCodecSettings extends AbstractCodecSettings
 {
     /**
      * @param string|null $serviceNamespace Service namespace for codec consumers.
-     * @param TimestampFormat $defaultTimestampFormat Fallback timestamp format.
+     * @param TimestampFormat|null $defaultTimestampFormat Fallback timestamp format.
      * @param bool $honorTimestampFormatTrait Whether to honor `timestampFormat`.
      */
     public function __construct(
         ?string $serviceNamespace = null,
-        TimestampFormat $defaultTimestampFormat
-            = TimestampFormat::EpochSeconds,
-        bool $honorTimestampFormatTrait = true
+        ?TimestampFormat $defaultTimestampFormat = null,
+        bool $honorTimestampFormatTrait = false
     ) {
         parent::__construct(
             $serviceNamespace,

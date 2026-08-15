@@ -648,11 +648,6 @@ final class XmlSerializer implements ShapeSerializerInterface
         $this->writerPool[] = $this->writer;
     }
 
-
-    // =========================================================================
-    // Typed list fast-path methods (no per-item dispatch or metadata lookup)
-    // =========================================================================
-
     /**
      * Write string-like list items.
      *
@@ -996,11 +991,6 @@ final class XmlSerializer implements ShapeSerializerInterface
             $this->writer->endElement();
         }
     }
-
-    // =========================================================================
-    // Internal helpers
-    // =========================================================================
-
     /**
      * Serialize a member value by shape type.
      *
