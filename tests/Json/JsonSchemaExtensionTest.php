@@ -56,7 +56,7 @@ final class JsonSchemaExtensionTest extends TestCase
         self::assertSame([], $info->timestampFormats);
     }
 
-    public function testTimestampMembersResolveFormatWithEpochDefault(): void
+    public function testTimestampMembersCarryExplicitFormatsOnly(): void
     {
         $schema = new Schema(
             id: 'smithy.example#Events',
@@ -81,10 +81,7 @@ final class JsonSchemaExtensionTest extends TestCase
         /** @var JsonSchemaExtension $info */
         $info = $schema->getExtension(JsonSchemaExtensionProvider::key());
 
-        self::assertSame(
-            TimestampFormat::EpochSeconds,
-            $info->timestampFormats[0]
-        );
+        self::assertArrayNotHasKey(0, $info->timestampFormats);
         self::assertSame(TimestampFormat::HttpDate, $info->timestampFormats[1]);
     }
 
@@ -120,7 +117,7 @@ final class JsonSchemaExtensionTest extends TestCase
         self::assertNull($info->listMemberTimestampFormat);
     }
 
-    public function testTimestampListCarriesResolvedFormat(): void
+    public function testTimestampListCarriesOnlyExplicitFormat(): void
     {
         $listSchema = new Schema(
             id: 'smithy.example#TimestampList',
@@ -137,10 +134,7 @@ final class JsonSchemaExtensionTest extends TestCase
         $info = $listSchema->getExtension(JsonSchemaExtensionProvider::key());
         self::assertNotNull($info);
         self::assertSame(ShapeType::Timestamp->value, $info->listMemberType);
-        self::assertSame(
-            TimestampFormat::EpochSeconds,
-            $info->listMemberTimestampFormat
-        );
+        self::assertNull($info->listMemberTimestampFormat);
     }
 
     public function testMapSchemasCarryMapValueInfo(): void

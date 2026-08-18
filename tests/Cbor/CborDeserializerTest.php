@@ -5,10 +5,14 @@ declare(strict_types=1);
 namespace Smithy\Tests\Cbor;
 
 use PHPUnit\Framework\TestCase;
-use Smithy\Cbor\CborDeserializer;
+use Smithy\Cbor\{
+    CborCodecSettings,
+    CborDeserializer
+};
 use Smithy\Core\Serde\{
     Schema,
-    ShapeType
+    ShapeType,
+    TimestampFormat
 };
 use Smithy\Core\Shape\{
     BigDecimal,
@@ -148,6 +152,62 @@ final class CborDeserializerTest extends TestCase
         );
         self::assertSame(1.5, $members[0]);
         self::assertSame(1, $members[1]);
+    }
+
+    public function testDeserializesTimestampUsingCodecSettingsDefault(): void
+    {
+        $members = [null];
+        (new CborDeserializer(
+            "\xA1\x61\x76\x74" . '1970-01-01T00:01:40Z',
+            new CborCodecSettings(
+                defaultTimestampFormat: TimestampFormat::DateTime
+            )
+        ))->deserialize(
+            new Schema(
+                id: 'smithy.test#TimestampWrap',
+                type: ShapeType::Structure,
+                members: [
+                    new Schema(
+                        id: 'smithy.test#TimestampWrap$v',
+                        type: ShapeType::Timestamp,
+                        memberName: 'v',
+                        memberIndex: 0
+                    )
+                ]
+            ),
+            $members
+        );
+
+        self::assertSame(100.0, $members[0]);
+    }
+
+    public function testCanIgnoreTimestampFormatTrait(): void
+    {
+        $members = [null];
+        (new CborDeserializer(
+            "\xA1\x61\x76\x63" . '100',
+            new CborCodecSettings(
+                defaultTimestampFormat: TimestampFormat::EpochSeconds,
+                honorTimestampFormatTrait: false
+            )
+        ))->deserialize(
+            new Schema(
+                id: 'smithy.test#TimestampWrap',
+                type: ShapeType::Structure,
+                members: [
+                    new Schema(
+                        id: 'smithy.test#TimestampWrap$v',
+                        type: ShapeType::Timestamp,
+                        memberName: 'v',
+                        memberIndex: 0,
+                        traits: [Schema::T_TIMESTAMP_FORMAT => 'date-time']
+                    )
+                ]
+            ),
+            $members
+        );
+
+        self::assertSame(100.0, $members[0]);
     }
 
     public function testDeserializesBigIntegerAndBigDecimal(): void

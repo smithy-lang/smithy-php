@@ -20,6 +20,10 @@ use Smithy\Core\Shape\UnionInterface;
  */
 final class CborSerializer implements ShapeSerializerInterface
 {
+    private readonly CborCodecSettings $settings;
+
+    private readonly bool $honorTimestampFormatTrait;
+
     private const TOKEN_FALSE = "\xF4";
     private const TOKEN_TRUE = "\xF5";
     private const TOKEN_NULL = "\xF6";
@@ -69,6 +73,16 @@ final class CborSerializer implements ShapeSerializerInterface
 
     /** @var array<int, string>|null */
     private ?array $currentFieldNameTable = null;
+
+    /**
+     * @param CborCodecSettings|null $settings Codec behavior overrides.
+     */
+    public function __construct(?CborCodecSettings $settings = null)
+    {
+        $this->settings = $settings ?? new CborCodecSettings();
+        $this->honorTimestampFormatTrait =
+            $this->settings->honorTimestampFormatTrait;
+    }
 
     /**
      * Serialize a boolean value.
@@ -435,6 +449,18 @@ final class CborSerializer implements ShapeSerializerInterface
             if ($this->currentStructMemberCount !== -1) {
                 $this->currentStructMemberCount++;
             }
+        }
+
+        $resolved = ($this->honorTimestampFormatTrait
+            ? ($format ?? TimestampFormat::fromTraitString(
+                $schema->getTrait(Schema::T_TIMESTAMP_FORMAT)
+            ))
+            : null
+        ) ?? $this->settings->defaultTimestampFormat;
+        if ($resolved !== TimestampFormat::EpochSeconds) {
+            $this->writeBytesWithMajor(0x60, $resolved->format($value));
+
+            return;
         }
 
         $this->buffer .= self::TOKEN_TAG_EPOCH;
@@ -1061,9 +1087,20 @@ final class CborSerializer implements ShapeSerializerInterface
                 if ($value instanceof \DateTimeInterface) {
                     $value = (float) $value->format('U.u');
                 }
-                $this->buffer .= self::TOKEN_TAG_EPOCH;
-
                 $value = (float) $value;
+                $resolved = ($this->honorTimestampFormatTrait
+                    ? TimestampFormat::fromTraitString(
+                        $schema->getTrait(Schema::T_TIMESTAMP_FORMAT)
+                    )
+                    : null
+                ) ?? $this->settings->defaultTimestampFormat;
+                if ($resolved !== TimestampFormat::EpochSeconds) {
+                    $this->writeBytesWithMajor(0x60, $resolved->format($value));
+
+                    return;
+                }
+
+                $this->buffer .= self::TOKEN_TAG_EPOCH;
                 $integral = (int) $value;
                 if ($value == $integral
                     && $value <= PHP_INT_MAX

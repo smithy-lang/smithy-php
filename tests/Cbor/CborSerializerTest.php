@@ -5,10 +5,14 @@ declare(strict_types=1);
 namespace Smithy\Tests\Cbor;
 
 use PHPUnit\Framework\TestCase;
-use Smithy\Cbor\CborSerializer;
+use Smithy\Cbor\{
+    CborCodecSettings,
+    CborSerializer
+};
 use Smithy\Core\Serde\{
     Schema,
-    ShapeType
+    ShapeType,
+    TimestampFormat
 };
 use Smithy\Core\Shape\{
     BigDecimal,
@@ -63,6 +67,41 @@ final class CborSerializerTest extends TestCase
             'c1fb4059200000000000',
             \bin2hex($serializer->flush())
         );
+    }
+
+    public function testSerializesTimestampUsingCodecSettingsDefault(): void
+    {
+        $schema = new Schema(id: 'smithy.test#T', type: ShapeType::Timestamp);
+        $serializer = new CborSerializer(
+            new CborCodecSettings(
+                defaultTimestampFormat: TimestampFormat::DateTime
+            )
+        );
+
+        $serializer->serializeTimestamp($schema, 100.0, 0);
+        self::assertSame(
+            \bin2hex("\x74" . '1970-01-01T00:01:40Z'),
+            \bin2hex($serializer->flush())
+        );
+    }
+
+    public function testCanIgnoreTimestampFormatTrait(): void
+    {
+        $schema = new Schema(
+            id: 'smithy.test#T',
+            type: ShapeType::Timestamp,
+            traits: [Schema::T_TIMESTAMP_FORMAT => 'date-time']
+        );
+        $serializer = new CborSerializer(
+            new CborCodecSettings(
+                defaultTimestampFormat: TimestampFormat::EpochSeconds,
+                honorTimestampFormatTrait: false
+            )
+        );
+
+        $serializer->serializeTimestamp($schema, 100.0, 0);
+
+        self::assertSame('c11864', \bin2hex($serializer->flush()));
     }
 
     public function testSerializesFloatUsingSchemaWidth(): void

@@ -21,7 +21,8 @@
             "Smithy\\Async\\": "src/Async/",
             "Smithy\\Xml\\": "src/Xml/",
             "Smithy\\Json\\": "src/Json/",
-            "Smithy\\Cbor\\": "src/Cbor/"
+            "Smithy\\Cbor\\": "src/Cbor/",
+            "Smithy\\FormUrlEncoded\\": "src/FormUrlEncoded/"
         }
     },
     "autoload-dev": {

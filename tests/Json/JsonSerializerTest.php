@@ -7,20 +7,24 @@ namespace Smithy\Tests\Json;
 use PHPUnit\Framework\TestCase;
 use Smithy\Core\Serde\{
     Schema,
-    ShapeType
+    ShapeType,
+    TimestampFormat
 };
 use Smithy\Core\Shape\{
     BigDecimal,
     BigInteger,
     Document\AbstractDocument
 };
-use Smithy\Json\JsonSerializer;
+use Smithy\Json\{
+    JsonCodecSettings,
+    JsonSerializer
+};
 
 final class JsonSerializerTest extends TestCase
 {
     public function testSerializeTopLevelBigIntegerNormalizesLeadingZeros(): void
     {
-        $serializer = new JsonSerializer(true);
+        $serializer = new JsonSerializer();
         $serializer->serializeBigInteger(
             new Schema(
                 id: 'smithy.test#BigIntegerValue',
@@ -44,7 +48,7 @@ final class JsonSerializerTest extends TestCase
             )
         );
 
-        $serializer = new JsonSerializer(true);
+        $serializer = new JsonSerializer();
         $serializer->serializeList(
             $schema,
             [new BigInteger('0001'), new BigInteger('-0002')],
@@ -69,7 +73,7 @@ final class JsonSerializerTest extends TestCase
             )
         );
 
-        $serializer = new JsonSerializer(true);
+        $serializer = new JsonSerializer();
         $serializer->serializeMap(
             $schema,
             [
@@ -98,7 +102,7 @@ final class JsonSerializerTest extends TestCase
             listMember: $inner
         );
 
-        $serializer = new JsonSerializer(true);
+        $serializer = new JsonSerializer();
         $serializer->serializeList(
             $outer,
             [[new BigInteger('0001'), new BigInteger('002')]],
@@ -123,7 +127,7 @@ final class JsonSerializerTest extends TestCase
             members: [$member]
         );
 
-        $serializer = new JsonSerializer(true);
+        $serializer = new JsonSerializer();
         $serializer->beginStruct($schema, 0);
         $serializer->serializeTimestamp(
             $member,
@@ -162,7 +166,7 @@ final class JsonSerializerTest extends TestCase
             mapValue: $inner
         );
 
-        $serializer = new JsonSerializer(true);
+        $serializer = new JsonSerializer();
         $serializer->serializeMap(
             $outer,
             ['outer' => ['a' => new BigDecimal('1.25')]],
@@ -181,7 +185,7 @@ final class JsonSerializerTest extends TestCase
         ]);
         self::assertNotNull($document);
 
-        $serializer = new JsonSerializer(true);
+        $serializer = new JsonSerializer();
         $document->serialize($serializer, 0);
 
         self::assertSame(
@@ -201,7 +205,7 @@ final class JsonSerializerTest extends TestCase
             )
         );
 
-        $serializer = new JsonSerializer(true);
+        $serializer = new JsonSerializer();
         $serializer->serializeList(
             $schema,
             [AbstractDocument::fromValue(new BigInteger('0001'))],
@@ -209,5 +213,62 @@ final class JsonSerializerTest extends TestCase
         );
 
         self::assertSame('[1]', $serializer->flush());
+    }
+
+    public function testSerializeTimestampUsesCodecSettingsDefault(): void
+    {
+        $member = new Schema(
+            id: 'smithy.test#Event$createdAt',
+            type: ShapeType::Timestamp,
+            memberName: 'createdAt',
+            memberIndex: 0
+        );
+        $schema = new Schema(
+            id: 'smithy.test#Event',
+            type: ShapeType::Structure,
+            members: [$member]
+        );
+
+        $serializer = new JsonSerializer(
+            new JsonCodecSettings(
+                defaultTimestampFormat: TimestampFormat::DateTime
+            )
+        );
+        $serializer->beginStruct($schema, 0);
+        $serializer->serializeTimestamp($member, 100.0, 0);
+        $serializer->endStruct();
+
+        self::assertSame(
+            '{"createdAt":"1970-01-01T00:01:40Z"}',
+            $serializer->flush()
+        );
+    }
+
+    public function testSerializeTimestampCanIgnoreTimestampFormatTrait(): void
+    {
+        $member = new Schema(
+            id: 'smithy.test#Event$createdAt',
+            type: ShapeType::Timestamp,
+            memberName: 'createdAt',
+            memberIndex: 0,
+            traits: [Schema::T_TIMESTAMP_FORMAT => 'date-time']
+        );
+        $schema = new Schema(
+            id: 'smithy.test#Event',
+            type: ShapeType::Structure,
+            members: [$member]
+        );
+
+        $serializer = new JsonSerializer(
+            new JsonCodecSettings(
+                defaultTimestampFormat: TimestampFormat::EpochSeconds,
+                honorTimestampFormatTrait: false
+            )
+        );
+        $serializer->beginStruct($schema, 0);
+        $serializer->serializeTimestamp($member, 100.0, 0);
+        $serializer->endStruct();
+
+        self::assertSame('{"createdAt":100}', $serializer->flush());
     }
 }

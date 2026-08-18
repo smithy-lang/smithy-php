@@ -19,6 +19,10 @@ use Smithy\Core\Shape\UnionInterface;
  */
 final class JsonSerializer implements ShapeSerializerInterface
 {
+    private readonly JsonCodecSettings $settings;
+
+    private readonly bool $honorTimestampFormatTrait;
+
     /**
      * Root output for the current payload.
      */
@@ -71,12 +75,12 @@ final class JsonSerializer implements ShapeSerializerInterface
      */
     private ?self $documentSerializer = null;
 
-    public function __construct(
-        /**
-         * Honor `smithy.api#jsonName` when encoding member names.
-         */
-        private readonly bool $honorJsonName
-    ) {}
+    public function __construct(?JsonCodecSettings $settings = null)
+    {
+        $this->settings = $settings ?? new JsonCodecSettings();
+        $this->honorTimestampFormatTrait =
+            $this->settings->honorTimestampFormatTrait;
+    }
 
     /**
      * Serialize a boolean member into the current JSON frame.
@@ -165,12 +169,15 @@ final class JsonSerializer implements ShapeSerializerInterface
     public function serializeTimestamp(
         Schema $schema,
         float $value,
-        int $idx
+        int $idx,
+        ?TimestampFormat $format = null
     ): void
     {
         // Prefer the frame's precomputed member format.
-        $resolved = $this->timestampFormats[$idx]
-            ?? TimestampFormat::EpochSeconds;
+        $resolved = ($this->honorTimestampFormatTrait
+            ? ($this->timestampFormats[$idx] ?? $format)
+            : null
+        ) ?? $this->settings->defaultTimestampFormat;
 
         if ($resolved === TimestampFormat::EpochSeconds) {
             $this->emit($value, $idx);
@@ -207,8 +214,7 @@ final class JsonSerializer implements ShapeSerializerInterface
             ?? $memberSchema->type
             ?? ShapeType::Document->value;
         $context = $type === ShapeType::Timestamp->value
-            ? ($info?->listMemberTimestampFormat
-                ?? TimestampFormat::EpochSeconds)
+            ? $info?->listMemberTimestampFormat
             : $memberSchema;
         $out = [];
         foreach ($list as $item) {
@@ -254,8 +260,7 @@ final class JsonSerializer implements ShapeSerializerInterface
         } else {
             $type = $info?->mapValueType ?? $valueSchema->type;
             $context = $type === ShapeType::Timestamp->value
-                ? ($info?->mapValueTimestampFormat
-                    ?? TimestampFormat::EpochSeconds)
+                ? $info?->mapValueTimestampFormat
                 : $valueSchema;
             foreach ($map as $key => $value) {
                 $stringKey = (string) $key;
@@ -328,7 +333,7 @@ final class JsonSerializer implements ShapeSerializerInterface
         $newFrame = [];
         $this->current = &$newFrame;
         // Pick the wire-name table once per struct.
-        $this->wireNames = $this->honorJsonName
+        $this->wireNames = $this->settings->honorJsonName
             ? $info?->wireNameByMemberIndex
             : $info?->rawWireNameByMemberIndex;
         $this->timestampFormats = $info?->timestampFormats ?? [];
@@ -485,7 +490,7 @@ final class JsonSerializer implements ShapeSerializerInterface
         unset($this->current);
         $this->current = &$frame;
         // Pick the wire-name table once per struct.
-        $this->wireNames = $this->honorJsonName
+        $this->wireNames = $this->settings->honorJsonName
             ? $info->wireNameByMemberIndex
             : $info->rawWireNameByMemberIndex;
         $this->timestampFormats = $info->timestampFormats;
@@ -521,7 +526,7 @@ final class JsonSerializer implements ShapeSerializerInterface
             $info = $unionSchema->getExtension($extKey);
             $unionEncodeByMemberName = $info === null
                 ? []
-                : ($this->honorJsonName
+                : ($this->settings->honorJsonName
                     ? $info->unionEncodeByMemberName
                     : $info->rawUnionEncodeByMemberName);
 
@@ -551,7 +556,7 @@ final class JsonSerializer implements ShapeSerializerInterface
         $info = $unionSchema->getExtension($extKey);
 
         $tag = $value->tag();
-        $entry = ($this->honorJsonName
+        $entry = ($this->settings->honorJsonName
             ? $info->unionEncodeByMemberName
             : $info->rawUnionEncodeByMemberName)[$tag] ?? null;
         $variantValue = $value->value();
@@ -594,8 +599,7 @@ final class JsonSerializer implements ShapeSerializerInterface
         }
 
         $context = $type === ShapeType::Timestamp->value
-            ? ($info?->listMemberTimestampFormat
-                ?? TimestampFormat::EpochSeconds)
+            ? $info?->listMemberTimestampFormat
             : $itemSchema;
         foreach ($items as $item) {
             if ($item === null) {
@@ -636,8 +640,7 @@ final class JsonSerializer implements ShapeSerializerInterface
 
         $type = $info?->mapValueType ?? $valueSchema->type;
         $context = $type === ShapeType::Timestamp->value
-            ? ($info?->mapValueTimestampFormat
-                ?? TimestampFormat::EpochSeconds)
+            ? $info?->mapValueTimestampFormat
             : $valueSchema;
         foreach ($entries as $key => $value) {
             $stringKey = (string) $key;
@@ -663,8 +666,10 @@ final class JsonSerializer implements ShapeSerializerInterface
         $extKey ??= JsonSchemaExtensionProvider::key();
         /** @var JsonSchemaExtension|null $info */
         $info = $memberSchema->getExtension($extKey);
-        $resolved = $info?->memberTimestampFormat
-            ?? TimestampFormat::EpochSeconds;
+        $resolved = ($this->honorTimestampFormatTrait
+            ? $info?->memberTimestampFormat
+            : null
+        ) ?? $this->settings->defaultTimestampFormat;
 
         $epoch = $value;
 
@@ -732,7 +737,10 @@ final class JsonSerializer implements ShapeSerializerInterface
                     return $this->renderTimestamp($context, $value);
                 }
 
-                $resolved = $context ?? TimestampFormat::EpochSeconds;
+                $resolved = ($this->honorTimestampFormatTrait
+                    ? $context
+                    : null
+                ) ?? $this->settings->defaultTimestampFormat;
                 $epoch = $value;
                 if ($value instanceof \DateTimeInterface) {
                     $epoch = (float) $value->format('U.u');
@@ -770,7 +778,7 @@ final class JsonSerializer implements ShapeSerializerInterface
     private function renderDocument(DocumentInterface $value): mixed
     {
         // Render nested documents without disturbing the outer frame.
-        $sub = $this->documentSerializer ??= new self($this->honorJsonName);
+        $sub = $this->documentSerializer ??= new self($this->settings);
         $sub->reset();
         $value->serialize($sub, 0);
         if ($sub->rootHasBigNumber) {

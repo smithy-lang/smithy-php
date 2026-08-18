@@ -28,6 +28,10 @@ use Smithy\Core\Shape\UnionInterface;
  */
 final class XmlSerializer implements ShapeSerializerInterface
 {
+    private readonly XmlCodecSettings $settings;
+
+    private readonly bool $honorTimestampFormatTrait;
+
     /** @var array<int, string> memberIndex -> XML wire name */
     private array $wireNames = [];
 
@@ -46,17 +50,18 @@ final class XmlSerializer implements ShapeSerializerInterface
     private array $writerPool;
 
     /**
-     * @param string|null      $defaultXmlNamespace Default XML namespace for
-     *                                              unqualified structs.
      * @param \XMLWriter       $writer Backing XML writer.
      * @param list<\XMLWriter> $writerPool Idle codec-owned writers available
      *                                     for reuse.
      */
     public function __construct(
-        private readonly ?string $defaultXmlNamespace,
         private readonly \XMLWriter $writer,
+        ?XmlCodecSettings $settings = null,
         array &$writerPool = []
     ) {
+        $this->settings = $settings ?? new XmlCodecSettings();
+        $this->honorTimestampFormatTrait =
+            $this->settings->honorTimestampFormatTrait;
         $this->writerPool =& $writerPool;
     }
 
@@ -218,9 +223,10 @@ final class XmlSerializer implements ShapeSerializerInterface
         ?TimestampFormat $format = null
     ): void
     {
-        $resolved = $this->tsFormats[$idx]
-            ?? $format
-            ?? TimestampFormat::DateTime;
+        $resolved = ($this->honorTimestampFormatTrait
+            ? ($this->tsFormats[$idx] ?? $format)
+            : null
+        ) ?? $this->settings->defaultTimestampFormat;
         $formatted = $resolved->format($value);
 
         if ($this->memberComponentTypes[$idx]) {
@@ -285,9 +291,12 @@ final class XmlSerializer implements ShapeSerializerInterface
                 $this->writeFloatItems($list, $itemName, $nsUri, $nsPrefix);
                 break;
             case ShapeType::Timestamp->value:
-                $timestampFormat = $info->listMemberTimestampFormat
-                    ?? $this->tsFormats[$idx]
-                    ?? TimestampFormat::DateTime;
+                $timestampFormat = ($this->honorTimestampFormatTrait
+                    ? ($info->listMemberTimestampFormat
+                        ?? $this->tsFormats[$idx]
+                        ?? null)
+                    : null
+                ) ?? $this->settings->defaultTimestampFormat;
                 $this->writeTimestampItems(
                     $list,
                     $itemName,
@@ -435,8 +444,11 @@ final class XmlSerializer implements ShapeSerializerInterface
             } else {
                 $this->writer->writeAttribute('xmlns', $ns['uri']);
             }
-        } elseif ($this->defaultXmlNamespace && $schema->memberName) {
-            $this->writer->writeAttribute('xmlns', $this->defaultXmlNamespace);
+        } elseif ($this->settings->defaultXmlNamespace && $schema->memberName) {
+            $this->writer->writeAttribute(
+                'xmlns',
+                $this->settings->defaultXmlNamespace
+            );
         }
 
         $prevWireNames = $this->wireNames;
@@ -514,8 +526,11 @@ final class XmlSerializer implements ShapeSerializerInterface
             } else {
                 $this->writer->writeAttribute('xmlns', $ns['uri']);
             }
-        } elseif ($this->defaultXmlNamespace && $schema->memberName) {
-            $this->writer->writeAttribute('xmlns', $this->defaultXmlNamespace);
+        } elseif ($this->settings->defaultXmlNamespace && $schema->memberName) {
+            $this->writer->writeAttribute(
+                'xmlns',
+                $this->settings->defaultXmlNamespace
+            );
         }
 
         $this->wireNames = $info->memberWireNames;
@@ -632,11 +647,6 @@ final class XmlSerializer implements ShapeSerializerInterface
         $this->writer->openMemory();
         $this->writerPool[] = $this->writer;
     }
-
-
-    // =========================================================================
-    // Typed list fast-path methods (no per-item dispatch or metadata lookup)
-    // =========================================================================
 
     /**
      * Write string-like list items.
@@ -981,11 +991,6 @@ final class XmlSerializer implements ShapeSerializerInterface
             $this->writer->endElement();
         }
     }
-
-    // =========================================================================
-    // Internal helpers
-    // =========================================================================
-
     /**
      * Serialize a member value by shape type.
      *
@@ -1106,10 +1111,11 @@ final class XmlSerializer implements ShapeSerializerInterface
                 return;
             case ShapeType::Timestamp->value:
                 $this->writer->text(
-                    (
-                        $this->tsFormats[$schema->memberIndex]
-                        ?? TimestampFormat::DateTime
-                    )->format($value)
+                    (($this->honorTimestampFormatTrait
+                        ? $this->tsFormats[$schema->memberIndex] ?? null
+                        : null
+                    ) ?? $this->settings->defaultTimestampFormat)
+                        ->format($value)
                 );
                 return;
             case ShapeType::Enum->value:

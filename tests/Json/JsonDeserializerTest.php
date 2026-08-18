@@ -7,10 +7,14 @@ namespace Smithy\Tests\Json;
 use PHPUnit\Framework\TestCase;
 use Smithy\Core\Serde\{
     Schema,
-    ShapeType
+    ShapeType,
+    TimestampFormat
 };
 use Smithy\Core\Shape\BigInteger;
-use Smithy\Json\JsonCodec;
+use Smithy\Json\{
+    JsonCodec,
+    JsonCodecSettings
+};
 use Smithy\Tests\Json\Fixture\{
     JsonEnumStructFixture,
     JsonIntEnumFixture,
@@ -25,7 +29,9 @@ final class JsonDeserializerTest extends TestCase
     {
         $struct = new SampleStruct(name: 'alpha', count: 42);
 
-        $codec = new JsonCodec(false);
+        $codec = new JsonCodec(
+            new JsonCodecSettings(honorJsonName: false)
+        );
         $serializer = $codec->createSerializer();
         $struct->serialize($serializer, 0);
         $json = $serializer->flush();
@@ -79,7 +85,9 @@ final class JsonDeserializerTest extends TestCase
 
     public function testTopLevelUnionDeserializeUsesSyntheticSchemaSlowPath(): void
     {
-        $codec = new JsonCodec(false);
+        $codec = new JsonCodec(
+            new JsonCodecSettings(honorJsonName: false)
+        );
         $serializer = $codec->createSerializer();
         $serializer->serializeUnion(
             JsonSampleUnionFixture::schema(),
@@ -123,5 +131,62 @@ final class JsonDeserializerTest extends TestCase
 
         self::assertInstanceOf(BigInteger::class, $fields[0]);
         self::assertSame('9223372036854775807123', $fields[0]->value);
+    }
+
+    public function testDeserializerUsesCodecSettingsDefaultTimestampFormat(): void
+    {
+        $schema = new Schema(
+            id: 'smithy.test#Event',
+            type: ShapeType::Structure,
+            members: [
+                new Schema(
+                    id: 'smithy.test#Event$createdAt',
+                    type: ShapeType::Timestamp,
+                    memberName: 'createdAt',
+                    memberIndex: 0
+                )
+            ]
+        );
+
+        $codec = new JsonCodec(
+            new JsonCodecSettings(
+                defaultTimestampFormat: TimestampFormat::DateTime
+            )
+        );
+        $fields = [null];
+        $codec->createDeserializer(
+            '{"createdAt":"1970-01-01T00:01:40Z"}'
+        )->deserialize($schema, $fields);
+
+        self::assertSame(100.0, $fields[0]);
+    }
+
+    public function testDeserializerCanIgnoreTimestampFormatTrait(): void
+    {
+        $schema = new Schema(
+            id: 'smithy.test#Event',
+            type: ShapeType::Structure,
+            members: [
+                new Schema(
+                    id: 'smithy.test#Event$createdAt',
+                    type: ShapeType::Timestamp,
+                    memberName: 'createdAt',
+                    memberIndex: 0,
+                    traits: [Schema::T_TIMESTAMP_FORMAT => 'date-time']
+                )
+            ]
+        );
+
+        $codec = new JsonCodec(
+            new JsonCodecSettings(
+                defaultTimestampFormat: TimestampFormat::EpochSeconds,
+                honorTimestampFormatTrait: false
+            )
+        );
+        $fields = [null];
+        $codec->createDeserializer('{"createdAt":100}')
+            ->deserialize($schema, $fields);
+
+        self::assertSame(100.0, $fields[0]);
     }
 }

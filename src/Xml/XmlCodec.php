@@ -21,17 +21,12 @@ final class XmlCodec extends AbstractCodec
      * Idle XML writers available for reuse.
      */
     private array $writerPool = [];
+    private readonly XmlCodecSettings $settings;
 
-    /**
-     * @param list<string> $wrapperElements Top-level wrapper element names to
-     *                                      skip during deserialization.
-     * @param string|null  $defaultXmlNamespace Default XML namespace URI
-     *                                          applied to root elements.
-     */
-    public function __construct(
-        private readonly array $wrapperElements = [],
-        private readonly ?string $defaultXmlNamespace = null
-    ) {}
+    public function __construct(?XmlCodecSettings $settings = null)
+    {
+        $this->settings = $settings ?? new XmlCodecSettings();
+    }
 
     /**
      * Create an XML serializer.
@@ -42,8 +37,8 @@ final class XmlCodec extends AbstractCodec
         $writer->openMemory();
 
         return new XmlSerializer(
-            $this->defaultXmlNamespace,
             $writer,
+            $this->settings,
             $this->writerPool
         );
     }
@@ -85,7 +80,7 @@ final class XmlCodec extends AbstractCodec
         // the children of the current element. A match steps in.
         // a miss leaves the current element unchanged (defensive against
         // servers that omit the outer wrapper).
-        foreach ($this->wrapperElements as $wrapper) {
+        foreach ($this->settings->wrapperElements as $wrapper) {
             if (isset($xml->{$wrapper})) {
                 $xml = $xml->{$wrapper};
             }
@@ -96,6 +91,6 @@ final class XmlCodec extends AbstractCodec
             }
         }
 
-        return new XmlDeserializer($xml);
+        return new XmlDeserializer($xml, $this->settings);
     }
 }

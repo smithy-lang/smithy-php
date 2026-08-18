@@ -31,7 +31,6 @@ final class XmlSchemaExtension
     public const COMPONENT_ELEMENT_WITH_NAMESPACE = 2;
 
     public function __construct(
-        // --- Struct info ---
         /** Resolved element name for this struct (xmlName ?? shape name) */
         public readonly string $xmlName = '',
         /** Resolved namespace ['uri' => ..., 'prefix' => ...] or null */
@@ -93,9 +92,6 @@ final class XmlSchemaExtension
          * @var array<int, null>
          */
         public readonly array $membersTemplate = [],
-
-        // --- Member info (for scalar write* methods) ---
-
         /** Whether this member should be written as an XML attribute */
         public readonly bool $isAttribute = false,
         /** Timestamp format for timestamp members, or null otherwise. */
@@ -104,8 +100,6 @@ final class XmlSchemaExtension
          * mediaType trait value for httpPayload content-type resolution.
          */
         public readonly ?string $mediaType = null,
-
-        // --- List info ---
         /** Resolved child element name for list items */
         public readonly ?string $listMemberName = null,
         /** Whether this list is flattened */
@@ -122,9 +116,6 @@ final class XmlSchemaExtension
         public readonly ?TimestampFormat $listMemberTimestampFormat = null,
         /** Nested extension for list members that need recursive reads. */
         public readonly ?XmlSchemaExtension $listMemberExtension = null,
-
-
-        // --- Union info ---
         /**
          * xmlName -> memberSchema for union variant lookup in
          * deserialization
@@ -135,8 +126,6 @@ final class XmlSchemaExtension
          * serialization
          */
         public readonly array $unionMembersByName = [],
-
-        // --- Map info ---
         /** Resolved key element name */
         public readonly ?string $mapKeyName = null,
         /** Resolved value element name */
@@ -152,9 +141,6 @@ final class XmlSchemaExtension
         public readonly ?TimestampFormat $mapValueTimestampFormat = null,
         /** Nested extension for map values that need recursive reads. */
         public readonly ?XmlSchemaExtension $mapValueExtension = null,
-
-        // --- Resolved target (enum / intEnum / struct / union member
-        // schemas) ---
         /** @var class-string|null */
         public readonly ?string $resolvedTargetClass = null,
         /** Resolved target schema for recursive member references. */
