@@ -662,7 +662,7 @@ final class CborSerializer implements ShapeSerializerInterface
             }
         }
 
-        $this->beginStructFrame($struct::schema());
+        $this->beginStructFrame($struct->getSchema());
         $struct->serializeMembers($this);
         $this->endStructFrame();
     }
@@ -1250,7 +1250,7 @@ final class CborSerializer implements ShapeSerializerInterface
                         . ' value.'
                     );
                 }
-                $this->beginStructFrame($value::schema());
+                $this->beginStructFrame($value->getSchema());
                 $value->serializeMembers($this);
                 $this->endStructFrame();
                 return;
@@ -1298,7 +1298,7 @@ final class CborSerializer implements ShapeSerializerInterface
         if ($union instanceof UnionInterface) {
             $tag = $union->tag();
             $value = $union->value();
-            $unionSchema = $union::schema();
+            $unionSchema = $union->getSchema();
         } else {
             foreach ($union as $candidateTag => $candidateValue) {
                 if ($candidateValue === null) {

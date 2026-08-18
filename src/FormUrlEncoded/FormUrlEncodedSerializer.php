@@ -499,7 +499,7 @@ final class FormUrlEncodedSerializer implements ShapeSerializerInterface
         int $idx
     ): void
     {
-        $this->beginStruct($struct::schema(), $idx);
+        $this->beginStruct($struct->getSchema(), $idx);
         $struct->serializeMembers($this);
         $this->endStruct();
     }
@@ -578,7 +578,7 @@ final class FormUrlEncodedSerializer implements ShapeSerializerInterface
         static $extKey = null;
         $extKey ??= FormUrlEncodedSchemaExtensionProvider::key();
         /** @var FormUrlEncodedSchemaExtension|null $info */
-        $info = $union::schema()->getExtension($extKey);
+        $info = $union->getSchema()->getExtension($extKey);
         $variantSchema = $info?->unionMembersByName[$tag] ?? null;
         if ($variantSchema === null) {
             return;

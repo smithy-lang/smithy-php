@@ -35,6 +35,11 @@ final class ArrayShapeSerializerUnionFixture implements UnionInterface
         );
     }
 
+    public function getSchema(): Schema
+    {
+        return self::schema();
+    }
+
     public function serialize(ShapeSerializerInterface $serializer, int $idx): void {}
 
     public function tag(): string

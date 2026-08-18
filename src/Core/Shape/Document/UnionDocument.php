@@ -17,7 +17,7 @@ use Smithy\Core\Shape\UnionInterface;
  * document.
  *
  * `$this->schema` is never null on a `UnionDocument`. The constructor falls back to the wrapped
- * value's `::schema()` when no schema is passed, so `serialize()` reads the property directly.
+ * value's `getSchema()` when no schema is passed, so `serialize()` reads the property directly.
  */
 final class UnionDocument extends AbstractDocument
 {
@@ -32,7 +32,7 @@ final class UnionDocument extends AbstractDocument
         ?Schema $schema = null
     )
     {
-        parent::__construct($schema ?? $value::schema());
+        parent::__construct($schema ?? $value->getSchema());
     }
 
     /**

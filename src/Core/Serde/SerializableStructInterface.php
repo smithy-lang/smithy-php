@@ -25,6 +25,17 @@ interface SerializableStructInterface extends SerializableShapeInterface
     public static function schema(): Schema;
 
     /**
+     * Return the schema describing this structure instance.
+     *
+     * Generated implementations delegate to {@see schema()}, preserving
+     * their process-wide lazy-static cache. Runtime implementations may
+     * instead carry the schema on the instance.
+     *
+     * @return Schema Runtime schema for this shape.
+     */
+    public function getSchema(): Schema;
+
+    /**
      * Push this struct's non-null members into the serializer.
      *
      * Called by the codec from inside `serializeStruct()` after the codec has opened the struct

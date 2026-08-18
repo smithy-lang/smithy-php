@@ -72,6 +72,11 @@ final class HttpBindingStringEnumFixture implements EnumInterface
      *
      * @return void
      */
+    public function getSchema(): Schema
+    {
+        return self::schema();
+    }
+
     public function serialize(ShapeSerializerInterface $serializer, int $idx): void
     {
         $serializer->serializeString(self::schema(), $this->value, $idx);

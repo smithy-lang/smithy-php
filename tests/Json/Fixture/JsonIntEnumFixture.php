@@ -74,6 +74,11 @@ final class JsonIntEnumFixture implements EnumInterface
      *
      * @return void
      */
+    public function getSchema(): Schema
+    {
+        return self::schema();
+    }
+
     public function serialize(ShapeSerializerInterface $serializer, int $idx): void
     {
         $serializer->serializeInteger(self::schema(), $this->value, $idx);

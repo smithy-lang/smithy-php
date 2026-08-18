@@ -17,7 +17,7 @@ use Smithy\Core\Serde\ShapeType;
  * continues to see a document.
  *
  * `$this->schema` is never null on a `StructDocument`. The constructor falls back to the wrapped
- * value's `::schema()` when no schema is passed, so `serialize()` reads the property directly.
+ * value's `getSchema()` when no schema is passed, so `serialize()` reads the property directly.
  */
 final class StructDocument extends AbstractDocument
 {
@@ -32,7 +32,7 @@ final class StructDocument extends AbstractDocument
         ?Schema $schema = null
     )
     {
-        parent::__construct($schema ?? $value::schema());
+        parent::__construct($schema ?? $value->getSchema());
     }
 
     /**

@@ -16,7 +16,7 @@ use Smithy\Core\Shape\UnionInterface;
  * Schema-driven converter between generated shape objects and their V3-compatible associative
  * array form.
  *
- * `toArray()` walks `$shape::schema()->getMembersByIndex()` and writes the V3-equivalent array
+ * `toArray()` walks `$shape->getSchema()->getMembersByIndex()` and writes the V3-equivalent array
  * (PascalCase wire keys, scalars passing through, structs and unions recursing, enums and
  * big-numerics unwrapping to their `->value`, lists and maps mapping element-wise).
  *
@@ -39,7 +39,7 @@ final class ArrayShapeSerializer
     public static function toArray(SerializableStructInterface|UnionInterface $shape): array
     {
         $result = [];
-        foreach ($shape::schema()->getMembersByIndex() as $memberSchema) {
+        foreach ($shape->getSchema()->getMembersByIndex() as $memberSchema) {
             // Wire member name is PascalCase (e.g., `Status`). PHP property name is the camelCase
             // form. Resolve both so the array round-trips on the wire while reading from the
             // strict-typed property.

@@ -30,6 +30,17 @@ interface UnionInterface extends SerializableShapeInterface
     public static function schema(): Schema;
 
     /**
+     * Return the schema describing this union instance.
+     *
+     * Generated implementations delegate to {@see schema()}, preserving
+     * their process-wide lazy-static cache. Runtime implementations may
+     * instead carry the schema on the instance.
+     *
+     * @return Schema Union shape schema.
+     */
+    public function getSchema(): Schema;
+
+    /**
      * Return the tag name of the active variant (the Smithy member name).
      *
      * For a union with members `stringValue`, `intValue`, `event`:

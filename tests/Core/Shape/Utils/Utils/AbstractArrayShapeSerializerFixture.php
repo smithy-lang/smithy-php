@@ -10,6 +10,11 @@ use Smithy\Core\Serde\ShapeSerializerInterface;
 
 abstract class AbstractArrayShapeSerializerFixture implements SerializableStructInterface
 {
+    public function getSchema(): Schema
+    {
+        return static::schema();
+    }
+
     public function serialize(ShapeSerializerInterface $serializer, int $idx): void
     {
         // Not exercised by these tests — ArrayShapeSerializer drives the

@@ -291,7 +291,7 @@ final class JsonSerializer implements ShapeSerializerInterface
     ): void
     {
         // Serialize against the struct's canonical schema.
-        $this->beginStruct($struct::schema(), $idx);
+        $this->beginStruct($struct->getSchema(), $idx);
         $struct->serializeMembers($this);
         $this->endStruct();
     }
@@ -375,7 +375,7 @@ final class JsonSerializer implements ShapeSerializerInterface
     {
         // `renderUnion()` already returns the single-key JSON object.
         /** @var UnionInterface $union */
-        $this->emit($this->renderUnion($union::schema(), $union), $idx);
+        $this->emit($this->renderUnion($union->getSchema(), $union), $idx);
     }
 
     /**
@@ -469,7 +469,7 @@ final class JsonSerializer implements ShapeSerializerInterface
         static $extKey = null;
         $extKey ??= JsonSchemaExtensionProvider::key();
         /** @var SerializableStructInterface $value */
-        $structSchema = $value::schema();
+        $structSchema = $value->getSchema();
         /** @var JsonSchemaExtension $info */
         $info = $structSchema->getExtension($extKey);
 
@@ -543,7 +543,7 @@ final class JsonSerializer implements ShapeSerializerInterface
         }
 
         /** @var UnionInterface $value */
-        $unionSchema = $value::schema();
+        $unionSchema = $value->getSchema();
         /** @var JsonSchemaExtension $info */
         $info = $unionSchema->getExtension($extKey);
 

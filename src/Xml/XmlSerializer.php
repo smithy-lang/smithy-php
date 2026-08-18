@@ -449,7 +449,7 @@ final class XmlSerializer implements ShapeSerializerInterface
         $prevNsAttrs = $this->nsAttrs;
         $prevTsFormats = $this->tsFormats;
 
-        $structSchema = $struct::schema();
+        $structSchema = $struct->getSchema();
         /** @var XmlSchemaExtension $structInfo */
         $structInfo = $structSchema->getExtension($extKey);
         $this->wireNames = $structInfo->memberWireNames;
@@ -565,7 +565,7 @@ final class XmlSerializer implements ShapeSerializerInterface
             $info->unionMembersByName === []
             && $union instanceof UnionInterface
         ) {
-            $iterInfo = $union::schema()->getExtension($extKey);
+            $iterInfo = $union->getSchema()->getExtension($extKey);
         }
         $variantSchema = $iterInfo->unionMembersByName[$tag] ?? null;
 
@@ -908,7 +908,7 @@ final class XmlSerializer implements ShapeSerializerInterface
 
             if ($actualInfo === null) {
                 /** @var XmlSchemaExtension $actualInfo */
-                $actualInfo = $item::schema()->getExtension($extKey);
+                $actualInfo = $item->getSchema()->getExtension($extKey);
                 $this->wireNames = $actualInfo->memberWireNames;
                 $this->memberComponentTypes = $actualInfo->memberComponentTypes;
                 $this->nsAttrs = $actualInfo->nsAttrs;

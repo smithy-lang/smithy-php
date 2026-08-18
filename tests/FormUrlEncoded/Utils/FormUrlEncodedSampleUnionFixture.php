@@ -60,6 +60,11 @@ final class FormUrlEncodedSampleUnionFixture implements UnionInterface
         return self::$SCHEMA;
     }
 
+    public function getSchema(): Schema
+    {
+        return self::schema();
+    }
+
     public function serialize(ShapeSerializerInterface $serializer, int $idx): void
     {
         $serializer->serializeUnion(self::schema(), $this, $idx);

@@ -29,6 +29,17 @@ interface EnumInterface extends SerializableShapeInterface
     public static function schema(): Schema;
 
     /**
+     * Return the schema describing this enum instance.
+     *
+     * Generated implementations delegate to {@see schema()}, preserving
+     * their process-wide lazy-static cache. Runtime implementations may
+     * instead carry the schema on the instance.
+     *
+     * @return Schema Enum shape schema.
+     */
+    public function getSchema(): Schema;
+
+    /**
      * Return the backing scalar value.
      *
      * @return string|int String for enum shapes, int for intEnum shapes.
