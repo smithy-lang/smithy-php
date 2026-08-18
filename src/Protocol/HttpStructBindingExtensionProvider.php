@@ -228,9 +228,10 @@ final class HttpStructBindingExtensionProvider implements SchemaExtensionProvide
                 $responseCodeMemberIndex = $idx;
             } else {
                 $bodyMemberIndices[] = $idx;
-                $memberRoutes[$idx] = HttpStructBindingExtension::ROUTE_BODY;
+                $memberRoutes[$idx] =
+                    HttpStructBindingExtension::ROUTE_BODY_MEMBER;
                 $writeInfo[$idx] = [
-                    HttpStructBindingExtension::ROUTE_BODY,
+                    HttpStructBindingExtension::ROUTE_BODY_MEMBER,
                     null
                 ];
             }

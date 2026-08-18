@@ -28,28 +28,22 @@ final class HttpBindingSerializer implements ShapeSerializerInterface
      * @var array<string, array{string, list<string>}>
      */
     private array $headers = [];
-
     /** @var list<array{string, string}> query pairs [name, value] */
     private array $queryPairs = [];
-
     /**
      * Formatted URI label values, keyed by member index.
      *
      * @var array<int, string>
      */
     private array $labels = [];
-
     /**
      * Captured `@httpPayload` value.
      *
      * @var mixed
      */
     private mixed $payload = null;
-
     private bool $hasPayload = false;
-
     private ?ShapeSerializerInterface $codecSerializer = null;
-
     /**
      * Fused per-member write table: `memberIndex => [route, target]`.
      *
@@ -62,7 +56,6 @@ final class HttpBindingSerializer implements ShapeSerializerInterface
      * @var array<int, array{0: int, 1: ?string, 2?: true}>
      */
     private readonly array $writeInfo;
-
     /**
      * memberIndex => precomputed timestamp-format kind for request-side
      * header/label/query timestamps. Values match {@see TimestampFormat}'s
@@ -71,10 +64,8 @@ final class HttpBindingSerializer implements ShapeSerializerInterface
      * @var array<int, int>
      */
     private readonly array $requestTimestampKinds;
-
     /** @var array<int, int> */
     private readonly array $listTimestampKinds;
-
     /**
      * Raw `@httpQuery` wire names used by `@httpQueryParams` to detect
      * per-key conflicts against modeled query members. Keyed by raw
@@ -107,19 +98,22 @@ final class HttpBindingSerializer implements ShapeSerializerInterface
         switch ($w[0]) {
             case HttpStructBindingExtension::ROUTE_HEADER:
                 $this->headers[$w[1]] = [$w[1], [$strValue]];
+
                 return;
             case HttpStructBindingExtension::ROUTE_QUERY:
                 $this->queryPairs[] = [$w[1], $strValue];
+
                 return;
             case HttpStructBindingExtension::ROUTE_LABEL:
                 $this->labels[$idx] = $strValue;
+
                 return;
-            case HttpStructBindingExtension::ROUTE_BODY:
+            case HttpStructBindingExtension::ROUTE_BODY_MEMBER:
                 $this->codecSerializer->serializeBoolean($schema, $value, $idx);
+
                 return;
         }
     }
-
 
     public function serializeInteger(Schema $schema, int $value, int $idx): void
     {
@@ -127,19 +121,22 @@ final class HttpBindingSerializer implements ShapeSerializerInterface
         switch ($w[0]) {
             case HttpStructBindingExtension::ROUTE_HEADER:
                 $this->headers[$w[1]] = [$w[1], [(string) $value]];
+
                 return;
             case HttpStructBindingExtension::ROUTE_QUERY:
                 $this->queryPairs[] = [$w[1], (string) $value];
+
                 return;
             case HttpStructBindingExtension::ROUTE_LABEL:
                 $this->labels[$idx] = (string) $value;
+
                 return;
-            case HttpStructBindingExtension::ROUTE_BODY:
+            case HttpStructBindingExtension::ROUTE_BODY_MEMBER:
                 $this->codecSerializer->serializeInteger($schema, $value, $idx);
+
                 return;
         }
     }
-
 
     public function serializeFloat(Schema $schema, float $value, int $idx): void
     {
@@ -147,19 +144,22 @@ final class HttpBindingSerializer implements ShapeSerializerInterface
         switch ($w[0]) {
             case HttpStructBindingExtension::ROUTE_HEADER:
                 $this->headers[$w[1]] = [$w[1], [self::formatFloat($value)]];
+
                 return;
             case HttpStructBindingExtension::ROUTE_QUERY:
                 $this->queryPairs[] = [$w[1], self::formatFloat($value)];
+
                 return;
             case HttpStructBindingExtension::ROUTE_LABEL:
                 $this->labels[$idx] = self::formatFloat($value);
+
                 return;
-            case HttpStructBindingExtension::ROUTE_BODY:
+            case HttpStructBindingExtension::ROUTE_BODY_MEMBER:
                 $this->codecSerializer->serializeFloat($schema, $value, $idx);
+
                 return;
         }
     }
-
 
     public function serializeBigInteger(
         Schema $schema,
@@ -173,23 +173,26 @@ final class HttpBindingSerializer implements ShapeSerializerInterface
         switch ($w[0]) {
             case HttpStructBindingExtension::ROUTE_HEADER:
                 $this->headers[$w[1]] = [$w[1], [$value->value]];
+
                 return;
             case HttpStructBindingExtension::ROUTE_QUERY:
                 $this->queryPairs[] = [$w[1], $value->value];
+
                 return;
             case HttpStructBindingExtension::ROUTE_LABEL:
                 $this->labels[$idx] = $value->value;
+
                 return;
-            case HttpStructBindingExtension::ROUTE_BODY:
+            case HttpStructBindingExtension::ROUTE_BODY_MEMBER:
                 $this->codecSerializer->serializeBigInteger(
                     $schema,
                     $value,
                     $idx
                 );
+
                 return;
         }
     }
-
 
     public function serializeBigDecimal(
         Schema $schema,
@@ -201,23 +204,26 @@ final class HttpBindingSerializer implements ShapeSerializerInterface
         switch ($w[0]) {
             case HttpStructBindingExtension::ROUTE_HEADER:
                 $this->headers[$w[1]] = [$w[1], [$value->value]];
+
                 return;
             case HttpStructBindingExtension::ROUTE_QUERY:
                 $this->queryPairs[] = [$w[1], $value->value];
+
                 return;
             case HttpStructBindingExtension::ROUTE_LABEL:
                 $this->labels[$idx] = $value->value;
+
                 return;
-            case HttpStructBindingExtension::ROUTE_BODY:
+            case HttpStructBindingExtension::ROUTE_BODY_MEMBER:
                 $this->codecSerializer->serializeBigDecimal(
                     $schema,
                     $value,
                     $idx
                 );
+
                 return;
         }
     }
-
 
     public function serializeString(Schema $schema, string $value, int $idx): void
     {
@@ -228,23 +234,27 @@ final class HttpBindingSerializer implements ShapeSerializerInterface
                     $value = \base64_encode($value);
                 }
                 $this->headers[$w[1]] = [$w[1], [$value]];
+
                 return;
             case HttpStructBindingExtension::ROUTE_QUERY:
                 $this->queryPairs[] = [$w[1], $value];
+
                 return;
             case HttpStructBindingExtension::ROUTE_LABEL:
                 $this->labels[$idx] = $value;
+
                 return;
             case HttpStructBindingExtension::ROUTE_PAYLOAD:
                 $this->payload = $value;
                 $this->hasPayload = true;
+
                 return;
-            case HttpStructBindingExtension::ROUTE_BODY:
+            case HttpStructBindingExtension::ROUTE_BODY_MEMBER:
                 $this->codecSerializer->serializeString($schema, $value, $idx);
+
                 return;
         }
     }
-
 
     public function serializeBlob(
         Schema $schema,
@@ -257,6 +267,7 @@ final class HttpBindingSerializer implements ShapeSerializerInterface
             case HttpStructBindingExtension::ROUTE_HEADER:
                 if (!$value instanceof StreamInterface) {
                     $this->headers[$w[1]] = [$w[1], [\base64_encode($value)]];
+
                     return;
                 }
 
@@ -264,14 +275,16 @@ final class HttpBindingSerializer implements ShapeSerializerInterface
             case HttpStructBindingExtension::ROUTE_PAYLOAD:
                 $this->payload = $value;
                 $this->hasPayload = true;
+
                 return;
-            case HttpStructBindingExtension::ROUTE_BODY:
+            case HttpStructBindingExtension::ROUTE_BODY_MEMBER:
                 if (!$value instanceof StreamInterface) {
                     $this->codecSerializer->serializeBlob(
                         $schema,
                         $value,
                         $idx
                     );
+
                     return;
                 }
 
@@ -283,7 +296,6 @@ final class HttpBindingSerializer implements ShapeSerializerInterface
         );
     }
 
-
     public function serializeTimestamp(
         Schema $schema,
         float $value,
@@ -291,12 +303,13 @@ final class HttpBindingSerializer implements ShapeSerializerInterface
     ): void
     {
         $w = $this->writeInfo[$idx];
-        if ($w[0] === HttpStructBindingExtension::ROUTE_BODY) {
+        if ($w[0] === HttpStructBindingExtension::ROUTE_BODY_MEMBER) {
             $this->codecSerializer->serializeTimestamp(
                 $schema,
                 $value,
                 $idx
             );
+
             return;
         }
 
@@ -321,16 +334,18 @@ final class HttpBindingSerializer implements ShapeSerializerInterface
         switch ($w[0]) {
             case HttpStructBindingExtension::ROUTE_HEADER:
                 $this->headers[$w[1]] = [$w[1], [$formatted]];
+
                 return;
             case HttpStructBindingExtension::ROUTE_QUERY:
                 $this->queryPairs[] = [$w[1], $formatted];
+
                 return;
             case HttpStructBindingExtension::ROUTE_LABEL:
                 $this->labels[$idx] = $formatted;
+
                 return;
         }
     }
-
 
     public function serializeList(Schema $schema, array $list, int $idx): void
     {
@@ -343,23 +358,25 @@ final class HttpBindingSerializer implements ShapeSerializerInterface
                     $w[1],
                     [$this->formatListHeader($list, $idx, $memberType)]
                 ];
+
                 return;
             case HttpStructBindingExtension::ROUTE_QUERY:
                 $this->serializeListQuery($list, $w[1], $idx, $memberType);
+
                 return;
-            case HttpStructBindingExtension::ROUTE_BODY:
+            case HttpStructBindingExtension::ROUTE_BODY_MEMBER:
                 $this->codecSerializer->serializeList($schema, $list, $idx);
+
                 return;
         }
     }
-
 
     public function serializeMap(Schema $schema, array $map, int $idx): void
     {
         $w = $this->writeInfo[$idx];
         match ($w[0]) {
-            HttpStructBindingExtension::ROUTE_BODY => $this->codecSerializer
-                ->serializeMap($schema, $map, $idx),
+            HttpStructBindingExtension::ROUTE_BODY_MEMBER =>
+                $this->codecSerializer->serializeMap($schema, $map, $idx),
             HttpStructBindingExtension::ROUTE_PREFIX_HEADERS =>
                 $this->serializePrefixHeaders($map, $w[1]),
             HttpStructBindingExtension::ROUTE_QUERY_PARAMS =>
@@ -375,8 +392,9 @@ final class HttpBindingSerializer implements ShapeSerializerInterface
     ): void
     {
         $w = $this->writeInfo[$idx];
-        if ($w[0] === HttpStructBindingExtension::ROUTE_BODY) {
+        if ($w[0] === HttpStructBindingExtension::ROUTE_BODY_MEMBER) {
             $this->codecSerializer->serializeStruct($schema, $struct, $idx);
+
             return;
         }
 
@@ -386,34 +404,36 @@ final class HttpBindingSerializer implements ShapeSerializerInterface
         }
     }
 
-
     /**
-     * Forwards to the codec's open codec frame so callers that hold an
+     * Forward to the codec's open codec frame so callers that hold an
      * `HttpBindingSerializer` reference (e.g. the document serialization
      * path) can open a nested struct in the body without reaching past the
      * binding layer.
+     *
+     * @return void
      */
     public function beginStruct(Schema $schema, int $idx): void
     {
         $this->codecSerializer?->beginStruct($schema, $idx);
     }
 
-
     /**
-     * Forwards to the codec's matching `endStruct` for the frame opened
+     * Forward to the codec's matching `endStruct` for the frame opened
      * via {@see beginStruct}.
+     *
+     * @return void
      */
     public function endStruct(): void
     {
         $this->codecSerializer?->endStruct();
     }
 
-
     public function serializeUnion(Schema $schema, mixed $union, int $idx): void
     {
         $w = $this->writeInfo[$idx];
-        if ($w[0] === HttpStructBindingExtension::ROUTE_BODY) {
+        if ($w[0] === HttpStructBindingExtension::ROUTE_BODY_MEMBER) {
             $this->codecSerializer->serializeUnion($schema, $union, $idx);
+
             return;
         }
 
@@ -423,7 +443,6 @@ final class HttpBindingSerializer implements ShapeSerializerInterface
         }
     }
 
-
     public function serializeDocument(
         Schema $schema,
         ?DocumentInterface $value,
@@ -431,8 +450,9 @@ final class HttpBindingSerializer implements ShapeSerializerInterface
     ): void
     {
         $w = $this->writeInfo[$idx];
-        if ($w[0] === HttpStructBindingExtension::ROUTE_BODY) {
+        if ($w[0] === HttpStructBindingExtension::ROUTE_BODY_MEMBER) {
             $this->codecSerializer->serializeDocument($schema, $value, $idx);
+
             return;
         }
 
@@ -454,6 +474,7 @@ final class HttpBindingSerializer implements ShapeSerializerInterface
     public function serializePath(?array $segments, string $defaultPath): string
     {
         if ($segments === null || $this->labels === []) {
+
             return $defaultPath;
         }
 
@@ -490,7 +511,6 @@ final class HttpBindingSerializer implements ShapeSerializerInterface
         return $path;
     }
 
-
     /**
      * Build the query string from captured query pairs + static pairs.
      *
@@ -505,6 +525,7 @@ final class HttpBindingSerializer implements ShapeSerializerInterface
         $pairs = $this->queryPairs;
         if ($pairs === []) {
             if ($staticPairs === null || $staticPairs === []) {
+
                 return '';
             }
 
@@ -528,6 +549,7 @@ final class HttpBindingSerializer implements ShapeSerializerInterface
         }
 
         if ($staticPairs === null || $staticPairs === []) {
+
             return $qs;
         }
 
@@ -538,14 +560,14 @@ final class HttpBindingSerializer implements ShapeSerializerInterface
         return $qs;
     }
 
-
     /**
      * Finalize and return the request body bytes or payload stream.
      */
     public function serializeBody(): string|StreamInterface
     {
         if ($this->hasPayload) {
-            return $this->buildPayloadBody(
+
+            return $this->buildPayload(
                 $this->payload,
                 $this->bindingInfo->payloadSerializationSchema
             );
@@ -559,17 +581,18 @@ final class HttpBindingSerializer implements ShapeSerializerInterface
             $serializer = $this->codec->createSerializer();
             $serializer->beginStruct($payloadSchema, 0);
             $serializer->endStruct();
+
             return $serializer->flush();
         }
 
         if ($this->codecSerializer !== null) {
             $this->codecSerializer->endStruct();
+
             return $this->codecSerializer->flush();
         }
 
         return '';
     }
-
 
     /**
      * Payload-derived content-type, or null when the protocol default applies.
@@ -581,10 +604,12 @@ final class HttpBindingSerializer implements ShapeSerializerInterface
         $payloadSchema = $this->bindingInfo->payloadSchema;
 
         if ($payloadSchema === null) {
+
             return null;
         }
 
         if ($this->bindingInfo->payloadMediaType) {
+
             return $this->bindingInfo->payloadMediaType;
         }
 
@@ -592,6 +617,7 @@ final class HttpBindingSerializer implements ShapeSerializerInterface
             && $payloadSchema->type !== ShapeType::Structure->value
             && $payloadSchema->type !== ShapeType::Union->value
         ) {
+
             return null;
         }
 
@@ -603,7 +629,6 @@ final class HttpBindingSerializer implements ShapeSerializerInterface
         };
     }
 
-
     /**
      * Get the final headers array (PSR-7 internal format).
      *
@@ -613,7 +638,6 @@ final class HttpBindingSerializer implements ShapeSerializerInterface
     {
         return $this->headers;
     }
-
 
     /**
      * Write an autofilled `@idempotencyToken` value into the binding bucket
@@ -634,19 +658,22 @@ final class HttpBindingSerializer implements ShapeSerializerInterface
         switch ($route) {
             case HttpStructBindingExtension::ROUTE_HEADER:
                 $this->headers[$w[1]] = [$w[1], [$value]];
+
                 return;
             case HttpStructBindingExtension::ROUTE_QUERY:
                 $this->queryPairs[] = [$w[1], $value];
+
                 return;
             case HttpStructBindingExtension::ROUTE_LABEL:
                 $this->labels[$idx] = $value;
+
                 return;
-            case HttpStructBindingExtension::ROUTE_BODY:
+            case HttpStructBindingExtension::ROUTE_BODY_MEMBER:
                 $this->codecSerializer->serializeString($member, $value, $idx);
+
                 return;
         }
     }
-
 
     private function formatListHeader(array $list, int $idx, int $memberType): string
     {
@@ -698,8 +725,10 @@ final class HttpBindingSerializer implements ShapeSerializerInterface
     private static function quoteStringHeaderItem(string $item): string
     {
         if (\strpbrk($item, ',"') === false) {
+
             return $item;
         }
+
         return '"' . \str_replace(['\\', '"'], ['\\\\', '\\"'], $item) . '"';
     }
 
@@ -747,6 +776,7 @@ final class HttpBindingSerializer implements ShapeSerializerInterface
                     }
                     break;
             }
+
             return;
         }
 
@@ -854,7 +884,7 @@ final class HttpBindingSerializer implements ShapeSerializerInterface
      * @param Schema|null $serializationSchema Member schema with explicit
      *     serialization traits.
      */
-    private function buildPayloadBody(
+    private function buildPayload(
         mixed $value,
         ?Schema $serializationSchema
     ): string|StreamInterface
@@ -864,11 +894,13 @@ final class HttpBindingSerializer implements ShapeSerializerInterface
                 $serializer = $this->codec->createSerializer();
                 $payloadSchema = $serializationSchema ?? $value::schema();
                 $serializer->serializeStruct($payloadSchema, $value, 0);
+
                 return $serializer->flush();
             case ShapeType::Union->value:
                 $serializer = $this->codec->createSerializer();
                 $payloadSchema = $serializationSchema ?? $value::schema();
                 $serializer->serializeUnion($payloadSchema, $value, 0);
+
                 return $serializer->flush();
             case ShapeType::String_->value:
             case ShapeType::Enum->value:
@@ -884,6 +916,7 @@ final class HttpBindingSerializer implements ShapeSerializerInterface
                     $value,
                     0
                 );
+
                 return $serializer->flush();
             default:
                 return (string) $value;
@@ -898,6 +931,7 @@ final class HttpBindingSerializer implements ShapeSerializerInterface
         // Match subject already does the (string) cast. Default returns the
         // same string, so the previous `default => (string) $value` was a
         // wasted re-cast on the hot path.
+
         return match ($s = (string) $value) {
             'NAN' => 'NaN',
             'INF' => 'Infinity',

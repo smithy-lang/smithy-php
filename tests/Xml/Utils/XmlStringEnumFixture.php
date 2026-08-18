@@ -14,7 +14,6 @@ use Smithy\Core\Shape\EnumInterface;
 final class XmlStringEnumFixture implements EnumInterface
 {
     private static ?Schema $SCHEMA = null;
-
     /** @var array<string, self> */
     private static array $known = [];
 

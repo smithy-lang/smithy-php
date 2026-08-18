@@ -144,7 +144,10 @@ final class HttpBindingDeserializerTest extends TestCase
 
         $deserializer->deserialize($schema, $members);
 
-        self::assertInstanceOf(HttpBindingPayloadShapeFixture::class, $members[0]);
+        self::assertInstanceOf(
+            HttpBindingPayloadShapeFixture::class,
+            $members[0]
+        );
         self::assertSame('nested', $members[0]->value);
     }
 

@@ -19,9 +19,7 @@ use Smithy\Core\Shape\Document\AbstractDocument;
 final class JsonDeserializer implements ShapeDeserializerInterface
 {
     private readonly JsonCodecSettings $settings;
-
     private readonly bool $honorTimestampFormatTrait;
-
     /**
      * Decoded wire body.
      */

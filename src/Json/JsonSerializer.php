@@ -20,35 +20,29 @@ use Smithy\Core\Shape\UnionInterface;
 final class JsonSerializer implements ShapeSerializerInterface
 {
     private readonly JsonCodecSettings $settings;
-
     private readonly bool $honorTimestampFormatTrait;
-
     /**
      * Root output for the current payload.
      */
     private mixed $root = null;
-
     /**
      * Active struct frame.
      *
      * @var array<string, mixed>|null
      */
     private ?array $current = null;
-
     /**
      * Wire-name lookup for the current struct/union frame.
      *
      * @var array<int, string>|null
      */
     private ?array $wireNames = null;
-
     /**
      * Timestamp formats for the active struct frame.
      *
      * @var array<int, TimestampFormat>|null
      */
     private ?array $timestampFormats = null;
-
     /**
      * Saved parent frames for nesting. Each entry is
      * `[parentFrameByValue, parentWireNames, parentTimestampFormats, idx]`
@@ -64,12 +58,10 @@ final class JsonSerializer implements ShapeSerializerInterface
      * }>
      */
     private array $frameStack = [];
-
     /**
      * Whether the current payload may contain a BigNumberToken.
      */
     private bool $rootHasBigNumber = false;
-
     /**
      * Reused sub-serializer for nested document values.
      */

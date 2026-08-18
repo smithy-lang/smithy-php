@@ -22,25 +22,20 @@ final class HttpBindingDeserializer implements ShapeDeserializerInterface
     private const RESPONSE_HEADER_SCALAR = 0;
 
     /** @var array<string, array<int, mixed>> */
-    private readonly array $responseHeaders;
-
+    private readonly array $headerBindingLookup;
     /**
      * Headers keyed by lowercase name.
      *
      * @var array<string, array{string, list<string>}>
      */
     private readonly array $headers;
-
     private readonly ?StreamInterface $body;
-
     private int $bodySize = -1;
-
     private ?string $bodyContents = null;
-
     private readonly int $statusCode;
 
     public function __construct(
-        private readonly AbstractCodec $codec,
+        private readonly AbstractCodec $payloadCodec,
         private readonly HttpStructBindingExtension $bindingInfo,
         array $headers,
         ?StreamInterface $body,
@@ -50,7 +45,7 @@ final class HttpBindingDeserializer implements ShapeDeserializerInterface
         $this->headers = $headers;
         $this->body = $body;
         $this->statusCode = $statusCode;
-        $this->responseHeaders = $bindingInfo->responseHeaders;
+        $this->headerBindingLookup = $bindingInfo->responseHeaders;
         if (isset($headers['content-length'][1][0])) {
             $this->bodySize = (int) $headers['content-length'][1][0];
         }
@@ -64,179 +59,96 @@ final class HttpBindingDeserializer implements ShapeDeserializerInterface
     public function deserialize(Schema $schema, array &$members): void
     {
         $bindingInfo = $this->bindingInfo;
-        $responseHeaders = $this->responseHeaders;
+        $headerBindingLookup = $this->headerBindingLookup;
         $headers = $this->headers;
         $scalarTimestampFormats = $bindingInfo->scalarTimestampFormats;
 
-        if (\count($headers) <= \count($responseHeaders)) {
-            foreach ($headers as $lowerName => $entry) {
-                $binding = $responseHeaders[$lowerName] ?? null;
-                if ($binding === null) {
-                    continue;
-                }
-
-                $idx = $binding[1];
-                if ($binding[0] === self::RESPONSE_HEADER_SCALAR) {
-                    switch ($binding[2]) {
-                        case ShapeType::String_->value:
-                            $members[$idx] = isset($binding[3])
-                                ? \base64_decode($entry[1][0], true)
-                                : $entry[1][0];
-                            break;
-                        case ShapeType::Enum->value:
-                            $class = $binding[3] ?? null;
-                            $members[$idx] = $class !== null
-                                ? $class::fromValue($entry[1][0])
-                                : $entry[1][0];
-                            break;
-                        case ShapeType::Integer->value:
-                        case ShapeType::Long->value:
-                        case ShapeType::Short->value:
-                        case ShapeType::Byte->value:
-                            $members[$idx] = (int) $entry[1][0];
-                            break;
-                        case ShapeType::IntEnum->value:
-                            $class = $binding[3] ?? null;
-                            $intValue = (int) $entry[1][0];
-                            $members[$idx] = $class !== null
-                                ? $class::fromValue($intValue)
-                                : $intValue;
-                            break;
-                        case ShapeType::Boolean->value:
-                            $members[$idx] = $entry[1][0] === 'true';
-                            break;
-                        case ShapeType::Float_->value:
-                        case ShapeType::Double->value:
-                            $members[$idx] = $this->parseHeaderFloat(
-                                $entry[1][0]
-                            );
-                            break;
-                        case ShapeType::Timestamp->value:
-                            $members[$idx] = $scalarTimestampFormats[$idx]
-                                ->parse($entry[1][0]);
-                            break;
-                        default:
-                            $members[$idx] = $entry[1][0];
-                            break;
-                    }
-                } else {
-                    switch ($binding[3]) {
-                        case ShapeType::Timestamp->value:
-                            $members[$idx] = $this->parseTimestampList(
-                                $entry[1],
-                                $idx
-                            );
-                            break;
-                        case ShapeType::Integer->value:
-                        case ShapeType::Long->value:
-                        case ShapeType::Short->value:
-                        case ShapeType::Byte->value:
-                            $members[$idx] = $this->parseIntegerList($entry[1]);
-                            break;
-                        case ShapeType::Boolean->value:
-                            $members[$idx] = $this->parseBooleanList($entry[1]);
-                            break;
-                        case ShapeType::Float_->value:
-                        case ShapeType::Double->value:
-                            $members[$idx] = $this->parseFloatList($entry[1]);
-                            break;
-                        case ShapeType::Enum->value:
-                        case ShapeType::IntEnum->value:
-                            $members[$idx] = $this->parseEnumList(
-                                $entry[1],
-                                $binding[4],
-                                $binding[3] === ShapeType::IntEnum->value
-                            );
-                            break;
-                        default:
-                            $members[$idx] = $this->parseStringList($entry[1]);
-                            break;
-                    }
-                }
+        $headerKeySource = \count($headers) <= \count($headerBindingLookup)
+            ? $headers
+            : $headerBindingLookup;
+        foreach ($headerKeySource as $lowerName => $_) {
+            $entry = $headers[$lowerName] ?? null;
+            $binding = $headerBindingLookup[$lowerName] ?? null;
+            if ($entry === null || $binding === null) {
+                continue;
             }
-        } else {
-            foreach ($responseHeaders as $lowerName => $binding) {
-                $entry = $headers[$lowerName] ?? null;
-                if ($entry === null) {
-                    continue;
+
+            $idx = $binding[1];
+            if ($binding[0] === self::RESPONSE_HEADER_SCALAR) {
+                switch ($binding[2]) {
+                    case ShapeType::String_->value:
+                        $members[$idx] = isset($binding[3])
+                            ? \base64_decode($entry[1][0], true)
+                            : $entry[1][0];
+                        break;
+                    case ShapeType::Enum->value:
+                        $class = $binding[3] ?? null;
+                        $members[$idx] = $class !== null
+                            ? $class::fromValue($entry[1][0])
+                            : $entry[1][0];
+                        break;
+                    case ShapeType::Integer->value:
+                    case ShapeType::Long->value:
+                    case ShapeType::Short->value:
+                    case ShapeType::Byte->value:
+                        $members[$idx] = (int) $entry[1][0];
+                        break;
+                    case ShapeType::IntEnum->value:
+                        $class = $binding[3] ?? null;
+                        $intValue = (int) $entry[1][0];
+                        $members[$idx] = $class !== null
+                            ? $class::fromValue($intValue)
+                            : $intValue;
+                        break;
+                    case ShapeType::Boolean->value:
+                        $members[$idx] = $entry[1][0] === 'true';
+                        break;
+                    case ShapeType::Float_->value:
+                    case ShapeType::Double->value:
+                        $members[$idx] = $this->parseHeaderFloat(
+                            $entry[1][0]
+                        );
+                        break;
+                    case ShapeType::Timestamp->value:
+                        $members[$idx] = $scalarTimestampFormats[$idx]
+                            ->parse($entry[1][0]);
+                        break;
+                    default:
+                        $members[$idx] = $entry[1][0];
+                        break;
                 }
-                $idx = $binding[1];
-                if ($binding[0] === self::RESPONSE_HEADER_SCALAR) {
-                    switch ($binding[2]) {
-                        case ShapeType::String_->value:
-                            $members[$idx] = isset($binding[3])
-                                ? \base64_decode($entry[1][0], true)
-                                : $entry[1][0];
-                            break;
-                        case ShapeType::Enum->value:
-                            $class = $binding[3] ?? null;
-                            $members[$idx] = $class !== null
-                                ? $class::fromValue($entry[1][0])
-                                : $entry[1][0];
-                            break;
-                        case ShapeType::Integer->value:
-                        case ShapeType::Long->value:
-                        case ShapeType::Short->value:
-                        case ShapeType::Byte->value:
-                            $members[$idx] = (int) $entry[1][0];
-                            break;
-                        case ShapeType::IntEnum->value:
-                            $class = $binding[3] ?? null;
-                            $intValue = (int) $entry[1][0];
-                            $members[$idx] = $class !== null
-                                ? $class::fromValue($intValue)
-                                : $intValue;
-                            break;
-                        case ShapeType::Boolean->value:
-                            $members[$idx] = $entry[1][0] === 'true';
-                            break;
-                        case ShapeType::Float_->value:
-                        case ShapeType::Double->value:
-                            $members[$idx] = $this->parseHeaderFloat(
-                                $entry[1][0]
-                            );
-                            break;
-                        case ShapeType::Timestamp->value:
-                            $members[$idx] = $scalarTimestampFormats[$idx]
-                                ->parse($entry[1][0]);
-                            break;
-                        default:
-                            $members[$idx] = $entry[1][0];
-                            break;
-                    }
-                } else {
-                    switch ($binding[3]) {
-                        case ShapeType::Timestamp->value:
-                            $members[$idx] = $this->parseTimestampList(
-                                $entry[1],
-                                $idx
-                            );
-                            break;
-                        case ShapeType::Integer->value:
-                        case ShapeType::Long->value:
-                        case ShapeType::Short->value:
-                        case ShapeType::Byte->value:
-                            $members[$idx] = $this->parseIntegerList($entry[1]);
-                            break;
-                        case ShapeType::Boolean->value:
-                            $members[$idx] = $this->parseBooleanList($entry[1]);
-                            break;
-                        case ShapeType::Float_->value:
-                        case ShapeType::Double->value:
-                            $members[$idx] = $this->parseFloatList($entry[1]);
-                            break;
-                        case ShapeType::Enum->value:
-                        case ShapeType::IntEnum->value:
-                            $members[$idx] = $this->parseEnumList(
-                                $entry[1],
-                                $binding[4],
-                                $binding[3] === ShapeType::IntEnum->value
-                            );
-                            break;
-                        default:
-                            $members[$idx] = $this->parseStringList($entry[1]);
-                            break;
-                    }
+            } else {
+                switch ($binding[3]) {
+                    case ShapeType::Timestamp->value:
+                        $members[$idx] = $this->parseTimestampList(
+                            $entry[1],
+                            $idx
+                        );
+                        break;
+                    case ShapeType::Integer->value:
+                    case ShapeType::Long->value:
+                    case ShapeType::Short->value:
+                    case ShapeType::Byte->value:
+                        $members[$idx] = $this->parseIntegerList($entry[1]);
+                        break;
+                    case ShapeType::Boolean->value:
+                        $members[$idx] = $this->parseBooleanList($entry[1]);
+                        break;
+                    case ShapeType::Float_->value:
+                    case ShapeType::Double->value:
+                        $members[$idx] = $this->parseFloatList($entry[1]);
+                        break;
+                    case ShapeType::Enum->value:
+                    case ShapeType::IntEnum->value:
+                        $members[$idx] = $this->parseEnumList(
+                            $entry[1],
+                            $binding[4],
+                            $binding[3] === ShapeType::IntEnum->value
+                        );
+                        break;
+                    default:
+                        $members[$idx] = $this->parseStringList($entry[1]);
+                        break;
                 }
             }
         }
@@ -297,7 +209,7 @@ final class HttpBindingDeserializer implements ShapeDeserializerInterface
                 return;
             }
 
-            $this->codec->createDeserializer($this->bodyContents())
+            $this->payloadCodec->createDeserializer($this->bodyContents())
                 ->deserialize($bindingInfo->bodySchema ?? $schema, $members);
         }
     }
@@ -315,7 +227,7 @@ final class HttpBindingDeserializer implements ShapeDeserializerInterface
         $payloadMembers = $memberCount > 0
             ? \array_fill(0, $memberCount, null)
             : [];
-        $this->codec->createDeserializer($this->bodyContents())
+        $this->payloadCodec->createDeserializer($this->bodyContents())
             ->deserialize($schema, $payloadMembers);
 
         return $payloadMembers;

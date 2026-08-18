@@ -25,10 +25,6 @@ use Smithy\Core\Shape\BigInteger;
  */
 final class CborDeserializer implements ShapeDeserializerInterface
 {
-    private readonly CborCodecSettings $settings;
-
-    private readonly bool $honorTimestampFormatTrait;
-
     private const MAJOR_POSINT = 0;
     private const MAJOR_NEGINT = 1;
     private const MAJOR_BYTESTRING = 2;
@@ -61,6 +57,8 @@ final class CborDeserializer implements ShapeDeserializerInterface
     private const FNV_PRIME = 16777619;
     private const MAX_DEPTH = 128;
 
+    private readonly CborCodecSettings $settings;
+    private readonly bool $honorTimestampFormatTrait;
     private readonly string $payload;
     private readonly int $length;
     private int $idx = 0;

@@ -55,7 +55,7 @@ final class HttpStructBindingExtensionProviderTest extends TestCase
             $extension->memberRoutes[4]
         );
         self::assertSame(
-            HttpStructBindingExtension::ROUTE_BODY,
+            HttpStructBindingExtension::ROUTE_BODY_MEMBER,
             $extension->memberRoutes[5]
         );
         self::assertSame(

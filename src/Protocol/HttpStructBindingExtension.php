@@ -18,7 +18,7 @@ final class HttpStructBindingExtension
     public const ROUTE_QUERY = 1;
     public const ROUTE_LABEL = 2;
     public const ROUTE_PAYLOAD = 3;
-    public const ROUTE_BODY = 4;
+    public const ROUTE_BODY_MEMBER = 4;
     public const ROUTE_PREFIX_HEADERS = 5;
     public const ROUTE_QUERY_PARAMS = 6;
     public const ROUTE_RESPONSE_CODE = 7;

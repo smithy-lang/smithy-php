@@ -25,7 +25,6 @@ use Smithy\Core\Shape\BigInteger;
 final class XmlDeserializer implements ShapeDeserializerInterface
 {
     private readonly XmlCodecSettings $settings;
-
     private readonly bool $honorTimestampFormatTrait;
 
     public function __construct(

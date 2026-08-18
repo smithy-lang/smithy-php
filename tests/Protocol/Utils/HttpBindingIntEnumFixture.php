@@ -12,7 +12,6 @@ use Smithy\Core\Shape\EnumInterface;
 final class HttpBindingIntEnumFixture implements EnumInterface
 {
     private static ?Schema $SCHEMA = null;
-
     /** @var array<int, self> */
     private static array $known = [];
 
