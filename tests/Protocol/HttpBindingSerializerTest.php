@@ -118,6 +118,28 @@ final class HttpBindingSerializerTest extends TestCase
         );
     }
 
+    public function testSerializePathRejectsMissingLabelValue(): void
+    {
+        $schema = HttpBindingFixtureSchemas::request();
+        $members = $schema->getMembersByIndex();
+        $bindingInfo = $schema->getExtension(
+            HttpStructBindingExtensionProvider::key()
+        );
+        $serializer = new HttpBindingSerializer(new JsonCodec(), $bindingInfo);
+
+        $serializer->serializeString($members[2], 'present', 2);
+
+        $this->expectException(\LogicException::class);
+        $this->expectExceptionMessage(
+            'Missing HTTP label value for member index 7.'
+        );
+
+        $serializer->serializePath(
+            [['/things/', null, false], [null, 7, false]],
+            '/things/{missing}'
+        );
+    }
+
     public function testSerializesStringPayloadWithContentType(): void
     {
         $schema = HttpBindingFixtureSchemas::payloadRequest();

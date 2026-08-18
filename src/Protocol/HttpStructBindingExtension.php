@@ -90,8 +90,9 @@ final class HttpStructBindingExtension
         /**
          * Response header lookup entries, keyed by lowercase header name.
          *
-         * Scalar entries are `[0, memberIndex, ShapeType-int]`. List entries
-         * are `[1, memberIndex, Schema, listItemType-int]`.
+         * Scalar entries are `[0, memberIndex, ShapeType-int]`, with an
+         * optional target class in slot 3 for enum and intEnum members.
+         * List entries are `[1, memberIndex, Schema, listItemType-int]`.
          *
          * @var array<string, array<int, mixed>>
          */

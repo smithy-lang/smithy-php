@@ -8,6 +8,7 @@ use Psr\Http\Message\StreamInterface;
 use Smithy\Core\Serde\AbstractCodec;
 use Smithy\Core\Serde\Schema;
 use Smithy\Core\Serde\ShapeDeserializerInterface;
+use Smithy\Core\Serde\ShapeType;
 use Smithy\Core\Serde\TimestampFormat;
 use Smithy\Core\Shape\Document\AbstractDocument;
 
@@ -18,6 +19,8 @@ use Smithy\Core\Shape\Document\AbstractDocument;
  */
 final class HttpBindingDeserializer implements ShapeDeserializerInterface
 {
+    private const RESPONSE_HEADER_SCALAR = 0;
+
     /** @var array<string, array<int, mixed>> */
     private readonly array $responseHeaders;
 
@@ -31,6 +34,8 @@ final class HttpBindingDeserializer implements ShapeDeserializerInterface
     private readonly ?StreamInterface $body;
 
     private int $bodySize = -1;
+
+    private ?string $bodyContents = null;
 
     private readonly int $statusCode;
 
@@ -71,35 +76,42 @@ final class HttpBindingDeserializer implements ShapeDeserializerInterface
                 }
 
                 $idx = $binding[1];
-                if ($binding[0] === 0) {
+                if ($binding[0] === self::RESPONSE_HEADER_SCALAR) {
                     switch ($binding[2]) {
-                        case 10:  // ShapeType::String_
+                        case ShapeType::String_->value:
                             $members[$idx] = isset($binding[3])
                                 ? \base64_decode($entry[1][0], true)
                                 : $entry[1][0];
                             break;
-                        case 17:  // ShapeType::Enum
-                            $members[$idx] = $entry[1][0];
+                        case ShapeType::Enum->value:
+                            $class = $binding[3] ?? null;
+                            $members[$idx] = $class !== null
+                                ? $class::fromValue($entry[1][0])
+                                : $entry[1][0];
                             break;
-                        case 4:  // ShapeType::Integer
-                        case 5:  // ShapeType::Long
-                        case 3: // ShapeType::Short
-                        case 2: // ShapeType::Byte
+                        case ShapeType::Integer->value:
+                        case ShapeType::Long->value:
+                        case ShapeType::Short->value:
+                        case ShapeType::Byte->value:
                             $members[$idx] = (int) $entry[1][0];
                             break;
-                        case 18:  // ShapeType::IntEnum
-                            $members[$idx] = (int) $entry[1][0];
+                        case ShapeType::IntEnum->value:
+                            $class = $binding[3] ?? null;
+                            $intValue = (int) $entry[1][0];
+                            $members[$idx] = $class !== null
+                                ? $class::fromValue($intValue)
+                                : $intValue;
                             break;
-                        case 1: // ShapeType::Boolean
+                        case ShapeType::Boolean->value:
                             $members[$idx] = $entry[1][0] === 'true';
                             break;
-                        case 6: // ShapeType::Float_
-                        case 7: // ShapeType::Double
+                        case ShapeType::Float_->value:
+                        case ShapeType::Double->value:
                             $members[$idx] = $this->parseHeaderFloat(
                                 $entry[1][0]
                             );
                             break;
-                        case 12: // ShapeType::Timestamp
+                        case ShapeType::Timestamp->value:
                             $members[$idx] = $scalarTimestampFormats[$idx]
                                 ->parse($entry[1][0]);
                             break;
@@ -109,31 +121,31 @@ final class HttpBindingDeserializer implements ShapeDeserializerInterface
                     }
                 } else {
                     switch ($binding[3]) {
-                        case 12: // ShapeType::Timestamp
+                        case ShapeType::Timestamp->value:
                             $members[$idx] = $this->parseTimestampList(
                                 $entry[1],
                                 $idx
                             );
                             break;
-                        case 4:  // ShapeType::Integer
-                        case 5:  // ShapeType::Long
-                        case 3: // ShapeType::Short
-                        case 2: // ShapeType::Byte
+                        case ShapeType::Integer->value:
+                        case ShapeType::Long->value:
+                        case ShapeType::Short->value:
+                        case ShapeType::Byte->value:
                             $members[$idx] = $this->parseIntegerList($entry[1]);
                             break;
-                        case 1: // ShapeType::Boolean
+                        case ShapeType::Boolean->value:
                             $members[$idx] = $this->parseBooleanList($entry[1]);
                             break;
-                        case 6: // ShapeType::Float_
-                        case 7: // ShapeType::Double
+                        case ShapeType::Float_->value:
+                        case ShapeType::Double->value:
                             $members[$idx] = $this->parseFloatList($entry[1]);
                             break;
-                        case 17:  // ShapeType::Enum
-                        case 18:  // ShapeType::IntEnum
+                        case ShapeType::Enum->value:
+                        case ShapeType::IntEnum->value:
                             $members[$idx] = $this->parseEnumList(
                                 $entry[1],
                                 $binding[4],
-                                $binding[3] === 18
+                                $binding[3] === ShapeType::IntEnum->value
                             );
                             break;
                         default:
@@ -149,35 +161,42 @@ final class HttpBindingDeserializer implements ShapeDeserializerInterface
                     continue;
                 }
                 $idx = $binding[1];
-                if ($binding[0] === 0) {
+                if ($binding[0] === self::RESPONSE_HEADER_SCALAR) {
                     switch ($binding[2]) {
-                        case 10:  // ShapeType::String_
+                        case ShapeType::String_->value:
                             $members[$idx] = isset($binding[3])
                                 ? \base64_decode($entry[1][0], true)
                                 : $entry[1][0];
                             break;
-                        case 17:  // ShapeType::Enum
-                            $members[$idx] = $entry[1][0];
+                        case ShapeType::Enum->value:
+                            $class = $binding[3] ?? null;
+                            $members[$idx] = $class !== null
+                                ? $class::fromValue($entry[1][0])
+                                : $entry[1][0];
                             break;
-                        case 4:  // ShapeType::Integer
-                        case 5:  // ShapeType::Long
-                        case 3: // ShapeType::Short
-                        case 2: // ShapeType::Byte
+                        case ShapeType::Integer->value:
+                        case ShapeType::Long->value:
+                        case ShapeType::Short->value:
+                        case ShapeType::Byte->value:
                             $members[$idx] = (int) $entry[1][0];
                             break;
-                        case 18:  // ShapeType::IntEnum
-                            $members[$idx] = (int) $entry[1][0];
+                        case ShapeType::IntEnum->value:
+                            $class = $binding[3] ?? null;
+                            $intValue = (int) $entry[1][0];
+                            $members[$idx] = $class !== null
+                                ? $class::fromValue($intValue)
+                                : $intValue;
                             break;
-                        case 1: // ShapeType::Boolean
+                        case ShapeType::Boolean->value:
                             $members[$idx] = $entry[1][0] === 'true';
                             break;
-                        case 6: // ShapeType::Float_
-                        case 7: // ShapeType::Double
+                        case ShapeType::Float_->value:
+                        case ShapeType::Double->value:
                             $members[$idx] = $this->parseHeaderFloat(
                                 $entry[1][0]
                             );
                             break;
-                        case 12: // ShapeType::Timestamp
+                        case ShapeType::Timestamp->value:
                             $members[$idx] = $scalarTimestampFormats[$idx]
                                 ->parse($entry[1][0]);
                             break;
@@ -187,31 +206,31 @@ final class HttpBindingDeserializer implements ShapeDeserializerInterface
                     }
                 } else {
                     switch ($binding[3]) {
-                        case 12: // ShapeType::Timestamp
+                        case ShapeType::Timestamp->value:
                             $members[$idx] = $this->parseTimestampList(
                                 $entry[1],
                                 $idx
                             );
                             break;
-                        case 4:  // ShapeType::Integer
-                        case 5:  // ShapeType::Long
-                        case 3: // ShapeType::Short
-                        case 2: // ShapeType::Byte
+                        case ShapeType::Integer->value:
+                        case ShapeType::Long->value:
+                        case ShapeType::Short->value:
+                        case ShapeType::Byte->value:
                             $members[$idx] = $this->parseIntegerList($entry[1]);
                             break;
-                        case 1: // ShapeType::Boolean
+                        case ShapeType::Boolean->value:
                             $members[$idx] = $this->parseBooleanList($entry[1]);
                             break;
-                        case 6: // ShapeType::Float_
-                        case 7: // ShapeType::Double
+                        case ShapeType::Float_->value:
+                        case ShapeType::Double->value:
                             $members[$idx] = $this->parseFloatList($entry[1]);
                             break;
-                        case 17:  // ShapeType::Enum
-                        case 18:  // ShapeType::IntEnum
+                        case ShapeType::Enum->value:
+                        case ShapeType::IntEnum->value:
                             $members[$idx] = $this->parseEnumList(
                                 $entry[1],
                                 $binding[4],
-                                $binding[3] === 18
+                                $binding[3] === ShapeType::IntEnum->value
                             );
                             break;
                         default:
@@ -241,32 +260,24 @@ final class HttpBindingDeserializer implements ShapeDeserializerInterface
             $idx = $bindingInfo->payloadMemberIndex;
             $payloadSchema = $bindingInfo->payloadSchema;
             switch ($payloadSchema->type) {
-                case 11: // ShapeType::Blob
+                case ShapeType::Blob->value:
                     $members[$idx] = $this->body;
                     break;
-                case 10: // ShapeType::String_
-                case 17: // ShapeType::Enum
-                    $bodySize = $this->bodySize;
-                    if ($bodySize < 0) {
-                        $bodySize = (int) ($this->body?->getSize() ?? 0);
-                        $this->bodySize = $bodySize;
-                    }
-                    $members[$idx] = $bodySize ? (string) $this->body : '';
+                case ShapeType::String_->value:
+                case ShapeType::Enum->value:
+                    $members[$idx] = $this->bodyHasContent()
+                        ? $this->bodyContents()
+                        : '';
                     break;
-                case 19: // ShapeType::Document
-                    $bodySize = $this->bodySize;
-                    if ($bodySize < 0) {
-                        $bodySize = (int) ($this->body?->getSize() ?? 0);
-                        $this->bodySize = $bodySize;
-                    }
-                    if (!$bodySize) {
+                case ShapeType::Document->value:
+                    if (!$this->bodyHasContent()) {
                         $members[$idx] = null;
                     } else {
-                        $decoded = \json_decode((string) $this->body, true);
+                        $decoded = \json_decode($this->bodyContents(), true);
                         $members[$idx] = AbstractDocument::fromValue($decoded);
                     }
                     break;
-                case 16: // ShapeType::Union
+                case ShapeType::Union->value:
                     $payloadMembers = $this->deserializePayload($payloadSchema);
                     $members[$idx] = \is_array($payloadMembers)
                         ? ($payloadMembers[0] ?? null)
@@ -282,16 +293,11 @@ final class HttpBindingDeserializer implements ShapeDeserializerInterface
 
             }
         } else {
-            $bodySize = $this->bodySize;
-            if ($bodySize < 0) {
-                $bodySize = (int) ($this->body?->getSize() ?? 0);
-                $this->bodySize = $bodySize;
-            }
-            if (!$bodySize) {
+            if (!$this->bodyHasContent()) {
                 return;
             }
 
-            $this->codec->createDeserializer((string) $this->body)
+            $this->codec->createDeserializer($this->bodyContents())
                 ->deserialize($bindingInfo->bodySchema ?? $schema, $members);
         }
     }
@@ -301,12 +307,7 @@ final class HttpBindingDeserializer implements ShapeDeserializerInterface
      */
     private function deserializePayload(Schema $schema): mixed
     {
-        $bodySize = $this->bodySize;
-        if ($bodySize < 0) {
-            $bodySize = (int) ($this->body?->getSize() ?? 0);
-            $this->bodySize = $bodySize;
-        }
-        if (!$bodySize) {
+        if (!$this->bodyHasContent()) {
             return null;
         }
 
@@ -314,10 +315,35 @@ final class HttpBindingDeserializer implements ShapeDeserializerInterface
         $payloadMembers = $memberCount > 0
             ? \array_fill(0, $memberCount, null)
             : [];
-        $this->codec->createDeserializer((string) $this->body)
+        $this->codec->createDeserializer($this->bodyContents())
             ->deserialize($schema, $payloadMembers);
 
         return $payloadMembers;
+    }
+
+    private function bodyHasContent(): bool
+    {
+        if ($this->body === null) {
+            return false;
+        }
+
+        if ($this->bodySize >= 0) {
+            return $this->bodySize > 0;
+        }
+
+        $size = $this->body->getSize();
+        if ($size !== null) {
+            $this->bodySize = $size;
+
+            return $size > 0;
+        }
+
+        return $this->bodyContents() !== '';
+    }
+
+    private function bodyContents(): string
+    {
+        return $this->bodyContents ??= (string) $this->body;
     }
 
     /**
@@ -416,10 +442,11 @@ final class HttpBindingDeserializer implements ShapeDeserializerInterface
      */
     private function parseTimestampList(array $values, int $memberIndex): array
     {
-        $kind = $this->bindingInfo->listTimestampKinds[$memberIndex] ?? 2;
+        $kind = $this->bindingInfo->listTimestampKinds[$memberIndex]
+            ?? TimestampFormat::HttpDate->value;
         $joined = \implode(', ', $values);
 
-        if ($kind === 2) {
+        if ($kind === TimestampFormat::HttpDate->value) {
             $items = [];
             $len = \strlen($joined);
             for ($o = 0; $o < $len; $o += 31) {
@@ -431,8 +458,8 @@ final class HttpBindingDeserializer implements ShapeDeserializerInterface
 
         $result = [];
         $format = match ($kind) {
-            1 => TimestampFormat::DateTime,
-            2 => TimestampFormat::HttpDate,
+            TimestampFormat::DateTime->value => TimestampFormat::DateTime,
+            TimestampFormat::HttpDate->value => TimestampFormat::HttpDate,
             default => TimestampFormat::EpochSeconds
         };
         foreach ($items as $item) {

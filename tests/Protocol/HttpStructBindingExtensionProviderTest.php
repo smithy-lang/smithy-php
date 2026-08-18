@@ -10,6 +10,8 @@ use Smithy\Core\Serde\TimestampFormat;
 use Smithy\Protocol\HttpStructBindingExtension;
 use Smithy\Protocol\HttpStructBindingExtensionProvider;
 use Smithy\Tests\Protocol\Utils\HttpBindingFixtureSchemas;
+use Smithy\Tests\Protocol\Utils\HttpBindingIntEnumFixture;
+use Smithy\Tests\Protocol\Utils\HttpBindingStringEnumFixture;
 
 #[CoversClass(HttpStructBindingExtensionProvider::class)]
 final class HttpStructBindingExtensionProviderTest extends TestCase
@@ -74,6 +76,24 @@ final class HttpStructBindingExtensionProviderTest extends TestCase
         self::assertSame(
             'body',
             $extension->bodySchema?->getMemberByIndex(5)?->memberName
+        );
+    }
+
+    public function testStoresScalarEnumHeaderTargetClasses(): void
+    {
+        $schema = HttpBindingFixtureSchemas::response();
+
+        $extension = $schema->getExtension(
+            HttpStructBindingExtensionProvider::key()
+        );
+
+        self::assertSame(
+            [0, 6, 17, HttpBindingStringEnumFixture::class],
+            $extension->responseHeaders['x-state']
+        );
+        self::assertSame(
+            [0, 7, 18, HttpBindingIntEnumFixture::class],
+            $extension->responseHeaders['x-priority']
         );
     }
 }

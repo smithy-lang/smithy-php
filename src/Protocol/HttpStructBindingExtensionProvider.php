@@ -84,7 +84,7 @@ final class HttpStructBindingExtensionProvider implements SchemaExtensionProvide
                     $listItemClass = (
                         $listItemType === ShapeType::Enum->value
                             || $listItemType === ShapeType::IntEnum->value
-                    ) ? $listMember?->targetClass : null;
+                    ) ? self::resolveEnumTargetClass($listMember) : null;
                     $responseHeaders[$lowerName] = [
                         1,
                         $idx,
@@ -118,6 +118,15 @@ final class HttpStructBindingExtensionProvider implements SchemaExtensionProvide
                             HttpStructBindingExtension::ROUTE_HEADER,
                             $lowerName,
                             true
+                        ];
+                    } elseif ($member->type === ShapeType::Enum->value
+                        || $member->type === ShapeType::IntEnum->value
+                    ) {
+                        $responseHeaders[$lowerName] = [
+                            0,
+                            $idx,
+                            $member->type,
+                            self::resolveEnumTargetClass($member)
                         ];
                     } else {
                         $responseHeaders[$lowerName] = [0, $idx, $member->type];
@@ -250,5 +259,15 @@ final class HttpStructBindingExtensionProvider implements SchemaExtensionProvide
             scalarTimestampFormats: $scalarTimestampFormats,
             listTimestampKinds: $listTimestampKinds
         );
+    }
+
+    private static function resolveEnumTargetClass(?Schema $schema): ?string
+    {
+        if ($schema === null) {
+            return null;
+        }
+
+        return $schema->targetClass
+            ?? $schema->resolveTarget()->targetClass;
     }
 }

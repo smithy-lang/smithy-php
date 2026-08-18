@@ -151,6 +151,22 @@ final class HttpBindingFixtureSchemas
                     type: ShapeType::String_,
                     memberName: 'body',
                     memberIndex: 5
+                ),
+                new Schema(
+                    id: 'smithy.test#Response$state',
+                    type: ShapeType::Enum,
+                    memberName: 'state',
+                    memberIndex: 6,
+                    traits: [Schema::T_HTTP_HEADER => 'X-State'],
+                    targetClass: HttpBindingStringEnumFixture::class
+                ),
+                new Schema(
+                    id: 'smithy.test#Response$priority',
+                    type: ShapeType::IntEnum,
+                    memberName: 'priority',
+                    memberIndex: 7,
+                    traits: [Schema::T_HTTP_HEADER => 'X-Priority'],
+                    targetClass: HttpBindingIntEnumFixture::class
                 )
             ],
             targetClass: HttpBindingOutputShapeFixture::class

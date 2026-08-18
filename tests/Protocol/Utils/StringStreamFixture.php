@@ -11,7 +11,8 @@ final class StringStreamFixture implements StreamInterface
     private int $position = 0;
 
     public function __construct(
-        private string $contents
+        private string $contents,
+        private bool $hasKnownSize = true
     ) {}
 
     public function __toString(): string
@@ -28,7 +29,7 @@ final class StringStreamFixture implements StreamInterface
 
     public function getSize(): ?int
     {
-        return \strlen($this->contents);
+        return $this->hasKnownSize ? \strlen($this->contents) : null;
     }
 
     public function tell(): int

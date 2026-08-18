@@ -23,7 +23,9 @@ final class HttpBindingOutputShapeFixture implements SerializableStructInterface
         public readonly ?array $list = null,
         public readonly ?array $metadata = null,
         public readonly ?int $status = null,
-        public readonly ?string $body = null
+        public readonly ?string $body = null,
+        public readonly ?HttpBindingStringEnumFixture $state = null,
+        public readonly ?HttpBindingIntEnumFixture $priority = null
     )
     {
         self::schema();
@@ -73,6 +75,20 @@ final class HttpBindingOutputShapeFixture implements SerializableStructInterface
         if ($this->body !== null) {
             $serializer->serializeString($members[5], $this->body, 5);
         }
+        if ($this->state !== null) {
+            $serializer->serializeString(
+                $members[6],
+                (string) $this->state->getValue(),
+                6
+            );
+        }
+        if ($this->priority !== null) {
+            $serializer->serializeInteger(
+                $members[7],
+                (int) $this->priority->getValue(),
+                7
+            );
+        }
     }
 
     /**
@@ -87,6 +103,8 @@ final class HttpBindingOutputShapeFixture implements SerializableStructInterface
             3 => $this->metadata,
             4 => $this->status,
             5 => $this->body,
+            6 => $this->state,
+            7 => $this->priority,
             default => null
         };
     }

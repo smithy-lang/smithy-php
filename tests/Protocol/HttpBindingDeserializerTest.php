@@ -34,6 +34,8 @@ final class HttpBindingDeserializerTest extends TestCase
                 'x-count' => ['X-Count', ['7']],
                 'x-list' => ['X-List', ['"a,b", c']],
                 'x-meta-one' => ['X-Meta-One', ['alpha']],
+                'x-state' => ['X-State', ['open']],
+                'x-priority' => ['X-Priority', ['7']],
                 'content-length' => ['Content-Length', ['20']]
             ],
             new StringStreamFixture('{"body":"body text"}'),
@@ -48,6 +50,8 @@ final class HttpBindingDeserializerTest extends TestCase
         self::assertSame(['One' => 'alpha'], $members[3]);
         self::assertSame(202, $members[4]);
         self::assertSame('body text', $members[5]);
+        self::assertSame('open', $members[6]?->getValue());
+        self::assertSame(7, $members[7]?->getValue());
     }
 
     public function testDeserializesGeneratedOutputShape(): void
@@ -65,6 +69,8 @@ final class HttpBindingDeserializerTest extends TestCase
                 'x-count' => ['X-Count', ['7']],
                 'x-list' => ['X-List', ['"a,b", c']],
                 'x-meta-one' => ['X-Meta-One', ['alpha']],
+                'x-state' => ['X-State', ['open']],
+                'x-priority' => ['X-Priority', ['7']],
                 'content-length' => ['Content-Length', ['20']]
             ],
             new StringStreamFixture('{"body":"body text"}'),
@@ -80,6 +86,8 @@ final class HttpBindingDeserializerTest extends TestCase
         self::assertSame(['One' => 'alpha'], $output->metadata);
         self::assertSame(202, $output->status);
         self::assertSame('body text', $output->body);
+        self::assertSame('open', $output->state?->getValue());
+        self::assertSame(7, $output->priority?->getValue());
     }
 
     public function testDeserializesStringPayloadMember(): void
@@ -94,6 +102,25 @@ final class HttpBindingDeserializerTest extends TestCase
             $bindingInfo,
             ['content-length' => ['Content-Length', ['12']]],
             new StringStreamFixture('payload text')
+        );
+
+        $deserializer->deserialize($schema, $members);
+
+        self::assertSame('payload text', $members[0]);
+    }
+
+    public function testDeserializesStringPayloadMemberWithUnknownSize(): void
+    {
+        $schema = HttpBindingFixtureSchemas::payloadResponse();
+        $members = [null];
+        $bindingInfo = $schema->getExtension(
+            HttpStructBindingExtensionProvider::key()
+        );
+        $deserializer = new HttpBindingDeserializer(
+            new JsonCodec(),
+            $bindingInfo,
+            [],
+            new StringStreamFixture('payload text', false)
         );
 
         $deserializer->deserialize($schema, $members);
@@ -119,6 +146,48 @@ final class HttpBindingDeserializerTest extends TestCase
 
         self::assertInstanceOf(HttpBindingPayloadShapeFixture::class, $members[0]);
         self::assertSame('nested', $members[0]->value);
+    }
+
+    public function testDeserializesStructurePayloadMemberWithUnknownSize(): void
+    {
+        $schema = HttpBindingFixtureSchemas::structurePayloadResponse();
+        $members = [null];
+        $bindingInfo = $schema->getExtension(
+            HttpStructBindingExtensionProvider::key()
+        );
+        $deserializer = new HttpBindingDeserializer(
+            new JsonCodec(),
+            $bindingInfo,
+            [],
+            new StringStreamFixture('{"value":"nested"}', false)
+        );
+
+        $deserializer->deserialize($schema, $members);
+
+        self::assertInstanceOf(
+            HttpBindingPayloadShapeFixture::class,
+            $members[0]
+        );
+        self::assertSame('nested', $members[0]->value);
+    }
+
+    public function testDeserializesBodyMemberWithUnknownSize(): void
+    {
+        $schema = HttpBindingFixtureSchemas::response();
+        $members = \array_fill(0, $schema->getMemberCount(), null);
+        $bindingInfo = $schema->getExtension(
+            HttpStructBindingExtensionProvider::key()
+        );
+        $deserializer = new HttpBindingDeserializer(
+            new JsonCodec(),
+            $bindingInfo,
+            [],
+            new StringStreamFixture('{"body":"body text"}', false)
+        );
+
+        $deserializer->deserialize($schema, $members);
+
+        self::assertSame('body text', $members[5]);
     }
 
     public function testBodyDeserializationUsesConfiguredCodecSettings(): void
