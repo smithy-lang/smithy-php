@@ -14,7 +14,6 @@ use Smithy\Core\Serde\ShapeSerializerInterface;
 final class CborCodec extends AbstractCodec
 {
     private readonly CborCodecSettings $settings;
-
     /** @var list<CborSerializer> Reusable internal serializers. */
     private array $serializerPool = [];
 

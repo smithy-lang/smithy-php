@@ -24,12 +24,46 @@ use Smithy\Core\Shape\UnionInterface;
 final class FormUrlEncodedSerializer implements ShapeSerializerInterface
 {
     private readonly FormUrlEncodedCodecSettings $settings;
-
     private readonly bool $honorTimestampFormatTrait;
-
     private readonly bool $honorXmlName;
-
     private readonly bool $capitalizeResolvedWireNames;
+    /**
+     * The accumulated URL-encoded body. Each `serializeXxx` scalar
+     * append emits one `key=value&` fragment; {@see flush()} trims the
+     * final trailing `&` before returning.
+     */
+    private string $buffer = '';
+    /**
+     * Prefix carried by every scalar emit under the current struct /
+     * list / map / union frame. Always ends with `'.'` (or is the empty
+     * string at the outermost frame), so appending the wire name is a
+     * bare concat with no separator branch.
+     */
+    private string $prefix = '';
+    /**
+     * Wire-name lookup for the current struct / union frame, or `null`
+     * at the outermost level before any `beginStruct` runs. Sourced from
+     * {@see FormUrlEncodedSchemaExtension::$memberWireNames}.
+     *
+     * @var array<int, string>|null
+     */
+    private ?array $wireNames = null;
+    /**
+     * Precomputed timestamp-format map for the current struct frame:
+     * `memberIndex → TimestampFormat`. Sparse. Only timestamp members
+     * with an explicit `@timestampFormat` trait appear.
+     *
+     * @var array<int, TimestampFormat>
+     */
+    private array $tsFormats = [];
+    /**
+     * Saved parent frames for nested struct / union writes. Each entry
+     * captures the state {@see beginStruct} rewrote so {@see endStruct}
+     * can restore it exactly.
+     *
+     * @var list<array{0: string, 1: array<int,string>|null, 2: array<int,TimestampFormat>}>
+     */
+    private array $frameStack = [];
 
     public function __construct(
         ?FormUrlEncodedCodecSettings $settings = null
@@ -41,48 +75,6 @@ final class FormUrlEncodedSerializer implements ShapeSerializerInterface
         $this->capitalizeResolvedWireNames =
             $this->settings->capitalizeResolvedWireNames;
     }
-
-    /**
-     * The accumulated URL-encoded body. Each `serializeXxx` scalar
-     * append emits one `key=value&` fragment; {@see flush()} trims the
-     * final trailing `&` before returning.
-     */
-    private string $buffer = '';
-
-    /**
-     * Prefix carried by every scalar emit under the current struct /
-     * list / map / union frame. Always ends with `'.'` (or is the empty
-     * string at the outermost frame), so appending the wire name is a
-     * bare concat with no separator branch.
-     */
-    private string $prefix = '';
-
-    /**
-     * Wire-name lookup for the current struct / union frame, or `null`
-     * at the outermost level before any `beginStruct` runs. Sourced from
-     * {@see FormUrlEncodedSchemaExtension::$memberWireNames}.
-     *
-     * @var array<int, string>|null
-     */
-    private ?array $wireNames = null;
-
-    /**
-     * Precomputed timestamp-format map for the current struct frame:
-     * `memberIndex → TimestampFormat`. Sparse. Only timestamp members
-     * with an explicit `@timestampFormat` trait appear.
-     *
-     * @var array<int, TimestampFormat>
-     */
-    private array $tsFormats = [];
-
-    /**
-     * Saved parent frames for nested struct / union writes. Each entry
-     * captures the state {@see beginStruct} rewrote so {@see endStruct}
-     * can restore it exactly.
-     *
-     * @var list<array{0: string, 1: array<int,string>|null, 2: array<int,TimestampFormat>}>
-     */
-    private array $frameStack = [];
 
     // Each of these looks up the current wire name in one array offset,
     // concatenates the prefix + wire name + '=' + urlencoded value +

@@ -20,10 +20,6 @@ use Smithy\Core\Shape\UnionInterface;
  */
 final class CborSerializer implements ShapeSerializerInterface
 {
-    private readonly CborCodecSettings $settings;
-
-    private readonly bool $honorTimestampFormatTrait;
-
     private const TOKEN_FALSE = "\xF4";
     private const TOKEN_TRUE = "\xF5";
     private const TOKEN_NULL = "\xF6";
@@ -58,19 +54,16 @@ final class CborSerializer implements ShapeSerializerInterface
         -25 => "\x38\x18", -100 => "\x38\x63"
     ];
 
+    private readonly CborCodecSettings $settings;
+    private readonly bool $honorTimestampFormatTrait;
     private string $buffer = '';
-
     /** @var list<string> */
     private array $bufferStack = [];
-
     /** @var list<array<int, string>|null> */
     private array $fieldNameTableStack = [];
-
     /** @var list<int> */
     private array $structMemberCountStack = [];
-
     private int $currentStructMemberCount = -1;
-
     /** @var array<int, string>|null */
     private ?array $currentFieldNameTable = null;
 

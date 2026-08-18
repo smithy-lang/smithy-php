@@ -14,7 +14,6 @@ use Smithy\Core\Shape\EnumInterface;
 final class FormUrlEncodedIntEnumFixture implements EnumInterface
 {
     private static ?Schema $SCHEMA = null;
-
     /** @var array<int, self> */
     private static array $known = [];
 

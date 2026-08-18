@@ -29,23 +29,16 @@ use Smithy\Core\Shape\UnionInterface;
 final class XmlSerializer implements ShapeSerializerInterface
 {
     private readonly XmlCodecSettings $settings;
-
     private readonly bool $honorTimestampFormatTrait;
-
     /** @var array<int, string> memberIndex -> XML wire name */
     private array $wireNames = [];
-
     /** @var array<int, int> memberIndex -> XmlSchemaExtension::COMPONENT_* */
     private array $memberComponentTypes = [];
-
     /** @var array<int, array{0: string, 1: string, 2: string}> */
     private array $nsAttrs = [];
-
     /** @var array<int, TimestampFormat> memberIndex -> TimestampFormat enum */
     private array $tsFormats = [];
-
     private bool $writerReleased = false;
-
     /** @var list<\XMLWriter> */
     private array $writerPool;
 
