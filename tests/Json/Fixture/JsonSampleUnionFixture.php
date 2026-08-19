@@ -11,10 +11,16 @@ use Smithy\Core\Serde\{
 };
 use Smithy\Core\Shape\UnionInterface;
 
+/**
+ * Provide a union fixture for JSON codec tests.
+ */
 final class JsonSampleUnionFixture implements UnionInterface
 {
     private static ?Schema $SCHEMA = null;
 
+    /**
+     * Create a union fixture.
+     */
     public function __construct(
         private readonly string $activeTag,
         private readonly mixed $activeValue
@@ -53,16 +59,13 @@ final class JsonSampleUnionFixture implements UnionInterface
         return self::$SCHEMA;
     }
 
-    /**
-     * Serialize this union.
-     *
-     * @return void
-     */
+    /** @inheritDoc */
     public function getSchema(): Schema
     {
         return self::schema();
     }
 
+    /** @inheritDoc */
     public function serialize(ShapeSerializerInterface $serializer, int $idx): void
     {
         $serializer->serializeUnion(self::schema(), $this, $idx);
@@ -74,6 +77,16 @@ final class JsonSampleUnionFixture implements UnionInterface
     public function tag(): string
     {
         return $this->activeTag;
+    }
+
+    /** @inheritDoc */
+    public function getMemberIndex(): int
+    {
+        return match ($this->activeTag) {
+            'value' => 0,
+            'count' => 1,
+            default => -1
+        };
     }
 
     /**
@@ -90,6 +103,23 @@ final class JsonSampleUnionFixture implements UnionInterface
     public static function create(string $tag, mixed $value): self
     {
         return new self($tag, $value);
+    }
+
+    /**
+     * Create a variant by member index.
+     */
+    public static function createByIndex(int $index, mixed $value): self
+    {
+        return new self(
+            match ($index) {
+                0 => 'value',
+                1 => 'count',
+                default => throw new \InvalidArgumentException(
+                    "Unknown union member index: {$index}"
+                )
+            },
+            $value
+        );
     }
 
     /**

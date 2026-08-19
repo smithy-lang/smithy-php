@@ -65,16 +65,27 @@ final class JsonSchemaExtensionProvider
         $memberDecodeByWireName = [];
         $unionDecodeByWireName = [];
         $unionEncodeByMemberName = [];
+        $unionEncodeByMemberIndex = [];
         $orderedMembers = [];
         $rawByWireName = [];
         $rawByIndex = [];
         $rawMemberDecodeByWireName = [];
         $rawUnionDecodeByWireName = [];
         $rawUnionEncodeByMemberName = [];
+        $rawUnionEncodeByMemberIndex = [];
         $rawOrderedMembers = [];
         $timestampFormats = [];
 
-        foreach ($schema->getMembers() as $member) {
+        $metadataSchema = $schema;
+        if (
+            $schema->type === ShapeType::Union->value
+            && $schema->getMemberCount() === 0
+            && $schema->hasTarget()
+        ) {
+            $metadataSchema = $schema->resolveTarget();
+        }
+
+        foreach ($metadataSchema->getMembers() as $member) {
             $idx = $member->memberIndex;
             $memberName = $member->memberName;
             $wireName = $member->getTrait(Schema::T_JSON_NAME) ?? $memberName;
@@ -114,23 +125,37 @@ final class JsonSchemaExtensionProvider
             $memberDecodeByWireName[$wireName] = $decodeEntry;
             $unionDecodeByWireName[$wireName] =
                 \count($decodeEntry) === 3
-                    ? [$memberName, $decodeEntry[1], $decodeEntry[2]]
-                    : [$memberName, $decodeEntry[1]];
+                    ? [
+                        $idx,
+                        $memberName,
+                        $decodeEntry[1],
+                        $decodeEntry[2]
+                    ]
+                    : [$idx, $memberName, $decodeEntry[1]];
             $unionEncodeByMemberName[$memberName] =
                 \count($decodeEntry) === 3
                     ? [$wireName, $decodeEntry[1], $decodeEntry[2]]
                     : [$wireName, $decodeEntry[1]];
+            $unionEncodeByMemberIndex[$idx] =
+                $unionEncodeByMemberName[$memberName];
             // Preserve declaration order for the in-order fast path.
             $orderedMembers[] = [$wireName, $decodeEntry];
             $rawMemberDecodeByWireName[$memberName] = $decodeEntry;
             $rawUnionDecodeByWireName[$memberName] =
                 \count($decodeEntry) === 3
-                    ? [$memberName, $decodeEntry[1], $decodeEntry[2]]
-                    : [$memberName, $decodeEntry[1]];
+                    ? [
+                        $idx,
+                        $memberName,
+                        $decodeEntry[1],
+                        $decodeEntry[2]
+                    ]
+                    : [$idx, $memberName, $decodeEntry[1]];
             $rawUnionEncodeByMemberName[$memberName] =
                 \count($decodeEntry) === 3
                     ? [$memberName, $decodeEntry[1], $decodeEntry[2]]
                     : [$memberName, $decodeEntry[1]];
+            $rawUnionEncodeByMemberIndex[$idx] =
+                $rawUnionEncodeByMemberName[$memberName];
             $rawOrderedMembers[] = [$memberName, $decodeEntry];
         }
 
@@ -146,8 +171,8 @@ final class JsonSchemaExtensionProvider
 
         // Cache the canonical target schema for struct and union stubs.
         // Resolve the target extension lazily to avoid recursion here.
-        if ($schema->getMemberCount() === 0 && $schema->targetClass !== null) {
-            $resolvedTargetSchema = $schema->resolveTarget();
+        if ($schema->getMemberCount() === 0 && $schema->hasTarget()) {
+            $resolvedTargetSchema = $metadataSchema;
             $resolvedTargetClass = $resolvedTargetSchema->targetClass;
         } else {
             $resolvedTargetSchema = $schema;
@@ -173,7 +198,11 @@ final class JsonSchemaExtensionProvider
             unionDecodeByWireName: $unionDecodeByWireName,
             rawUnionDecodeByWireName: $rawUnionDecodeByWireName,
             unionEncodeByMemberName: $unionEncodeByMemberName,
-            rawUnionEncodeByMemberName: $rawUnionEncodeByMemberName
+            unionEncodeByMemberIndex: $unionEncodeByMemberIndex,
+            rawUnionEncodeByMemberName: $rawUnionEncodeByMemberName,
+            rawUnionEncodeByMemberIndex: $rawUnionEncodeByMemberIndex,
+            hasIndexedUnionFactory: $resolvedTargetClass !== null
+                && \method_exists($resolvedTargetClass, 'createByIndex')
         );
     }
 
@@ -193,6 +222,7 @@ final class JsonSchemaExtensionProvider
         }
 
         $listMemberResolvedTargetClass = null;
+        $listMemberUnionInfo = null;
         if (
             $inner !== null
             && (
@@ -208,6 +238,9 @@ final class JsonSchemaExtensionProvider
                 $listMemberResolvedTargetClass =
                     $inner->resolveTarget()?->targetClass;
             }
+        }
+        if ($inner !== null && $innerType === ShapeType::Union->value) {
+            $listMemberUnionInfo = $inner->getExtension(self::key());
         }
 
         return new JsonSchemaExtension(
@@ -225,6 +258,7 @@ final class JsonSchemaExtensionProvider
             listMemberType: $innerType,
             listMemberTimestampFormat: $listTsFmt,
             listMemberResolvedTargetClass: $listMemberResolvedTargetClass,
+            listMemberUnionInfo: $listMemberUnionInfo,
             sparse: $schema->hasTrait(Schema::T_SPARSE)
         );
     }
@@ -245,6 +279,7 @@ final class JsonSchemaExtensionProvider
         }
 
         $mapValueResolvedTargetClass = null;
+        $mapValueUnionInfo = null;
         if (
             $value !== null
             && (
@@ -260,6 +295,9 @@ final class JsonSchemaExtensionProvider
                 $mapValueResolvedTargetClass =
                     $value->resolveTarget()?->targetClass;
             }
+        }
+        if ($value !== null && $valueType === ShapeType::Union->value) {
+            $mapValueUnionInfo = $value->getExtension(self::key());
         }
 
         return new JsonSchemaExtension(
@@ -277,7 +315,8 @@ final class JsonSchemaExtensionProvider
             mapValueType: $valueType,
             mapValueTimestampFormat: $mapTsFmt,
             sparse: $schema->hasTrait(Schema::T_SPARSE),
-            mapValueResolvedTargetClass: $mapValueResolvedTargetClass
+            mapValueResolvedTargetClass: $mapValueResolvedTargetClass,
+            mapValueUnionInfo: $mapValueUnionInfo
         );
     }
 
@@ -349,7 +388,7 @@ final class JsonSchemaExtensionProvider
         }
 
         // Resolve recursive stubs once and stop on cycles.
-        if ($schema->targetClass !== null) {
+        if ($schema->hasTarget()) {
             $resolved = $schema->resolveTarget();
             if (isset($visiting[$resolved->id])) {
                 return false;

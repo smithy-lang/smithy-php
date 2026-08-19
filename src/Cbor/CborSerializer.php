@@ -135,11 +135,13 @@ final class CborSerializer implements ShapeSerializerInterface
             case ShapeType::Float_->value:
                 $this->buffer .= self::TOKEN_FLOAT32;
                 $this->buffer .= \pack('G', $value);
+
                 return;
 
             default:
                 $this->buffer .= self::TOKEN_FLOAT64;
                 $this->buffer .= \pack('E', $value);
+
                 return;
         }
     }
@@ -194,14 +196,17 @@ final class CborSerializer implements ShapeSerializerInterface
         switch (true) {
             case $length <= 0xFF:
                 $this->buffer .= "\x58" . \chr($length) . $value;
+
                 return;
 
             case $length <= 0xFFFF:
                 $this->buffer .= "\x59" . \pack('n', $length) . $value;
+
                 return;
 
             case $length <= 0xFFFF_FFFF:
                 $this->buffer .= "\x5A" . \pack('N', $length) . $value;
+
                 return;
         }
 
@@ -365,18 +370,21 @@ final class CborSerializer implements ShapeSerializerInterface
                 $this->buffer .= "\x58"
                     . \chr($mantissaLength)
                     . $mantissaValue;
+
                 return;
 
             case $mantissaLength <= 0xFFFF:
                 $this->buffer .= "\x59"
                     . \pack('n', $mantissaLength)
                     . $mantissaValue;
+
                 return;
 
             case $mantissaLength <= 0xFFFF_FFFF:
                 $this->buffer .= "\x5A"
                     . \pack('N', $mantissaLength)
                     . $mantissaValue;
+
                 return;
         }
 
@@ -496,36 +504,7 @@ final class CborSerializer implements ShapeSerializerInterface
         $extKey ??= CborSchemaExtensionProvider::key();
         /** @var CborSchemaExtension|null $info */
         $info = $schema->getExtension($extKey);
-        $memberSchema = $info?->listMemberSchema ?? $schema->listMember;
-        $sparse = $info?->sparse ?? false;
-        if ($memberSchema === null) {
-            $this->writeArrayStart(0);
-
-            return;
-        }
-
-        $count = $this->countListItems($list, $sparse);
-        $this->writeArrayStart($count);
-
-        if ($sparse) {
-            foreach ($list as $item) {
-                if ($item === null) {
-                    $this->buffer .= self::TOKEN_NULL;
-                    continue;
-                }
-
-                $this->writeValue($memberSchema, $item);
-            }
-
-            return;
-        }
-
-        foreach ($list as $item) {
-            if ($item !== null) {
-                $this->writeValue($memberSchema, $item);
-            }
-        }
-
+        $this->writeListValue($schema, $list, $info);
     }
 
     /**
@@ -548,98 +527,7 @@ final class CborSerializer implements ShapeSerializerInterface
         $extKey ??= CborSchemaExtensionProvider::key();
         /** @var CborSchemaExtension|null $info */
         $info = $schema->getExtension($extKey);
-        $valueSchema = $info?->mapValueSchema ?? $schema->mapValue;
-        $sparse = $info?->sparse ?? false;
-        if ($valueSchema === null) {
-            $this->writeMapStart(0);
-
-            return;
-        }
-
-        $count = $this->countMapEntries($map, $sparse);
-        $this->writeMapStart($count);
-
-        if ($sparse) {
-            foreach ($map as $key => $value) {
-                $key = (string) $key;
-                $length = \strlen($key);
-                if ($length < 24) {
-                    $this->buffer .= \chr(0x60 | $length) . $key;
-                } else {
-                    switch (true) {
-                        case $length <= 0xFF:
-                            $this->buffer .= "\x78" . \chr($length) . $key;
-                            break;
-
-                        case $length <= 0xFFFF:
-                            $this->buffer .= "\x79"
-                                . \pack('n', $length)
-                                . $key;
-                            break;
-
-                        case $length <= 0xFFFF_FFFF:
-                            $this->buffer .= "\x7A"
-                                . \pack('N', $length)
-                                . $key;
-                            break;
-
-                        default:
-                            $high = ($length >> 32) & 0xFFFF_FFFF;
-                            $low = $length & 0xFFFF_FFFF;
-                            $this->buffer .= "\x7B"
-                                . \pack('NN', $high, $low)
-                                . $key;
-                            break;
-                    }
-                }
-
-                if ($value === null) {
-                    $this->buffer .= self::TOKEN_NULL;
-                    continue;
-                }
-
-                $this->writeValue($valueSchema, $value);
-            }
-
-            return;
-        }
-
-        foreach ($map as $key => $value) {
-            if ($value === null) {
-                continue;
-            }
-
-            $key = (string) $key;
-            $length = \strlen($key);
-            if ($length < 24) {
-                $this->buffer .= \chr(0x60 | $length) . $key;
-            } else {
-                switch (true) {
-                    case $length <= 0xFF:
-                        $this->buffer .= "\x78" . \chr($length) . $key;
-                        break;
-
-                    case $length <= 0xFFFF:
-                        $this->buffer .= "\x79" . \pack('n', $length) . $key;
-                        break;
-
-                    case $length <= 0xFFFF_FFFF:
-                        $this->buffer .= "\x7A" . \pack('N', $length) . $key;
-                        break;
-
-                    default:
-                        $high = ($length >> 32) & 0xFFFF_FFFF;
-                        $low = $length & 0xFFFF_FFFF;
-                        $this->buffer .= "\x7B"
-                            . \pack('NN', $high, $low)
-                            . $key;
-                        break;
-                }
-            }
-
-            $this->writeValue($valueSchema, $value);
-        }
-
+        $this->writeMapValue($schema, $map, $info);
     }
 
     /**
@@ -712,7 +600,11 @@ final class CborSerializer implements ShapeSerializerInterface
             }
         }
 
-        $this->writeUnionValue($schema, $union);
+        static $extKey = null;
+        $extKey ??= CborSchemaExtensionProvider::key();
+        /** @var CborSchemaExtension|null $info */
+        $info = $schema->getExtension($extKey);
+        $this->writeUnionValue($schema, $union, $info);
     }
 
     /**
@@ -727,6 +619,7 @@ final class CborSerializer implements ShapeSerializerInterface
     ): void
     {
         if ($value === null) {
+
             return;
         }
 
@@ -770,6 +663,7 @@ final class CborSerializer implements ShapeSerializerInterface
         switch ($schema->type) {
             case ShapeType::Boolean->value:
                 $this->buffer .= $value ? self::TOKEN_TRUE : self::TOKEN_FALSE;
+
                 return;
 
             case ShapeType::Byte->value:
@@ -777,16 +671,19 @@ final class CborSerializer implements ShapeSerializerInterface
             case ShapeType::Integer->value:
             case ShapeType::Long->value:
                 $this->writeIntegerValue($value);
+
                 return;
 
             case ShapeType::Float_->value:
                 $this->buffer .= self::TOKEN_FLOAT32;
                 $this->buffer .= \pack('G', (float) $value);
+
                 return;
 
             case ShapeType::Double->value:
                 $this->buffer .= self::TOKEN_FLOAT64;
                 $this->buffer .= \pack('E', (float) $value);
+
                 return;
 
             case ShapeType::BigInteger->value:
@@ -795,6 +692,7 @@ final class CborSerializer implements ShapeSerializerInterface
                     : (string) $value;
                 if ($this->fitsSignedInt64($value)) {
                     $this->writeIntegerValue((int) $value);
+
                     return;
                 }
 
@@ -803,6 +701,7 @@ final class CborSerializer implements ShapeSerializerInterface
                 $digits = \ltrim($digits, '0');
                 if ($digits === '') {
                     $this->buffer .= "\x00";
+
                     return;
                 }
 
@@ -817,26 +716,31 @@ final class CborSerializer implements ShapeSerializerInterface
                 $length = \strlen($value);
                 if ($length < 24) {
                     $this->buffer .= \chr(0x40 | $length) . $value;
+
                     return;
                 }
 
                 switch (true) {
                     case $length <= 0xFF:
                         $this->buffer .= "\x58" . \chr($length) . $value;
+
                         return;
 
                     case $length <= 0xFFFF:
                         $this->buffer .= "\x59" . \pack('n', $length) . $value;
+
                         return;
 
                     case $length <= 0xFFFF_FFFF:
                         $this->buffer .= "\x5A" . \pack('N', $length) . $value;
+
                         return;
                 }
 
                 $high = ($length >> 32) & 0xFFFF_FFFF;
                 $low = $length & 0xFFFF_FFFF;
                 $this->buffer .= "\x5B" . \pack('NN', $high, $low) . $value;
+
                 return;
 
             case ShapeType::BigDecimal->value:
@@ -960,6 +864,7 @@ final class CborSerializer implements ShapeSerializerInterface
 
                 if ($this->fitsSignedInt64($mantissa)) {
                     $this->writeIntegerValue((int) $mantissa);
+
                     return;
                 }
 
@@ -970,6 +875,7 @@ final class CborSerializer implements ShapeSerializerInterface
                 $mantissaDigits = \ltrim($mantissaDigits, '0');
                 if ($mantissaDigits === '') {
                     $this->buffer .= "\x00";
+
                     return;
                 }
 
@@ -989,6 +895,7 @@ final class CborSerializer implements ShapeSerializerInterface
                 if ($mantissaLength < 24) {
                     $this->buffer .= \chr(0x40 | $mantissaLength)
                         . $mantissaValue;
+
                     return;
                 }
 
@@ -997,18 +904,21 @@ final class CborSerializer implements ShapeSerializerInterface
                         $this->buffer .= "\x58"
                             . \chr($mantissaLength)
                             . $mantissaValue;
+
                         return;
 
                     case $mantissaLength <= 0xFFFF:
                         $this->buffer .= "\x59"
                             . \pack('n', $mantissaLength)
                             . $mantissaValue;
+
                         return;
 
                     case $mantissaLength <= 0xFFFF_FFFF:
                         $this->buffer .= "\x5A"
                             . \pack('N', $mantissaLength)
                             . $mantissaValue;
+
                         return;
                 }
 
@@ -1017,6 +927,7 @@ final class CborSerializer implements ShapeSerializerInterface
                 $this->buffer .= "\x5B"
                     . \pack('NN', $high, $low)
                     . $mantissaValue;
+
                 return;
 
             case ShapeType::String_->value:
@@ -1027,26 +938,31 @@ final class CborSerializer implements ShapeSerializerInterface
                 $length = \strlen($value);
                 if ($length < 24) {
                     $this->buffer .= \chr(0x60 | $length) . $value;
+
                     return;
                 }
 
                 switch (true) {
                     case $length <= 0xFF:
                         $this->buffer .= "\x78" . \chr($length) . $value;
+
                         return;
 
                     case $length <= 0xFFFF:
                         $this->buffer .= "\x79" . \pack('n', $length) . $value;
+
                         return;
 
                     case $length <= 0xFFFF_FFFF:
                         $this->buffer .= "\x7A" . \pack('N', $length) . $value;
+
                         return;
                 }
 
                 $high = ($length >> 32) & 0xFFFF_FFFF;
                 $low = $length & 0xFFFF_FFFF;
                 $this->buffer .= "\x7B" . \pack('NN', $high, $low) . $value;
+
                 return;
 
             case ShapeType::Blob->value:
@@ -1054,26 +970,31 @@ final class CborSerializer implements ShapeSerializerInterface
                 $length = \strlen($value);
                 if ($length < 24) {
                     $this->buffer .= \chr(0x40 | $length) . $value;
+
                     return;
                 }
 
                 switch (true) {
                     case $length <= 0xFF:
                         $this->buffer .= "\x58" . \chr($length) . $value;
+
                         return;
 
                     case $length <= 0xFFFF:
                         $this->buffer .= "\x59" . \pack('n', $length) . $value;
+
                         return;
 
                     case $length <= 0xFFFF_FFFF:
                         $this->buffer .= "\x5A" . \pack('N', $length) . $value;
+
                         return;
                 }
 
                 $high = ($length >> 32) & 0xFFFF_FFFF;
                 $low = $length & 0xFFFF_FFFF;
                 $this->buffer .= "\x5B" . \pack('NN', $high, $low) . $value;
+
                 return;
 
             case ShapeType::Timestamp->value:
@@ -1106,6 +1027,7 @@ final class CborSerializer implements ShapeSerializerInterface
 
                 $this->buffer .= self::TOKEN_FLOAT64;
                 $this->buffer .= \pack('E', $value);
+
                 return;
 
             case ShapeType::List_->value:
@@ -1113,32 +1035,8 @@ final class CborSerializer implements ShapeSerializerInterface
                 $listExtKey ??= CborSchemaExtensionProvider::key();
                 /** @var CborSchemaExtension|null $listInfo */
                 $listInfo = $schema->getExtension($listExtKey);
-                $memberSchema = $listInfo?->listMemberSchema
-                    ?? $schema->listMember;
-                $sparse = $listInfo?->sparse ?? false;
-                $count = $this->countListItems($value, $sparse);
-                $this->writeArrayStart($count);
+                $this->writeListValue($schema, $value, $listInfo);
 
-                if ($memberSchema !== null) {
-                    if ($sparse) {
-                        foreach ($value as $item) {
-                            if ($item === null) {
-                                $this->buffer .= self::TOKEN_NULL;
-                                continue;
-                            }
-
-                            $this->writeValue($memberSchema, $item);
-                        }
-
-                        return;
-                    }
-
-                    foreach ($value as $item) {
-                        if ($item !== null) {
-                            $this->writeValue($memberSchema, $item);
-                        }
-                    }
-                }
                 return;
 
             case ShapeType::Map->value:
@@ -1146,101 +1044,8 @@ final class CborSerializer implements ShapeSerializerInterface
                 $mapExtKey ??= CborSchemaExtensionProvider::key();
                 /** @var CborSchemaExtension|null $mapInfo */
                 $mapInfo = $schema->getExtension($mapExtKey);
-                $valueSchema = $mapInfo?->mapValueSchema ?? $schema->mapValue;
-                $sparse = $mapInfo?->sparse ?? false;
-                $count = $this->countMapEntries($value, $sparse);
-                $this->writeMapStart($count);
+                $this->writeMapValue($schema, $value, $mapInfo);
 
-                if ($valueSchema !== null) {
-                    if ($sparse) {
-                        foreach ($value as $mapKey => $mapValue) {
-                            $mapKey = (string) $mapKey;
-                            $length = \strlen($mapKey);
-                            if ($length < 24) {
-                                $this->buffer .= \chr(0x60 | $length) . $mapKey;
-                            } else {
-                                switch (true) {
-                                    case $length <= 0xFF:
-                                        $this->buffer .= "\x78"
-                                            . \chr($length)
-                                            . $mapKey;
-                                        break;
-
-                                    case $length <= 0xFFFF:
-                                        $this->buffer .= "\x79"
-                                            . \pack('n', $length)
-                                            . $mapKey;
-                                        break;
-
-                                    case $length <= 0xFFFF_FFFF:
-                                        $this->buffer .= "\x7A"
-                                            . \pack('N', $length)
-                                            . $mapKey;
-                                        break;
-
-                                    default:
-                                        $high = ($length >> 32) & 0xFFFF_FFFF;
-                                        $low = $length & 0xFFFF_FFFF;
-                                        $this->buffer .= "\x7B"
-                                            . \pack('NN', $high, $low)
-                                            . $mapKey;
-                                        break;
-                                }
-                            }
-
-                            if ($mapValue === null) {
-                                $this->buffer .= self::TOKEN_NULL;
-                                continue;
-                            }
-
-                            $this->writeValue($valueSchema, $mapValue);
-                        }
-
-                        return;
-                    }
-
-                    foreach ($value as $mapKey => $mapValue) {
-                        if ($mapValue === null) {
-                            continue;
-                        }
-
-                        $mapKey = (string) $mapKey;
-                        $length = \strlen($mapKey);
-                        if ($length < 24) {
-                            $this->buffer .= \chr(0x60 | $length) . $mapKey;
-                        } else {
-                            switch (true) {
-                                case $length <= 0xFF:
-                                    $this->buffer .= "\x78"
-                                        . \chr($length)
-                                        . $mapKey;
-                                    break;
-
-                                case $length <= 0xFFFF:
-                                    $this->buffer .= "\x79"
-                                        . \pack('n', $length)
-                                        . $mapKey;
-                                    break;
-
-                                case $length <= 0xFFFF_FFFF:
-                                    $this->buffer .= "\x7A"
-                                        . \pack('N', $length)
-                                        . $mapKey;
-                                    break;
-
-                                default:
-                                    $high = ($length >> 32) & 0xFFFF_FFFF;
-                                    $low = $length & 0xFFFF_FFFF;
-                                    $this->buffer .= "\x7B"
-                                        . \pack('NN', $high, $low)
-                                        . $mapKey;
-                                    break;
-                            }
-                        }
-
-                        $this->writeValue($valueSchema, $mapValue);
-                    }
-                }
                 return;
 
             case ShapeType::Structure->value:
@@ -1253,10 +1058,16 @@ final class CborSerializer implements ShapeSerializerInterface
                 $this->beginStructFrame($value->getSchema());
                 $value->serializeMembers($this);
                 $this->endStructFrame();
+
                 return;
 
             case ShapeType::Union->value:
-                $this->writeUnionValue($schema, $value);
+                static $unionExtKey = null;
+                $unionExtKey ??= CborSchemaExtensionProvider::key();
+                /** @var CborSchemaExtension|null $unionInfo */
+                $unionInfo = $schema->getExtension($unionExtKey);
+                $this->writeUnionValue($schema, $value, $unionInfo);
+
                 return;
 
             case ShapeType::IntEnum->value:
@@ -1265,6 +1076,7 @@ final class CborSerializer implements ShapeSerializerInterface
                         ? (int) $value->getValue()
                         : (int) $value
                 );
+
                 return;
 
             case ShapeType::Document->value:
@@ -1279,15 +1091,546 @@ final class CborSerializer implements ShapeSerializerInterface
     }
 
     /**
+     * Serialize a list using precomputed member metadata.
+     *
+     * @return void
+     */
+    private function writeListValue(
+        Schema $schema,
+        array $list,
+        ?CborSchemaExtension $info = null
+    ): void
+    {
+        if ($info === null) {
+            static $extKey = null;
+            $extKey ??= CborSchemaExtensionProvider::key();
+            /** @var CborSchemaExtension|null $info */
+            $info = $schema->getExtension($extKey);
+        }
+
+        $memberSchema = $info?->listMemberSchema ?? $schema->listMember;
+        $sparse = $info?->sparse ?? false;
+        $this->writeArrayStart($this->countListItems($list, $sparse));
+        if ($memberSchema === null) {
+
+            return;
+        }
+
+        $memberType = $info?->listMemberType ?? $memberSchema->type;
+        switch ($memberType) {
+            case ShapeType::Union->value:
+                $unionInfo = $info?->listMemberUnionInfo;
+                foreach ($list as $item) {
+                    if ($item === null) {
+                        if ($sparse) {
+                            $this->buffer .= self::TOKEN_NULL;
+                        }
+                        continue;
+                    }
+                    $this->writeUnionValue(
+                        $memberSchema,
+                        $item,
+                        $unionInfo
+                    );
+                }
+
+                return;
+
+            case ShapeType::Boolean->value:
+                foreach ($list as $item) {
+                    if ($item === null) {
+                        if ($sparse) {
+                            $this->buffer .= self::TOKEN_NULL;
+                        }
+                        continue;
+                    }
+                    $this->buffer .= $item
+                        ? self::TOKEN_TRUE
+                        : self::TOKEN_FALSE;
+                }
+
+                return;
+
+            case ShapeType::Byte->value:
+            case ShapeType::Short->value:
+            case ShapeType::Integer->value:
+            case ShapeType::Long->value:
+            case ShapeType::IntEnum->value:
+                foreach ($list as $item) {
+                    if ($item === null) {
+                        if ($sparse) {
+                            $this->buffer .= self::TOKEN_NULL;
+                        }
+                        continue;
+                    }
+                    $this->writeIntegerValue(
+                        $item instanceof EnumInterface
+                            ? (int) $item->getValue()
+                            : (int) $item
+                    );
+                }
+
+                return;
+
+            case ShapeType::Float_->value:
+                foreach ($list as $item) {
+                    if ($item === null) {
+                        if ($sparse) {
+                            $this->buffer .= self::TOKEN_NULL;
+                        }
+                        continue;
+                    }
+                    $this->buffer .= self::TOKEN_FLOAT32
+                        . \pack('G', (float) $item);
+                }
+
+                return;
+
+            case ShapeType::Double->value:
+                foreach ($list as $item) {
+                    if ($item === null) {
+                        if ($sparse) {
+                            $this->buffer .= self::TOKEN_NULL;
+                        }
+                        continue;
+                    }
+                    $this->buffer .= self::TOKEN_FLOAT64
+                        . \pack('E', (float) $item);
+                }
+
+                return;
+
+            case ShapeType::String_->value:
+            case ShapeType::Enum->value:
+                foreach ($list as $item) {
+                    if ($item === null) {
+                        if ($sparse) {
+                            $this->buffer .= self::TOKEN_NULL;
+                        }
+                        continue;
+                    }
+                    $this->writeBytesWithMajor(
+                        0x60,
+                        $item instanceof EnumInterface
+                            ? (string) $item->getValue()
+                            : (string) $item
+                    );
+                }
+
+                return;
+
+            case ShapeType::Blob->value:
+                foreach ($list as $item) {
+                    if ($item === null) {
+                        if ($sparse) {
+                            $this->buffer .= self::TOKEN_NULL;
+                        }
+                        continue;
+                    }
+                    $this->writeBytesWithMajor(0x40, (string) $item);
+                }
+
+                return;
+
+            case ShapeType::Timestamp->value:
+                $timestampFormat = $info?->listMemberTimestampFormat;
+                foreach ($list as $item) {
+                    if ($item === null) {
+                        if ($sparse) {
+                            $this->buffer .= self::TOKEN_NULL;
+                        }
+                        continue;
+                    }
+                    $this->writeTimestampValue($item, $timestampFormat);
+                }
+
+                return;
+
+            case ShapeType::Structure->value:
+                foreach ($list as $item) {
+                    if ($item === null) {
+                        if ($sparse) {
+                            $this->buffer .= self::TOKEN_NULL;
+                        }
+                        continue;
+                    }
+                    if (!$item instanceof SerializableStructInterface) {
+                        throw new \InvalidArgumentException(
+                            'Expected SerializableStructInterface for '
+                            . 'structure value.'
+                        );
+                    }
+                    $this->beginStructFrame($item->getSchema());
+                    $item->serializeMembers($this);
+                    $this->endStructFrame();
+                }
+
+                return;
+
+            case ShapeType::List_->value:
+                static $listExtKey = null;
+                $listExtKey ??= CborSchemaExtensionProvider::key();
+                /** @var CborSchemaExtension|null $nestedListInfo */
+                $nestedListInfo = $memberSchema->getExtension($listExtKey);
+                foreach ($list as $item) {
+                    if ($item === null) {
+                        if ($sparse) {
+                            $this->buffer .= self::TOKEN_NULL;
+                        }
+                        continue;
+                    }
+                    $this->writeListValue(
+                        $memberSchema,
+                        $item,
+                        $nestedListInfo
+                    );
+                }
+
+                return;
+
+            case ShapeType::Map->value:
+                static $mapExtKey = null;
+                $mapExtKey ??= CborSchemaExtensionProvider::key();
+                /** @var CborSchemaExtension|null $nestedMapInfo */
+                $nestedMapInfo = $memberSchema->getExtension($mapExtKey);
+                foreach ($list as $item) {
+                    if ($item === null) {
+                        if ($sparse) {
+                            $this->buffer .= self::TOKEN_NULL;
+                        }
+                        continue;
+                    }
+                    $this->writeMapValue(
+                        $memberSchema,
+                        $item,
+                        $nestedMapInfo
+                    );
+                }
+
+                return;
+        }
+
+        foreach ($list as $item) {
+            if ($item === null) {
+                if ($sparse) {
+                    $this->buffer .= self::TOKEN_NULL;
+                }
+                continue;
+            }
+            $this->writeValue($memberSchema, $item);
+        }
+    }
+
+    /**
+     * Serialize a map using precomputed value metadata.
+     *
+     * @return void
+     */
+    private function writeMapValue(
+        Schema $schema,
+        array $map,
+        ?CborSchemaExtension $info = null
+    ): void
+    {
+        if ($info === null) {
+            static $extKey = null;
+            $extKey ??= CborSchemaExtensionProvider::key();
+            /** @var CborSchemaExtension|null $info */
+            $info = $schema->getExtension($extKey);
+        }
+
+        $valueSchema = $info?->mapValueSchema ?? $schema->mapValue;
+        $sparse = $info?->sparse ?? false;
+        $this->writeMapStart($this->countMapEntries($map, $sparse));
+        if ($valueSchema === null) {
+
+            return;
+        }
+
+        $valueType = $info?->mapValueType ?? $valueSchema->type;
+        switch ($valueType) {
+            case ShapeType::Union->value:
+                $unionInfo = $info?->mapValueUnionInfo;
+                foreach ($map as $key => $value) {
+                    if ($value === null && !$sparse) {
+                        continue;
+                    }
+                    $this->writeBytesWithMajor(0x60, (string) $key);
+                    if ($value === null) {
+                        $this->buffer .= self::TOKEN_NULL;
+                        continue;
+                    }
+                    $this->writeUnionValue(
+                        $valueSchema,
+                        $value,
+                        $unionInfo
+                    );
+                }
+
+                return;
+
+            case ShapeType::Boolean->value:
+                foreach ($map as $key => $value) {
+                    if ($value === null && !$sparse) {
+                        continue;
+                    }
+                    $this->writeBytesWithMajor(0x60, (string) $key);
+                    if ($value === null) {
+                        $this->buffer .= self::TOKEN_NULL;
+                        continue;
+                    }
+                    $this->buffer .= $value
+                        ? self::TOKEN_TRUE
+                        : self::TOKEN_FALSE;
+                }
+
+                return;
+
+            case ShapeType::Byte->value:
+            case ShapeType::Short->value:
+            case ShapeType::Integer->value:
+            case ShapeType::Long->value:
+            case ShapeType::IntEnum->value:
+                foreach ($map as $key => $value) {
+                    if ($value === null && !$sparse) {
+                        continue;
+                    }
+                    $this->writeBytesWithMajor(0x60, (string) $key);
+                    if ($value === null) {
+                        $this->buffer .= self::TOKEN_NULL;
+                        continue;
+                    }
+                    $this->writeIntegerValue(
+                        $value instanceof EnumInterface
+                            ? (int) $value->getValue()
+                            : (int) $value
+                    );
+                }
+
+                return;
+
+            case ShapeType::Float_->value:
+                foreach ($map as $key => $value) {
+                    if ($value === null && !$sparse) {
+                        continue;
+                    }
+                    $this->writeBytesWithMajor(0x60, (string) $key);
+                    if ($value === null) {
+                        $this->buffer .= self::TOKEN_NULL;
+                        continue;
+                    }
+                    $this->buffer .= self::TOKEN_FLOAT32
+                        . \pack('G', (float) $value);
+                }
+
+                return;
+
+            case ShapeType::Double->value:
+                foreach ($map as $key => $value) {
+                    if ($value === null && !$sparse) {
+                        continue;
+                    }
+                    $this->writeBytesWithMajor(0x60, (string) $key);
+                    if ($value === null) {
+                        $this->buffer .= self::TOKEN_NULL;
+                        continue;
+                    }
+                    $this->buffer .= self::TOKEN_FLOAT64
+                        . \pack('E', (float) $value);
+                }
+
+                return;
+
+            case ShapeType::String_->value:
+            case ShapeType::Enum->value:
+                foreach ($map as $key => $value) {
+                    if ($value === null && !$sparse) {
+                        continue;
+                    }
+                    $this->writeBytesWithMajor(0x60, (string) $key);
+                    if ($value === null) {
+                        $this->buffer .= self::TOKEN_NULL;
+                        continue;
+                    }
+                    $this->writeBytesWithMajor(
+                        0x60,
+                        $value instanceof EnumInterface
+                            ? (string) $value->getValue()
+                            : (string) $value
+                    );
+                }
+
+                return;
+
+            case ShapeType::Blob->value:
+                foreach ($map as $key => $value) {
+                    if ($value === null && !$sparse) {
+                        continue;
+                    }
+                    $this->writeBytesWithMajor(0x60, (string) $key);
+                    if ($value === null) {
+                        $this->buffer .= self::TOKEN_NULL;
+                        continue;
+                    }
+                    $this->writeBytesWithMajor(0x40, (string) $value);
+                }
+
+                return;
+
+            case ShapeType::Timestamp->value:
+                $timestampFormat = $info?->mapValueTimestampFormat;
+                foreach ($map as $key => $value) {
+                    if ($value === null && !$sparse) {
+                        continue;
+                    }
+                    $this->writeBytesWithMajor(0x60, (string) $key);
+                    if ($value === null) {
+                        $this->buffer .= self::TOKEN_NULL;
+                        continue;
+                    }
+                    $this->writeTimestampValue($value, $timestampFormat);
+                }
+
+                return;
+
+            case ShapeType::Structure->value:
+                foreach ($map as $key => $value) {
+                    if ($value === null && !$sparse) {
+                        continue;
+                    }
+                    $this->writeBytesWithMajor(0x60, (string) $key);
+                    if ($value === null) {
+                        $this->buffer .= self::TOKEN_NULL;
+                        continue;
+                    }
+                    if (!$value instanceof SerializableStructInterface) {
+                        throw new \InvalidArgumentException(
+                            'Expected SerializableStructInterface for '
+                            . 'structure value.'
+                        );
+                    }
+                    $this->beginStructFrame($value->getSchema());
+                    $value->serializeMembers($this);
+                    $this->endStructFrame();
+                }
+
+                return;
+
+            case ShapeType::List_->value:
+                static $listExtKey = null;
+                $listExtKey ??= CborSchemaExtensionProvider::key();
+                /** @var CborSchemaExtension|null $nestedListInfo */
+                $nestedListInfo = $valueSchema->getExtension($listExtKey);
+                foreach ($map as $key => $value) {
+                    if ($value === null && !$sparse) {
+                        continue;
+                    }
+                    $this->writeBytesWithMajor(0x60, (string) $key);
+                    if ($value === null) {
+                        $this->buffer .= self::TOKEN_NULL;
+                        continue;
+                    }
+                    $this->writeListValue(
+                        $valueSchema,
+                        $value,
+                        $nestedListInfo
+                    );
+                }
+
+                return;
+
+            case ShapeType::Map->value:
+                static $mapExtKey = null;
+                $mapExtKey ??= CborSchemaExtensionProvider::key();
+                /** @var CborSchemaExtension|null $nestedMapInfo */
+                $nestedMapInfo = $valueSchema->getExtension($mapExtKey);
+                foreach ($map as $key => $value) {
+                    if ($value === null && !$sparse) {
+                        continue;
+                    }
+                    $this->writeBytesWithMajor(0x60, (string) $key);
+                    if ($value === null) {
+                        $this->buffer .= self::TOKEN_NULL;
+                        continue;
+                    }
+                    $this->writeMapValue(
+                        $valueSchema,
+                        $value,
+                        $nestedMapInfo
+                    );
+                }
+
+                return;
+        }
+
+        foreach ($map as $key => $value) {
+            if ($value === null && !$sparse) {
+                continue;
+            }
+            $this->writeBytesWithMajor(0x60, (string) $key);
+            if ($value === null) {
+                $this->buffer .= self::TOKEN_NULL;
+                continue;
+            }
+            $this->writeValue($valueSchema, $value);
+        }
+    }
+
+    /**
+     * Write a timestamp payload with a pre-resolved explicit format.
+     *
+     * @return void
+     */
+    private function writeTimestampValue(
+        mixed $value,
+        ?TimestampFormat $explicitFormat
+    ): void
+    {
+        if ($value instanceof \DateTimeInterface) {
+            $value = (float) $value->format('U.u');
+        }
+        $value = (float) $value;
+
+        $resolved = ($this->honorTimestampFormatTrait
+            ? $explicitFormat
+            : null
+        ) ?? $this->settings->defaultTimestampFormat;
+        if ($resolved !== TimestampFormat::EpochSeconds) {
+            $this->writeBytesWithMajor(0x60, $resolved->format($value));
+
+            return;
+        }
+
+        $this->buffer .= self::TOKEN_TAG_EPOCH;
+        $integral = (int) $value;
+        if ($value == $integral
+            && $value <= PHP_INT_MAX
+            && $value >= PHP_INT_MIN
+        ) {
+            $this->writeIntegerValue($integral);
+
+            return;
+        }
+
+        $this->buffer .= self::TOKEN_FLOAT64
+            . \pack('E', $value);
+    }
+
+    /**
      * Serialize a union payload as a single-entry CBOR map.
      *
      * @return void
      */
-    private function writeUnionValue(Schema $schema, mixed $union): void
+    private function writeUnionValue(
+        Schema $schema,
+        mixed $union,
+        ?CborSchemaExtension $info = null
+    ): void
     {
         $tag = null;
         $value = null;
         $unionSchema = null;
+        $entry = null;
 
         if (!($union instanceof UnionInterface) && !\is_array($union)) {
             throw new \InvalidArgumentException(
@@ -1295,10 +1638,24 @@ final class CborSerializer implements ShapeSerializerInterface
             );
         }
 
+        if ($info === null) {
+            static $extKey = null;
+            $extKey ??= CborSchemaExtensionProvider::key();
+            /** @var CborSchemaExtension|null $info */
+            $info = $schema->getExtension($extKey);
+        }
+
         if ($union instanceof UnionInterface) {
-            $tag = $union->tag();
             $value = $union->value();
-            $unionSchema = $union->getSchema();
+            $memberIndex = $union->getMemberIndex();
+            if ($memberIndex >= 0) {
+                $entry = $info?->unionEncodeByMemberIndex[$memberIndex]
+                    ?? null;
+            }
+            if ($entry === null) {
+                $tag = $union->tag();
+                $unionSchema = $union->getSchema();
+            }
         } else {
             foreach ($union as $candidateTag => $candidateValue) {
                 if ($candidateValue === null) {
@@ -1315,13 +1672,107 @@ final class CborSerializer implements ShapeSerializerInterface
             }
         }
 
-        $tag = (string) $tag;
-        $resolvedSchema = $unionSchema ?? $this->resolveTargetSchema($schema);
-        $variantSchema = $resolvedSchema?->getMember($tag);
-        if ($resolvedSchema !== null && $variantSchema === null) {
-            throw new \InvalidArgumentException(
-                'Unknown union variant: ' . $tag
-            );
+        if ($entry === null) {
+            $tag = (string) $tag;
+            $resolvedSchema = $unionSchema
+                ?? $info?->resolvedTargetSchema
+                ?? $this->resolveTargetSchema($schema);
+            $entry = $info?->unionEncodeByMemberName[$tag] ?? null;
+            $variantSchema = $entry[2] ?? $resolvedSchema?->getMember($tag);
+            if ($resolvedSchema !== null && $variantSchema === null) {
+                throw new \InvalidArgumentException(
+                    'Unknown union variant: ' . $tag
+                );
+            }
+        }
+
+        if ($entry !== null) {
+            $this->buffer .= $entry[3];
+            switch ($entry[1]) {
+                case ShapeType::Boolean->value:
+                    $this->buffer .= $value
+                        ? self::TOKEN_TRUE
+                        : self::TOKEN_FALSE;
+
+                    return;
+
+                case ShapeType::Byte->value:
+                case ShapeType::Short->value:
+                case ShapeType::Integer->value:
+                case ShapeType::Long->value:
+                    $this->writeIntegerValue((int) $value);
+
+                    return;
+
+                case ShapeType::IntEnum->value:
+                    $this->writeIntegerValue(
+                        $value instanceof EnumInterface
+                            ? (int) $value->getValue()
+                            : (int) $value
+                    );
+
+                    return;
+
+                case ShapeType::Float_->value:
+                    $this->buffer .= self::TOKEN_FLOAT32
+                        . \pack('G', (float) $value);
+
+                    return;
+
+                case ShapeType::Double->value:
+                    $this->buffer .= self::TOKEN_FLOAT64
+                        . \pack('E', (float) $value);
+
+                    return;
+
+                case ShapeType::String_->value:
+                case ShapeType::Enum->value:
+                    $this->writeBytesWithMajor(
+                        0x60,
+                        $value instanceof EnumInterface
+                            ? (string) $value->getValue()
+                            : (string) $value
+                    );
+
+                    return;
+
+                case ShapeType::Blob->value:
+                    $this->writeBytesWithMajor(0x40, (string) $value);
+
+                    return;
+
+                case ShapeType::List_->value:
+                    $this->writeListValue($entry[2], $value);
+
+                    return;
+
+                case ShapeType::Map->value:
+                    $this->writeMapValue($entry[2], $value);
+
+                    return;
+
+                case ShapeType::Structure->value:
+                    if (!$value instanceof SerializableStructInterface) {
+                        throw new \InvalidArgumentException(
+                            'Expected SerializableStructInterface for '
+                            . 'structure value.'
+                        );
+                    }
+                    $this->beginStructFrame($value->getSchema());
+                    $value->serializeMembers($this);
+                    $this->endStructFrame();
+
+                    return;
+
+                case ShapeType::Union->value:
+                    $this->writeUnionValue($entry[2], $value);
+
+                    return;
+            }
+
+            $this->writeValue($entry[2], $value);
+
+            return;
         }
 
         $this->writeMapStart(1);
@@ -1441,6 +1892,7 @@ final class CborSerializer implements ShapeSerializerInterface
 
         if ($value >= 0) {
             $this->writeUnsignedWithMajor(0x00, $value);
+
             return;
         }
 
@@ -1483,14 +1935,17 @@ final class CborSerializer implements ShapeSerializerInterface
         switch (true) {
             case $value <= 0xFF:
                 $this->buffer .= \chr($majorBase | 24) . \chr($value);
+
                 return;
 
             case $value <= 0xFFFF:
                 $this->buffer .= \chr($majorBase | 25) . \pack('n', $value);
+
                 return;
 
             case $value <= 0xFFFF_FFFF:
                 $this->buffer .= \chr($majorBase | 26) . \pack('N', $value);
+
                 return;
         }
 
@@ -1547,24 +2002,28 @@ final class CborSerializer implements ShapeSerializerInterface
         $length = \strlen($value);
         if ($length < 24) {
             $this->buffer .= \chr($majorBase | $length) . $value;
+
             return;
         }
 
         switch (true) {
             case $length <= 0xFF:
                 $this->buffer .= \chr($majorBase | 24) . \chr($length) . $value;
+
                 return;
 
             case $length <= 0xFFFF:
                 $this->buffer .= \chr($majorBase | 25)
                     . \pack('n', $length)
                     . $value;
+
                 return;
 
             case $length <= 0xFFFF_FFFF:
                 $this->buffer .= \chr($majorBase | 26)
                     . \pack('N', $length)
                     . $value;
+
                 return;
         }
 

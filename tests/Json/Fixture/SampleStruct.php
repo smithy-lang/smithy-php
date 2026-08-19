@@ -10,14 +10,20 @@ use Smithy\Core\Serde\{
     ShapeSerializerInterface,
     ShapeType
 };
+use Smithy\Core\Shape\FromMembersTrait;
 
 /**
  * Provide a structure fixture for the JSON codec tests.
  */
 final class SampleStruct implements SerializableStructInterface
 {
+    use FromMembersTrait;
+
     private static ?Schema $SCHEMA = null;
 
+    /**
+     * Create a structure fixture.
+     */
     public function __construct(
         public readonly ?string $name = null,
         public readonly ?int $count = null,
@@ -114,15 +120,14 @@ final class SampleStruct implements SerializableStructInterface
     }
 
     /**
-     * Serialize this fixture.
-     *
-     * @return void
+     * Return the fixture schema.
      */
     public function getSchema(): Schema
     {
         return self::schema();
     }
 
+    /** @inheritDoc */
     public function serialize(ShapeSerializerInterface $serializer, int $idx): void
     {
         $serializer->serializeStruct(self::schema(), $this, $idx);

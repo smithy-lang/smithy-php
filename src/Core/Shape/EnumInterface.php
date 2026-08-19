@@ -19,16 +19,6 @@ use Smithy\Core\Serde\SerializableShapeInterface;
 interface EnumInterface extends SerializableShapeInterface
 {
     /**
-     * Return the schema describing this enum shape.
-     *
-     * Implementations cache the {@see Schema} instance (lazy-static pattern) so it is built once
-     * per process.
-     *
-     * @return Schema Enum shape schema.
-     */
-    public static function schema(): Schema;
-
-    /**
      * Return the schema describing this enum instance.
      *
      * Generated implementations delegate to {@see schema()}, preserving

@@ -557,17 +557,24 @@ final class XmlSerializer implements ShapeSerializerInterface
         $info = $schema->getExtension($extKey);
         $this->writer->startElement($info->xmlName);
 
-        $tag = $union->tag();
         $value = $union->value();
+        $memberIndex = $union->getMemberIndex();
 
         $iterInfo = $info;
         if (
-            $info->unionMembersByName === []
+            $info->unionMembersByIndex === []
             && $union instanceof UnionInterface
         ) {
             $iterInfo = $union->getSchema()->getExtension($extKey);
         }
-        $variantSchema = $iterInfo->unionMembersByName[$tag] ?? null;
+        $variantSchema = $memberIndex < 0
+            ? null
+            : $iterInfo->unionMembersByIndex[$memberIndex] ?? null;
+        $tag = null;
+        if ($variantSchema === null) {
+            $tag = $union->tag();
+            $variantSchema = $iterInfo->unionMembersByName[$tag] ?? null;
+        }
 
         if ($variantSchema !== null) {
             $prevWireNames = $this->wireNames;
@@ -586,7 +593,7 @@ final class XmlSerializer implements ShapeSerializerInterface
             $this->nsAttrs = $prevNsAttrs;
             $this->tsFormats = $prevTsFormats;
         } else {
-            $this->writer->writeElement($tag, (string) $value);
+            $this->writer->writeElement((string) $tag, (string) $value);
         }
 
         $this->writer->endElement();

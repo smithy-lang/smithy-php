@@ -10,6 +10,7 @@ use Smithy\Core\Shape\Document\IntegerDocument;
 use Smithy\Core\Shape\Document\StringDocument;
 use Smithy\Core\Shape\Utils\ArrayShapeSerializer;
 use Smithy\Tests\Core\Shape\Utils\Utils\{
+    ArrayShapeSerializerAliasedFixture,
     ArrayShapeSerializerBigNumberFixture,
     ArrayShapeSerializerDocumentFixture,
     ArrayShapeSerializerEmptyFixture,
@@ -18,6 +19,7 @@ use Smithy\Tests\Core\Shape\Utils\Utils\{
     ArrayShapeSerializerScalarFixture,
     ArrayShapeSerializerTimestampFixture,
     ArrayShapeSerializerUnionFixture,
+    ArrayShapeSerializerUnionHolderFixture,
     ArrayShapeSerializerV3CompatFixture
 };
 
@@ -41,6 +43,16 @@ final class ArrayShapeSerializerTest extends TestCase
         $obj = new ArrayShapeSerializerScalarFixture(name: 'sam', count: 42);
         $this->assertSame(
             ['name' => 'sam', 'count' => 42],
+            ArrayShapeSerializer::toArray($obj)
+        );
+    }
+
+    public function testToArrayUsesModeledMemberAccessor(): void
+    {
+        $obj = new ArrayShapeSerializerAliasedFixture(message: 'Hi');
+
+        $this->assertSame(
+            ['Message' => 'Hi'],
             ArrayShapeSerializer::toArray($obj)
         );
     }
@@ -98,17 +110,6 @@ final class ArrayShapeSerializerTest extends TestCase
         );
 
         $this->assertInstanceOf(ArrayShapeSerializerEmptyFixture::class, $obj);
-    }
-
-    public function testFromArraySupportsUnionClass(): void
-    {
-        /** @var ArrayShapeSerializerUnionFixture $obj */
-        $obj = ArrayShapeSerializer::fromArray(
-            ArrayShapeSerializerUnionFixture::class,
-            ['foo' => 'bar']
-        );
-
-        $this->assertSame('bar', $obj->foo);
     }
 
     public function testRoundTripRetainsValues(): void
@@ -301,5 +302,59 @@ final class ArrayShapeSerializerTest extends TestCase
             ['doc' => $doc]
         );
         $this->assertSame($doc, $obj->doc);
+    }
+
+    public function testFromArrayHydratesRootUnionVariant(): void
+    {
+        /** @var ArrayShapeSerializerUnionFixture $union */
+        $union = ArrayShapeSerializer::fromArray(
+            ArrayShapeSerializerUnionFixture::class,
+            ['text' => 'hello']
+        );
+
+        $this->assertSame('text', $union->tag());
+        $this->assertSame('hello', $union->value());
+    }
+
+    public function testToArrayUnwrapsRootUnionStructVariant(): void
+    {
+        $union = ArrayShapeSerializerUnionFixture::scalar(
+            new ArrayShapeSerializerScalarFixture(name: 'sam', count: 42)
+        );
+
+        $this->assertSame(
+            ['scalar' => ['name' => 'sam', 'count' => 42]],
+            ArrayShapeSerializer::toArray($union)
+        );
+    }
+
+    public function testFromArrayHydratesNestedUnionMember(): void
+    {
+        /** @var ArrayShapeSerializerUnionHolderFixture $obj */
+        $obj = ArrayShapeSerializer::fromArray(
+            ArrayShapeSerializerUnionHolderFixture::class,
+            ['choice' => ['scalar' => ['name' => 'sam', 'count' => 42]]]
+        );
+
+        $this->assertSame('scalar', $obj->choice->tag());
+        $this->assertInstanceOf(
+            ArrayShapeSerializerScalarFixture::class,
+            $obj->choice->value()
+        );
+        $this->assertSame('sam', $obj->choice->value()->name);
+    }
+
+    public function testToArrayUnwrapsNestedUnionMember(): void
+    {
+        $obj = new ArrayShapeSerializerUnionHolderFixture(
+            ArrayShapeSerializerUnionFixture::scalar(
+                new ArrayShapeSerializerScalarFixture(name: 'sam', count: 42)
+            )
+        );
+
+        $this->assertSame(
+            ['choice' => ['scalar' => ['name' => 'sam', 'count' => 42]]],
+            ArrayShapeSerializer::toArray($obj)
+        );
     }
 }

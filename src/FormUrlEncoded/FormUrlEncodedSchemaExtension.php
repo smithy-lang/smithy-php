@@ -18,7 +18,7 @@ final class FormUrlEncodedSchemaExtension
 {
     public function __construct(
         /**
-         * `memberIndex → wire key segment` for every direct member of
+         * `memberIndex => wire key segment` for every direct member of
          * this struct / union schema. Resolution follows the awsQuery
          * "Query key resolution" spec:
          *   1. `@xmlName` on the member wins.
@@ -34,7 +34,7 @@ final class FormUrlEncodedSchemaExtension
 
 
         /**
-         * `memberIndex → wire key segment` for every direct member of
+         * `memberIndex => wire key segment` for every direct member of
          * this struct / union schema under the `ec2Query` naming
          * rules:
          *   1. `@ec2QueryName` on the member wins.
@@ -46,9 +46,16 @@ final class FormUrlEncodedSchemaExtension
          */
         public readonly array $ec2MemberWireNames = [],
 
+        /**
+         * Member wire-name tables indexed by serializer naming mode.
+         *
+         * @var array<int, array<int, string>>
+         */
+        public readonly array $memberWireNamesByMode = [],
+
 
         /**
-         * Sparse `memberIndex → bool` map: `true` when the member's
+         * Sparse `memberIndex => bool` map: `true` when the member's
          * container carries `@xmlFlattened`. Consulted by the list and
          * map serializer paths to decide whether to emit the container
          * name + `.member` / `.entry` scaffolding or unwrap directly
@@ -59,7 +66,7 @@ final class FormUrlEncodedSchemaExtension
         public readonly array $memberIsFlattened = [],
 
         /**
-         * Sparse `memberIndex → TimestampFormat` map for timestamp
+         * Sparse `memberIndex => TimestampFormat` map for timestamp
          * members with an explicit `@timestampFormat` trait. Members
          * that don't carry the trait are absent; callers fall back to
          * the codec settings default (see the serializer's timestamp
@@ -196,6 +203,9 @@ final class FormUrlEncodedSchemaExtension
          */
         public readonly ?Schema $mapValueSchema = null,
 
+        /** Pre-resolved map value shape type. */
+        public readonly ?int $mapValueType = null,
+
         /**
          * Pre-resolved {@see TimestampFormat} for a map's value when
          * the value shape is a timestamp; null otherwise. Populated only
@@ -219,7 +229,7 @@ final class FormUrlEncodedSchemaExtension
         public readonly ?string $memberMapEntryPrefix = null,
 
         /**
-         * `memberName → memberSchema` lookup for union variants, used
+         * `memberName => memberSchema` lookup for union variants, used
          * by the serializer to resolve the active variant's member
          * schema when serializing a union. Same shape as
          * {@see \Smithy\Xml\XmlSchemaExtension::$unionMembersByName}.
@@ -229,7 +239,7 @@ final class FormUrlEncodedSchemaExtension
         public readonly array $unionMembersByName = [],
 
         /**
-         * `memberName → resolved wire name` for union variants. `@xmlName`
+         * `memberName => resolved wire name` for union variants. `@xmlName`
          * on the variant wins; otherwise the Smithy `memberName` is used.
          * Populated at provider time so
          * {@see FormUrlEncodedSerializer::serializeUnion} reads the
@@ -241,7 +251,7 @@ final class FormUrlEncodedSchemaExtension
         public readonly array $unionMemberWireNames = [],
 
         /**
-         * `memberName → resolved ec2Query wire name` for union
+         * `memberName => resolved ec2Query wire name` for union
          * variants.
          *
          * @var array<string, string>
@@ -249,7 +259,7 @@ final class FormUrlEncodedSchemaExtension
         public readonly array $ec2UnionMemberWireNames = [],
 
         /**
-         * Sparse `memberName → TimestampFormat` map for union variants
+         * Sparse `memberName => TimestampFormat` map for union variants
          * whose target is a timestamp. Populated only for those variants;
          * absent entries fall through to the codec settings default at
          * read time. Matches the
@@ -259,6 +269,19 @@ final class FormUrlEncodedSchemaExtension
          * @var array<string, TimestampFormat>
          */
         public readonly array $unionMemberTsFormats = [],
+
+        /**
+         * Union encode metadata indexed by schema member index.
+         *
+         * Each entry is `[memberSchema, wireNamesByMode, timestampFormat]`.
+         *
+         * @var array<int, array{
+         *     0: Schema,
+         *     1: array<int, string>,
+         *     2: ?TimestampFormat
+         * }>
+         */
+        public readonly array $unionEncodeByMemberIndex = [],
 
         /**
          * Pre-resolved target class FQCN for enum / intEnum / struct /

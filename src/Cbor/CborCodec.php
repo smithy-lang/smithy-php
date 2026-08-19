@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Smithy\Cbor;
 
 use Smithy\Core\Serde\AbstractCodec;
+use Smithy\Core\Serde\Schema;
 use Smithy\Core\Serde\ShapeDeserializerInterface;
 use Smithy\Core\Serde\ShapeSerializerInterface;
 
@@ -39,6 +40,21 @@ final class CborCodec extends AbstractCodec
     public function createDeserializer(string $source): ShapeDeserializerInterface
     {
         return new CborDeserializer($source, $this->settings);
+    }
+
+    /**
+     * Return the CBOR extension's precomputed positional member template.
+     *
+     * @return array<int, mixed> Positional member values.
+     */
+    public function createMembersBuffer(Schema $schema): array
+    {
+        static $key = null;
+        $key ??= CborSchemaExtensionProvider::$KEY
+            ?? CborSchemaExtensionProvider::key();
+
+        return $schema->getExtension($key)?->membersTemplate
+            ?? parent::createMembersBuffer($schema);
     }
 
     /**

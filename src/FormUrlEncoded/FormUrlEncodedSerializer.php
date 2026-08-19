@@ -23,10 +23,16 @@ use Smithy\Core\Shape\UnionInterface;
  */
 final class FormUrlEncodedSerializer implements ShapeSerializerInterface
 {
+    private const WIRE_MODE_QUERY = 0;
+    private const WIRE_MODE_EC2 = 1;
+    private const WIRE_MODE_RAW = 2;
+    private const WIRE_MODE_CAPITALIZED_RAW = 3;
+
     private readonly FormUrlEncodedCodecSettings $settings;
     private readonly bool $honorTimestampFormatTrait;
     private readonly bool $honorXmlName;
     private readonly bool $capitalizeResolvedWireNames;
+    private readonly int $wireNameMode;
     /**
      * The accumulated URL-encoded body. Each `serializeXxx` scalar
      * append emits one `key=value&` fragment; {@see flush()} trims the
@@ -50,20 +56,23 @@ final class FormUrlEncodedSerializer implements ShapeSerializerInterface
     private ?array $wireNames = null;
     /**
      * Precomputed timestamp-format map for the current struct frame:
-     * `memberIndex → TimestampFormat`. Sparse. Only timestamp members
+     * `memberIndex => TimestampFormat`. Sparse. Only timestamp members
      * with an explicit `@timestampFormat` trait appear.
      *
      * @var array<int, TimestampFormat>
      */
     private array $tsFormats = [];
-    /**
-     * Saved parent frames for nested struct / union writes. Each entry
-     * captures the state {@see beginStruct} rewrote so {@see endStruct}
-     * can restore it exactly.
-     *
-     * @var list<array{0: string, 1: array<int,string>|null, 2: array<int,TimestampFormat>}>
-     */
-    private array $frameStack = [];
+    /** Current nested structure depth. */
+    private int $frameDepth = 0;
+
+    /** @var array<int, string> Saved parent prefixes by depth. */
+    private array $prefixStack = [];
+
+    /** @var array<int, array<int, string>|null> Saved wire-name tables. */
+    private array $wireNameStack = [];
+
+    /** @var array<int, array<int, TimestampFormat>> Saved timestamp tables. */
+    private array $timestampFormatStack = [];
 
     public function __construct(
         ?FormUrlEncodedCodecSettings $settings = null
@@ -74,16 +83,27 @@ final class FormUrlEncodedSerializer implements ShapeSerializerInterface
         $this->honorXmlName = $this->settings->honorXmlName;
         $this->capitalizeResolvedWireNames =
             $this->settings->capitalizeResolvedWireNames;
+        $this->wireNameMode = match (true) {
+            $this->honorXmlName
+                && !$this->capitalizeResolvedWireNames
+                    => self::WIRE_MODE_QUERY,
+            $this->honorXmlName
+                && $this->capitalizeResolvedWireNames
+                    => self::WIRE_MODE_EC2,
+            !$this->capitalizeResolvedWireNames
+                => self::WIRE_MODE_RAW,
+            default => self::WIRE_MODE_CAPITALIZED_RAW
+        };
     }
 
     // Each of these looks up the current wire name in one array offset,
     // concatenates the prefix + wire name + '=' + urlencoded value +
     // '&', and appends to the buffer in a single `.=`. The hot path for
-    // a struct with N scalar members is N × (1 array read, 1 C-string
+    // a struct with N scalar members is N x (1 array read, 1 C-string
     // encode, 1 string concat).
     //
     // `$this->wireNames` is guaranteed non-null here because scalar
-    // methods only run inside a beginStruct → endStruct pair emitted
+    // methods only run inside a beginStruct to endStruct pair emitted
     // by codegen. The `null` state is reserved for the outermost
     // "before any struct opens" case, which no scalar path reaches.
 
@@ -239,11 +259,13 @@ final class FormUrlEncodedSerializer implements ShapeSerializerInterface
     {
         if ($list === []) {
             if ($this->settings->alwaysFlattenLists) {
+
                 return;
             }
 
             $containerName = $this->wireNames[$idx] ?? '';
             $this->buffer .= $this->prefix . $containerName . '=&';
+
             return;
         }
 
@@ -276,10 +298,6 @@ final class FormUrlEncodedSerializer implements ShapeSerializerInterface
             ?? $memberSchema?->type
             ?? ShapeType::Document->value;
 
-        $savedPrefix = $this->prefix;
-        $savedWireNames = $this->wireNames;
-        $savedTsFormats = $this->tsFormats;
-
         switch ($mt) {
             case ShapeType::String_->value:
             case ShapeType::Enum->value:
@@ -301,25 +319,23 @@ final class FormUrlEncodedSerializer implements ShapeSerializerInterface
                         : null
                     ) ?? $this->settings->defaultTimestampFormat)
                     : null;
-                $counter = 1;
-                foreach ($list as $item) {
-                    if ($item === null) {
-                        $counter++;
-                        continue;
-                    }
-                    $this->serializeValue(
-                        $mt,
-                        $item,
-                        $itemPrefix . $counter,
-                        $fmt
-                    );
-                    $counter++;
-                }
-                break;
+                $this->serializeScalarList(
+                    $mt,
+                    $list,
+                    $itemPrefix,
+                    $fmt
+                );
 
+                return;
+        }
+
+        $savedPrefix = $this->prefix;
+        $savedWireNames = $this->wireNames;
+        $savedTsFormats = $this->tsFormats;
+
+        switch ($mt) {
             case ShapeType::Structure->value:
             case ShapeType::Union->value:
-                $savedPrefix = $this->prefix;
                 $counter = 1;
                 foreach ($list as $item) {
                     if ($item === null) {
@@ -390,6 +406,7 @@ final class FormUrlEncodedSerializer implements ShapeSerializerInterface
         }
 
         if ($map === []) {
+
             return;
         }
 
@@ -403,6 +420,8 @@ final class FormUrlEncodedSerializer implements ShapeSerializerInterface
         $keyName = $info?->mapKeyName ?? 'key';
         $valueName = $info?->mapValueName ?? 'value';
         $keyAssignment = $info?->mapKeyAssignment ?? ($keyName . '=');
+        $valueAssignment = $info?->mapValueAssignment
+            ?? ($valueName . '=');
 
         $precomputedEntryPrefix = $info?->memberMapEntryPrefix;
         if ($precomputedEntryPrefix !== null) {
@@ -414,8 +433,42 @@ final class FormUrlEncodedSerializer implements ShapeSerializerInterface
         }
 
         $valueSchema = $info?->mapValueSchema ?? $schema->getMapValue();
-        $valueType = $valueSchema?->type ?? ShapeType::String_->value;
-        $valueTsFmt = $info?->mapValueTimestampFormat;
+        $valueType = $info?->mapValueType
+            ?? $valueSchema?->type
+            ?? ShapeType::String_->value;
+
+        switch ($valueType) {
+            case ShapeType::String_->value:
+            case ShapeType::Enum->value:
+            case ShapeType::Integer->value:
+            case ShapeType::Long->value:
+            case ShapeType::Short->value:
+            case ShapeType::Byte->value:
+            case ShapeType::IntEnum->value:
+            case ShapeType::Boolean->value:
+            case ShapeType::Float_->value:
+            case ShapeType::Double->value:
+            case ShapeType::Timestamp->value:
+            case ShapeType::Blob->value:
+            case ShapeType::BigInteger->value:
+            case ShapeType::BigDecimal->value:
+                $format = $valueType === ShapeType::Timestamp->value
+                    ? (($this->honorTimestampFormatTrait
+                        ? $info?->mapValueTimestampFormat
+                        : null
+                    ) ?? $this->settings->defaultTimestampFormat)
+                    : null;
+                $this->serializeScalarMap(
+                    $valueType,
+                    $map,
+                    $baseEntryPrefix,
+                    $keyAssignment,
+                    $valueAssignment,
+                    $format
+                );
+
+                return;
+        }
 
         $savedPrefix = $this->prefix;
         $savedWireNames = $this->wireNames;
@@ -437,27 +490,6 @@ final class FormUrlEncodedSerializer implements ShapeSerializerInterface
             }
 
             switch ($valueType) {
-                case ShapeType::String_->value:
-                case ShapeType::Enum->value:
-                case ShapeType::Integer->value:
-                case ShapeType::Long->value:
-                case ShapeType::Short->value:
-                case ShapeType::Byte->value:
-                case ShapeType::IntEnum->value:
-                case ShapeType::Boolean->value:
-                case ShapeType::Float_->value:
-                case ShapeType::Double->value:
-                case ShapeType::Timestamp->value:
-                case ShapeType::Blob->value:
-                case ShapeType::BigInteger->value:
-                case ShapeType::BigDecimal->value:
-                    $this->serializeValue(
-                        $valueType,
-                        $v,
-                        $entryPrefix . $valueName,
-                        $valueTsFmt
-                    );
-                    break;
                 case ShapeType::Structure->value:
                 case ShapeType::Union->value:
                     $this->prefix = $entryPrefix;
@@ -517,7 +549,8 @@ final class FormUrlEncodedSerializer implements ShapeSerializerInterface
         $info = $schema->getExtension($extKey);
 
         $this->prefix = '';
-        $this->wireNames = $this->resolveMemberWireNames($schema, $info);
+        $this->wireNames =
+            $info?->memberWireNamesByMode[$this->wireNameMode] ?? [];
         $this->tsFormats = $info?->tsFormats ?? [];
     }
 
@@ -534,17 +567,17 @@ final class FormUrlEncodedSerializer implements ShapeSerializerInterface
         /** @var FormUrlEncodedSchemaExtension|null $info */
         $info = $schema->getExtension($extKey);
 
-        $this->frameStack[] = [
-            $this->prefix,
-            $this->wireNames,
-            $this->tsFormats
-        ];
+        $depth = $this->frameDepth++;
+        $this->prefixStack[$depth] = $this->prefix;
+        $this->wireNameStack[$depth] = $this->wireNames;
+        $this->timestampFormatStack[$depth] = $this->tsFormats;
 
         if ($this->wireNames !== null) {
             $this->prefix .= $this->wireNames[$idx] . '.';
         }
 
-        $this->wireNames = $this->resolveMemberWireNames($schema, $info);
+        $this->wireNames =
+            $info?->memberWireNamesByMode[$this->wireNameMode] ?? [];
         $this->tsFormats = $info?->tsFormats ?? [];
     }
 
@@ -556,8 +589,10 @@ final class FormUrlEncodedSerializer implements ShapeSerializerInterface
      */
     public function endStruct(): void
     {
-        [$this->prefix, $this->wireNames, $this->tsFormats]
-            = \array_pop($this->frameStack);
+        $depth = --$this->frameDepth;
+        $this->prefix = $this->prefixStack[$depth];
+        $this->wireNames = $this->wireNameStack[$depth];
+        $this->tsFormats = $this->timestampFormatStack[$depth];
     }
 
 
@@ -569,9 +604,9 @@ final class FormUrlEncodedSerializer implements ShapeSerializerInterface
     public function serializeUnion(Schema $schema, mixed $union, int $idx): void
     {
         /** @var UnionInterface $union */
-        $tag = $union->tag();
         $value = $union->value();
         if ($value === null) {
+
             return;
         }
 
@@ -579,8 +614,28 @@ final class FormUrlEncodedSerializer implements ShapeSerializerInterface
         $extKey ??= FormUrlEncodedSchemaExtensionProvider::key();
         /** @var FormUrlEncodedSchemaExtension|null $info */
         $info = $union->getSchema()->getExtension($extKey);
-        $variantSchema = $info?->unionMembersByName[$tag] ?? null;
+        $entry = $info?->unionEncodeByMemberIndex[
+            $union->getMemberIndex()
+        ] ?? null;
+        $tag = null;
+        if ($entry !== null) {
+            $variantSchema = $entry[0];
+            $variantWire = $entry[1][$this->wireNameMode];
+            $variantTsFmt = $entry[2];
+        } else {
+            $tag = $union->tag();
+            $variantSchema = $info?->unionMembersByName[$tag] ?? null;
+            $variantWire = $variantSchema === null
+                ? null
+                : $this->resolveUnionVariantWireName(
+                    $variantSchema,
+                    $info,
+                    $tag
+                );
+            $variantTsFmt = $info?->unionMemberTsFormats[$tag] ?? null;
+        }
         if ($variantSchema === null) {
+
             return;
         }
 
@@ -591,14 +646,8 @@ final class FormUrlEncodedSerializer implements ShapeSerializerInterface
         $savedWireNames = $this->wireNames;
         $savedTsFormats = $this->tsFormats;
         $variantIdx = $variantSchema->memberIndex;
-        $variantWire = $this->resolveUnionVariantWireName(
-            $variantSchema,
-            $info,
-            $tag
-        );
         $this->wireNames = [$variantIdx => $variantWire];
         $this->tsFormats = [];
-        $variantTsFmt = $info->unionMemberTsFormats[$tag] ?? null;
         if ($variantTsFmt !== null) {
             $this->tsFormats[$variantIdx] = $variantTsFmt;
         }
@@ -679,7 +728,10 @@ final class FormUrlEncodedSerializer implements ShapeSerializerInterface
         $this->prefix = '';
         $this->wireNames = null;
         $this->tsFormats = [];
-        $this->frameStack = [];
+        $this->frameDepth = 0;
+        $this->prefixStack = [];
+        $this->wireNameStack = [];
+        $this->timestampFormatStack = [];
     }
 
 
@@ -694,6 +746,263 @@ final class FormUrlEncodedSerializer implements ShapeSerializerInterface
         $this->reset();
 
         return $out;
+    }
+
+    /**
+     * Serialize a list whose member type is scalar.
+     *
+     * @return void
+     */
+    private function serializeScalarList(
+        int $type,
+        array $list,
+        string $itemPrefix,
+        ?TimestampFormat $timestampFormat
+    ): void
+    {
+        switch ($type) {
+            case ShapeType::String_->value:
+            case ShapeType::Enum->value:
+                $counter = 1;
+                foreach ($list as $item) {
+                    if ($item !== null) {
+                        $this->buffer .= $itemPrefix . $counter . '='
+                            . \rawurlencode((string) $item) . '&';
+                    }
+                    $counter++;
+                }
+
+                return;
+
+            case ShapeType::Integer->value:
+            case ShapeType::Long->value:
+            case ShapeType::Short->value:
+            case ShapeType::Byte->value:
+            case ShapeType::IntEnum->value:
+                $counter = 1;
+                foreach ($list as $item) {
+                    if ($item !== null) {
+                        $this->buffer .= $itemPrefix . $counter . '='
+                            . (int) $item . '&';
+                    }
+                    $counter++;
+                }
+
+                return;
+
+            case ShapeType::Boolean->value:
+                $counter = 1;
+                foreach ($list as $item) {
+                    if ($item !== null) {
+                        $this->buffer .= $itemPrefix . $counter . '='
+                            . ($item ? 'true' : 'false') . '&';
+                    }
+                    $counter++;
+                }
+
+                return;
+
+            case ShapeType::Float_->value:
+            case ShapeType::Double->value:
+                $counter = 1;
+                foreach ($list as $item) {
+                    if ($item !== null) {
+                        $number = match ($str = (string) (float) $item) {
+                            'NAN' => 'NaN',
+                            'INF' => 'Infinity',
+                            '-INF' => '-Infinity',
+                            default => $str
+                        };
+                        $this->buffer .= $itemPrefix . $counter . '='
+                            . \rawurlencode($number) . '&';
+                    }
+                    $counter++;
+                }
+
+                return;
+
+            case ShapeType::Timestamp->value:
+                $counter = 1;
+                foreach ($list as $item) {
+                    if ($item !== null) {
+                        $this->buffer .= $itemPrefix . $counter . '='
+                            . \rawurlencode(
+                                $timestampFormat->format((float) $item)
+                            )
+                            . '&';
+                    }
+                    $counter++;
+                }
+
+                return;
+
+            case ShapeType::Blob->value:
+                $counter = 1;
+                foreach ($list as $item) {
+                    if ($item !== null) {
+                        $this->buffer .= $itemPrefix . $counter . '='
+                            . \rawurlencode(\base64_encode((string) $item))
+                            . '&';
+                    }
+                    $counter++;
+                }
+
+                return;
+
+            case ShapeType::BigInteger->value:
+            case ShapeType::BigDecimal->value:
+                $counter = 1;
+                foreach ($list as $item) {
+                    if ($item !== null) {
+                        $this->buffer .= $itemPrefix . $counter . '='
+                            . \rawurlencode($item->value) . '&';
+                    }
+                    $counter++;
+                }
+
+                return;
+        }
+    }
+
+    /**
+     * Serialize a map whose value type is scalar.
+     *
+     * @return void
+     */
+    private function serializeScalarMap(
+        int $type,
+        array $map,
+        string $entryPrefix,
+        string $keyAssignment,
+        string $valueAssignment,
+        ?TimestampFormat $timestampFormat
+    ): void
+    {
+        switch ($type) {
+            case ShapeType::String_->value:
+            case ShapeType::Enum->value:
+                $counter = 1;
+                foreach ($map as $key => $value) {
+                    $prefix = $entryPrefix . $counter . '.';
+                    $this->buffer .= $prefix . $keyAssignment
+                        . \rawurlencode((string) $key) . '&';
+                    if ($value !== null) {
+                        $this->buffer .= $prefix . $valueAssignment
+                            . \rawurlencode((string) $value) . '&';
+                    }
+                    $counter++;
+                }
+
+                return;
+
+            case ShapeType::Integer->value:
+            case ShapeType::Long->value:
+            case ShapeType::Short->value:
+            case ShapeType::Byte->value:
+            case ShapeType::IntEnum->value:
+                $counter = 1;
+                foreach ($map as $key => $value) {
+                    $prefix = $entryPrefix . $counter . '.';
+                    $this->buffer .= $prefix . $keyAssignment
+                        . \rawurlencode((string) $key) . '&';
+                    if ($value !== null) {
+                        $this->buffer .= $prefix . $valueAssignment
+                            . (int) $value . '&';
+                    }
+                    $counter++;
+                }
+
+                return;
+
+            case ShapeType::Boolean->value:
+                $counter = 1;
+                foreach ($map as $key => $value) {
+                    $prefix = $entryPrefix . $counter . '.';
+                    $this->buffer .= $prefix . $keyAssignment
+                        . \rawurlencode((string) $key) . '&';
+                    if ($value !== null) {
+                        $this->buffer .= $prefix . $valueAssignment
+                            . ($value ? 'true' : 'false') . '&';
+                    }
+                    $counter++;
+                }
+
+                return;
+
+            case ShapeType::Float_->value:
+            case ShapeType::Double->value:
+                $counter = 1;
+                foreach ($map as $key => $value) {
+                    $prefix = $entryPrefix . $counter . '.';
+                    $this->buffer .= $prefix . $keyAssignment
+                        . \rawurlencode((string) $key) . '&';
+                    if ($value !== null) {
+                        $number = match ($str = (string) (float) $value) {
+                            'NAN' => 'NaN',
+                            'INF' => 'Infinity',
+                            '-INF' => '-Infinity',
+                            default => $str
+                        };
+                        $this->buffer .= $prefix . $valueAssignment
+                            . \rawurlencode($number) . '&';
+                    }
+                    $counter++;
+                }
+
+                return;
+
+            case ShapeType::Timestamp->value:
+                $counter = 1;
+                foreach ($map as $key => $value) {
+                    $prefix = $entryPrefix . $counter . '.';
+                    $this->buffer .= $prefix . $keyAssignment
+                        . \rawurlencode((string) $key) . '&';
+                    if ($value !== null) {
+                        $this->buffer .= $prefix . $valueAssignment
+                            . \rawurlencode(
+                                $timestampFormat->format((float) $value)
+                            )
+                            . '&';
+                    }
+                    $counter++;
+                }
+
+                return;
+
+            case ShapeType::Blob->value:
+                $counter = 1;
+                foreach ($map as $key => $value) {
+                    $prefix = $entryPrefix . $counter . '.';
+                    $this->buffer .= $prefix . $keyAssignment
+                        . \rawurlencode((string) $key) . '&';
+                    if ($value !== null) {
+                        $this->buffer .= $prefix . $valueAssignment
+                            . \rawurlencode(
+                                \base64_encode((string) $value)
+                            )
+                            . '&';
+                    }
+                    $counter++;
+                }
+
+                return;
+
+            case ShapeType::BigInteger->value:
+            case ShapeType::BigDecimal->value:
+                $counter = 1;
+                foreach ($map as $key => $value) {
+                    $prefix = $entryPrefix . $counter . '.';
+                    $this->buffer .= $prefix . $keyAssignment
+                        . \rawurlencode((string) $key) . '&';
+                    if ($value !== null) {
+                        $this->buffer .= $prefix . $valueAssignment
+                            . \rawurlencode($value->value) . '&';
+                    }
+                    $counter++;
+                }
+
+                return;
+        }
     }
 
     /**
@@ -713,6 +1022,7 @@ final class FormUrlEncodedSerializer implements ShapeSerializerInterface
                     . '='
                     . \rawurlencode((string) $value)
                     . '&';
+
                 return;
             case ShapeType::Integer->value:
             case ShapeType::Long->value:
@@ -720,11 +1030,13 @@ final class FormUrlEncodedSerializer implements ShapeSerializerInterface
             case ShapeType::Byte->value:
             case ShapeType::IntEnum->value:
                 $this->buffer .= $key . '=' . (int) $value . '&';
+
                 return;
             case ShapeType::Boolean->value:
                 $this->buffer .= $key . '='
                     . ($value ? 'true' : 'false')
                     . '&';
+
                 return;
             case ShapeType::Float_->value:
             case ShapeType::Double->value:
@@ -735,6 +1047,7 @@ final class FormUrlEncodedSerializer implements ShapeSerializerInterface
                     default => $str,
                 };
                 $this->buffer .= $key . '=' . \rawurlencode($number) . '&';
+
                 return;
             case ShapeType::Timestamp->value:
                 $fmt = ($this->honorTimestampFormatTrait
@@ -744,51 +1057,26 @@ final class FormUrlEncodedSerializer implements ShapeSerializerInterface
                 $this->buffer .= $key . '='
                     . \rawurlencode($fmt->format((float) $value))
                     . '&';
+
                 return;
             case ShapeType::Blob->value:
                 $this->buffer .= $key . '='
                     . \rawurlencode(\base64_encode((string) $value))
                     . '&';
+
                 return;
             case ShapeType::BigInteger->value:
             case ShapeType::BigDecimal->value:
                 $this->buffer .= $key . '='
                     . \rawurlencode($value->value)
                     . '&';
+
                 return;
         }
 
         throw new \LogicException(
             'serializeValue does not support ShapeType ' . $type
         );
-    }
-
-    /**
-     * Resolve direct member wire names for the active frame.
-     *
-     * @return array<int, string>
-     */
-    private function resolveMemberWireNames(
-        Schema $schema,
-        ?FormUrlEncodedSchemaExtension $info
-    ): array
-    {
-        if ($this->honorXmlName) {
-            return $this->capitalizeResolvedWireNames
-                ? ($info?->ec2MemberWireNames ?? [])
-                : ($info?->memberWireNames ?? []);
-        }
-
-        $wireNames = [];
-        foreach ($schema->getMembers() as $memberSchema) {
-            $name = (string) $memberSchema->memberName;
-            if ($this->capitalizeResolvedWireNames) {
-                $name = \ucfirst($name);
-            }
-            $wireNames[$memberSchema->memberIndex] = \rawurlencode($name);
-        }
-
-        return $wireNames;
     }
 
     private function selectMemberListPrefix(

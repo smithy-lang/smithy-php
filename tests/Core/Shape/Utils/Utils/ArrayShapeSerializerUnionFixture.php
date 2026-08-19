@@ -4,20 +4,21 @@ declare(strict_types=1);
 
 namespace Smithy\Tests\Core\Shape\Utils\Utils;
 
-use Smithy\Core\Serde\Schema;
-use Smithy\Core\Serde\ShapeSerializerInterface;
-use Smithy\Core\Serde\ShapeType;
+use Smithy\Core\Serde\{
+    Schema,
+    ShapeSerializerInterface,
+    ShapeType
+};
 use Smithy\Core\Shape\UnionInterface;
+use Smithy\Core\Shape\Utils\ArrayShapeSerializer;
 
-final class ArrayShapeSerializerUnionFixture implements UnionInterface
+abstract class ArrayShapeSerializerUnionFixture implements UnionInterface
 {
     private static Schema $SCHEMA;
 
-    public function __construct(
-        public readonly ?string $foo = null
-    ) {
-    }
-
+    /**
+     * Return the fixture schema.
+     */
     public static function schema(): Schema
     {
         return self::$SCHEMA ??= new Schema(
@@ -27,28 +28,85 @@ final class ArrayShapeSerializerUnionFixture implements UnionInterface
                 new Schema(
                     id: 'smithy.api#String',
                     type: ShapeType::String_,
-                    memberName: 'foo',
+                    memberName: 'text',
                     memberIndex: 0
+                ),
+                new Schema(
+                    id: 'test#ArrayShapeSerializerScalarFixture',
+                    type: ShapeType::Structure,
+                    memberName: 'scalar',
+                    memberIndex: 1,
+                    targetClass: ArrayShapeSerializerScalarFixture::class
                 )
             ],
             targetClass: self::class
         );
     }
 
+    /**
+     * Create a text variant.
+     */
+    public static function text(string $value): self
+    {
+        return new ArrayShapeSerializerUnionTextFixture($value);
+    }
+
+    /**
+     * Create a structure variant.
+     */
+    public static function scalar(
+        ArrayShapeSerializerScalarFixture $value
+    ): self
+    {
+        return new ArrayShapeSerializerUnionScalarFixture($value);
+    }
+
+    /**
+     * Create an unknown variant.
+     */
+    public static function unknown(string $tag, mixed $value): self
+    {
+        return new ArrayShapeSerializerUnionUnknownFixture($tag, $value);
+    }
+
+    /**
+     * Create a variant by tag.
+     */
+    public static function create(string $tag, mixed $value): self
+    {
+        return match ($tag) {
+            'text' => self::text((string) $value),
+            'scalar' => self::scalar(
+                $value instanceof ArrayShapeSerializerScalarFixture
+                    ? $value
+                    : ArrayShapeSerializer::fromArray(
+                        ArrayShapeSerializerScalarFixture::class,
+                        $value
+                    )
+            ),
+            default => self::unknown($tag, $value)
+        };
+    }
+
+    /** @inheritDoc */
     public function getSchema(): Schema
     {
         return self::schema();
     }
 
-    public function serialize(ShapeSerializerInterface $serializer, int $idx): void {}
-
-    public function tag(): string
+    /** @inheritDoc */
+    public function getMemberIndex(): int
     {
-        return 'foo';
+        return match ($this->tag()) {
+            'text' => 0,
+            'scalar' => 1,
+            default => -1
+        };
     }
 
-    public function value(): mixed
-    {
-        return $this->foo;
-    }
+    /** @inheritDoc */
+    public function serialize(
+        ShapeSerializerInterface $serializer,
+        int $idx
+    ): void {}
 }

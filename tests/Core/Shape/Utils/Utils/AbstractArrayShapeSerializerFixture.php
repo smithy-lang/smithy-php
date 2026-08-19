@@ -10,24 +10,36 @@ use Smithy\Core\Serde\ShapeSerializerInterface;
 
 abstract class AbstractArrayShapeSerializerFixture implements SerializableStructInterface
 {
+    use \Smithy\Core\Shape\WithMemberValueTrait;
+
+    /** @inheritDoc */
     public function getSchema(): Schema
     {
         return static::schema();
     }
 
-    public function serialize(ShapeSerializerInterface $serializer, int $idx): void
-    {
-        // Not exercised by these tests — ArrayShapeSerializer drives the
-        // schema-walk path, not the codec dispatch path.
-    }
+    /** @inheritDoc */
+    public function serialize(
+        ShapeSerializerInterface $serializer,
+        int $idx
+    ): void {}
 
+    /** @inheritDoc */
     public function serializeMembers(ShapeSerializerInterface $serializer): void {}
 
+    /** @inheritDoc */
     public function getMemberValue(Schema $member): mixed
     {
-        return null;
+        $property = \lcfirst($member->memberName);
+
+        return $this->{$property} ?? null;
     }
 
+    /**
+     * Reject construction through positional members in these fixtures.
+     *
+     * @throws \BadMethodCallException Always.
+     */
     public static function fromMembers(array $fields): static
     {
         throw new \BadMethodCallException('Not used in these tests.');

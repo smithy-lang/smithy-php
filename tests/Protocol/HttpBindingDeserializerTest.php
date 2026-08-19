@@ -6,7 +6,12 @@ namespace Smithy\Tests\Protocol;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
-use Smithy\Core\Serde\TimestampFormat;
+use Smithy\Core\Serde\{
+    Schema,
+    ShapeType,
+    TimestampFormat
+};
+use Smithy\Core\Shape\Document\StructDocument;
 use Smithy\Json\JsonCodec;
 use Smithy\Json\JsonCodecSettings;
 use Smithy\Protocol\HttpBindingDeserializer;
@@ -172,6 +177,82 @@ final class HttpBindingDeserializerTest extends TestCase
             $members[0]
         );
         self::assertSame('nested', $members[0]->value);
+    }
+
+    public function testDeserializesRuntimeStructurePayloadMember(): void
+    {
+        $payloadSchema = new Schema(
+            id: 'smithy.test#RuntimePayload',
+            type: ShapeType::Structure,
+            memberName: 'payload',
+            memberIndex: 0,
+            members: [
+                new Schema(
+                    id: 'smithy.api#String',
+                    type: ShapeType::String_,
+                    memberName: 'value',
+                    memberIndex: 0
+                )
+            ],
+            traits: [Schema::T_HTTP_PAYLOAD => true]
+        );
+        $schema = new Schema(
+            id: 'smithy.test#RuntimeResponse',
+            type: ShapeType::Structure,
+            members: [$payloadSchema]
+        );
+        $members = [null];
+        $bindingInfo = $schema->getExtension(
+            HttpStructBindingExtensionProvider::key()
+        );
+        $deserializer = new HttpBindingDeserializer(
+            new JsonCodec(),
+            $bindingInfo,
+            ['content-length' => ['Content-Length', ['18']]],
+            new StringStreamFixture('{"value":"nested"}')
+        );
+
+        $deserializer->deserialize($schema, $members);
+
+        self::assertInstanceOf(StructDocument::class, $members[0]);
+        self::assertSame(
+            'nested',
+            $members[0]->getMemberValue($payloadSchema->getMember('value'))
+        );
+    }
+
+    public function testDocumentPayloadRetainsModeledSchema(): void
+    {
+        $payloadSchema = new Schema(
+            id: 'smithy.test#RuntimeDocumentPayload',
+            type: ShapeType::Document,
+            memberName: 'payload',
+            memberIndex: 0,
+            traits: [Schema::T_HTTP_PAYLOAD => true]
+        );
+        $schema = new Schema(
+            id: 'smithy.test#RuntimeDocumentResponse',
+            type: ShapeType::Structure,
+            members: [$payloadSchema]
+        );
+        $members = [null];
+        $bindingInfo = $schema->getExtension(
+            HttpStructBindingExtensionProvider::key()
+        );
+        $deserializer = new HttpBindingDeserializer(
+            new JsonCodec(),
+            $bindingInfo,
+            ['content-length' => ['Content-Length', ['13']]],
+            new StringStreamFixture('{"value":"x"}')
+        );
+
+        $deserializer->deserialize($schema, $members);
+
+        self::assertSame($payloadSchema, $members[0]->schema());
+        self::assertSame(
+            'smithy.test#RuntimeDocumentPayload',
+            $members[0]->discriminator()
+        );
     }
 
     public function testDeserializesBodyMemberWithUnknownSize(): void

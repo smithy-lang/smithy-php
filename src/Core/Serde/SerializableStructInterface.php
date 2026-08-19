@@ -15,16 +15,6 @@ namespace Smithy\Core\Serde;
 interface SerializableStructInterface extends SerializableShapeInterface
 {
     /**
-     * Return the schema describing this shape's structure.
-     *
-     * Implementations cache the Schema instance (lazy-static pattern) so it is constructed once per
-     * process.
-     *
-     * @return Schema Runtime schema for this shape.
-     */
-    public static function schema(): Schema;
-
-    /**
      * Return the schema describing this structure instance.
      *
      * Generated implementations delegate to {@see schema()}, preserving
@@ -62,4 +52,14 @@ interface SerializableStructInterface extends SerializableShapeInterface
      *               recognized.
      */
     public function getMemberValue(Schema $member): mixed;
+
+    /**
+     * Return a copy with one positional member replaced.
+     *
+     * @param Schema $member Member schema to replace.
+     * @param mixed $value Replacement value.
+     *
+     * @return static Copied structure value.
+     */
+    public function withMemberValue(Schema $member, mixed $value): static;
 }

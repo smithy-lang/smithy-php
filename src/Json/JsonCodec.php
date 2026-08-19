@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Smithy\Json;
 
 use Smithy\Core\Serde\AbstractCodec;
+use Smithy\Core\Serde\Schema;
 use Smithy\Core\Serde\ShapeDeserializerInterface;
 use Smithy\Core\Serde\ShapeSerializerInterface;
 
@@ -39,6 +40,21 @@ final class JsonCodec extends AbstractCodec
     }
 
     /**
+     * Return the JSON extension's precomputed positional member template.
+     *
+     * @return array<int, mixed> Positional member values.
+     */
+    public function createMembersBuffer(Schema $schema): array
+    {
+        static $key = null;
+        $key ??= JsonSchemaExtensionProvider::$KEY
+            ?? JsonSchemaExtensionProvider::key();
+
+        return $schema->getExtension($key)?->membersTemplate
+            ?? parent::createMembersBuffer($schema);
+    }
+
+    /**
      * Borrow a reusable serializer.
      *
      * @internal
@@ -56,6 +72,8 @@ final class JsonCodec extends AbstractCodec
      * Return a borrowed serializer to the pool.
      *
      * @internal
+     *
+     * @return void
      */
     public function releaseSerializer(JsonSerializer $serializer): void
     {

@@ -10,6 +10,7 @@ use Smithy\Core\Serde\{
     ShapeSerializerInterface,
     ShapeType
 };
+use Smithy\Core\Shape\FromMembersTrait;
 
 /**
  * Provide a structure fixture for CBOR serializer tests.
@@ -17,6 +18,8 @@ use Smithy\Core\Serde\{
 final class CborSerializerSampleStructFixture
     implements SerializableStructInterface
 {
+    use FromMembersTrait;
+
     private static ?Schema $SCHEMA = null;
 
     /**
@@ -106,15 +109,14 @@ final class CborSerializerSampleStructFixture
     }
 
     /**
-     * Serialize the fixture as a structure.
-     *
-     * @return void
+     * Return the fixture schema.
      */
     public function getSchema(): Schema
     {
         return self::schema();
     }
 
+    /** @inheritDoc */
     public function serialize(ShapeSerializerInterface $serializer, int $idx): void
     {
         $serializer->serializeStruct(self::schema(), $this, $idx);

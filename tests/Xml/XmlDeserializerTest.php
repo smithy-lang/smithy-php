@@ -5,6 +5,14 @@ declare(strict_types=1);
 namespace Smithy\Tests\Xml;
 
 use PHPUnit\Framework\TestCase;
+use Smithy\Core\Serde\{
+    Schema,
+    ShapeType
+};
+use Smithy\Core\Shape\Document\{
+    StructDocument,
+    UnionDocument
+};
 use Smithy\Tests\Xml\Utils\{
     XmlIntEnumFixture,
     XmlNestedStructFixture,
@@ -105,6 +113,7 @@ final class XmlDeserializerTest extends TestCase
 
     public function testDeserializesKnownRootUnionVariant(): void
     {
+        XmlSampleUnionFixture::$indexedCreations = 0;
         $deserializer = $this->createDeserializer(
             '<SampleUnion><count>2</count></SampleUnion>'
         );
@@ -115,6 +124,7 @@ final class XmlDeserializerTest extends TestCase
         self::assertInstanceOf(XmlSampleUnionFixture::class, $members[0]);
         self::assertSame('count', $members[0]->tag());
         self::assertSame(2, $members[0]->value());
+        self::assertSame(1, XmlSampleUnionFixture::$indexedCreations);
     }
 
     public function testDeserializesUnknownRootUnionVariant(): void
@@ -129,6 +139,123 @@ final class XmlDeserializerTest extends TestCase
         self::assertInstanceOf(XmlSampleUnionFixture::class, $members[0]);
         self::assertSame('mystery', $members[0]->tag());
         self::assertSame('zzz', $members[0]->value());
+    }
+
+    public function testDeserializerCreatesDocumentsForRuntimeShapes(): void
+    {
+        $childSchema = new Schema(
+            id: 'smithy.test#Child',
+            type: ShapeType::Structure,
+            members: [
+                new Schema(
+                    id: 'smithy.api#String',
+                    type: ShapeType::String_,
+                    memberName: 'value',
+                    memberIndex: 0
+                )
+            ]
+        );
+        $unionSchema = new Schema(
+            id: 'smithy.test#Choice',
+            type: ShapeType::Union,
+            members: [
+                new Schema(
+                    id: 'smithy.api#Integer',
+                    type: ShapeType::Integer,
+                    memberName: 'count',
+                    memberIndex: 0
+                )
+            ]
+        );
+        $enumSchema = new Schema(
+            id: 'smithy.test#Status',
+            type: ShapeType::Enum
+        );
+        $schema = new Schema(
+            id: 'smithy.test#Container',
+            type: ShapeType::Structure,
+            members: [
+                new Schema(
+                    id: $childSchema->id,
+                    type: ShapeType::Structure,
+                    memberName: 'child',
+                    memberIndex: 0,
+                    target: $childSchema
+                ),
+                new Schema(
+                    id: $unionSchema->id,
+                    type: ShapeType::Union,
+                    memberName: 'choice',
+                    memberIndex: 1,
+                    target: $unionSchema
+                ),
+                new Schema(
+                    id: $enumSchema->id,
+                    type: ShapeType::Enum,
+                    memberName: 'status',
+                    memberIndex: 2,
+                    target: $enumSchema
+                )
+            ]
+        );
+        $members = [null, null, null];
+
+        $this->createDeserializer(
+            '<Container><child><value>kid</value></child>'
+            . '<choice><count>2</count></choice>'
+            . '<status>open</status></Container>'
+        )->deserialize($schema, $members);
+
+        self::assertInstanceOf(StructDocument::class, $members[0]);
+        self::assertSame('kid', $members[0]->getMemberValue(
+            $childSchema->getMember('value')
+        ));
+        self::assertInstanceOf(UnionDocument::class, $members[1]);
+        self::assertSame('count', $members[1]->tag());
+        self::assertSame(2, $members[1]->value());
+        self::assertSame('open', $members[2]);
+    }
+
+    public function testDeserializesClasslessEnumListsAsScalars(): void
+    {
+        $stringEnum = new Schema(
+            id: 'smithy.test#Status',
+            type: ShapeType::Enum
+        );
+        $intEnum = new Schema(
+            id: 'smithy.test#Code',
+            type: ShapeType::IntEnum
+        );
+        $schema = new Schema(
+            id: 'smithy.test#Container',
+            type: ShapeType::Structure,
+            members: [
+                new Schema(
+                    id: 'smithy.test#Statuses',
+                    type: ShapeType::List_,
+                    memberName: 'statuses',
+                    memberIndex: 0,
+                    listMember: $stringEnum
+                ),
+                new Schema(
+                    id: 'smithy.test#Codes',
+                    type: ShapeType::List_,
+                    memberName: 'codes',
+                    memberIndex: 1,
+                    listMember: $intEnum
+                )
+            ]
+        );
+        $members = [null, null];
+
+        $this->createDeserializer(
+            '<Container><statuses><member>open</member><member>closed'
+            . '</member></statuses><codes><member>7</member><member>9'
+            . '</member></codes></Container>'
+        )->deserialize($schema, $members);
+
+        self::assertSame(['open', 'closed'], $members[0]);
+        self::assertSame([7, 9], $members[1]);
     }
 
     private function createDeserializer(string $xml): XmlDeserializer

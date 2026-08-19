@@ -44,6 +44,14 @@ final class HttpBindingOperationFixture implements OperationInterface
     }
 
     /**
+     * Return the runtime identity.
+     */
+    public function getRuntimeIdentity(): string
+    {
+        return self::class;
+    }
+
+    /**
      * Get the operation input class.
      */
     public function getInputClass(): string
@@ -68,11 +76,55 @@ final class HttpBindingOperationFixture implements OperationInterface
     }
 
     /**
+     * Materialize an input value.
+     *
+     * @param array<int, mixed> $members Positional member values.
+     */
+    public function createInput(
+        array $members
+    ): \Smithy\Core\Serde\SerializableStructInterface
+    {
+        $inputClass = $this->getInputClass();
+
+        return new $inputClass(...$members);
+    }
+
+    /**
+     * Materialize an output value.
+     *
+     * @param array<int, mixed> $members Positional member values.
+     */
+    public function createOutput(
+        array $members
+    ): \Smithy\Core\Serde\SerializableStructInterface
+    {
+        $outputClass = $this->getOutputClass();
+
+        return $outputClass::fromMembers($members);
+    }
+
+    /**
+     * Get the operation schema.
+     */
+    public function getSchema(): Schema
+    {
+        return self::schema();
+    }
+
+    /**
      * Get the operation schema.
      */
     public static function schema(): Schema
     {
         return HttpBindingFixtureSchemas::httpOperation();
+    }
+
+    /**
+     * Get the input shape schema.
+     */
+    public function getInputSchema(): Schema
+    {
+        return self::inputSchema();
     }
 
     /**
@@ -86,15 +138,47 @@ final class HttpBindingOperationFixture implements OperationInterface
     /**
      * Get the output shape schema.
      */
+    public function getOutputSchema(): Schema
+    {
+        return self::outputSchema();
+    }
+
+    /**
+     * Get the output shape schema.
+     */
     public static function outputSchema(): Schema
     {
         return HttpBindingOutputShapeFixture::schema();
     }
 
     /**
+     * Return the protocol request target.
+     */
+    public function getRequestTarget(): ?string
+    {
+        return \defined(static::class . '::TARGET')
+            ? \constant(static::class . '::TARGET')
+            : null;
+    }
+
+    /**
+     * Resolve a modeled error schema.
+     */
+    public function resolveErrorSchema(string $discriminator): ?Schema
+    {
+        $errorMap = $this->getSchema()->getTrait(Schema::T_ERRORS) ?? [];
+        $errorClass = $errorMap[$discriminator] ?? null;
+
+        return \is_string($errorClass)
+            && \method_exists($errorClass, 'schema')
+                ? $errorClass::schema()
+                : null;
+    }
+
+    /**
      * Get the modeled input stream member.
      */
-    public static function getInputStreamMember(): ?Schema
+    public function getInputStreamMember(): ?Schema
     {
         return null;
     }
@@ -102,7 +186,7 @@ final class HttpBindingOperationFixture implements OperationInterface
     /**
      * Get the modeled output stream member.
      */
-    public static function getOutputStreamMember(): ?Schema
+    public function getOutputStreamMember(): ?Schema
     {
         return null;
     }

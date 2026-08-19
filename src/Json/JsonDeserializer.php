@@ -12,6 +12,8 @@ use Smithy\Core\Serde\TimestampFormat;
 use Smithy\Core\Shape\BigDecimal;
 use Smithy\Core\Shape\BigInteger;
 use Smithy\Core\Shape\Document\AbstractDocument;
+use Smithy\Core\Shape\Document\StructDocument;
+use Smithy\Core\Shape\Document\UnionDocument;
 
 /**
  * Deserialize JSON into Smithy shapes.
@@ -170,9 +172,11 @@ final class JsonDeserializer implements ShapeDeserializerInterface
             $members = $count > 0 ? \array_fill(0, $count, null) : [];
         }
         $this->readStruct($targetSchema, $value, $members);
-        return $targetSchema->targetClass
-            ? ($targetSchema->targetClass)::fromMembers($members)
-            : null;
+        if ($targetSchema->targetClass !== null) {
+            return ($targetSchema->targetClass)::fromMembers($members);
+        }
+
+        return StructDocument::fromMembers($targetSchema, $members);
     }
 
 
@@ -180,72 +184,99 @@ final class JsonDeserializer implements ShapeDeserializerInterface
     /**
      * Hydrate a union wire value.
      */
-    private function readUnion(Schema $member, mixed $value): ?SerializableShapeInterface
+    private function readUnion(
+        Schema|JsonSchemaExtension $context,
+        mixed $value
+    ): ?SerializableShapeInterface
     {
         if (!\is_array($value) || $value === []) {
             return null;
         }
-        // Memoize target union extensions by schema id.
-        static $extKey = null;
-        static $targetInfoById = [];
-        $extKey ??= JsonSchemaExtensionProvider::key();
-        /** @var JsonSchemaExtension|null $memberInfo */
-        $memberInfo = $member->getExtension($extKey);
-        if ($memberInfo === null) {
-            // Synthetic schemas may not have precomputed extensions.
-            $unionSchema = $member->resolveTarget();
-            $targetClass = $unionSchema->targetClass;
-            if ($targetClass === null) {
-                return null;
-            }
-            $info = $unionSchema->getExtension($extKey);
-        } else {
-            $targetClass = $memberInfo->resolvedTargetClass;
-            if ($targetClass === null) {
-                return null;
-            }
-            $unionSchema = $memberInfo->resolvedTargetSchema ?? $member;
-            // Canonical member schemas already carry the union tables.
-            if ($unionSchema === $member) {
-                $info = $memberInfo;
-            } else {
-                $tid = $unionSchema->id;
-                $info = $targetInfoById[$tid]
-                    ??= $unionSchema->getExtension($extKey);
-            }
+
+        if ($context instanceof JsonSchemaExtension) {
+            return $this->readUnionFromInfo($context, $value);
         }
 
-        // Pick the union wire-name table once.
-        $unionDecodeByWireName = $info === null
-            ? []
-            : ($this->settings->honorJsonName
-                ? $info->unionDecodeByWireName
-                : $info->rawUnionDecodeByWireName);
+        static $extKey = null;
+        $extKey ??= JsonSchemaExtensionProvider::key();
+
+        /** @var JsonSchemaExtension|null $info */
+        $info = $context->getExtension($extKey);
+        if ($info !== null && $info->resolvedTargetSchema !== null) {
+            return $this->readUnionFromInfo($info, $value);
+        }
+
+        $unionSchema = $context->resolveTarget();
+        $targetClass = $unionSchema->targetClass;
 
         foreach ($value as $wireKey => $wireValue) {
-            // Ignore restJson1's synthetic discriminator.
-            if ($wireKey === '__type') {
+            if ($wireKey === '__type' || $wireValue === null) {
                 continue;
             }
-            // Null union entries are absent variants.
-            if ($wireValue === null) {
+
+            return $targetClass !== null
+                ? $targetClass::unknown((string) $wireKey, $wireValue)
+                : UnionDocument::unknown(
+                    $unionSchema,
+                    (string) $wireKey,
+                    $wireValue
+                );
+        }
+
+        return null;
+    }
+
+    /**
+     * Hydrate a union using fully resolved extension metadata.
+     *
+     * @param array<string, mixed> $value
+     */
+    private function readUnionFromInfo(
+        JsonSchemaExtension $info,
+        array $value
+    ): ?SerializableShapeInterface
+    {
+        $unionSchema = $info->resolvedTargetSchema;
+        $targetClass = $info->resolvedTargetClass;
+        $unionDecodeByWireName = $this->settings->honorJsonName
+            ? $info->unionDecodeByWireName
+            : $info->rawUnionDecodeByWireName;
+
+        foreach ($value as $wireKey => $wireValue) {
+            if ($wireKey === '__type' || $wireValue === null) {
                 continue;
             }
             $entry = $unionDecodeByWireName[$wireKey] ?? null;
 
             if ($entry === null) {
-                return $targetClass::unknown((string) $wireKey, $wireValue);
+                return $targetClass !== null
+                    ? $targetClass::unknown((string) $wireKey, $wireValue)
+                    : UnionDocument::unknown(
+                        $unionSchema,
+                        (string) $wireKey,
+                        $wireValue
+                    );
             }
 
-            return $targetClass::create(
-                $entry[0],
-                $this->readValue(
-                    $entry[1],
-                    $wireValue,
-                    $entry[2] ?? null
-                )
+            $decoded = $this->readValue(
+                $entry[2],
+                $wireValue,
+                $entry[3] ?? null
+            );
+
+            if ($targetClass !== null) {
+                return $info->hasIndexedUnionFactory
+                    ? $targetClass::createByIndex($entry[0], $decoded)
+                    : $targetClass::create($entry[1], $decoded);
+            }
+
+            return UnionDocument::create(
+                $unionSchema,
+                $entry[1],
+                $decoded
             );
         }
+
         return null;
     }
 
@@ -311,6 +342,12 @@ final class JsonDeserializer implements ShapeDeserializerInterface
                 return $this->readNestedStruct($context, $value);
 
             case ShapeType::Union->value:
+                if ($context instanceof JsonSchemaExtension) {
+                    return \is_array($value) && $value !== []
+                        ? $this->readUnionFromInfo($context, $value)
+                        : null;
+                }
+
                 return $this->readUnion($context, $value);
 
             case ShapeType::List_->value:
@@ -350,6 +387,20 @@ final class JsonDeserializer implements ShapeDeserializerInterface
         $info = $member->getExtension($extKey);
         // Synthetic schemas may not have extension metadata.
         $itemType = $info?->listMemberType ?? $itemSchema->type;
+        $unionInfo = $itemType === ShapeType::Union->value
+            ? $info?->listMemberUnionInfo
+            : null;
+        if ($unionInfo !== null) {
+            $out = [];
+            foreach ($value as $item) {
+                $out[] = \is_array($item) && $item !== []
+                    ? $this->readUnionFromInfo($unionInfo, $item)
+                    : null;
+            }
+
+            return $out;
+        }
+
         $context = match ($itemType) {
             ShapeType::Timestamp->value => $info?->listMemberTimestampFormat,
             ShapeType::Enum->value,
@@ -385,6 +436,20 @@ final class JsonDeserializer implements ShapeDeserializerInterface
         /** @var JsonSchemaExtension|null $info */
         $info = $member->getExtension($extKey);
         $valueType = $info?->mapValueType ?? $valueSchema->type;
+        $unionInfo = $valueType === ShapeType::Union->value
+            ? $info?->mapValueUnionInfo
+            : null;
+        if ($unionInfo !== null) {
+            $out = [];
+            foreach ($value as $key => $item) {
+                $out[$key] = \is_array($item) && $item !== []
+                    ? $this->readUnionFromInfo($unionInfo, $item)
+                    : null;
+            }
+
+            return $out;
+        }
+
         $context = match ($valueType) {
             ShapeType::Timestamp->value => $info?->mapValueTimestampFormat,
             ShapeType::Enum->value,

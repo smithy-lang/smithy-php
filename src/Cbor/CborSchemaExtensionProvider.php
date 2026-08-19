@@ -8,6 +8,7 @@ use Smithy\Core\Serde\Schema;
 use Smithy\Core\Serde\SchemaExtensionKey;
 use Smithy\Core\Serde\SchemaExtensionProviderInterface;
 use Smithy\Core\Serde\ShapeType;
+use Smithy\Core\Serde\TimestampFormat;
 
 /**
  * Build cached CBOR metadata for schema extension lookups.
@@ -44,11 +45,19 @@ final class CborSchemaExtensionProvider
             $listMember = $schema->listMember;
             $resolvedTargetClass = null;
             $resolvedTargetSchema = null;
-            $listMemberDecodeKind = null;
+            $unionInfo = null;
+            $listMemberType = null;
+            $listMemberTimestampFormat = null;
             if ($listMember !== null) {
-                $listMemberDecodeKind = self::decodeKindForType(
-                    $listMember->type
-                );
+                $listMemberType = $listMember->type;
+                if ($listMemberType === ShapeType::Timestamp->value) {
+                    $listMemberTimestampFormat =
+                        TimestampFormat::fromTraitString(
+                            $listMember->getTrait(
+                                Schema::T_TIMESTAMP_FORMAT
+                            )
+                        );
+                }
                 switch ($listMember->type) {
                     case ShapeType::Enum->value:
                     case ShapeType::IntEnum->value:
@@ -59,7 +68,7 @@ final class CborSchemaExtensionProvider
                     case ShapeType::Structure->value:
                     case ShapeType::Union->value:
                         if ($listMember->getMemberCount() === 0
-                            && $listMember->targetClass !== null
+                            && $listMember->hasTarget()
                         ) {
                             $resolvedTargetSchema =
                                 $listMember->resolveTarget();
@@ -69,17 +78,23 @@ final class CborSchemaExtensionProvider
                             $resolvedTargetSchema = $listMember;
                             $resolvedTargetClass = $listMember->targetClass;
                         }
+                        if ($listMember->type === ShapeType::Union->value) {
+                            $unionInfo = $resolvedTargetSchema->getExtension(
+                                self::key()
+                            );
+                        }
                         break;
                 }
             }
 
             return new CborSchemaExtension(
                 memberNameBytes: $memberNameBytes,
-                listMemberType: $listMember?->type,
-                listMemberDecodeKind: $listMemberDecodeKind,
+                listMemberType: $listMemberType,
                 listMemberSchema: $listMember,
                 listMemberResolvedTargetClass: $resolvedTargetClass,
                 listMemberResolvedTargetSchema: $resolvedTargetSchema,
+                listMemberUnionInfo: $unionInfo,
+                listMemberTimestampFormat: $listMemberTimestampFormat,
                 sparse: $schema->hasTrait(Schema::T_SPARSE)
             );
         }
@@ -88,9 +103,19 @@ final class CborSchemaExtensionProvider
             $mapValue = $schema->mapValue;
             $resolvedTargetClass = null;
             $resolvedTargetSchema = null;
-            $mapValueDecodeKind = null;
+            $unionInfo = null;
+            $mapValueType = null;
+            $mapValueTimestampFormat = null;
             if ($mapValue !== null) {
-                $mapValueDecodeKind = self::decodeKindForType($mapValue->type);
+                $mapValueType = $mapValue->type;
+                if ($mapValueType === ShapeType::Timestamp->value) {
+                    $mapValueTimestampFormat =
+                        TimestampFormat::fromTraitString(
+                            $mapValue->getTrait(
+                                Schema::T_TIMESTAMP_FORMAT
+                            )
+                        );
+                }
                 switch ($mapValue->type) {
                     case ShapeType::Enum->value:
                     case ShapeType::IntEnum->value:
@@ -101,7 +126,7 @@ final class CborSchemaExtensionProvider
                     case ShapeType::Structure->value:
                     case ShapeType::Union->value:
                         if ($mapValue->getMemberCount() === 0
-                            && $mapValue->targetClass !== null
+                            && $mapValue->hasTarget()
                         ) {
                             $resolvedTargetSchema = $mapValue->resolveTarget();
                             $resolvedTargetClass =
@@ -110,6 +135,11 @@ final class CborSchemaExtensionProvider
                             $resolvedTargetSchema = $mapValue;
                             $resolvedTargetClass = $mapValue->targetClass;
                         }
+                        if ($mapValue->type === ShapeType::Union->value) {
+                            $unionInfo = $resolvedTargetSchema->getExtension(
+                                self::key()
+                            );
+                        }
                         break;
                 }
             }
@@ -117,12 +147,12 @@ final class CborSchemaExtensionProvider
             return new CborSchemaExtension(
                 memberNameBytes: $memberNameBytes,
                 sparse: $schema->hasTrait(Schema::T_SPARSE),
-                mapKeySchema: $schema->mapKey,
                 mapValueSchema: $mapValue,
-                mapValueType: $mapValue?->type,
-                mapValueDecodeKind: $mapValueDecodeKind,
+                mapValueType: $mapValueType,
                 mapValueResolvedTargetClass: $resolvedTargetClass,
-                mapValueResolvedTargetSchema: $resolvedTargetSchema
+                mapValueResolvedTargetSchema: $resolvedTargetSchema,
+                mapValueUnionInfo: $unionInfo,
+                mapValueTimestampFormat: $mapValueTimestampFormat
             );
         }
 
@@ -147,7 +177,6 @@ final class CborSchemaExtensionProvider
         $orderedMemberSchemas = [];
         $orderedMemberIndexes = [];
         $orderedMemberTypes = [];
-        $orderedMemberDecodeKinds = [];
         $orderedMemberNameBytes = [];
         $orderedMemberNameLengths = [];
         $orderedMemberNameHashes = [];
@@ -158,7 +187,20 @@ final class CborSchemaExtensionProvider
         $orderedMemberResolvedTargetClasses = [];
         $orderedMemberResolvedTargetSchemas = [];
         $fieldNameTable = [];
-        $membersByIndex = $schema->getMembersByIndex();
+        $unionDecodeEntries = [];
+        $unionEncodeByMemberName = [];
+        $unionEncodeByMemberIndex = [];
+
+        $metadataSchema = $schema;
+        if (
+            $schema->type === ShapeType::Union->value
+            && $schema->getMemberCount() === 0
+            && $schema->hasTarget()
+        ) {
+            $metadataSchema = $schema->resolveTarget();
+        }
+
+        $membersByIndex = $metadataSchema->getMembersByIndex();
         if ($membersByIndex !== []) {
             \ksort($membersByIndex);
         }
@@ -170,9 +212,6 @@ final class CborSchemaExtensionProvider
             $orderedMemberSchemas[] = $member;
             $orderedMemberIndexes[] = $member->memberIndex ?? 0;
             $orderedMemberTypes[] = $member->type;
-            $orderedMemberDecodeKinds[] = self::decodeKindForType(
-                $member->type
-            );
             $orderedMemberNameBytes[] = $rawNameBytes;
             $nameLength = \strlen($rawNameBytes);
             $orderedMemberNameLengths[] = $nameLength;
@@ -214,7 +253,7 @@ final class CborSchemaExtensionProvider
                 case ShapeType::Structure->value:
                 case ShapeType::Union->value:
                     if ($member->getMemberCount() === 0
-                        && $member->targetClass !== null
+                        && $member->hasTarget()
                     ) {
                         $resolvedTargetSchema = $member->resolveTarget();
                         $resolvedTargetClass =
@@ -228,15 +267,38 @@ final class CborSchemaExtensionProvider
 
             $orderedMemberResolvedTargetClasses[] = $resolvedTargetClass;
             $orderedMemberResolvedTargetSchemas[] = $resolvedTargetSchema;
+
+            if ($schema->type === ShapeType::Union->value) {
+                $memberIndex = $member->memberIndex ?? 0;
+                $memberName = (string) $member->memberName;
+                $unionDecodeEntries[] = [
+                    $memberIndex,
+                    $memberName,
+                    $member->type,
+                    $member,
+                    $resolvedTargetClass,
+                    $resolvedTargetSchema
+                ];
+                $unionEncodeByMemberName[$memberName] = [
+                    $memberIndex,
+                    $member->type,
+                    $member,
+                    "\xA1" . $encodedNameBytes,
+                    $resolvedTargetClass,
+                    $resolvedTargetSchema
+                ];
+                $unionEncodeByMemberIndex[$memberIndex] =
+                    $unionEncodeByMemberName[$memberName];
+            }
         }
 
-        $memberCount = $schema->getMemberCount();
+        $memberCount = $metadataSchema->getMemberCount();
         $membersTemplate = $memberCount > 0
             ? \array_fill(0, $memberCount, null)
             : [];
 
-        if ($schema->getMemberCount() === 0 && $schema->targetClass !== null) {
-            $resolvedTargetSchema = $schema->resolveTarget();
+        if ($schema->getMemberCount() === 0 && $schema->hasTarget()) {
+            $resolvedTargetSchema = $metadataSchema;
             $resolvedTargetClass = $resolvedTargetSchema->targetClass;
         } else {
             $resolvedTargetSchema = $schema;
@@ -248,7 +310,6 @@ final class CborSchemaExtensionProvider
             orderedMemberSchemas: $orderedMemberSchemas,
             orderedMemberIndexes: $orderedMemberIndexes,
             orderedMemberTypes: $orderedMemberTypes,
-            orderedMemberDecodeKinds: $orderedMemberDecodeKinds,
             orderedMemberNameBytes: $orderedMemberNameBytes,
             orderedMemberNameLengths: $orderedMemberNameLengths,
             orderedMemberNameHashes: $orderedMemberNameHashes,
@@ -264,36 +325,13 @@ final class CborSchemaExtensionProvider
             memberCount: $memberCount,
             membersTemplate: $membersTemplate,
             resolvedTargetClass: $resolvedTargetClass,
-            resolvedTargetSchema: $resolvedTargetSchema
+            resolvedTargetSchema: $resolvedTargetSchema,
+            unionDecodeEntries: $unionDecodeEntries,
+            unionEncodeByMemberName: $unionEncodeByMemberName,
+            unionEncodeByMemberIndex: $unionEncodeByMemberIndex,
+            hasIndexedUnionFactory: $resolvedTargetClass !== null
+                && \method_exists($resolvedTargetClass, 'createByIndex')
         );
-    }
-
-    /**
-     * Map a ShapeType to a decode kind.
-     */
-    private static function decodeKindForType(int $type): int
-    {
-        return match ($type) {
-            ShapeType::Boolean->value => 1,
-            ShapeType::Byte->value,
-            ShapeType::Short->value,
-            ShapeType::Integer->value,
-            ShapeType::Long->value => 2,
-            ShapeType::Float_->value, ShapeType::Double->value => 3,
-            ShapeType::BigInteger->value => 4,
-            ShapeType::BigDecimal->value => 5,
-            ShapeType::String_->value => 6,
-            ShapeType::Blob->value => 7,
-            ShapeType::Timestamp->value => 8,
-            ShapeType::List_->value => 9,
-            ShapeType::Map->value => 10,
-            ShapeType::Structure->value => 11,
-            ShapeType::Union->value => 12,
-            ShapeType::Enum->value => 13,
-            ShapeType::IntEnum->value => 14,
-            ShapeType::Document->value => 15,
-            default => 0,
-        };
     }
 
     /**

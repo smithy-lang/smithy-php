@@ -14,6 +14,7 @@ use Smithy\Json\{
     JsonSchemaExtension,
     JsonSchemaExtensionProvider
 };
+use Smithy\Tests\Json\Fixture\JsonSampleUnionFixture;
 
 /**
  * Test {@see JsonSchemaExtension} construction through the lazy provider.
@@ -202,5 +203,27 @@ final class JsonSchemaExtensionTest extends TestCase
             [0 => 'str', 1 => 'number'],
             $info->wireNameByMemberIndex
         );
+        self::assertSame(
+            [1, 'num', ShapeType::Integer->value],
+            $info->unionDecodeByWireName['number']
+        );
+        self::assertSame(
+            ['number', ShapeType::Integer->value],
+            $info->unionEncodeByMemberIndex[1]
+        );
+        self::assertSame(
+            ['num', ShapeType::Integer->value],
+            $info->rawUnionEncodeByMemberIndex[1]
+        );
+    }
+
+    public function testGeneratedUnionSupportsIndexedConstruction(): void
+    {
+        /** @var JsonSchemaExtension $info */
+        $info = JsonSampleUnionFixture::schema()->getExtension(
+            JsonSchemaExtensionProvider::key()
+        );
+
+        self::assertTrue($info->hasIndexedUnionFactory);
     }
 }

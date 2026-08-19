@@ -164,6 +164,83 @@ final class CborSerializerTest extends TestCase
         self::assertSame('a165636f756e7402', \bin2hex($serializer->flush()));
     }
 
+    public function testSerializesUnionListsAndMaps(): void
+    {
+        $unionSchema = CborSerializerSampleUnionFixture::schema();
+        $listSchema = new Schema(
+            id: 'smithy.test#UnionList',
+            type: ShapeType::List_,
+            listMember: $unionSchema
+        );
+        $mapSchema = new Schema(
+            id: 'smithy.test#UnionMap',
+            type: ShapeType::Map,
+            mapValue: $unionSchema
+        );
+        $serializer = new CborSerializer();
+
+        $serializer->serializeList(
+            $listSchema,
+            [
+                new CborSerializerSampleUnionFixture('count', 2),
+                new CborSerializerSampleUnionFixture('value', 'x')
+            ],
+            0
+        );
+        self::assertSame(
+            '82a165636f756e7402a16576616c75656178',
+            \bin2hex($serializer->flush())
+        );
+
+        $serializer->reset();
+        $serializer->serializeMap(
+            $mapSchema,
+            [
+                'k' => new CborSerializerSampleUnionFixture('count', 3)
+            ],
+            0
+        );
+        self::assertSame(
+            'a1616ba165636f756e7403',
+            \bin2hex($serializer->flush())
+        );
+    }
+
+    public function testSerializesTimestampCollectionsUsingMemberFormat(): void
+    {
+        $timestampMember = new Schema(
+            id: 'smithy.test#TimestampCollection$member',
+            type: ShapeType::Timestamp,
+            traits: [Schema::T_TIMESTAMP_FORMAT => 'date-time']
+        );
+        $listSchema = new Schema(
+            id: 'smithy.test#TimestampList',
+            type: ShapeType::List_,
+            listMember: $timestampMember
+        );
+        $mapSchema = new Schema(
+            id: 'smithy.test#TimestampMap',
+            type: ShapeType::Map,
+            mapValue: $timestampMember
+        );
+        $serializer = new CborSerializer(
+            new CborCodecSettings(honorTimestampFormatTrait: true)
+        );
+
+        $serializer->serializeList($listSchema, [0.0], 0);
+        self::assertSame(
+            \bin2hex("\x81\x74" . '1970-01-01T00:00:00Z'),
+            \bin2hex($serializer->flush())
+        );
+
+        $serializer->reset();
+        $serializer->serializeMap($mapSchema, ['k' => 0.0], 0);
+        self::assertSame(
+            \bin2hex("\xA1\x61k\x74" . '1970-01-01T00:00:00Z'),
+            \bin2hex($serializer->flush())
+        );
+    }
+
     public function testRejectsUnknownTypedUnionVariantBeforeMutatingBuffer(): void
     {
         $serializer = new CborSerializer();

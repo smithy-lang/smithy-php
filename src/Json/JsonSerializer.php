@@ -373,9 +373,12 @@ final class JsonSerializer implements ShapeSerializerInterface
      */
     public function serializeUnion(Schema $schema, mixed $union, int $idx): void
     {
-        // `renderUnion()` already returns the single-key JSON object.
-        /** @var UnionInterface $union */
-        $this->emit($this->renderUnion($union->getSchema(), $union), $idx);
+        static $extKey = null;
+        $extKey ??= JsonSchemaExtensionProvider::key();
+        /** @var JsonSchemaExtension|null $info */
+        $info = $schema->getExtension($extKey);
+
+        $this->emit($this->renderUnion($info ?? $schema, $union), $idx);
     }
 
     /**
@@ -500,22 +503,22 @@ final class JsonSerializer implements ShapeSerializerInterface
         return $result === [] ? new \stdClass() : $result;
     }
 
-    private function renderUnion(Schema $memberSchema, mixed $value): array
+    private function renderUnion(
+        Schema|JsonSchemaExtension $context,
+        mixed $value
+    ): array
     {
-        // Cache the extension key in the hot path.
         static $extKey = null;
         $extKey ??= JsonSchemaExtensionProvider::key();
 
-        // List/map unions often arrive as raw arrays. Avoid rehydrating them
-        // just to recover the active tag and value.
-        if (\is_array($value)) {
-            // Synthetic schemas may need `resolveTarget()`.
-            $target = $memberSchema->targetClass;
-            $unionSchema = $target !== null
-                ? $target::schema()
-                : $memberSchema->resolveTarget();
+        if ($context instanceof JsonSchemaExtension) {
+            $info = $context;
+        } else {
             /** @var JsonSchemaExtension|null $info */
-            $info = $unionSchema->getExtension($extKey);
+            $info = $context->getExtension($extKey);
+        }
+
+        if (\is_array($value)) {
             $unionEncodeByMemberName = $info === null
                 ? []
                 : ($this->settings->honorJsonName
@@ -543,25 +546,36 @@ final class JsonSerializer implements ShapeSerializerInterface
         }
 
         /** @var UnionInterface $value */
-        $unionSchema = $value->getSchema();
-        /** @var JsonSchemaExtension $info */
-        $info = $unionSchema->getExtension($extKey);
-
-        $tag = $value->tag();
-        $entry = ($this->settings->honorJsonName
-            ? $info->unionEncodeByMemberName
-            : $info->rawUnionEncodeByMemberName)[$tag] ?? null;
+        $memberIndex = $value->getMemberIndex();
+        $entry = $info === null || $memberIndex < 0
+            ? null
+            : ($this->settings->honorJsonName
+                ? $info->unionEncodeByMemberIndex
+                : $info->rawUnionEncodeByMemberIndex)[$memberIndex] ?? null;
         $variantValue = $value->value();
 
-        if ($entry === null) {
-            return [$tag => $variantValue];
+        if ($entry !== null) {
+            return [$entry[0] => $this->renderValue(
+                $entry[1],
+                $variantValue,
+                $entry[2] ?? null
+            )];
         }
 
-        return [$entry[0] => $this->renderValue(
-            $entry[1],
-            $variantValue,
-            $entry[2] ?? null
-        )];
+        $tag = $value->tag();
+        $entry = $info === null
+            ? null
+            : ($this->settings->honorJsonName
+                ? $info->unionEncodeByMemberName
+                : $info->rawUnionEncodeByMemberName)[$tag] ?? null;
+
+        return $entry === null
+            ? [$tag => $variantValue]
+            : [$entry[0] => $this->renderValue(
+                $entry[1],
+                $variantValue,
+                $entry[2] ?? null
+            )];
     }
 
 
@@ -592,7 +606,9 @@ final class JsonSerializer implements ShapeSerializerInterface
 
         $context = $type === ShapeType::Timestamp->value
             ? $info?->listMemberTimestampFormat
-            : $itemSchema;
+            : ($type === ShapeType::Union->value
+                ? $info?->listMemberUnionInfo ?? $itemSchema
+                : $itemSchema);
         foreach ($items as $item) {
             if ($item === null) {
                 if ($sparse) {
@@ -633,7 +649,9 @@ final class JsonSerializer implements ShapeSerializerInterface
         $type = $info?->mapValueType ?? $valueSchema->type;
         $context = $type === ShapeType::Timestamp->value
             ? $info?->mapValueTimestampFormat
-            : $valueSchema;
+            : ($type === ShapeType::Union->value
+                ? $info?->mapValueUnionInfo ?? $valueSchema
+                : $valueSchema);
         foreach ($entries as $key => $value) {
             $stringKey = (string) $key;
             if ($value === null) {

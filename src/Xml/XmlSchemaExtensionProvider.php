@@ -209,6 +209,7 @@ final class XmlSchemaExtensionProvider
         $tsFormats = [];
         $unionMembersByXmlName = [];
         $unionMembersByName = [];
+        $unionMembersByIndex = [];
 
         foreach ($schema->getMembers() as $memberSchema) {
             $idx = $memberSchema->memberIndex;
@@ -341,8 +342,9 @@ final class XmlSchemaExtensionProvider
             }
 
             if ($schema->type === ShapeType::Union->value) {
-                $unionMembersByXmlName[$xmlName] = $memberSchema;
+                $unionMembersByXmlName[$xmlName] = [$idx, $memberSchema];
                 $unionMembersByName[$memberSchema->memberName] = $memberSchema;
+                $unionMembersByIndex[$idx] = $memberSchema;
             }
         }
 
@@ -409,7 +411,10 @@ final class XmlSchemaExtensionProvider
             memberCount: $memberCount,
             membersTemplate: $membersTemplate,
             unionMembersByXmlName: $unionMembersByXmlName,
-            unionMembersByName: $unionMembersByName
+            unionMembersByName: $unionMembersByName,
+            unionMembersByIndex: $unionMembersByIndex,
+            hasIndexedUnionFactory: $schema->targetClass !== null
+                && \method_exists($schema->targetClass, 'createByIndex')
         );
     }
 

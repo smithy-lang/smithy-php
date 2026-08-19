@@ -5,8 +5,11 @@ declare(strict_types=1);
 namespace Smithy\Tests\Core\Serde;
 
 use PHPUnit\Framework\TestCase;
-use Smithy\Core\Serde\Schema;
-use Smithy\Core\Serde\ShapeType;
+use Smithy\Core\Serde\{
+    Schema,
+    SchemaReference,
+    ShapeType
+};
 use Smithy\Tests\Core\Serde\Utils\SchemaTestTargetFixture;
 
 /**
@@ -28,6 +31,7 @@ final class SchemaTest extends TestCase
         $this->assertSame(25, Schema::T_IDEMPOTENT);
         $this->assertSame(26, Schema::T_RETRYABLE);
         $this->assertSame(27, Schema::T_EC2_QUERY_NAME);
+        $this->assertSame(28, Schema::T_HTTP_CHECKSUM);
     }
 
     public function testStoresIdAndUnwrapsShapeTypeToInt(): void
@@ -329,6 +333,48 @@ final class SchemaTest extends TestCase
         $this->assertSame(SchemaTestTargetFixture::schema(), $resolved);
         $this->assertSame('test#Target', $resolved->id);
         $this->assertNotNull($resolved->getMember('leaf'));
+    }
+
+    public function testResolveTargetCachesRuntimeReference(): void
+    {
+        $target = new Schema(
+            id: 'smithy.test#Target',
+            type: ShapeType::Structure
+        );
+        $calls = 0;
+        $stub = new Schema(
+            id: 'smithy.test#Target',
+            type: ShapeType::Structure,
+            target: new SchemaReference(
+                static function () use ($target, &$calls): Schema
+                {
+                    $calls++;
+
+                    return $target;
+                }
+            )
+        );
+
+        $this->assertTrue($stub->hasTarget());
+        $this->assertSame($target, $stub->resolveTarget());
+        $this->assertSame($target, $stub->resolveTarget());
+        $this->assertSame(1, $calls);
+    }
+
+    public function testResolveTargetReturnsDirectRuntimeTarget(): void
+    {
+        $target = new Schema(
+            id: 'smithy.test#Target',
+            type: ShapeType::Structure
+        );
+        $stub = new Schema(
+            id: $target->id,
+            type: ShapeType::Structure,
+            target: $target
+        );
+
+        $this->assertTrue($stub->hasTarget());
+        $this->assertSame($target, $stub->resolveTarget());
     }
 
     public function testWithMembersReturnsFilteredCopy(): void

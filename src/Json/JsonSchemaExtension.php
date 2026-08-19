@@ -81,6 +81,9 @@ final class JsonSchemaExtension
         /** @var class-string|null Resolved list-member enum target class. */
         public readonly ?string $listMemberResolvedTargetClass = null,
 
+        /** Precomputed union metadata for union-typed list members. */
+        public readonly ?self $listMemberUnionInfo = null,
+
         /** Cached map value type. */
         public readonly ?int $mapValueType = null,
 
@@ -99,20 +102,23 @@ final class JsonSchemaExtension
         /** @var class-string|null Resolved map-value enum target class. */
         public readonly ?string $mapValueResolvedTargetClass = null,
 
+        /** Precomputed union metadata for union-typed map values. */
+        public readonly ?self $mapValueUnionInfo = null,
+
         /** Canonical target schema for union members. */
         public readonly ?Schema $resolvedTargetSchema = null,
 
         /**
          * Packed union decode metadata by wire name.
          *
-         * @var array<string, array{0: string, 1: int, 2?: mixed}>
+         * @var array<string, array{0: int, 1: string, 2: int, 3?: mixed}>
          */
         public readonly array $unionDecodeByWireName = [],
 
         /**
          * Packed union decode metadata by raw member name.
          *
-         * @var array<string, array{0: string, 1: int, 2?: mixed}>
+         * @var array<string, array{0: int, 1: string, 2: int, 3?: mixed}>
          */
         public readonly array $rawUnionDecodeByWireName = [],
 
@@ -124,10 +130,27 @@ final class JsonSchemaExtension
         public readonly array $unionEncodeByMemberName = [],
 
         /**
+         * Packed union encode metadata by member index.
+         *
+         * @var array<int, array{0: string, 1: int, 2?: mixed}>
+         */
+        public readonly array $unionEncodeByMemberIndex = [],
+
+        /**
          * Packed union encode metadata by raw member name.
          *
          * @var array<string, array{0: string, 1: int, 2?: mixed}>
          */
-        public readonly array $rawUnionEncodeByMemberName = []
+        public readonly array $rawUnionEncodeByMemberName = [],
+
+        /**
+         * Raw packed union encode metadata by member index.
+         *
+         * @var array<int, array{0: string, 1: int, 2?: mixed}>
+         */
+        public readonly array $rawUnionEncodeByMemberIndex = [],
+
+        /** Whether the generated union supports indexed construction. */
+        public readonly bool $hasIndexedUnionFactory = false
     ) {}
 }

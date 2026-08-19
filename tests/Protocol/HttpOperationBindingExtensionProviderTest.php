@@ -35,7 +35,8 @@ final class HttpOperationBindingExtensionProviderTest extends TestCase
 
     public function testBuildsExtensionFromHttpTrait(): void
     {
-        $schema = HttpBindingOperationFixture::schema();
+        $operation = HttpBindingOperationFixture::instance();
+        $schema = $operation->getSchema();
 
         $extension = $schema->getExtension(
             HttpOperationBindingExtensionProvider::key()
@@ -49,5 +50,27 @@ final class HttpOperationBindingExtensionProviderTest extends TestCase
         );
         self::assertSame([['fixed', 'true']], $extension->pathQueryPairs);
         self::assertSame(206, $extension->httpResponseCode);
+        self::assertSame(
+            HttpBindingOperationFixture::class,
+            $operation->getRuntimeIdentity()
+        );
+        self::assertSame(
+            HttpBindingOperationFixture::inputSchema(),
+            $operation->getInputSchema()
+        );
+        self::assertSame(
+            HttpBindingOperationFixture::outputSchema(),
+            $operation->getOutputSchema()
+        );
+        self::assertInstanceOf(
+            \Smithy\Tests\Protocol\Utils\HttpBindingInputShapeFixture::class,
+            $operation->createInput([])
+        );
+        self::assertInstanceOf(
+            \Smithy\Tests\Protocol\Utils\HttpBindingOutputShapeFixture::class,
+            $operation->createOutput([])
+        );
+        self::assertNull($operation->getRequestTarget());
+        self::assertNull($operation->resolveErrorSchema('Unknown'));
     }
 }

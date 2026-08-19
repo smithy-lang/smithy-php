@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Smithy\Tests\FormUrlEncoded;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Smithy\Core\Serde\{
     Schema,
@@ -166,6 +167,171 @@ final class FormUrlEncodedSerializerTest extends TestCase
         );
 
         $serializer->serializeMap($member, ['a' => 1], 13);
+    }
+
+    /**
+     * @param list<mixed> $values
+     * @param list<string> $encodedValues
+     * @param array<int, mixed> $traits
+     */
+    #[DataProvider('scalarCollectionCases')]
+    public function testSerializeScalarCollections(
+        ShapeType $type,
+        array $values,
+        array $encodedValues,
+        array $traits = []
+    ): void
+    {
+        $listSchema = new Schema(
+            id: 'smithy.test#ValuesList',
+            type: ShapeType::List_,
+            memberName: 'values',
+            memberIndex: 0,
+            listMember: new Schema(
+                id: 'smithy.test#ValuesList$member',
+                type: $type,
+                memberName: 'member',
+                memberIndex: 0,
+                traits: $traits
+            )
+        );
+        $mapSchema = new Schema(
+            id: 'smithy.test#ValuesMap',
+            type: ShapeType::Map,
+            memberName: 'values',
+            memberIndex: 0,
+            mapKey: new Schema(
+                id: 'smithy.test#ValuesMap$key',
+                type: ShapeType::String_,
+                memberName: 'key',
+                memberIndex: 0
+            ),
+            mapValue: new Schema(
+                id: 'smithy.test#ValuesMap$value',
+                type: $type,
+                memberName: 'value',
+                memberIndex: 1,
+                traits: $traits
+            )
+        );
+
+        $serializer = new FormUrlEncodedSerializer();
+        $serializer->beginRootStruct(new Schema(
+            id: 'smithy.test#ListInput',
+            type: ShapeType::Structure,
+            members: [$listSchema]
+        ));
+        $serializer->serializeList($listSchema, $values, 0);
+        self::assertSame(
+            'values.member.1=' . $encodedValues[0]
+                . '&values.member.3=' . $encodedValues[1],
+            $serializer->flush()
+        );
+
+        $serializer->beginRootStruct(new Schema(
+            id: 'smithy.test#MapInput',
+            type: ShapeType::Structure,
+            members: [$mapSchema]
+        ));
+        $serializer->serializeMap(
+            $mapSchema,
+            [
+                'first' => $values[0],
+                'empty' => null,
+                'last' => $values[2]
+            ],
+            0
+        );
+        self::assertSame(
+            'values.entry.1.key=first&values.entry.1.value='
+                . $encodedValues[0]
+                . '&values.entry.2.key=empty&values.entry.3.key=last'
+                . '&values.entry.3.value=' . $encodedValues[1],
+            $serializer->flush()
+        );
+    }
+
+    /**
+     * Provide scalar collection serialization cases.
+     *
+     * @return iterable<
+     *     string,
+     *     array{ShapeType, list<mixed>, list<string>, array<int, mixed>}
+     * >
+     */
+    public static function scalarCollectionCases(): iterable
+    {
+        yield 'string' => [
+            ShapeType::String_,
+            ['a b', null, 'c/d'],
+            ['a%20b', 'c%2Fd'],
+            []
+        ];
+        yield 'enum' => [
+            ShapeType::Enum,
+            ['open', null, 'closed'],
+            ['open', 'closed'],
+            []
+        ];
+        yield 'integer' => [
+            ShapeType::Integer,
+            [1, null, -2],
+            ['1', '-2'],
+            []
+        ];
+        yield 'int enum' => [
+            ShapeType::IntEnum,
+            [7, null, 9],
+            ['7', '9'],
+            []
+        ];
+        yield 'boolean' => [
+            ShapeType::Boolean,
+            [true, null, false],
+            ['true', 'false'],
+            []
+        ];
+        yield 'float' => [
+            ShapeType::Double,
+            [INF, null, NAN],
+            ['Infinity', 'NaN'],
+            []
+        ];
+        yield 'timestamp' => [
+            ShapeType::Timestamp,
+            [0.0, null, 86400.0],
+            [
+                'Thu%2C%2001%20Jan%201970%2000%3A00%3A00%20GMT',
+                'Fri%2C%2002%20Jan%201970%2000%3A00%3A00%20GMT'
+            ],
+            [Schema::T_TIMESTAMP_FORMAT => 'http-date']
+        ];
+        yield 'blob' => [
+            ShapeType::Blob,
+            ["\x01\x02", null, "\xFF"],
+            ['AQI%3D', '%2Fw%3D%3D'],
+            []
+        ];
+        yield 'big integer' => [
+            ShapeType::BigInteger,
+            [
+                new BigInteger('18446744073709551616'),
+                null,
+                new BigInteger('-18446744073709551617')
+            ],
+            ['18446744073709551616', '-18446744073709551617'],
+            []
+        ];
+        yield 'big decimal' => [
+            ShapeType::BigDecimal,
+            [
+                new BigDecimal('123.45'),
+                null,
+                new BigDecimal('-0.125')
+            ],
+            ['123.45', '-0.125'],
+            []
+        ];
     }
 
     public function testSerializeUnionSkipsUnknownTags(): void
