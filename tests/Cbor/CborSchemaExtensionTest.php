@@ -11,9 +11,13 @@ use Smithy\Cbor\{
 };
 use Smithy\Core\Serde\{
     Schema,
-    ShapeType
+    ShapeType,
+    TimestampFormat
 };
-use Smithy\Tests\Cbor\Utils\CborSchemaFixture;
+use Smithy\Tests\Cbor\Utils\{
+    CborDeserializerSampleUnionFixture,
+    CborSchemaFixture
+};
 
 /**
  * Cover the cached CBOR schema extension payload.
@@ -126,10 +130,68 @@ final class CborSchemaExtensionTest extends TestCase
         /** @var CborSchemaExtension $info */
         $info = $schema->getExtension(CborSchemaExtensionProvider::key());
 
-        self::assertSame($schema->mapKey, $info->mapKeySchema);
         self::assertSame($schema->mapValue, $info->mapValueSchema);
         self::assertSame(ShapeType::Boolean->value, $info->mapValueType);
         self::assertTrue($info->sparse);
+    }
+
+    public function testCollectionsCarryTimestampFormats(): void
+    {
+        $timestamp = new Schema(
+            id: 'smithy.example#Times$member',
+            type: ShapeType::Timestamp,
+            traits: [Schema::T_TIMESTAMP_FORMAT => 'date-time']
+        );
+        $list = new Schema(
+            id: 'smithy.example#Times',
+            type: ShapeType::List_,
+            listMember: $timestamp
+        );
+        $map = new Schema(
+            id: 'smithy.example#TimesByName',
+            type: ShapeType::Map,
+            mapValue: $timestamp
+        );
+
+        /** @var CborSchemaExtension $listInfo */
+        $listInfo = $list->getExtension(
+            CborSchemaExtensionProvider::key()
+        );
+        /** @var CborSchemaExtension $mapInfo */
+        $mapInfo = $map->getExtension(
+            CborSchemaExtensionProvider::key()
+        );
+
+        self::assertSame(
+            TimestampFormat::DateTime,
+            $listInfo->listMemberTimestampFormat
+        );
+        self::assertSame(
+            TimestampFormat::DateTime,
+            $mapInfo->mapValueTimestampFormat
+        );
+    }
+
+    public function testUnionSchemasCarryCompleteEntries(): void
+    {
+        /** @var CborSchemaExtension $info */
+        $info = CborDeserializerSampleUnionFixture::schema()->getExtension(
+            CborSchemaExtensionProvider::key()
+        );
+
+        self::assertSame(
+            [1, 'count', ShapeType::Integer->value],
+            \array_slice($info->unionDecodeEntries[1], 0, 3)
+        );
+        self::assertSame(
+            "\xA1\x65count",
+            $info->unionEncodeByMemberName['count'][3]
+        );
+        self::assertSame(
+            $info->unionEncodeByMemberName['count'],
+            $info->unionEncodeByMemberIndex[1]
+        );
+        self::assertTrue($info->hasIndexedUnionFactory);
     }
 
     public function testRootScalarSchemasReturnNull(): void

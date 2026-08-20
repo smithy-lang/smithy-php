@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Smithy\Xml;
 
 use Smithy\Core\Serde\AbstractCodec;
+use Smithy\Core\Serde\Schema;
 use Smithy\Core\Serde\ShapeDeserializerInterface;
 use Smithy\Core\Serde\ShapeSerializerInterface;
 
@@ -92,5 +93,20 @@ final class XmlCodec extends AbstractCodec
         }
 
         return new XmlDeserializer($xml, $this->settings);
+    }
+
+    /**
+     * Return the XML extension's precomputed positional member template.
+     *
+     * @return array<int, mixed> Positional member values.
+     */
+    public function createMembersBuffer(Schema $schema): array
+    {
+        static $key = null;
+        $key ??= XmlSchemaExtensionProvider::$KEY
+            ?? XmlSchemaExtensionProvider::key();
+
+        return $schema->getExtension($key)?->membersTemplate
+            ?? parent::createMembersBuffer($schema);
     }
 }

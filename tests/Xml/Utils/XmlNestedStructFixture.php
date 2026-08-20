@@ -45,6 +45,11 @@ final class XmlNestedStructFixture implements SerializableStructInterface
         return self::$SCHEMA;
     }
 
+    public function getSchema(): Schema
+    {
+        return self::schema();
+    }
+
     public function serialize(ShapeSerializerInterface $serializer, int $idx): void
     {
         $serializer->serializeStruct(self::schema(), $this, $idx);

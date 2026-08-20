@@ -11,6 +11,10 @@ use Smithy\Core\Serde\{
     TimestampFormat
 };
 use Smithy\Core\Shape\BigInteger;
+use Smithy\Core\Shape\Document\{
+    StructDocument,
+    UnionDocument
+};
 use Smithy\Json\{
     JsonCodec,
     JsonCodecSettings
@@ -188,5 +192,66 @@ final class JsonDeserializerTest extends TestCase
             ->deserialize($schema, $fields);
 
         self::assertSame(100.0, $fields[0]);
+    }
+
+    public function testDeserializerCreatesDocumentsForRuntimeShapes(): void
+    {
+        $childSchema = new Schema(
+            id: 'smithy.test#Child',
+            type: ShapeType::Structure,
+            members: [
+                new Schema(
+                    id: 'smithy.api#String',
+                    type: ShapeType::String_,
+                    memberName: 'value',
+                    memberIndex: 0
+                )
+            ]
+        );
+        $unionSchema = new Schema(
+            id: 'smithy.test#Choice',
+            type: ShapeType::Union,
+            members: [
+                new Schema(
+                    id: 'smithy.api#Integer',
+                    type: ShapeType::Integer,
+                    memberName: 'count',
+                    memberIndex: 0
+                )
+            ]
+        );
+        $schema = new Schema(
+            id: 'smithy.test#Container',
+            type: ShapeType::Structure,
+            members: [
+                new Schema(
+                    id: $childSchema->id,
+                    type: ShapeType::Structure,
+                    memberName: 'child',
+                    memberIndex: 0,
+                    target: $childSchema
+                ),
+                new Schema(
+                    id: $unionSchema->id,
+                    type: ShapeType::Union,
+                    memberName: 'choice',
+                    memberIndex: 1,
+                    target: $unionSchema
+                )
+            ]
+        );
+        $members = [null, null];
+
+        (new JsonCodec())->createDeserializer(
+            '{"child":{"value":"kid"},"choice":{"count":2}}'
+        )->deserialize($schema, $members);
+
+        self::assertInstanceOf(StructDocument::class, $members[0]);
+        self::assertSame('kid', $members[0]->getMemberValue(
+            $childSchema->getMember('value')
+        ));
+        self::assertInstanceOf(UnionDocument::class, $members[1]);
+        self::assertSame('count', $members[1]->tag());
+        self::assertSame(2, $members[1]->value());
     }
 }

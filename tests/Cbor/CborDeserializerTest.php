@@ -18,6 +18,10 @@ use Smithy\Core\Shape\{
     BigDecimal,
     BigInteger
 };
+use Smithy\Core\Shape\Document\{
+    StructDocument,
+    UnionDocument
+};
 use Smithy\Tests\Cbor\Utils\{
     CborDeserializerSampleStructFixture,
     CborDeserializerSampleUnionFixture,
@@ -208,6 +212,68 @@ final class CborDeserializerTest extends TestCase
         );
 
         self::assertSame(100.0, $members[0]);
+    }
+
+    public function testDeserializerCreatesDocumentsForRuntimeShapes(): void
+    {
+        $childSchema = new Schema(
+            id: 'smithy.test#Child',
+            type: ShapeType::Structure,
+            members: [
+                new Schema(
+                    id: 'smithy.api#String',
+                    type: ShapeType::String_,
+                    memberName: 'value',
+                    memberIndex: 0
+                )
+            ]
+        );
+        $unionSchema = new Schema(
+            id: 'smithy.test#Choice',
+            type: ShapeType::Union,
+            members: [
+                new Schema(
+                    id: 'smithy.api#Integer',
+                    type: ShapeType::Integer,
+                    memberName: 'count',
+                    memberIndex: 0
+                )
+            ]
+        );
+        $schema = new Schema(
+            id: 'smithy.test#Container',
+            type: ShapeType::Structure,
+            members: [
+                new Schema(
+                    id: $childSchema->id,
+                    type: ShapeType::Structure,
+                    memberName: 'child',
+                    memberIndex: 0,
+                    target: $childSchema
+                ),
+                new Schema(
+                    id: $unionSchema->id,
+                    type: ShapeType::Union,
+                    memberName: 'choice',
+                    memberIndex: 1,
+                    target: $unionSchema
+                )
+            ]
+        );
+        $members = [null, null];
+
+        (new CborDeserializer(\hex2bin(
+            'a2656368696c64a16576616c7565636b6964'
+            . '6663686f696365a165636f756e7402'
+        )))->deserialize($schema, $members);
+
+        self::assertInstanceOf(StructDocument::class, $members[0]);
+        self::assertSame('kid', $members[0]->getMemberValue(
+            $childSchema->getMember('value')
+        ));
+        self::assertInstanceOf(UnionDocument::class, $members[1]);
+        self::assertSame('count', $members[1]->tag());
+        self::assertSame(2, $members[1]->value());
     }
 
     public function testDeserializesBigIntegerAndBigDecimal(): void

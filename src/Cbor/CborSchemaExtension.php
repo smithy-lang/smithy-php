@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace Smithy\Cbor;
 
-use Smithy\Core\Serde\Schema;
+use Smithy\Core\Serde\{
+    Schema,
+    TimestampFormat
+};
 
 /**
  * Store precomputed CBOR metadata for a schema.
@@ -35,13 +38,6 @@ final class CborSchemaExtension
          * @var list<int>
          */
         public readonly array $orderedMemberTypes = [],
-
-        /**
-         * Decode kinds parallel to orderedMemberSchemas.
-         *
-         * @var list<int>
-         */
-        public readonly array $orderedMemberDecodeKinds = [],
 
         /**
          * Raw member-name bytes in ascending memberIndex order.
@@ -126,9 +122,6 @@ final class CborSchemaExtension
         /** Cached list-member type. */
         public readonly ?int $listMemberType = null,
 
-        /** Cached list-member decode kind. */
-        public readonly ?int $listMemberDecodeKind = null,
-
         /** Resolved list-member schema. */
         public readonly ?Schema $listMemberSchema = null,
 
@@ -138,11 +131,14 @@ final class CborSchemaExtension
         /** Resolved target schema for list members. */
         public readonly ?Schema $listMemberResolvedTargetSchema = null,
 
+        /** Precomputed union metadata for union-typed list members. */
+        public readonly ?self $listMemberUnionInfo = null,
+
+        /** Explicit timestamp format for timestamp list members. */
+        public readonly ?TimestampFormat $listMemberTimestampFormat = null,
+
         /** Whether a list or map schema is sparse. */
         public readonly bool $sparse = false,
-
-        /** Resolved map key schema. */
-        public readonly ?Schema $mapKeySchema = null,
 
         /** Resolved map value schema. */
         public readonly ?Schema $mapValueSchema = null,
@@ -150,19 +146,67 @@ final class CborSchemaExtension
         /** Cached map-value type. */
         public readonly ?int $mapValueType = null,
 
-        /** Cached map-value decode kind. */
-        public readonly ?int $mapValueDecodeKind = null,
-
         /** Resolved target class for map values. */
         public readonly ?string $mapValueResolvedTargetClass = null,
 
         /** Resolved target schema for map values. */
         public readonly ?Schema $mapValueResolvedTargetSchema = null,
 
+        /** Precomputed union metadata for union-typed map values. */
+        public readonly ?self $mapValueUnionInfo = null,
+
+        /** Explicit timestamp format for timestamp map values. */
+        public readonly ?TimestampFormat $mapValueTimestampFormat = null,
+
         /** Resolved target class for member schemas. */
         public readonly ?string $resolvedTargetClass = null,
 
         /** Resolved target schema for recursive stub members. */
-        public readonly ?Schema $resolvedTargetSchema = null
+        public readonly ?Schema $resolvedTargetSchema = null,
+
+        /**
+         * Complete union decode entries in member-index order.
+         *
+         * @var list<array{
+         *     0: int,
+         *     1: string,
+         *     2: int,
+         *     3: Schema,
+         *     4: ?string,
+         *     5: ?Schema
+         * }>
+         */
+        public readonly array $unionDecodeEntries = [],
+
+        /**
+         * Complete union encode metadata by member name.
+         *
+         * @var array<string, array{
+         *     0: int,
+         *     1: int,
+         *     2: Schema,
+         *     3: string,
+         *     4: ?string,
+         *     5: ?Schema
+         * }>
+         */
+        public readonly array $unionEncodeByMemberName = [],
+
+        /**
+         * Complete union encode metadata by member index.
+         *
+         * @var array<int, array{
+         *     0: int,
+         *     1: int,
+         *     2: Schema,
+         *     3: string,
+         *     4: ?string,
+         *     5: ?Schema
+         * }>
+         */
+        public readonly array $unionEncodeByMemberIndex = [],
+
+        /** Whether the generated union supports indexed construction. */
+        public readonly bool $hasIndexedUnionFactory = false
     ) {}
 }

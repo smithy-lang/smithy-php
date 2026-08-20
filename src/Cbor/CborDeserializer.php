@@ -11,6 +11,8 @@ use Smithy\Core\Serde\ShapeType;
 use Smithy\Core\Serde\TimestampFormat;
 use Smithy\Core\Shape\BigDecimal;
 use Smithy\Core\Shape\BigInteger;
+use Smithy\Core\Shape\Document\StructDocument;
+use Smithy\Core\Shape\Document\UnionDocument;
 
 /**
  * Byte-level CBOR deserializer.
@@ -94,7 +96,11 @@ final class CborDeserializer implements ShapeDeserializerInterface
         }
 
         if ($schema->type === ShapeType::Union->value) {
-            $members[0] = $this->readUnion($schema);
+            static $unionExtKey = null;
+            $unionExtKey ??= CborSchemaExtensionProvider::key();
+            /** @var CborSchemaExtension|null $info */
+            $info = $schema->getExtension($unionExtKey);
+            $members[0] = $this->readUnion($schema, $info);
         } else {
             $this->readStruct($schema, $members);
         }
@@ -346,52 +352,45 @@ final class CborDeserializer implements ShapeDeserializerInterface
      * The variant branches remain inlined here to keep member resolution and
      * payload hydration branch-local.
      */
-    private function readUnion(Schema $schema): ?SerializableShapeInterface
+    private function readUnion(
+        Schema $schema,
+        ?CborSchemaExtension $info = null
+    ): ?SerializableShapeInterface
     {
-        static $extKey = null;
-        $extKey ??= CborSchemaExtensionProvider::key();
-        /** @var CborSchemaExtension|null $info */
-        $info = $schema->getExtension($extKey);
+        if ($info === null) {
+            static $extKey = null;
+            $extKey ??= CborSchemaExtensionProvider::key();
+            /** @var CborSchemaExtension|null $info */
+            $info = $schema->getExtension($extKey);
+        }
         if (!$info) {
             return null;
         }
 
         $unionSchema = $info->resolvedTargetSchema ?? $schema;
         $targetClass = $info->resolvedTargetClass ?? $unionSchema->targetClass;
-        if (!$targetClass) {
-            return null;
-        }
 
         // Guard nested payload depth.
         if (++$this->depth > self::MAX_DEPTH) {
             $this->malformed();
         }
 
-        $initial = $this->readInitialByte();
-        $infoByte = $initial & 0x1F;
-        $indefinite = $infoByte === self::INFO_INDEFINITE;
-        $remaining = $indefinite ? -1 : $this->readLengthFromInfo($infoByte);
-
-        $orderedSchemas = $info->orderedMemberSchemas;
-        $orderedTypes = $info->orderedMemberTypes;
-        $orderedNameBytes = $info->orderedMemberNameBytes;
-        $orderedNameLengths = $info->orderedMemberNameLengths;
-        $orderedNameHashes = $info->orderedMemberNameHashes;
-        $orderedLookup1 = $info->orderedMemberLookup1;
-        $orderedLookup2 = $info->orderedMemberLookup2;
-        $orderedLookup3 = $info->orderedMemberLookup3;
-        $orderedLookup4 = $info->orderedMemberLookup4;
-        $orderedTargetClasses = $info->orderedMemberResolvedTargetClasses;
-        $orderedTargetSchemas = $info->orderedMemberResolvedTargetSchemas;
-        $orderedCount = \count($orderedSchemas);
+        if ($this->idx >= $this->length) {
+            $this->malformed();
+        }
         $payload = $this->payload;
         $payloadLength = $this->length;
+        $initial = \ord($payload[$this->idx++]);
+        $decodeEntries = $info->unionDecodeEntries;
 
-        // Single-entry unions are the common case.
-        if (!$indefinite && $remaining === 1) {
+        // Canonical definite single-entry unions are the common case.
+        if ($initial === 0xA1) {
             $memberSlot = -1;
             $wireKey = '';
-            $initial = $this->readInitialByte();
+            if ($this->idx >= $payloadLength) {
+                $this->malformed();
+            }
+            $initial = \ord($payload[$this->idx++]);
             $infoByte = $initial & 0x1F;
 
             if ($infoByte === self::INFO_INDEFINITE) {
@@ -412,6 +411,8 @@ final class CborDeserializer implements ShapeDeserializerInterface
                     );
                     $this->idx += $chunkInfo;
                 }
+                $orderedNameBytes = $info->orderedMemberNameBytes;
+                $orderedCount = \count($decodeEntries);
                 for ($i = 0; $i < $orderedCount; $i++) {
                     if ($orderedNameBytes[$i] === $wireKey) {
                         $memberSlot = $i;
@@ -419,7 +420,9 @@ final class CborDeserializer implements ShapeDeserializerInterface
                     }
                 }
             } else {
-                $length = $this->readLengthFromInfo($infoByte);
+                $length = $infoByte < self::INFO_ONE_BYTE
+                    ? $infoByte
+                    : $this->readLengthFromInfo($infoByte);
                 if ($this->idx + $length > $payloadLength) {
                     $this->malformed();
                 }
@@ -427,17 +430,19 @@ final class CborDeserializer implements ShapeDeserializerInterface
                 $this->idx += $length;
 
                 $memberSlot = match ($length) {
-                    1 => $orderedLookup1[\ord($payload[$start])] ?? -1,
-                    2 => $orderedLookup2[
+                    1 => $info->orderedMemberLookup1[
+                        \ord($payload[$start])
+                    ] ?? -1,
+                    2 => $info->orderedMemberLookup2[
                         (\ord($payload[$start]) << 8)
                         | \ord($payload[$start + 1])
                     ] ?? -1,
-                    3 => $orderedLookup3[
+                    3 => $info->orderedMemberLookup3[
                         (\ord($payload[$start]) << 16)
                         | (\ord($payload[$start + 1]) << 8)
                         | \ord($payload[$start + 2])
                     ] ?? -1,
-                    4 => $orderedLookup4[
+                    4 => $info->orderedMemberLookup4[
                         (\ord($payload[$start]) << 24)
                         | (\ord($payload[$start + 1]) << 16)
                         | (\ord($payload[$start + 2]) << 8)
@@ -451,6 +456,10 @@ final class CborDeserializer implements ShapeDeserializerInterface
                 ) {
                     $wireKey = '__type';
                 } elseif ($memberSlot < 0) {
+                    $orderedNameBytes = $info->orderedMemberNameBytes;
+                    $orderedNameLengths = $info->orderedMemberNameLengths;
+                    $orderedNameHashes = $info->orderedMemberNameHashes;
+                    $orderedCount = \count($decodeEntries);
                     $hash = self::FNV_OFFSET;
                     $end = $start + $length;
                     for ($j = $start; $j < $end; $j++) {
@@ -493,20 +502,104 @@ final class CborDeserializer implements ShapeDeserializerInterface
             }
 
             if ($memberSlot < 0) {
-                $result = $targetClass::unknown(
-                    $wireKey,
-                    $this->readUntypedValue()
-                );
+                $value = $this->readUntypedValue();
+                $result = $targetClass !== null
+                    ? $targetClass::unknown($wireKey, $value)
+                    : UnionDocument::unknown(
+                        $unionSchema,
+                        $wireKey,
+                        $value
+                    );
             } else {
-                $result = $targetClass::create(
-                    $orderedNameBytes[$memberSlot],
-                    $this->readValue(
-                        $orderedTypes[$memberSlot],
-                        $orderedSchemas[$memberSlot],
-                        $orderedTargetClasses[$memberSlot],
-                        $orderedTargetSchemas[$memberSlot]
-                    )
-                );
+                $entry = $decodeEntries[$memberSlot];
+                switch ($entry[2]) {
+                    case ShapeType::Blob->value:
+                    case ShapeType::String_->value:
+                    case ShapeType::Enum->value:
+                        if ($this->idx >= $payloadLength) {
+                            $this->malformed();
+                        }
+                        $stringInfo = \ord($payload[$this->idx++]) & 0x1F;
+                        if ($stringInfo >= self::INFO_ONE_BYTE) {
+                            $value = $this->readStringPayload($stringInfo);
+                        } else {
+                            if ($this->idx + $stringInfo > $payloadLength) {
+                                $this->malformed();
+                            }
+                            $start = $this->idx;
+                            $this->idx += $stringInfo;
+                            $value = \substr(
+                                $payload,
+                                $start,
+                                $stringInfo
+                            );
+                        }
+                        if (
+                            $entry[2] === ShapeType::Enum->value
+                            && $entry[4] !== null
+                        ) {
+                            $value = $entry[4]::fromValue($value);
+                        }
+                        break;
+
+                    case ShapeType::Boolean->value:
+                        if ($this->idx >= $payloadLength) {
+                            $this->malformed();
+                        }
+                        $value = \ord($payload[$this->idx++]) === 0xF5;
+                        break;
+
+                    case ShapeType::Byte->value:
+                    case ShapeType::Short->value:
+                    case ShapeType::Integer->value:
+                    case ShapeType::Long->value:
+                    case ShapeType::IntEnum->value:
+                        if ($this->idx >= $payloadLength) {
+                            $this->malformed();
+                        }
+                        $numericInitial = \ord($payload[$this->idx++]);
+                        $value = $this->readIntegerFromMajorAndInfo(
+                            $numericInitial >> 5,
+                            $numericInitial & 0x1F
+                        );
+                        if (
+                            $entry[2] === ShapeType::IntEnum->value
+                            && $entry[4] !== null
+                        ) {
+                            $value = $entry[4]::fromValue($value);
+                        }
+                        break;
+
+                    case ShapeType::Float_->value:
+                    case ShapeType::Double->value:
+                        if ($this->idx >= $payloadLength) {
+                            $this->malformed();
+                        }
+                        $value = $this->readNumericFromInitial(
+                            \ord($payload[$this->idx++])
+                        );
+                        break;
+
+                    default:
+                        $value = $this->readValue(
+                            $entry[2],
+                            $entry[3],
+                            $entry[4],
+                            $entry[5]
+                        );
+                        break;
+                }
+                if ($targetClass !== null) {
+                    $result = $info->hasIndexedUnionFactory
+                        ? $targetClass::createByIndex($entry[0], $value)
+                        : $targetClass::create($entry[1], $value);
+                } else {
+                    $result = UnionDocument::create(
+                        $unionSchema,
+                        $entry[1],
+                        $value
+                    );
+                }
             }
 
             $this->depth--;
@@ -514,6 +607,17 @@ final class CborDeserializer implements ShapeDeserializerInterface
             return $result;
         }
 
+        $infoByte = $initial & 0x1F;
+        $indefinite = $infoByte === self::INFO_INDEFINITE;
+        $remaining = $indefinite ? -1 : $this->readLengthFromInfo($infoByte);
+        $orderedNameBytes = $info->orderedMemberNameBytes;
+        $orderedNameLengths = $info->orderedMemberNameLengths;
+        $orderedNameHashes = $info->orderedMemberNameHashes;
+        $orderedLookup1 = $info->orderedMemberLookup1;
+        $orderedLookup2 = $info->orderedMemberLookup2;
+        $orderedLookup3 = $info->orderedMemberLookup3;
+        $orderedLookup4 = $info->orderedMemberLookup4;
+        $orderedCount = \count($decodeEntries);
         $hint = 0;
         $result = null;
 
@@ -711,31 +815,38 @@ final class CborDeserializer implements ShapeDeserializerInterface
             }
 
             if ($memberSlot < 0) {
-                $result = $targetClass::unknown(
-                    $wireKey,
-                    $this->readUntypedValue()
-                );
+                $value = $this->readUntypedValue();
+                $result = $targetClass !== null
+                    ? $targetClass::unknown($wireKey, $value)
+                    : UnionDocument::unknown(
+                        $unionSchema,
+                        $wireKey,
+                        $value
+                    );
                 if (!$indefinite && $remaining === 0) {
                     break;
                 }
                 continue;
             }
 
-            $memberName = $orderedNameBytes[$memberSlot];
-            $memberType = $orderedTypes[$memberSlot];
-            $memberSchema = $orderedSchemas[$memberSlot];
-            $resolvedTargetClass = $orderedTargetClasses[$memberSlot];
-            $resolvedTargetSchema = $orderedTargetSchemas[$memberSlot];
-
-            $result = $targetClass::create(
-                $memberName,
-                $this->readValue(
-                    $memberType,
-                    $memberSchema,
-                    $resolvedTargetClass,
-                    $resolvedTargetSchema
-                )
+            $entry = $decodeEntries[$memberSlot];
+            $value = $this->readValue(
+                $entry[2],
+                $entry[3],
+                $entry[4],
+                $entry[5]
             );
+            if ($targetClass !== null) {
+                $result = $info->hasIndexedUnionFactory
+                    ? $targetClass::createByIndex($entry[0], $value)
+                    : $targetClass::create($entry[1], $value);
+            } else {
+                $result = UnionDocument::create(
+                    $unionSchema,
+                    $entry[1],
+                    $value
+                );
+            }
             if (!$indefinite && $remaining === 0) {
                 break;
             }
@@ -846,21 +957,30 @@ final class CborDeserializer implements ShapeDeserializerInterface
                 };
 
             case ShapeType::Structure->value:
-                if (!$resolvedTargetClass) {
-                    $this->skipValue();
-                    return null;
-                }
-                static $extKey = null;
-                $extKey ??= CborSchemaExtensionProvider::key();
+                static $structExtKey = null;
+                $structExtKey ??= CborSchemaExtensionProvider::key();
                 $targetSchema = $resolvedTargetSchema ?? $schema;
                 /** @var CborSchemaExtension|null $targetInfo */
-                $targetInfo = $targetSchema->getExtension($extKey);
+                $targetInfo = $targetSchema->getExtension($structExtKey);
                 $nestedMembers = $targetInfo?->membersTemplate ?? [];
                 $this->readStruct($targetSchema, $nestedMembers);
-                return $resolvedTargetClass::fromMembers($nestedMembers);
+                if ($resolvedTargetClass !== null) {
+                    return $resolvedTargetClass::fromMembers($nestedMembers);
+                }
+
+                return StructDocument::fromMembers(
+                    $targetSchema,
+                    $nestedMembers
+                );
 
             case ShapeType::Union->value:
-                return $this->readUnion($resolvedTargetSchema ?? $schema);
+                $targetSchema = $resolvedTargetSchema ?? $schema;
+                static $unionExtKey = null;
+                $unionExtKey ??= CborSchemaExtensionProvider::key();
+                /** @var CborSchemaExtension|null $unionInfo */
+                $unionInfo = $targetSchema->getExtension($unionExtKey);
+
+                return $this->readUnion($targetSchema, $unionInfo);
 
             case ShapeType::List_->value:
                 return $this->readList($schema);
@@ -916,6 +1036,7 @@ final class CborDeserializer implements ShapeDeserializerInterface
         $itemType = $info?->listMemberType ?? 0;
         $resolvedTargetClass = $info?->listMemberResolvedTargetClass;
         $resolvedTargetSchema = $info?->listMemberResolvedTargetSchema;
+        $unionInfo = $info?->listMemberUnionInfo;
         $payload = $this->payload;
         $payloadLength = $this->length;
         $sparse = $info?->sparse ?? false;
@@ -944,12 +1065,18 @@ final class CborDeserializer implements ShapeDeserializerInterface
                 continue;
             }
 
-            $out[] = $this->readValue(
-                $itemType,
-                $itemSchema,
-                $resolvedTargetClass,
-                $resolvedTargetSchema
-            );
+            $out[] = $itemType === ShapeType::Union->value
+                && $unionInfo !== null
+                ? $this->readUnion(
+                    $resolvedTargetSchema ?? $itemSchema,
+                    $unionInfo
+                )
+                : $this->readValue(
+                    $itemType,
+                    $itemSchema,
+                    $resolvedTargetClass,
+                    $resolvedTargetSchema
+                );
         }
 
         $this->depth--;
@@ -994,6 +1121,7 @@ final class CborDeserializer implements ShapeDeserializerInterface
         $valueType = $info?->mapValueType ?? 0;
         $resolvedTargetClass = $info?->mapValueResolvedTargetClass;
         $resolvedTargetSchema = $info?->mapValueResolvedTargetSchema;
+        $unionInfo = $info?->mapValueUnionInfo;
         $payload = $this->payload;
         $payloadLength = $this->length;
         $sparse = $info?->sparse ?? false;
@@ -1035,12 +1163,18 @@ final class CborDeserializer implements ShapeDeserializerInterface
                 continue;
             }
 
-            $out[$key] = $this->readValue(
-                $valueType,
-                $valueSchema,
-                $resolvedTargetClass,
-                $resolvedTargetSchema
-            );
+            $out[$key] = $valueType === ShapeType::Union->value
+                && $unionInfo !== null
+                ? $this->readUnion(
+                    $resolvedTargetSchema ?? $valueSchema,
+                    $unionInfo
+                )
+                : $this->readValue(
+                    $valueType,
+                    $valueSchema,
+                    $resolvedTargetClass,
+                    $resolvedTargetSchema
+                );
         }
 
         $this->depth--;

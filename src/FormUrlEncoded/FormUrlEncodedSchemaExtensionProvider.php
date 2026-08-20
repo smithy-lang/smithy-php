@@ -76,12 +76,15 @@ final class FormUrlEncodedSchemaExtensionProvider
     {
         $memberWireNames = [];
         $ec2MemberWireNames = [];
+        $rawMemberWireNames = [];
+        $capitalizedRawMemberWireNames = [];
         $memberIsFlattened = [];
         $tsFormats = [];
         $unionMembersByName = [];
         $unionMemberWireNames = [];
         $ec2UnionMemberWireNames = [];
         $unionMemberTsFormats = [];
+        $unionEncodeByMemberIndex = [];
         $isUnion = $schema->type === ShapeType::Union->value;
 
         foreach ($schema->getMembers() as $memberSchema) {
@@ -97,8 +100,17 @@ final class FormUrlEncodedSchemaExtensionProvider
             $ec2WireName = self::encodeQuerySegment(
                 $this->resolveEc2WireName($memberSchema)
             );
+            $rawWireName = self::encodeQuerySegment(
+                (string) $memberSchema->memberName
+            );
+            $capitalizedRawWireName = self::encodeQuerySegment(
+                \ucfirst((string) $memberSchema->memberName)
+            );
             $memberWireNames[$idx] = $wireName;
             $ec2MemberWireNames[$idx] = $ec2WireName;
+            $rawMemberWireNames[$idx] = $rawWireName;
+            $capitalizedRawMemberWireNames[$idx] =
+                $capitalizedRawWireName;
 
             // Flattened flag is sparse. Populate it only for members
             // whose container carries `@xmlFlattened`. Consulted by
@@ -139,18 +151,35 @@ final class FormUrlEncodedSchemaExtensionProvider
                     $unionMemberTsFormats[$memberSchema->memberName]
                         = $memberTsFmt;
                 }
+                $unionEncodeByMemberIndex[$idx] = [
+                    $memberSchema,
+                    [
+                        $wireName,
+                        $ec2WireName,
+                        $rawWireName,
+                        $capitalizedRawWireName
+                    ],
+                    $memberTsFmt
+                ];
             }
         }
 
         return new FormUrlEncodedSchemaExtension(
             memberWireNames: $memberWireNames,
             ec2MemberWireNames: $ec2MemberWireNames,
+            memberWireNamesByMode: [
+                $memberWireNames,
+                $ec2MemberWireNames,
+                $rawMemberWireNames,
+                $capitalizedRawMemberWireNames
+            ],
             memberIsFlattened: $memberIsFlattened,
             tsFormats: $tsFormats,
             unionMembersByName: $unionMembersByName,
             unionMemberWireNames: $unionMemberWireNames,
             ec2UnionMemberWireNames: $ec2UnionMemberWireNames,
-            unionMemberTsFormats: $unionMemberTsFormats
+            unionMemberTsFormats: $unionMemberTsFormats,
+            unionEncodeByMemberIndex: $unionEncodeByMemberIndex
         );
     }
 
@@ -274,6 +303,7 @@ final class FormUrlEncodedSchemaExtensionProvider
                 mapEntryName: $entryName,
                 mapKeySchema: $mapKey,
                 mapValueSchema: $mapValue,
+                mapValueType: $mapValue?->type,
                 mapValueTimestampFormat: $mapValueTsFmt,
                 memberMapEntryPrefix: $flattened
                     ? $awsMemberWireName . '.'
@@ -370,6 +400,7 @@ final class FormUrlEncodedSchemaExtensionProvider
                 : self::encodeQuerySegment('entry'),
             mapKeySchema: $mapKey,
             mapValueSchema: $mapValue,
+            mapValueType: $mapValue?->type,
             mapValueTimestampFormat: $mapValueTsFmt
         );
     }

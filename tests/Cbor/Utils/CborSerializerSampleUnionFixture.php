@@ -18,11 +18,17 @@ final class CborSerializerSampleUnionFixture implements UnionInterface
 {
     private static ?Schema $SCHEMA = null;
 
+    /**
+     * Create a union fixture.
+     */
     public function __construct(
         private readonly string $activeTag,
         private readonly mixed $activeValue
     ) {}
 
+    /**
+     * Return the fixture schema.
+     */
     public static function schema(): Schema
     {
         if (self::$SCHEMA !== null) {
@@ -52,16 +58,35 @@ final class CborSerializerSampleUnionFixture implements UnionInterface
         return self::$SCHEMA;
     }
 
+    /** @inheritDoc */
+    public function getSchema(): Schema
+    {
+        return self::schema();
+    }
+
+    /** @inheritDoc */
     public function serialize(ShapeSerializerInterface $serializer, int $idx): void
     {
         $serializer->serializeUnion(self::schema(), $this, $idx);
     }
 
+    /** @inheritDoc */
     public function tag(): string
     {
         return $this->activeTag;
     }
 
+    /** @inheritDoc */
+    public function getMemberIndex(): int
+    {
+        return match ($this->activeTag) {
+            'value' => 0,
+            'count' => 1,
+            default => -1
+        };
+    }
+
+    /** @inheritDoc */
     public function value(): mixed
     {
         return $this->activeValue;

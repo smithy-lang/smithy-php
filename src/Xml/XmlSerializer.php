@@ -449,7 +449,7 @@ final class XmlSerializer implements ShapeSerializerInterface
         $prevNsAttrs = $this->nsAttrs;
         $prevTsFormats = $this->tsFormats;
 
-        $structSchema = $struct::schema();
+        $structSchema = $struct->getSchema();
         /** @var XmlSchemaExtension $structInfo */
         $structInfo = $structSchema->getExtension($extKey);
         $this->wireNames = $structInfo->memberWireNames;
@@ -557,17 +557,24 @@ final class XmlSerializer implements ShapeSerializerInterface
         $info = $schema->getExtension($extKey);
         $this->writer->startElement($info->xmlName);
 
-        $tag = $union->tag();
         $value = $union->value();
+        $memberIndex = $union->getMemberIndex();
 
         $iterInfo = $info;
         if (
-            $info->unionMembersByName === []
+            $info->unionMembersByIndex === []
             && $union instanceof UnionInterface
         ) {
-            $iterInfo = $union::schema()->getExtension($extKey);
+            $iterInfo = $union->getSchema()->getExtension($extKey);
         }
-        $variantSchema = $iterInfo->unionMembersByName[$tag] ?? null;
+        $variantSchema = $memberIndex < 0
+            ? null
+            : $iterInfo->unionMembersByIndex[$memberIndex] ?? null;
+        $tag = null;
+        if ($variantSchema === null) {
+            $tag = $union->tag();
+            $variantSchema = $iterInfo->unionMembersByName[$tag] ?? null;
+        }
 
         if ($variantSchema !== null) {
             $prevWireNames = $this->wireNames;
@@ -586,7 +593,7 @@ final class XmlSerializer implements ShapeSerializerInterface
             $this->nsAttrs = $prevNsAttrs;
             $this->tsFormats = $prevTsFormats;
         } else {
-            $this->writer->writeElement($tag, (string) $value);
+            $this->writer->writeElement((string) $tag, (string) $value);
         }
 
         $this->writer->endElement();
@@ -908,7 +915,7 @@ final class XmlSerializer implements ShapeSerializerInterface
 
             if ($actualInfo === null) {
                 /** @var XmlSchemaExtension $actualInfo */
-                $actualInfo = $item::schema()->getExtension($extKey);
+                $actualInfo = $item->getSchema()->getExtension($extKey);
                 $this->wireNames = $actualInfo->memberWireNames;
                 $this->memberComponentTypes = $actualInfo->memberComponentTypes;
                 $this->nsAttrs = $actualInfo->nsAttrs;

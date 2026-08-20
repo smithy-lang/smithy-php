@@ -45,7 +45,7 @@ final class XmlSchemaExtension
         public readonly array $attributeDeserMembers = [],
         /** elementXmlName -> Schema for pre-filtered regular element members */
         public readonly array $elementMembers = [],
-        /** flatName → ['member' => Schema, 'listMember' => Schema] */
+        /** flatName => ['member' => Schema, 'listMember' => Schema] */
         public readonly array $flattenedLists = [],
         /**
          * flatName -> ['member' => Schema, 'keyName' => string,
@@ -117,8 +117,9 @@ final class XmlSchemaExtension
         /** Nested extension for list members that need recursive reads. */
         public readonly ?XmlSchemaExtension $listMemberExtension = null,
         /**
-         * xmlName -> memberSchema for union variant lookup in
-         * deserialization
+         * XML wire name to packed union decode metadata.
+         *
+         * @var array<string, array{0: int, 1: Schema}>
          */
         public readonly array $unionMembersByXmlName = [],
         /**
@@ -126,6 +127,14 @@ final class XmlSchemaExtension
          * serialization
          */
         public readonly array $unionMembersByName = [],
+        /**
+         * Member index to member schema for indexed union serialization.
+         *
+         * @var array<int, Schema>
+         */
+        public readonly array $unionMembersByIndex = [],
+        /** Whether the generated union supports indexed construction. */
+        public readonly bool $hasIndexedUnionFactory = false,
         /** Resolved key element name */
         public readonly ?string $mapKeyName = null,
         /** Resolved value element name */

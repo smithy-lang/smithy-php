@@ -11,6 +11,8 @@ use Smithy\Core\Serde\ShapeDeserializerInterface;
 use Smithy\Core\Serde\TimestampFormat;
 use Smithy\Core\Shape\BigDecimal;
 use Smithy\Core\Shape\BigInteger;
+use Smithy\Core\Shape\Document\StructDocument;
+use Smithy\Core\Shape\Document\UnionDocument;
 
 /**
  * Deserialize XML into Smithy shapes with a C-extension tree parser.
@@ -296,7 +298,10 @@ final class XmlDeserializer implements ShapeDeserializerInterface
             case ShapeType::Enum->value:
                 $class = $listMember->targetClass;
                 foreach ($element->{$memberName} as $child) {
-                    $result[] = $class::fromValue((string) $child);
+                    $value = (string) $child;
+                    $result[] = $class !== null
+                        ? $class::fromValue($value)
+                        : $value;
                 }
                 break;
             case ShapeType::Integer->value:
@@ -310,7 +315,10 @@ final class XmlDeserializer implements ShapeDeserializerInterface
             case ShapeType::IntEnum->value:
                 $class = $listMember->targetClass;
                 foreach ($element->{$memberName} as $child) {
-                    $result[] = $class::fromValue((int) (string) $child);
+                    $value = (int) (string) $child;
+                    $result[] = $class !== null
+                        ? $class::fromValue($value)
+                        : $value;
                 }
                 break;
             case ShapeType::BigInteger->value:
@@ -460,22 +468,39 @@ final class XmlDeserializer implements ShapeDeserializerInterface
         } else {
             $iterSchema = $schema;
         }
-        if (!$iterSchema->targetClass) {
-            return null;
-        }
+        $targetClass = $iterSchema->targetClass;
         $membersByXmlName = $info->unionMembersByXmlName;
 
         foreach ($element->children() as $childName => $child) {
-            if (!($memberSchema = $membersByXmlName[$childName] ?? null)) {
-                return ($iterSchema->targetClass)::unknown(
-                    $childName,
-                    (string) $child
-                );
+            $entry = $membersByXmlName[$childName] ?? null;
+            if ($entry === null) {
+                $value = (string) $child;
+
+                return $targetClass !== null
+                    ? $targetClass::unknown($childName, $value)
+                    : UnionDocument::unknown(
+                        $iterSchema,
+                        $childName,
+                        $value
+                    );
             }
 
-            return ($iterSchema->targetClass)::create(
+            $memberSchema = $entry[1];
+            $value = $this->readValueFromElement($child, $memberSchema);
+
+            if ($targetClass !== null) {
+                return $info->hasIndexedUnionFactory
+                    ? $targetClass::createByIndex($entry[0], $value)
+                    : $targetClass::create(
+                        $memberSchema->memberName,
+                        $value
+                    );
+            }
+
+            return UnionDocument::create(
+                $iterSchema,
                 $memberSchema->memberName,
-                $this->readValueFromElement($child, $memberSchema)
+                $value
             );
         }
 
@@ -497,14 +522,20 @@ final class XmlDeserializer implements ShapeDeserializerInterface
             case ShapeType::String_->value:
                 return (string) $element;
             case ShapeType::Enum->value:
-                return $schema->targetClass::fromValue((string) $element);
+                $value = (string) $element;
+                return $schema->targetClass !== null
+                    ? ($schema->targetClass)::fromValue($value)
+                    : $value;
             case ShapeType::Integer->value:
             case ShapeType::Long->value:
             case ShapeType::Short->value:
             case ShapeType::Byte->value:
                 return (int) (string) $element;
             case ShapeType::IntEnum->value:
-                return $schema->targetClass::fromValue((int) (string) $element);
+                $value = (int) (string) $element;
+                return $schema->targetClass !== null
+                    ? ($schema->targetClass)::fromValue($value)
+                    : $value;
             case ShapeType::BigInteger->value:
                 return new BigInteger((string) $element);
             case ShapeType::BigDecimal->value:
@@ -572,8 +603,10 @@ final class XmlDeserializer implements ShapeDeserializerInterface
         }
         $this->readStructFromElement($element, $resolved, $members);
 
-        return $resolved->targetClass
-            ? ($resolved->targetClass)::fromMembers($members)
-            : null;
+        if ($resolved->targetClass !== null) {
+            return ($resolved->targetClass)::fromMembers($members);
+        }
+
+        return StructDocument::fromMembers($resolved, $members);
     }
 }

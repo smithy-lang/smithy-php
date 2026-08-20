@@ -44,6 +44,11 @@ final class HttpBindingOutputShapeFixture implements SerializableStructInterface
      *
      * @return void
      */
+    public function getSchema(): Schema
+    {
+        return self::schema();
+    }
+
     public function serialize(ShapeSerializerInterface $serializer, int $idx): void
     {
         $serializer->serializeStruct(self::schema(), $this, $idx);

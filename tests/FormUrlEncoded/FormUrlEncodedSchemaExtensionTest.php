@@ -81,6 +81,10 @@ final class FormUrlEncodedSchemaExtensionTest extends TestCase
         self::assertSame('v=', $flatScores->mapValueAssignment);
         self::assertSame('scoreEntry', $flatScores->mapEntryName);
         self::assertSame('scoreEntry.', $flatScores->memberMapEntryPrefix);
+        self::assertSame(
+            ShapeType::String_->value,
+            $flatScores->mapValueType
+        );
 
         $mapSchema = new Schema(
             id: 'smithy.test#TimestampMap',
@@ -114,6 +118,10 @@ final class FormUrlEncodedSchemaExtensionTest extends TestCase
         self::assertSame(
             TimestampFormat::HttpDate,
             $mapInfo->mapValueTimestampFormat
+        );
+        self::assertSame(
+            ShapeType::Timestamp->value,
+            $mapInfo->mapValueType
         );
         self::assertSame('Events.entry.', $mapInfo->memberMapEntryPrefix);
     }
@@ -150,6 +158,10 @@ final class FormUrlEncodedSchemaExtensionTest extends TestCase
         self::assertSame('value', $info->unionMemberWireNames['value']);
         self::assertSame('countValue', $info->unionMemberWireNames['count']);
         self::assertSame('Counter', $info->ec2UnionMemberWireNames['count']);
+        self::assertSame(
+            ['countValue', 'Counter', 'count', 'Count'],
+            $info->unionEncodeByMemberIndex[1][1]
+        );
         self::assertSame(
             TimestampFormat::EpochSeconds,
             $info->unionMemberTsFormats['created']
