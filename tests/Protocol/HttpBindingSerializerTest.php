@@ -46,8 +46,8 @@ final class HttpBindingSerializerTest extends TestCase
             )
         );
         self::assertSame(
-            'mode=true&extra%20key=a%26b&fixed=yes',
-            $serializer->serializeQueryString([['fixed', 'yes']])
+            'mode=true&extra%20key=a%26b&fixed=yes%20value',
+            $serializer->serializeQueryString('fixed=yes%20value')
         );
         self::assertSame(
             [
