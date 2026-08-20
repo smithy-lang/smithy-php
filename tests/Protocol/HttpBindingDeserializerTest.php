@@ -12,8 +12,8 @@ use Smithy\Core\Serde\{
     TimestampFormat
 };
 use Smithy\Core\Shape\Document\StructDocument;
-use Smithy\Json\JsonCodec;
-use Smithy\Json\JsonCodecSettings;
+use Smithy\Codec\Json\JsonCodec;
+use Smithy\Codec\Json\JsonCodecSettings;
 use Smithy\Protocol\HttpBindingDeserializer;
 use Smithy\Protocol\HttpStructBindingExtensionProvider;
 use Smithy\Tests\Protocol\Utils\HttpBindingFixtureSchemas;

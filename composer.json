@@ -19,10 +19,7 @@
             "Smithy\\Protocol\\": "src/Protocol/",
             "Smithy\\Http\\": "src/Http/",
             "Smithy\\Async\\": "src/Async/",
-            "Smithy\\Xml\\": "src/Xml/",
-            "Smithy\\Json\\": "src/Json/",
-            "Smithy\\Cbor\\": "src/Cbor/",
-            "Smithy\\FormUrlEncoded\\": "src/FormUrlEncoded/"
+            "Smithy\\Codec\\": "src/Codec/"
         }
     },
     "autoload-dev": {
