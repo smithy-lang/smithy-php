@@ -29,7 +29,7 @@ final class HttpOperationBindingExtensionProviderTest extends TestCase
         self::assertSame('POST', $extension->method);
         self::assertSame('/', $extension->path);
         self::assertNull($extension->pathSegments);
-        self::assertNull($extension->pathQueryPairs);
+        self::assertNull($extension->pathQueryString);
         self::assertNull($extension->httpResponseCode);
     }
 
@@ -48,7 +48,7 @@ final class HttpOperationBindingExtensionProviderTest extends TestCase
             [['/things/', null, false], [null, 0, false]],
             $extension->pathSegments
         );
-        self::assertSame([['fixed', 'true']], $extension->pathQueryPairs);
+        self::assertSame('fixed=true', $extension->pathQueryString);
         self::assertSame(206, $extension->httpResponseCode);
         self::assertSame(
             HttpBindingOperationFixture::class,
