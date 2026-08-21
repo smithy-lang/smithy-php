@@ -8,9 +8,9 @@ use PHPUnit\Framework\TestCase;
 use Smithy\Core\Serde\{
     Schema,
     SchemaExtensionKey,
-    ShapeType,
     TimestampFormat
 };
+use Smithy\Core\Shape\ShapeType;
 use Smithy\Codec\FormUrlEncoded\{
     FormUrlEncodedSchemaExtension,
     FormUrlEncodedSchemaExtensionProvider

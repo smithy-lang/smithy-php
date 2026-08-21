@@ -7,9 +7,9 @@ namespace Smithy\Tests\Codec\Xml;
 use PHPUnit\Framework\TestCase;
 use Smithy\Core\Serde\{
     Schema,
-    ShapeType,
     TimestampFormat
 };
+use Smithy\Core\Shape\ShapeType;
 use Smithy\Codec\Xml\{
     XmlSchemaExtension,
     XmlSchemaExtensionProvider

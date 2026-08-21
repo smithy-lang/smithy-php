@@ -6,9 +6,9 @@ namespace Smithy\Tests\Codec\Json\Fixture;
 
 use Smithy\Core\Serde\{
     Schema,
-    ShapeSerializerInterface,
-    ShapeType
+    ShapeSerializerInterface
 };
+use Smithy\Core\Shape\ShapeType;
 use Smithy\Core\Shape\EnumInterface;
 
 final class JsonIntEnumFixture implements EnumInterface

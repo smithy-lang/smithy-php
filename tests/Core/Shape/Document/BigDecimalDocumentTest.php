@@ -8,7 +8,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Smithy\Core\Serde\Schema;
 use Smithy\Core\Serde\ShapeSerializerInterface;
-use Smithy\Core\Serde\ShapeType;
+use Smithy\Core\Shape\ShapeType;
 use Smithy\Core\Shape\BigDecimal;
 use Smithy\Core\Shape\Document\BigDecimalDocument;
 use Smithy\Core\Shape\Document\IncompatibleDocumentTypeException;

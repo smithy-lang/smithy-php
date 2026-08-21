@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Smithy\Tests\Codec\Xml;
 
 use PHPUnit\Framework\TestCase;
+use Smithy\Codec\Exception\CodecException;
 use Smithy\Codec\Xml\{
     XmlCodec,
     XmlCodecSettings,
@@ -89,7 +90,7 @@ final class XmlCodecTest extends TestCase
     {
         $codec = new XmlCodec();
 
-        $this->expectException(\RuntimeException::class);
+        $this->expectException(CodecException::class);
         $this->expectExceptionMessage('Failed to parse XML:');
 
         $codec->createDeserializer('<broken');

@@ -7,9 +7,9 @@ namespace Smithy\Tests\Core\Serde;
 use PHPUnit\Framework\TestCase;
 use Smithy\Core\Serde\{
     Schema,
-    SchemaReference,
-    ShapeType
+    SchemaReference
 };
+use Smithy\Core\Shape\ShapeType;
 use Smithy\Tests\Core\Serde\Utils\SchemaTestTargetFixture;
 
 /**

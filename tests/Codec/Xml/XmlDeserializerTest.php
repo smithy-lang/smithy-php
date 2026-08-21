@@ -5,10 +5,8 @@ declare(strict_types=1);
 namespace Smithy\Tests\Codec\Xml;
 
 use PHPUnit\Framework\TestCase;
-use Smithy\Core\Serde\{
-    Schema,
-    ShapeType
-};
+use Smithy\Core\Serde\Schema;
+use Smithy\Core\Shape\ShapeType;
 use Smithy\Core\Shape\Document\{
     StructDocument,
     UnionDocument

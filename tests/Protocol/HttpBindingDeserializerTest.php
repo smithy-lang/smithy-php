@@ -8,9 +8,9 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Smithy\Core\Serde\{
     Schema,
-    ShapeType,
     TimestampFormat
 };
+use Smithy\Core\Shape\ShapeType;
 use Smithy\Core\Shape\Document\StructDocument;
 use Smithy\Codec\Json\JsonCodec;
 use Smithy\Codec\Json\JsonCodecSettings;

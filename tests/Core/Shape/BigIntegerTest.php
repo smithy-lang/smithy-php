@@ -7,6 +7,7 @@ namespace Smithy\Tests\Core\Shape;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Smithy\Core\Shape\BigInteger;
+use Smithy\Core\Shape\Exception\InvalidShapeValueException;
 
 class BigIntegerTest extends TestCase
 {
@@ -31,7 +32,7 @@ class BigIntegerTest extends TestCase
     #[DataProvider('invalidValues')]
     public function testRejectsInvalidValue(string $invalid): void
     {
-        $this->expectException(\InvalidArgumentException::class);
+        $this->expectException(InvalidShapeValueException::class);
         $this->expectExceptionMessageMatches('/Invalid BigInteger/');
         new BigInteger($invalid);
     }

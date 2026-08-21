@@ -6,7 +6,7 @@ namespace Smithy\Tests\Protocol\Utils;
 
 use Smithy\Core\Serde\Schema;
 use Smithy\Core\Serde\ShapeSerializerInterface;
-use Smithy\Core\Serde\ShapeType;
+use Smithy\Core\Shape\ShapeType;
 use Smithy\Core\Shape\EnumInterface;
 
 final class HttpBindingStringEnumFixture implements EnumInterface

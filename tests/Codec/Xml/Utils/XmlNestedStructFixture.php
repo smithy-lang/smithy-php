@@ -7,9 +7,9 @@ namespace Smithy\Tests\Codec\Xml\Utils;
 use Smithy\Core\Serde\{
     Schema,
     SerializableStructInterface,
-    ShapeSerializerInterface,
-    ShapeType
+    ShapeSerializerInterface
 };
+use Smithy\Core\Shape\ShapeType;
 use Smithy\Core\Shape\FromMembersTrait;
 
 final class XmlNestedStructFixture implements SerializableStructInterface

@@ -7,6 +7,7 @@ namespace Smithy\Tests\Core\Shape;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Smithy\Core\Shape\BigDecimal;
+use Smithy\Core\Shape\Exception\InvalidShapeValueException;
 
 class BigDecimalTest extends TestCase
 {
@@ -36,7 +37,7 @@ class BigDecimalTest extends TestCase
     #[DataProvider('invalidValues')]
     public function testRejectsInvalidValue(string $invalid): void
     {
-        $this->expectException(\InvalidArgumentException::class);
+        $this->expectException(InvalidShapeValueException::class);
         $this->expectExceptionMessageMatches('/Invalid BigDecimal/');
         new BigDecimal($invalid);
     }

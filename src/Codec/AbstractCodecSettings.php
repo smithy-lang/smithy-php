@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Smithy\Core\Serde;
+namespace Smithy\Codec;
+
+use Smithy\Core\Serde\TimestampFormat;
 
 /**
  * Shared codec settings.

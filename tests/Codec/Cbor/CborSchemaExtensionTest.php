@@ -11,9 +11,9 @@ use Smithy\Codec\Cbor\{
 };
 use Smithy\Core\Serde\{
     Schema,
-    ShapeType,
     TimestampFormat
 };
+use Smithy\Core\Shape\ShapeType;
 use Smithy\Tests\Codec\Cbor\Utils\{
     CborDeserializerSampleUnionFixture,
     CborSchemaFixture

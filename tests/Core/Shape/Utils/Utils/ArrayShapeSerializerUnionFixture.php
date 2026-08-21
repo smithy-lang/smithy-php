@@ -6,9 +6,9 @@ namespace Smithy\Tests\Core\Shape\Utils\Utils;
 
 use Smithy\Core\Serde\{
     Schema,
-    ShapeSerializerInterface,
-    ShapeType
+    ShapeSerializerInterface
 };
+use Smithy\Core\Shape\ShapeType;
 use Smithy\Core\Shape\UnionInterface;
 use Smithy\Core\Shape\Utils\ArrayShapeSerializer;
 

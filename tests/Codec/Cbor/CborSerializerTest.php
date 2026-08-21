@@ -9,11 +9,12 @@ use Smithy\Codec\Cbor\{
     CborCodecSettings,
     CborSerializer
 };
+use Smithy\Codec\Exception\SerializationException;
 use Smithy\Core\Serde\{
     Schema,
-    ShapeType,
     TimestampFormat
 };
+use Smithy\Core\Shape\ShapeType;
 use Smithy\Core\Shape\{
     BigDecimal,
     BigInteger
@@ -252,7 +253,7 @@ final class CborSerializerTest extends TestCase
                 0
             );
             self::fail('Expected an exception for an unknown union variant.');
-        } catch (\InvalidArgumentException $e) {
+        } catch (SerializationException $e) {
             self::assertSame(
                 'Unknown union variant: missing',
                 $e->getMessage()

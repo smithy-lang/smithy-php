@@ -4,10 +4,9 @@ declare(strict_types=1);
 
 namespace Smithy\Tests\Core\Shape\Utils\Utils;
 
-use Smithy\Core\Serde\{
-    Schema,
-    ShapeType
-};
+use Smithy\Core\Serde\Schema;
+use Smithy\Core\Shape\ShapeType;
+
 
 final class ArrayShapeSerializerAliasedFixture
     extends AbstractArrayShapeSerializerFixture

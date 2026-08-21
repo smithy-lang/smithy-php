@@ -8,7 +8,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Smithy\Core\Serde\PreludeSchemas;
 use Smithy\Core\Serde\Schema;
-use Smithy\Core\Serde\ShapeType;
+use Smithy\Core\Shape\ShapeType;
 
 /**
  * The prelude schema table is a static singleton cache that is eagerly initialized on file load.
