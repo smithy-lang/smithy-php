@@ -8,6 +8,7 @@ use PHPUnit\Framework\TestCase;
 use Smithy\Core\Shape\BigInteger;
 use Smithy\Core\Shape\Document\IntegerDocument;
 use Smithy\Core\Shape\Document\StringDocument;
+use Smithy\Core\Shape\Exception\InvalidShapeValueException;
 use Smithy\Core\Shape\Utils\ArrayShapeSerializer;
 use Smithy\Tests\Core\Shape\Utils\Utils\{
     ArrayShapeSerializerAliasedFixture,
@@ -91,7 +92,7 @@ final class ArrayShapeSerializerTest extends TestCase
 
     public function testFromArrayRejectsUnsupportedClass(): void
     {
-        $this->expectException(\InvalidArgumentException::class);
+        $this->expectException(InvalidShapeValueException::class);
         $this->expectExceptionMessage(
             'ArrayShapeSerializer::fromArray() expects a class implementing '
             . 'Smithy\Core\Serde\SerializableStructInterface or '
@@ -224,7 +225,7 @@ final class ArrayShapeSerializerTest extends TestCase
 
     public function testFromArrayThrowsWhenTimestampStringCannotBeParsed(): void
     {
-        $this->expectException(\InvalidArgumentException::class);
+        $this->expectException(InvalidShapeValueException::class);
         $this->expectExceptionMessage(
             "Invalid timestamp value 'not-a-timestamp' for schema 't'."
         );

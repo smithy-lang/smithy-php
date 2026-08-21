@@ -8,7 +8,7 @@ use PHPUnit\Framework\TestCase;
 use Smithy\Core\Serde\Schema;
 use Smithy\Core\Serde\SchemaExtensionKey;
 use Smithy\Core\Serde\SchemaExtensionProviderInterface;
-use Smithy\Core\Serde\ShapeType;
+use Smithy\Core\Shape\ShapeType;
 
 class SchemaExtensionTest extends TestCase
 {

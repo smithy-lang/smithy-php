@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Smithy\Tests\Codec\FormUrlEncoded;
 
 use PHPUnit\Framework\TestCase;
+use Smithy\Codec\Exception\CodecException;
 use Smithy\Codec\FormUrlEncoded\{
     FormUrlEncodedCodec,
     FormUrlEncodedSerializer
@@ -61,7 +62,7 @@ final class FormUrlEncodedCodecTest extends TestCase
     {
         $codec = new FormUrlEncodedCodec();
 
-        $this->expectException(\LogicException::class);
+        $this->expectException(CodecException::class);
         $this->expectExceptionMessage(
             'FormUrlEncodedCodec does not support deserialization.'
         );

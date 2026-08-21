@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Smithy\Tests\Core\Serde\Utils;
 
 use Smithy\Core\Serde\Schema;
-use Smithy\Core\Serde\ShapeType;
+use Smithy\Core\Shape\ShapeType;
 
 /**
  * Named helper for the `resolveTarget()` recursive-reference test. Schema dispatches to

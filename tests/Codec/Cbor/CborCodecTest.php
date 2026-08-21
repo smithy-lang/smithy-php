@@ -13,9 +13,10 @@ use Smithy\Codec\Cbor\{
 };
 use Smithy\Core\Serde\{
     Schema,
-    ShapeType,
     TimestampFormat
 };
+use Smithy\Core\Shape\ShapeType;
+
 
 /**
  * Cover the CBOR codec entrypoints.

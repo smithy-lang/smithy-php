@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace Smithy\Tests\Core\Exception;
 
 use PHPUnit\Framework\TestCase;
-use Smithy\Core\Exception\DocumentException;
+use Smithy\Core\Shape\Exception\DocumentException;
 use Smithy\Core\Exception\ErrorFault;
 use Smithy\Core\Serde\Schema;
-use Smithy\Core\Serde\ShapeType;
+use Smithy\Core\Shape\ShapeType;
 
 final class DocumentExceptionTest extends TestCase
 {

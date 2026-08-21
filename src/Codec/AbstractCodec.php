@@ -2,7 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Smithy\Core\Serde;
+namespace Smithy\Codec;
+
+use Smithy\Core\Serde\Schema;
+use Smithy\Core\Serde\ShapeDeserializerInterface;
+use Smithy\Core\Serde\ShapeSerializerInterface;
 
 /**
  * Factory for a format's `ShapeSerializerInterface` and `ShapeDeserializerInterface` pair (JSON,

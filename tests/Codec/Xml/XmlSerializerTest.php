@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace Smithy\Tests\Codec\Xml;
 
 use PHPUnit\Framework\TestCase;
+use Smithy\Codec\Exception\SerializationException;
 use Smithy\Core\Serde\{
     Schema,
-    ShapeType,
     TimestampFormat
 };
+use Smithy\Core\Shape\ShapeType;
 use Smithy\Core\Shape\{
     BigDecimal,
     BigInteger
@@ -203,7 +204,7 @@ final class XmlSerializerTest extends TestCase
             memberIndex: 0
         );
 
-        $this->expectException(\LogicException::class);
+        $this->expectException(SerializationException::class);
         $this->expectExceptionMessageMatches(
             '/XML protocols do not support document-typed members/'
         );
@@ -225,7 +226,7 @@ final class XmlSerializerTest extends TestCase
             memberIndex: 0
         );
 
-        $this->expectException(\LogicException::class);
+        $this->expectException(SerializationException::class);
 
         $serializer->serializeDocument($schema, null, 0);
     }

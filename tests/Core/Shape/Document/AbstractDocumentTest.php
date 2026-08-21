@@ -7,7 +7,7 @@ namespace Smithy\Tests\Core\Shape\Document;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Smithy\Core\Serde\Schema;
-use Smithy\Core\Serde\ShapeType;
+use Smithy\Core\Shape\ShapeType;
 use Smithy\Core\Shape\BigDecimal;
 use Smithy\Core\Shape\BigInteger;
 use Smithy\Core\Shape\Document\AbstractDocument;
@@ -27,6 +27,7 @@ use Smithy\Core\Shape\Document\ShortDocument;
 use Smithy\Core\Shape\Document\StringDocument;
 use Smithy\Core\Shape\Document\TimestampDocument;
 use Smithy\Core\Shape\Document\TimestampValue;
+use Smithy\Core\Shape\Exception\InvalidShapeValueException;
 
 /**
  * Covers `AbstractDocument`'s factory routing, `fromValue()` recursive coercion, schema
@@ -285,7 +286,7 @@ final class AbstractDocumentTest extends TestCase
 
     public function testFromValueRejectsResource(): void
     {
-        $this->expectException(\InvalidArgumentException::class);
+        $this->expectException(InvalidShapeValueException::class);
         $this->expectExceptionMessageMatches(
             '/Cannot build a document from value of type/'
         );
@@ -294,7 +295,7 @@ final class AbstractDocumentTest extends TestCase
 
     public function testFromValueRejectsUnknownObjectClass(): void
     {
-        $this->expectException(\InvalidArgumentException::class);
+        $this->expectException(InvalidShapeValueException::class);
         $this->expectExceptionMessageMatches(
             '/Cannot build a document from value of class/'
         );

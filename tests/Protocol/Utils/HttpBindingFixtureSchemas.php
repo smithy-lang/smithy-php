@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Smithy\Tests\Protocol\Utils;
 
 use Smithy\Core\Serde\Schema;
-use Smithy\Core\Serde\ShapeType;
+use Smithy\Core\Shape\ShapeType;
 
 /**
  * Provide schema fixtures for HTTP binding tests.

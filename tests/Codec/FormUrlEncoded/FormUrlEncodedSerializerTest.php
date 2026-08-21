@@ -6,10 +6,9 @@ namespace Smithy\Tests\Codec\FormUrlEncoded;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use Smithy\Core\Serde\{
-    Schema,
-    ShapeType
-};
+use Smithy\Codec\Exception\SerializationException;
+use Smithy\Core\Serde\Schema;
+use Smithy\Core\Shape\ShapeType;
 use Smithy\Core\Shape\{
     BigDecimal,
     BigInteger,
@@ -160,7 +159,7 @@ final class FormUrlEncodedSerializerTest extends TestCase
         $member = FormUrlEncodedSampleStructFixture::schema()
             ->getMembersByIndex()[13];
 
-        $this->expectException(\RuntimeException::class);
+        $this->expectException(SerializationException::class);
         $this->expectExceptionMessage(
             'This form-urlencoded mode does not support map '
             . 'serialization'
@@ -355,7 +354,7 @@ final class FormUrlEncodedSerializerTest extends TestCase
     {
         $serializer = new FormUrlEncodedSerializer();
 
-        $this->expectException(\RuntimeException::class);
+        $this->expectException(SerializationException::class);
         $this->expectExceptionMessage(
             'This form-urlencoded mode does not support document types'
         );

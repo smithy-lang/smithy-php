@@ -6,9 +6,9 @@ namespace Smithy\Tests\Codec\FormUrlEncoded\Utils;
 
 use Smithy\Core\Serde\{
     Schema,
-    ShapeSerializerInterface,
-    ShapeType
+    ShapeSerializerInterface
 };
+use Smithy\Core\Shape\ShapeType;
 use Smithy\Core\Shape\EnumInterface;
 
 final class FormUrlEncodedStringEnumFixture implements EnumInterface

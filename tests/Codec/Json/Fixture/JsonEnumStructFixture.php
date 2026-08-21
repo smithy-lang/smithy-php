@@ -4,10 +4,9 @@ declare(strict_types=1);
 
 namespace Smithy\Tests\Codec\Json\Fixture;
 
-use Smithy\Core\Serde\{
-    Schema,
-    ShapeType
-};
+use Smithy\Core\Serde\Schema;
+use Smithy\Core\Shape\ShapeType;
+
 
 final class JsonEnumStructFixture
 {

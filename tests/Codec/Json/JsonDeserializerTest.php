@@ -7,9 +7,9 @@ namespace Smithy\Tests\Codec\Json;
 use PHPUnit\Framework\TestCase;
 use Smithy\Core\Serde\{
     Schema,
-    ShapeType,
     TimestampFormat
 };
+use Smithy\Core\Shape\ShapeType;
 use Smithy\Core\Shape\BigInteger;
 use Smithy\Core\Shape\Document\{
     StructDocument,

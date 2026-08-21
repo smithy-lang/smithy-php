@@ -8,9 +8,9 @@ use Smithy\Core\Serde\{
     Schema,
     SerializableStructInterface,
     ShapeSerializerInterface,
-    ShapeType,
     TimestampFormat
 };
+use Smithy\Core\Shape\ShapeType;
 use Smithy\Core\Shape\{
     BigDecimal,
     BigInteger,

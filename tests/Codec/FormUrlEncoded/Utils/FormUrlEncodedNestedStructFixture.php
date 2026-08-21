@@ -7,9 +7,9 @@ namespace Smithy\Tests\Codec\FormUrlEncoded\Utils;
 use Smithy\Core\Serde\{
     Schema,
     SerializableStructInterface,
-    ShapeSerializerInterface,
-    ShapeType
+    ShapeSerializerInterface
 };
+use Smithy\Core\Shape\ShapeType;
 use Smithy\Core\Shape\FromMembersTrait;
 
 final class FormUrlEncodedNestedStructFixture

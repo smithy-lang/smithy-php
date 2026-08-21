@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Smithy\Tests\Core\Serde;
+namespace Smithy\Tests\Core\Shape;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use Smithy\Core\Serde\ShapeType;
+use Smithy\Core\Shape\ShapeType;
 
 /**
  * `ShapeType` is a load-bearing enum: its integer backing values are literal-inlined into
