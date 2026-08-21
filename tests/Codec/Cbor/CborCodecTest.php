@@ -16,6 +16,7 @@ use Smithy\Core\Serde\{
     TimestampFormat
 };
 use Smithy\Core\Shape\ShapeType;
+use Smithy\Tests\Protocol\Utils\StringStreamFixture;
 
 
 /**
@@ -112,7 +113,9 @@ final class CborCodecTest extends TestCase
 
         $wire = $serializer->flush();
 
-        $deserializer = $codec->createDeserializer($wire);
+        $deserializer = $codec->createDeserializer(
+            new StringStreamFixture($wire)
+        );
         self::assertInstanceOf(CborDeserializer::class, $deserializer);
 
         $fields = [null, null, null];
@@ -156,8 +159,38 @@ final class CborCodecTest extends TestCase
         );
 
         $fields = [null];
-        $codec->createDeserializer($wire)->deserialize($schema, $fields);
+        $codec->createDeserializer(
+            new StringStreamFixture($wire)
+        )->deserialize($schema, $fields);
 
         self::assertSame(100.0, $fields[0]);
+    }
+
+    public function testDeserializerSupportsStreamsWithUnknownSize(): void
+    {
+        $schema = new Schema(
+            id: 'smithy.test#UnknownSize',
+            type: ShapeType::Structure,
+            members: [
+                new Schema(
+                    id: 'smithy.test#UnknownSize$value',
+                    type: ShapeType::Integer,
+                    memberName: 'value',
+                    memberIndex: 0
+                )
+            ]
+        );
+        $fields = [null];
+        $source = new StringStreamFixture(
+            \hex2bin('a16576616c756501'),
+            false
+        );
+
+        (new CborCodec())->createDeserializer($source)->deserialize(
+            $schema,
+            $fields
+        );
+
+        self::assertSame(1, $fields[0]);
     }
 }

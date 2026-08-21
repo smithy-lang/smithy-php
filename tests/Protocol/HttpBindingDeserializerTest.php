@@ -179,6 +179,25 @@ final class HttpBindingDeserializerTest extends TestCase
         self::assertSame('nested', $members[0]->value);
     }
 
+    public function testContentLengthZeroSkipsStructuredBody(): void
+    {
+        $schema = HttpBindingFixtureSchemas::structurePayloadResponse();
+        $members = [null];
+        $bindingInfo = $schema->getExtension(
+            HttpStructBindingExtensionProvider::key()
+        );
+        $deserializer = new HttpBindingDeserializer(
+            new JsonCodec(),
+            $bindingInfo,
+            ['content-length' => ['Content-Length', ['0']]],
+            new StringStreamFixture('not-json')
+        );
+
+        $deserializer->deserialize($schema, $members);
+
+        self::assertNull($members[0]);
+    }
+
     public function testDeserializesRuntimeStructurePayloadMember(): void
     {
         $payloadSchema = new Schema(
