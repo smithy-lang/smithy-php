@@ -20,6 +20,7 @@ use Smithy\Core\Shape\{
     BigInteger
 };
 use Smithy\Tests\Codec\Cbor\Utils\{
+    CborRecursiveUnionFixture,
     CborSerializerSampleStructFixture,
     CborSerializerSampleUnionFixture
 };
@@ -203,6 +204,57 @@ final class CborSerializerTest extends TestCase
         );
         self::assertSame(
             'a1616ba165636f756e7403',
+            \bin2hex($serializer->flush())
+        );
+    }
+
+    public function testSerializesRecursiveUnionUsingCanonicalTargetSchema(): void
+    {
+        $unionReference = new Schema(
+            id: CborRecursiveUnionFixture::SHAPE_ID,
+            type: ShapeType::Union,
+            targetClass: CborRecursiveUnionFixture::class,
+            members: [
+                new Schema(
+                    id: 'smithy.test#CborRecursiveUnionMap',
+                    type: ShapeType::Map,
+                    memberName: 'M',
+                    memberIndex: 0
+                ),
+                new Schema(
+                    id: 'smithy.test#CborRecursiveUnionList',
+                    type: ShapeType::List_,
+                    memberName: 'L',
+                    memberIndex: 1
+                ),
+                new Schema(
+                    id: 'smithy.api#Blob',
+                    type: ShapeType::Blob,
+                    memberName: 'B',
+                    memberIndex: 2
+                )
+            ]
+        );
+        $mapSchema = new Schema(
+            id: 'smithy.test#RecursiveUnionMap',
+            type: ShapeType::Map,
+            mapKey: new Schema(
+                id: 'smithy.api#String',
+                type: ShapeType::String_
+            ),
+            mapValue: $unionReference
+        );
+        $value = new CborRecursiveUnionFixture('M', [
+            'nested' => new CborRecursiveUnionFixture('L', [
+                new CborRecursiveUnionFixture('B', 'payload')
+            ])
+        ]);
+        $serializer = new CborSerializer();
+
+        $serializer->serializeMap($mapSchema, ['root' => $value], 0);
+
+        self::assertSame(
+            'a164726f6f74a1614da1666e6573746564a1614c81a16142477061796c6f6164',
             \bin2hex($serializer->flush())
         );
     }
