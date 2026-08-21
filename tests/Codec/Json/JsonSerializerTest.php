@@ -19,6 +19,7 @@ use Smithy\Codec\Json\{
     JsonCodecSettings,
     JsonSerializer
 };
+use Smithy\Tests\Codec\Json\Fixture\JsonRecursiveUnionFixture;
 
 final class JsonSerializerTest extends TestCase
 {
@@ -174,6 +175,57 @@ final class JsonSerializerTest extends TestCase
         );
 
         self::assertSame('{"outer":{"a":1.25}}', $serializer->flush());
+    }
+
+    public function testSerializesRecursiveUnionUsingCanonicalTargetSchema(): void
+    {
+        $unionReference = new Schema(
+            id: JsonRecursiveUnionFixture::SHAPE_ID,
+            type: ShapeType::Union,
+            targetClass: JsonRecursiveUnionFixture::class,
+            members: [
+                new Schema(
+                    id: 'smithy.test#JsonRecursiveUnionMap',
+                    type: ShapeType::Map,
+                    memberName: 'M',
+                    memberIndex: 0
+                ),
+                new Schema(
+                    id: 'smithy.test#JsonRecursiveUnionList',
+                    type: ShapeType::List_,
+                    memberName: 'L',
+                    memberIndex: 1
+                ),
+                new Schema(
+                    id: 'smithy.api#Blob',
+                    type: ShapeType::Blob,
+                    memberName: 'B',
+                    memberIndex: 2
+                )
+            ]
+        );
+        $mapSchema = new Schema(
+            id: 'smithy.test#RecursiveUnionMap',
+            type: ShapeType::Map,
+            mapKey: new Schema(
+                id: 'smithy.api#String',
+                type: ShapeType::String_
+            ),
+            mapValue: $unionReference
+        );
+        $value = new JsonRecursiveUnionFixture('M', [
+            'nested' => new JsonRecursiveUnionFixture('L', [
+                new JsonRecursiveUnionFixture('B', 'payload')
+            ])
+        ]);
+        $serializer = new JsonSerializer();
+
+        $serializer->serializeMap($mapSchema, ['root' => $value], 0);
+
+        self::assertSame(
+            '{"root":{"M":{"nested":{"L":[{"B":"cGF5bG9hZA=="}]}}}}',
+            $serializer->flush()
+        );
     }
 
     public function testSerializesNestedDocumentValuesAndNulls(): void
