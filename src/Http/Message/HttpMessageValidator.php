@@ -41,11 +41,10 @@ final class HttpMessageValidator
      */
     public static function validateProtocolVersion(string $version): void
     {
-        if (
-            \preg_match(
-                self::PROTOCOL_VERSION_PATTERN,
-                $version
-            ) !== 1
+        if (\preg_match(
+            self::PROTOCOL_VERSION_PATTERN,
+            $version
+        ) !== 1
         ) {
             throw new \InvalidArgumentException(
                 'HTTP protocol versions must contain only a version number.'
@@ -76,11 +75,10 @@ final class HttpMessageValidator
      */
     public static function validateReasonPhrase(string $reasonPhrase): void
     {
-        if (
-            \preg_match(
-                self::INVALID_FIELD_VALUE_PATTERN,
-                $reasonPhrase
-            ) === 1
+        if (\preg_match(
+            self::INVALID_FIELD_VALUE_PATTERN,
+            $reasonPhrase
+        ) === 1
         ) {
             throw new \InvalidArgumentException(
                 'HTTP reason phrases contain invalid control bytes.'
@@ -129,11 +127,10 @@ final class HttpMessageValidator
                 );
             }
 
-            if (
-                \preg_match(
-                    self::INVALID_FIELD_VALUE_PATTERN,
-                    $fieldValue
-                ) === 1
+            if (\preg_match(
+                self::INVALID_FIELD_VALUE_PATTERN,
+                $fieldValue
+            ) === 1
             ) {
                 throw new \InvalidArgumentException(
                     'HTTP header values contain invalid control bytes.'

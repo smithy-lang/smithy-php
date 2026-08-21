@@ -180,7 +180,7 @@ trait MessageTrait
     public function withNormalizedHeader(
         string $lowerName,
         string $originalName,
-        array $values,
+        array $values
     ): static {
         $new = clone $this;
         $new->headers[$lowerName] = [$originalName, $values];

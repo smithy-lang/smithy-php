@@ -54,6 +54,20 @@ final class StreamBodyAdapterTest extends TestCase
         $this->assertTrue($stream->fullyConsumed());
     }
 
+    public function testGetContentsMarksUnknownSizeStreamConsumed(): void
+    {
+        $stream = StreamBodyAdapter::wrap(
+            new GenericStreamFixture(
+                content: 'abc',
+                sizeKnown: false
+            )
+        );
+
+        $this->assertSame('abc', $stream->getContents());
+        $this->assertTrue($stream->started());
+        $this->assertTrue($stream->fullyConsumed());
+    }
+
     public function testSeekBeforeReadingResetsLogicalStart(): void
     {
         $stream = StreamBodyAdapter::wrap(

@@ -44,7 +44,7 @@ final class Request implements RequestInterface
         array $headers = [],
         string|StreamInterface|null $body = null,
         string $protocolVersion = '1.1',
-        bool $normalizeHeaders = true,
+        bool $normalizeHeaders = true
     ) {
         HttpMessageValidator::validateMethod($method);
         HttpMessageValidator::validateProtocolVersion($protocolVersion);
@@ -85,7 +85,7 @@ final class Request implements RequestInterface
         string|UriInterface $uri,
         array $headers = [],
         string|StreamInterface|null $body = null,
-        string $protocolVersion = '1.1',
+        string $protocolVersion = '1.1'
     ): self {
         return new self(
             $method,
@@ -93,7 +93,7 @@ final class Request implements RequestInterface
             $headers,
             $body,
             $protocolVersion,
-            normalizeHeaders: false,
+            normalizeHeaders: false
         );
     }
 
@@ -168,7 +168,7 @@ final class Request implements RequestInterface
      */
     public function withUri(
         UriInterface $uri,
-        bool $preserveHost = false,
+        bool $preserveHost = false
     ): static
     {
         $new = clone $this;

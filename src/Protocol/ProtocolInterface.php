@@ -25,26 +25,29 @@ interface ProtocolInterface
      * @param OperationInterface $operation The operation singleton.
      * @param SerializableStructInterface $input The input shape.
      * @param string $endpoint The base endpoint URL.
+     *
      * @return RequestInterface The serialized HTTP request.
      */
     public function serializeRequest(
         OperationInterface $operation,
         SerializableStructInterface $input,
-        string $endpoint,
+        string $endpoint
     ): RequestInterface;
 
     /**
      * Deserialize an HTTP response into an output shape.
      *
-     * Throws on error responses (status >= 300).
+     * Throws when the response does not satisfy the protocol's success
+     * contract or represents a modeled/unmodeled service error.
      *
      * @param OperationInterface $operation The operation singleton.
      * @param ResponseInterface $response The HTTP response.
+     *
      * @return SerializableStructInterface The deserialized output shape.
-     * @throws \Throwable On error responses.
+     * @throws \Throwable On protocol or service error responses.
      */
     public function deserializeResponse(
         OperationInterface $operation,
-        ResponseInterface $response,
+        ResponseInterface $response
     ): SerializableStructInterface;
 }

@@ -77,7 +77,7 @@ final class Response implements ResponseInterface
         507 => 'Insufficient Storage',
         508 => 'Loop Detected',
         510 => 'Not Extended',
-        511 => 'Network Authentication Required',
+        511 => 'Network Authentication Required'
     ];
 
     private int $statusCode;
@@ -105,7 +105,7 @@ final class Response implements ResponseInterface
         string $protocolVersion = '1.1',
         string $reason = '',
         ?ResponseTrailers $trailers = null,
-        bool $normalizedHeaders = false,
+        bool $normalizedHeaders = false
     ) {
         HttpMessageValidator::validateStatusCode($status);
         HttpMessageValidator::validateReasonPhrase($reason);
@@ -145,7 +145,7 @@ final class Response implements ResponseInterface
         string|StreamInterface|null $body = null,
         string $protocolVersion = '1.1',
         string $reason = '',
-        ?ResponseTrailers $trailers = null,
+        ?ResponseTrailers $trailers = null
     ): self {
         return new self(
             $status,
@@ -154,7 +154,7 @@ final class Response implements ResponseInterface
             $protocolVersion,
             $reason,
             $trailers,
-            normalizedHeaders: true,
+            normalizedHeaders: true
         );
     }
 

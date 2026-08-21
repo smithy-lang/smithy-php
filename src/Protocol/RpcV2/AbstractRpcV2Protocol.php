@@ -6,13 +6,14 @@ namespace Smithy\Protocol\RpcV2;
 
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
-use Smithy\Core\Serde\AbstractCodec;
+use Smithy\Codec\AbstractCodec;
 use Smithy\Core\Serde\SerializableStructInterface;
 use Smithy\Core\Shape\OperationInterface;
-use Smithy\Protocol\Utils\ComponentUri;
 use Smithy\Http\Message\Request;
+use Smithy\Protocol\Exception\ProtocolException;
 use Smithy\Protocol\HttpErrorDeserializer;
 use Smithy\Protocol\ProtocolInterface;
+use Smithy\Protocol\Utils\ComponentUri;
 
 /**
  * Shared base for Smithy RPC v2 protocols.
@@ -35,6 +36,7 @@ abstract class AbstractRpcV2Protocol implements ProtocolInterface
     protected const HEADER_CONTENT_TYPE = 'content-type';
     protected const HEADER_CONTENT_LENGTH = 'content-length';
     protected const HEADER_SMITHY_PROTOCOL = 'smithy-protocol';
+    private const UNIT_SHAPE_ID = 'smithy.api#Unit';
 
     /**
      * @var string Smithy-Protocol header value for the concrete protocol.
@@ -66,16 +68,16 @@ abstract class AbstractRpcV2Protocol implements ProtocolInterface
     public function serializeRequest(
         OperationInterface $operation,
         SerializableStructInterface $input,
-        string $endpoint,
+        string $endpoint
     ): RequestInterface {
         [$requestPath, $inputIsUnit] = $this->resolveWireInfo($operation);
 
         $headers = [
             self::HEADER_SMITHY_PROTOCOL => [
                 'Smithy-Protocol',
-                [static::$protocolHeaderValue],
+                [static::$protocolHeaderValue]
             ],
-            self::HEADER_ACCEPT => ['Accept', [static::$mediaType]],
+            self::HEADER_ACCEPT => ['Accept', [static::$mediaType]]
         ];
 
         $body = '';
@@ -99,23 +101,38 @@ abstract class AbstractRpcV2Protocol implements ProtocolInterface
         }
 
         $ep = \parse_url($endpoint);
+        if ($ep === false) {
+            throw new ProtocolException(
+                "Unable to parse endpoint URL: {$endpoint}"
+            );
+        }
         $endpointPath = $ep['path'] ?? '';
         $path = $endpointPath !== '' && $endpointPath !== '/'
             ? \rtrim($endpointPath, '/') . $requestPath
             : $requestPath;
 
+        if (!isset($headers['host']) && isset($ep['host'])) {
+            $host = $ep['host'];
+            if (isset($ep['port'])) {
+                $host .= ':' . $ep['port'];
+            }
+            $headers = [
+                'host' => ['Host', [$host]]
+            ] + $headers;
+        }
+
         $uri = new ComponentUri(
             scheme: $ep['scheme'] ?? 'https',
             host: $ep['host'] ?? '',
             port: $ep['port'] ?? null,
-            path: $path,
+            path: $path
         );
 
         return Request::fromNormalized(
             'POST',
             $uri,
             $headers,
-            $body,
+            $body
         );
     }
 
@@ -124,7 +141,7 @@ abstract class AbstractRpcV2Protocol implements ProtocolInterface
      */
     public function deserializeResponse(
         OperationInterface $operation,
-        ResponseInterface $response,
+        ResponseInterface $response
     ): SerializableStructInterface {
         $statusCode = $response->getStatusCode();
         if ($statusCode !== 200) {
@@ -135,9 +152,9 @@ abstract class AbstractRpcV2Protocol implements ProtocolInterface
         }
 
         if (!$this->hasExpectedProtocolHeader($response)) {
-            throw new \RuntimeException(
+            throw new ProtocolException(
                 'Malformed ' . static::$protocolHeaderValue
-                . ' response: invalid Smithy-Protocol header for HTTP 200.',
+                . ' response: invalid Smithy-Protocol header for HTTP 200.'
             );
         }
 
@@ -147,24 +164,22 @@ abstract class AbstractRpcV2Protocol implements ProtocolInterface
             return $operation->createOutput([]);
         }
 
-        $body = (string) $response->getBody();
-        if ($body === '') {
+        $contentLength = $response->getHeader('content-length')[0] ?? null;
+        if ($contentLength !== null && (int) $contentLength === 0) {
             if ($outputSchema->getMemberCount() === 0) {
                 return $operation->createOutput([]);
             }
 
-            throw new \RuntimeException(
+            throw new ProtocolException(
                 'Malformed ' . static::$protocolHeaderValue
-                . ' response: missing body for non-Unit output.',
+                . ' response: missing body for non-Unit output.'
             );
         }
 
         $members = $this->codec->createMembersBuffer($outputSchema);
 
-        $this->codec->createDeserializer($body)->deserialize(
-            $outputSchema,
-            $members
-        );
+        $this->codec->createDeserializer($response->getBody())
+            ->deserialize($outputSchema, $members);
 
         return $operation->createOutput($members);
     }
@@ -187,13 +202,13 @@ abstract class AbstractRpcV2Protocol implements ProtocolInterface
     {
         $target = $operation->getRequestTarget();
         if ($target === null) {
-            throw new \LogicException(
+            throw new ProtocolException(
                 'RPC v2 operations require a request target.'
             );
         }
         $dot = \strrpos($target, '.');
         if ($dot === false) {
-            throw new \LogicException(
+            throw new ProtocolException(
                 'RPC v2 request targets must use the '
                     . '"<Service>.<Operation>" form.'
             );
@@ -204,8 +219,10 @@ abstract class AbstractRpcV2Protocol implements ProtocolInterface
 
         return [
             '/service/' . $serviceName . '/operation/' . $operationName,
-            $operation->getInputSchema()->id === 'smithy.api#Unit',
-            $operation->getOutputSchema()->id === 'smithy.api#Unit',
+            $operation->getInputSchema()->resolveTarget()->id
+                === self::UNIT_SHAPE_ID,
+            $operation->getOutputSchema()->resolveTarget()->id
+                === self::UNIT_SHAPE_ID
         ];
     }
 

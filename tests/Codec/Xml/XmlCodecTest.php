@@ -12,8 +12,8 @@ use Smithy\Codec\Xml\{
     XmlDeserializer,
     XmlSerializer
 };
+use Smithy\Http\Message\StringBodyStream;
 use Smithy\Tests\Codec\Xml\Utils\XmlNestedStructFixture;
-use Smithy\Tests\Protocol\Utils\StringStreamFixture;
 
 final class XmlCodecTest extends TestCase
 {
@@ -73,7 +73,7 @@ final class XmlCodecTest extends TestCase
             new XmlCodecSettings(wrapperElements: ['Response'])
         );
         $deserializer = $codec->createDeserializer(
-            new StringStreamFixture(
+            new StringBodyStream(
                 '<Envelope><Response><NestedStruct><value>alpha</value>'
                 . '</NestedStruct></Response></Envelope>'
             ),
@@ -96,6 +96,6 @@ final class XmlCodecTest extends TestCase
         $this->expectException(CodecException::class);
         $this->expectExceptionMessage('Failed to parse XML:');
 
-        $codec->createDeserializer(new StringStreamFixture('<broken'));
+        $codec->createDeserializer(new StringBodyStream('<broken'));
     }
 }

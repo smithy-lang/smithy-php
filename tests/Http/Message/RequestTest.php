@@ -45,18 +45,18 @@ final class RequestTest extends TestCase
             'https://example.com',
             [
                 'X-Test' => " \tvalue\tinside\t ",
-                'X-List' => [' first ', 'second'],
-            ],
+                'X-List' => [' first ', 'second']
+            ]
         );
 
         $this->assertTrue($request->hasHeader('x-TEST'));
         $this->assertSame(
             ["value\tinside"],
-            $request->getHeader('X-Test'),
+            $request->getHeader('X-Test')
         );
         $this->assertSame(
             ['first', 'second'],
-            $request->getHeader('x-list'),
+            $request->getHeader('x-list')
         );
         $this->assertSame('first, second', $request->getHeaderLine('X-List'));
     }
@@ -69,8 +69,8 @@ final class RequestTest extends TestCase
             'GET',
             'https://example.com',
             [
-                'x-test' => ['X-Test', ['value']],
-            ],
+                'x-test' => ['X-Test', ['value']]
+            ]
         );
     }
 
@@ -82,12 +82,12 @@ final class RequestTest extends TestCase
         $request = Request::fromNormalized(
             'GET',
             'https://example.com',
-            $headers,
+            $headers
         );
 
         $this->assertSame(
             $headers['x-test'],
-            $request->getRawHeaders()['x-test'],
+            $request->getRawHeaders()['x-test']
         );
         $this->assertSame(['example.com'], $request->getHeader('Host'));
     }
@@ -99,9 +99,9 @@ final class RequestTest extends TestCase
             'https://example.com/original',
             [
                 'X-Test' => 'old',
-                'X-Remove' => 'remove',
+                'X-Remove' => 'remove'
             ],
-            'original',
+            'original'
         );
         $body = new StringBodyStream('updated');
 
@@ -140,19 +140,19 @@ final class RequestTest extends TestCase
             'https://example.com',
             [
                 'X-First' => '1',
-                'X-Replace' => 'old',
-            ],
+                'X-Replace' => 'old'
+            ]
         );
 
         $updated = $request
             ->withNormalizedHeader(
                 'x-single',
                 'X-Single',
-                [" \tvalue\t "],
+                [" \tvalue\t "]
             )
             ->withNormalizedHeaders([
                 'x-second' => ['X-Second', ['2']],
-                'x-replace' => ['X-REPLACE', ['new']],
+                'x-replace' => ['X-REPLACE', ['new']]
             ]);
 
         $this->assertNotSame($request, $updated);
@@ -165,11 +165,11 @@ final class RequestTest extends TestCase
         $this->assertSame(['new'], $updated->getHeader('x-replace'));
         $this->assertSame(
             ['X-Single', [" \tvalue\t "]],
-            $updated->getRawHeaders()['x-single'],
+            $updated->getRawHeaders()['x-single']
         );
         $this->assertSame(
             'X-REPLACE',
-            $updated->getRawHeaders()['x-replace'][0],
+            $updated->getRawHeaders()['x-replace'][0]
         );
     }
 
@@ -178,12 +178,12 @@ final class RequestTest extends TestCase
         $request = new Request('GET', 'https://example.com');
 
         $updated = $request->withNormalizedHeaders([
-            'wrong-key' => ['Bad Header', ["value\r\n"]],
+            'wrong-key' => ['Bad Header', ["value\r\n"]]
         ]);
 
         $this->assertSame(
             ['Bad Header', ["value\r\n"]],
-            $updated->getRawHeaders()['wrong-key'],
+            $updated->getRawHeaders()['wrong-key']
         );
     }
 
@@ -191,7 +191,7 @@ final class RequestTest extends TestCase
     {
         $request = new Request(
             'GET',
-            'https://example.com:8443/path?one=1',
+            'https://example.com:8443/path?one=1'
         );
 
         $this->assertSame('/path?one=1', $request->getRequestTarget());
@@ -203,11 +203,11 @@ final class RequestTest extends TestCase
         $request = new Request(
             'GET',
             'https://example.com/first',
-            ['X-First' => 'value'],
+            ['X-First' => 'value']
         );
 
         $updated = $request->withUri(
-            new Uri('https://example.org/second?two=2'),
+            new Uri('https://example.org/second?two=2')
         );
 
         $this->assertSame('/first', $request->getRequestTarget());
@@ -216,7 +216,7 @@ final class RequestTest extends TestCase
         $this->assertSame('example.org', $updated->getHeaderLine('Host'));
         $this->assertSame(
             ['Host', 'X-First'],
-            \array_keys($updated->getHeaders()),
+            \array_keys($updated->getHeaders())
         );
     }
 
@@ -225,12 +225,12 @@ final class RequestTest extends TestCase
         $request = new Request(
             'GET',
             'https://example.com',
-            ['Host' => 'custom.example'],
+            ['Host' => 'custom.example']
         );
 
         $updated = $request->withUri(
             new Uri('https://example.org'),
-            preserveHost: true,
+            preserveHost: true
         );
 
         $this->assertSame('custom.example', $updated->getHeaderLine('Host'));
@@ -270,7 +270,7 @@ final class RequestTest extends TestCase
         new Request(
             'GET',
             'https://example.com',
-            ['Bad Header' => 'value'],
+            ['Bad Header' => 'value']
         );
     }
 
@@ -282,7 +282,7 @@ final class RequestTest extends TestCase
 
         $request->withHeader(
             'X-Test',
-            "value\r\nX-Injected: true",
+            "value\r\nX-Injected: true"
         );
     }
 

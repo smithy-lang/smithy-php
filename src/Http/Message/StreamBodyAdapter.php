@@ -209,6 +209,11 @@ final class StreamBodyAdapter implements BodyStreamInterface
         if ($contents !== '') {
             $this->started = true;
         }
+        if ($this->length === null) {
+            $this->fullyConsumed = true;
+
+            return $contents;
+        }
         $this->updateConsumedState();
 
         return $contents;

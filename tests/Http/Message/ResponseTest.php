@@ -38,8 +38,8 @@ final class ResponseTest extends TestCase
         $response = new Response(
             headers: [
                 'X-Test' => " \told\t ",
-                'X-Remove' => 'remove',
-            ],
+                'X-Remove' => 'remove'
+            ]
         );
 
         $updated = $response
@@ -63,18 +63,18 @@ final class ResponseTest extends TestCase
     {
         $response = new Response(headers: [
             'X-First' => '1',
-            'X-Replace' => 'old',
+            'X-Replace' => 'old'
         ]);
 
         $updated = $response
             ->withNormalizedHeader(
                 'x-single',
                 'X-Single',
-                [" \tvalue\t "],
+                [" \tvalue\t "]
             )
             ->withNormalizedHeaders([
                 'x-second' => ['X-Second', ['2']],
-                'x-replace' => ['X-REPLACE', ['new']],
+                'x-replace' => ['X-REPLACE', ['new']]
             ]);
 
         $this->assertNotSame($response, $updated);
@@ -87,11 +87,11 @@ final class ResponseTest extends TestCase
         $this->assertSame(['new'], $updated->getHeader('x-replace'));
         $this->assertSame(
             ['X-Single', [" \tvalue\t "]],
-            $updated->getRawHeaders()['x-single'],
+            $updated->getRawHeaders()['x-single']
         );
         $this->assertSame(
             'X-REPLACE',
-            $updated->getRawHeaders()['x-replace'][0],
+            $updated->getRawHeaders()['x-replace'][0]
         );
     }
 
@@ -107,12 +107,12 @@ final class ResponseTest extends TestCase
         $response = new Response();
 
         $updated = $response->withNormalizedHeaders([
-            'wrong-key' => ['Bad Header', ["value\r\n"]],
+            'wrong-key' => ['Bad Header', ["value\r\n"]]
         ]);
 
         $this->assertSame(
             ['Bad Header', ["value\r\n"]],
-            $updated->getRawHeaders()['wrong-key'],
+            $updated->getRawHeaders()['wrong-key']
         );
     }
 
@@ -148,7 +148,7 @@ final class ResponseTest extends TestCase
     public function testPreservesProvidedTrailers(): void
     {
         $trailers = ResponseTrailers::completed([
-            'X-Checksum' => 'checksum',
+            'X-Checksum' => 'checksum'
         ]);
         $response = new Response(trailers: $trailers);
 
@@ -197,7 +197,7 @@ final class ResponseTest extends TestCase
 
         $response->withHeader(
             'X-Test',
-            "value\r\nX-Injected: true",
+            "value\r\nX-Injected: true"
         );
     }
 
@@ -217,8 +217,8 @@ final class ResponseTest extends TestCase
         new Response(headers: [
             'x-test' => [
                 'X-Test',
-                ["value\r\nX-Injected: true"],
-            ],
+                ["value\r\nX-Injected: true"]
+            ]
         ]);
     }
 

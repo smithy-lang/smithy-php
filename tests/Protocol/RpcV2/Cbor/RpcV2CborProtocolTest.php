@@ -7,24 +7,27 @@ namespace Smithy\Tests\Protocol\RpcV2\Cbor;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Smithy\Codec\Cbor\CborCodec;
-use Smithy\Core\Exception\DocumentException;
+use Smithy\Core\Exception\ApiException;
 use Smithy\Core\Serde\Schema;
-use Smithy\Core\Serde\SerializableStructInterface;
-use Smithy\Core\Serde\ShapeType;
 use Smithy\Core\Shape\Document\StructDocument;
-use Smithy\Core\Shape\OperationInterface;
+use Smithy\Core\Shape\Exception\DocumentException;
+use Smithy\Core\Shape\ShapeType;
+use Smithy\Http\Message\BodyStreamInterface;
 use Smithy\Http\Message\Request;
 use Smithy\Http\Message\Response;
+use Smithy\Protocol\Exception\ProtocolException;
 use Smithy\Protocol\HttpErrorDeserializer;
 use Smithy\Protocol\RpcV2\AbstractRpcV2Protocol;
 use Smithy\Protocol\RpcV2\RpcV2CborProtocol;
 use Smithy\Protocol\RpcV2\RpcV2ErrorDeserializer;
+use Smithy\Tests\Http\Message\Utils\GenericStreamFixture;
+use Smithy\Tests\Protocol\RpcV2\Cbor\Fixtures\RpcV2CborOperationFixture;
 
 #[CoversClass(AbstractRpcV2Protocol::class)]
 #[CoversClass(HttpErrorDeserializer::class)]
 #[CoversClass(RpcV2CborProtocol::class)]
 #[CoversClass(RpcV2ErrorDeserializer::class)]
-final class RpcV2ProtocolTest extends TestCase
+final class RpcV2CborProtocolTest extends TestCase
 {
     public function testSerializesUnitInputRequest(): void
     {
@@ -37,7 +40,7 @@ final class RpcV2ProtocolTest extends TestCase
         $request = (new RpcV2CborProtocol())->serializeRequest(
             $operation,
             StructDocument::fromMembers($schema, []),
-            'https://example.amazonaws.com/base',
+            'https://example.amazonaws.com:8443/base'
         );
 
         self::assertInstanceOf(Request::class, $request);
@@ -51,8 +54,40 @@ final class RpcV2ProtocolTest extends TestCase
             $request->getHeaderLine('Smithy-Protocol')
         );
         self::assertSame('application/cbor', $request->getHeaderLine('Accept'));
+        self::assertSame(
+            'example.amazonaws.com:8443',
+            $request->getHeaderLine('Host')
+        );
+        self::assertSame('Host', \array_key_first($request->getHeaders()));
         self::assertFalse($request->hasHeader('Content-Type'));
         self::assertSame('', (string) $request->getBody());
+    }
+
+    public function testTreatsReferencedUnitShapesAsUnit(): void
+    {
+        $schema = self::unitReferenceSchema();
+        $operation = self::operation(
+            inputSchema: $schema,
+            outputSchema: $schema
+        );
+        $protocol = new RpcV2CborProtocol();
+
+        $request = $protocol->serializeRequest(
+            $operation,
+            StructDocument::fromMembers($schema, []),
+            'https://example.amazonaws.com/base'
+        );
+        $output = $protocol->deserializeResponse(
+            $operation,
+            new Response(
+                status: 200,
+                headers: ['Smithy-Protocol' => 'rpc-v2-cbor']
+            )
+        );
+
+        self::assertFalse($request->hasHeader('Content-Type'));
+        self::assertSame('', (string) $request->getBody());
+        self::assertSame(self::unitSchema()->id, $output->getSchema()->id);
     }
 
     public function testDeserializesSuccessResponse(): void
@@ -69,8 +104,61 @@ final class RpcV2ProtocolTest extends TestCase
             $operation,
             new Response(
                 status: 200,
-                headers: ['Smithy-Protocol' => 'rpc-v2-cbor'],
+                headers: [
+                    'Smithy-Protocol' => 'rpc-v2-cbor',
+                    'Content-Length' => (string) \strlen($body)
+                ],
                 body: $body
+            )
+        );
+
+        self::assertSame(
+            'ok',
+            $output->getMemberValue($outputSchema->getMember('message'))
+        );
+    }
+
+    public function testContentLengthZeroDoesNotReadSuccessBody(): void
+    {
+        $body = $this->createMock(BodyStreamInterface::class);
+        $body->expects(self::never())->method('getSize');
+        $body->expects(self::never())->method('getContents');
+
+        $this->expectException(ProtocolException::class);
+        $this->expectExceptionMessage(
+            'missing body for non-Unit output'
+        );
+
+        (new RpcV2CborProtocol())->deserializeResponse(
+            self::operation(
+                inputSchema: self::unitSchema(),
+                outputSchema: self::messageSchema('smithy.example#Output')
+            ),
+            new Response(
+                status: 200,
+                headers: [
+                    'Smithy-Protocol' => 'rpc-v2-cbor',
+                    'Content-Length' => '0'
+                ],
+                body: $body
+            )
+        );
+    }
+
+    public function testMissingContentLengthDeserializesUnknownSizeBody(): void
+    {
+        $outputSchema = self::messageSchema('smithy.example#Output');
+        $body = self::serializeStruct($outputSchema, ['ok']);
+
+        $output = (new RpcV2CborProtocol())->deserializeResponse(
+            self::operation(
+                inputSchema: self::unitSchema(),
+                outputSchema: $outputSchema
+            ),
+            new Response(
+                status: 200,
+                headers: ['Smithy-Protocol' => 'rpc-v2-cbor'],
+                body: new GenericStreamFixture($body, false)
             )
         );
 
@@ -88,7 +176,7 @@ final class RpcV2ProtocolTest extends TestCase
             outputSchema: $schema
         );
 
-        $this->expectException(\RuntimeException::class);
+        $this->expectException(ProtocolException::class);
         $this->expectExceptionMessage('invalid Smithy-Protocol header');
 
         (new RpcV2CborProtocol())->deserializeResponse(
@@ -122,7 +210,7 @@ final class RpcV2ProtocolTest extends TestCase
                 new Response(
                     status: 400,
                     headers: ['Smithy-Protocol' => 'rpc-v2-cbor'],
-                    body: $body
+                    body: new GenericStreamFixture($body, false)
                 )
             );
         } catch (DocumentException $exception) {
@@ -135,6 +223,55 @@ final class RpcV2ProtocolTest extends TestCase
         self::fail('Expected a modeled error.');
     }
 
+    public function testContentLengthZeroDoesNotReadErrorBody(): void
+    {
+        $body = $this->createMock(BodyStreamInterface::class);
+        $body->expects(self::never())->method('getSize');
+        $body->expects(self::never())->method('getContents');
+
+        $this->expectException(ApiException::class);
+        $this->expectExceptionMessage('HTTP 400');
+
+        (new RpcV2CborProtocol())->deserializeResponse(
+            self::operation(
+                inputSchema: self::unitSchema(),
+                outputSchema: self::unitSchema()
+            ),
+            new Response(
+                status: 400,
+                headers: [
+                    'Smithy-Protocol' => 'rpc-v2-cbor',
+                    'Content-Length' => '0'
+                ],
+                body: $body
+            )
+        );
+    }
+
+    public function testInvalidErrorProtocolHeaderDoesNotReadBody(): void
+    {
+        $body = $this->createMock(BodyStreamInterface::class);
+        $body->expects(self::never())->method('getSize');
+        $body->expects(self::never())->method('getContents');
+
+        $this->expectException(ApiException::class);
+        $this->expectExceptionMessage(
+            'Malformed rpc-v2-cbor error response'
+        );
+
+        (new RpcV2CborProtocol())->deserializeResponse(
+            self::operation(
+                inputSchema: self::unitSchema(),
+                outputSchema: self::unitSchema()
+            ),
+            new Response(
+                status: 400,
+                headers: ['Smithy-Protocol' => 'wrong-protocol'],
+                body: $body
+            )
+        );
+    }
+
     /**
      * @param array<string, Schema> $errorSchemas
      */
@@ -142,94 +279,12 @@ final class RpcV2ProtocolTest extends TestCase
         Schema $inputSchema,
         Schema $outputSchema,
         array $errorSchemas = []
-    ): OperationInterface {
-        return new class ($inputSchema, $outputSchema, $errorSchemas)
-            implements OperationInterface
-        {
-            /**
-             * @param array<string, Schema> $errorSchemas
-             */
-            public function __construct(
-                private readonly Schema $inputSchema,
-                private readonly Schema $outputSchema,
-                private readonly array $errorSchemas
-            ) {}
-
-            public function getName(): string
-            {
-                return 'GetThing';
-            }
-
-            public function getId(): string
-            {
-                return 'smithy.example#GetThing';
-            }
-
-            public function getRuntimeIdentity(): string
-            {
-                return self::class . '#' . \spl_object_id($this);
-            }
-
-            public function getSchema(): Schema
-            {
-                return new Schema(
-                    id: $this->getId(),
-                    type: ShapeType::Operation
-                );
-            }
-
-            public function getInputSchema(): Schema
-            {
-                return $this->inputSchema;
-            }
-
-            public function getOutputSchema(): Schema
-            {
-                return $this->outputSchema;
-            }
-
-            public function createInput(
-                array $members
-            ): SerializableStructInterface
-            {
-                return StructDocument::fromMembers(
-                    $this->inputSchema,
-                    $members
-                );
-            }
-
-            public function createOutput(
-                array $members
-            ): SerializableStructInterface
-            {
-                return StructDocument::fromMembers(
-                    $this->outputSchema,
-                    $members
-                );
-            }
-
-            public function getRequestTarget(): ?string
-            {
-                return 'ExampleService.GetThing';
-            }
-
-            public function resolveErrorSchema(
-                string $discriminator
-            ): ?Schema
-            {
-                return $this->errorSchemas[$discriminator] ?? null;
-            }
-
-            public function getInputStreamMember(): ?Schema
-            {
-                return null;
-            }
-
-            public function getOutputStreamMember(): ?Schema
-            {
-                return null;
-            }
-        };
+    ): RpcV2CborOperationFixture {
+        return new RpcV2CborOperationFixture(
+            inputSchema: $inputSchema,
+            outputSchema: $outputSchema,
+            errorSchemas: $errorSchemas
+        );
     }
 
     private static function unitSchema(): Schema
@@ -237,6 +292,15 @@ final class RpcV2ProtocolTest extends TestCase
         return new Schema(
             id: 'smithy.api#Unit',
             type: ShapeType::Structure
+        );
+    }
+
+    private static function unitReferenceSchema(): Schema
+    {
+        return new Schema(
+            id: 'smithy.example#UnitReference',
+            type: ShapeType::Structure,
+            target: self::unitSchema()
         );
     }
 

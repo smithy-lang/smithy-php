@@ -52,6 +52,16 @@ final class HttpBindingOperationFixture implements OperationInterface
     }
 
     /**
+     * Return effective authentication schemes.
+     *
+     * @return list<string>
+     */
+    public function getEffectiveAuthSchemes(): array
+    {
+        return [];
+    }
+
+    /**
      * Get the operation input class.
      */
     public function getInputClass(): string
@@ -141,6 +151,16 @@ final class HttpBindingOperationFixture implements OperationInterface
     public function getOutputSchema(): Schema
     {
         return self::outputSchema();
+    }
+
+    /**
+     * Return modeled error schemas.
+     *
+     * @return list<Schema>
+     */
+    public function getErrorSchemas(): array
+    {
+        return [];
     }
 
     /**

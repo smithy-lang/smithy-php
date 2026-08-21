@@ -21,7 +21,7 @@ final class ComponentUri implements UriInterface
 {
     private const DEFAULT_PORTS = [
         'http' => 80,
-        'https' => 443,
+        'https' => 443
     ];
 
     /**
@@ -34,7 +34,7 @@ final class ComponentUri implements UriInterface
         private readonly string $path = '',
         private readonly string $query = '',
         private readonly string $fragment = '',
-        private readonly string $userInfo = '',
+        private readonly string $userInfo = ''
     ) {
     }
 
@@ -127,8 +127,7 @@ final class ComponentUri implements UriInterface
         }
 
         $port = $this->port;
-        if (
-            $port !== null
+        if ($port !== null
             && isset(self::DEFAULT_PORTS[$scheme])
             && $port === self::DEFAULT_PORTS[$scheme]
         ) {
@@ -142,7 +141,7 @@ final class ComponentUri implements UriInterface
             $this->path,
             $this->query,
             $this->fragment,
-            $this->userInfo,
+            $this->userInfo
         );
     }
 
@@ -167,7 +166,7 @@ final class ComponentUri implements UriInterface
             $this->path,
             $this->query,
             $this->fragment,
-            $info,
+            $info
         );
     }
 
@@ -188,7 +187,7 @@ final class ComponentUri implements UriInterface
             $this->path,
             $this->query,
             $this->fragment,
-            $this->userInfo,
+            $this->userInfo
         );
     }
 
@@ -220,7 +219,7 @@ final class ComponentUri implements UriInterface
             $this->path,
             $this->query,
             $this->fragment,
-            $this->userInfo,
+            $this->userInfo
         );
     }
 
@@ -240,7 +239,7 @@ final class ComponentUri implements UriInterface
             $path,
             $this->query,
             $this->fragment,
-            $this->userInfo,
+            $this->userInfo
         );
     }
 
@@ -260,7 +259,7 @@ final class ComponentUri implements UriInterface
             $this->path,
             $query,
             $this->fragment,
-            $this->userInfo,
+            $this->userInfo
         );
     }
 
@@ -280,7 +279,7 @@ final class ComponentUri implements UriInterface
             $this->path,
             $this->query,
             $fragment,
-            $this->userInfo,
+            $this->userInfo
         );
     }
 

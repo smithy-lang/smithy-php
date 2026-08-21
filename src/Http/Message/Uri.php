@@ -15,7 +15,7 @@ final class Uri implements UriInterface
 {
     private const DEFAULT_PORTS = [
         'http' => 80,
-        'https' => 443,
+        'https' => 443
     ];
 
     private string $scheme = '';
@@ -330,7 +330,7 @@ final class Uri implements UriInterface
         return \preg_replace_callback(
             '/(?:[^a-zA-Z0-9_\-.~:@!$&\'()*+,;=%\/]+|%(?![A-Fa-f0-9]{2}))/',
             fn(array $match) => \rawurlencode($match[0]),
-            $path,
+            $path
         );
     }
 
@@ -342,7 +342,7 @@ final class Uri implements UriInterface
         return \preg_replace_callback(
             '/(?:[^a-zA-Z0-9_\-.~!$&\'()*+,;=%:@\/?]+|%(?![A-Fa-f0-9]{2}))/',
             fn(array $match) => \rawurlencode($match[0]),
-            $str,
+            $str
         );
     }
 }

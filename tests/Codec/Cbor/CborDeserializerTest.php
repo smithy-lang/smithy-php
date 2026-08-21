@@ -22,12 +22,12 @@ use Smithy\Core\Shape\Document\{
     StructDocument,
     UnionDocument
 };
+use Smithy\Http\Message\StringBodyStream;
 use Smithy\Tests\Codec\Cbor\Utils\{
     CborDeserializerSampleStructFixture,
     CborDeserializerSampleUnionFixture,
     CborDeserializerSparseStructFixture
 };
-use Smithy\Tests\Protocol\Utils\StringStreamFixture;
 
 /**
  * Cover the CBOR deserializer.
@@ -48,7 +48,7 @@ final class CborDeserializerTest extends TestCase
         foreach ($payloads as $payload) {
             $members = [null, null, null, null, null];
             $deserializer = new CborDeserializer(
-                new StringStreamFixture(\hex2bin($payload))
+                new StringBodyStream(\hex2bin($payload))
             );
             $deserializer->deserialize(
                 CborDeserializerSampleStructFixture::schema(),
@@ -77,7 +77,7 @@ final class CborDeserializerTest extends TestCase
         foreach ($payloads as $payload) {
             $members = [null, null];
             $deserializer = new CborDeserializer(
-                new StringStreamFixture(\hex2bin($payload))
+                new StringBodyStream(\hex2bin($payload))
             );
             $deserializer->deserialize(
                 CborDeserializerSparseStructFixture::schema(),
@@ -101,7 +101,7 @@ final class CborDeserializerTest extends TestCase
         foreach ($payloads as [$payload, $tag, $value]) {
             $members = [null];
             $deserializer = new CborDeserializer(
-                new StringStreamFixture(\hex2bin($payload))
+                new StringBodyStream(\hex2bin($payload))
             );
             $deserializer->deserialize(
                 CborDeserializerSampleUnionFixture::schema(),
@@ -121,7 +121,7 @@ final class CborDeserializerTest extends TestCase
     {
         $members = [null];
         (new CborDeserializer(
-            new StringStreamFixture(\hex2bin('bf6176c11864ff'))
+            new StringBodyStream(\hex2bin('bf6176c11864ff'))
         ))->deserialize(
             new Schema(
                 id: 'smithy.test#TimestampWrap',
@@ -141,7 +141,7 @@ final class CborDeserializerTest extends TestCase
 
         $members = [null, null];
         (new CborDeserializer(
-            new StringStreamFixture(
+            new StringBodyStream(
                 \hex2bin('bf6166fa3fc00000616401ff')
             )
         ))->deserialize(
@@ -173,7 +173,7 @@ final class CborDeserializerTest extends TestCase
     {
         $members = [null];
         (new CborDeserializer(
-            new StringStreamFixture(
+            new StringBodyStream(
                 "\xA1\x61\x76\x74" . '1970-01-01T00:01:40Z'
             ),
             new CborCodecSettings(
@@ -202,7 +202,7 @@ final class CborDeserializerTest extends TestCase
     {
         $members = [null];
         (new CborDeserializer(
-            new StringStreamFixture("\xA1\x61\x76\x63" . '100'),
+            new StringBodyStream("\xA1\x61\x76\x63" . '100'),
             new CborCodecSettings(
                 defaultTimestampFormat: TimestampFormat::EpochSeconds,
                 honorTimestampFormatTrait: false
@@ -276,7 +276,7 @@ final class CborDeserializerTest extends TestCase
         $members = [null, null];
 
         (new CborDeserializer(
-            new StringStreamFixture(\hex2bin(
+            new StringBodyStream(\hex2bin(
                 'a2656368696c64a16576616c7565636b6964'
                 . '6663686f696365a165636f756e7402'
             ))
@@ -295,7 +295,7 @@ final class CborDeserializerTest extends TestCase
     {
         $members = [null, null];
         $de = new CborDeserializer(
-            new StringStreamFixture(\hex2bin(
+            new StringBodyStream(\hex2bin(
                 'bf626269c249010000000000000000626264c48221193039ff'
             ))
         );
