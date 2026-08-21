@@ -16,8 +16,8 @@ use Smithy\Core\Serde\{
     TimestampFormat
 };
 use Smithy\Core\Shape\ShapeType;
-use Smithy\Tests\Protocol\Utils\StringStreamFixture;
-
+use Smithy\Http\Message\StringBodyStream;
+use Smithy\Tests\Http\Message\Utils\GenericStreamFixture;
 
 /**
  * Cover the CBOR codec entrypoints.
@@ -114,7 +114,7 @@ final class CborCodecTest extends TestCase
         $wire = $serializer->flush();
 
         $deserializer = $codec->createDeserializer(
-            new StringStreamFixture($wire)
+            new StringBodyStream($wire)
         );
         self::assertInstanceOf(CborDeserializer::class, $deserializer);
 
@@ -160,7 +160,7 @@ final class CborCodecTest extends TestCase
 
         $fields = [null];
         $codec->createDeserializer(
-            new StringStreamFixture($wire)
+            new StringBodyStream($wire)
         )->deserialize($schema, $fields);
 
         self::assertSame(100.0, $fields[0]);
@@ -181,7 +181,7 @@ final class CborCodecTest extends TestCase
             ]
         );
         $fields = [null];
-        $source = new StringStreamFixture(
+        $source = new GenericStreamFixture(
             \hex2bin('a16576616c756501'),
             false
         );
@@ -192,5 +192,32 @@ final class CborCodecTest extends TestCase
         );
 
         self::assertSame(1, $fields[0]);
+    }
+
+    public function testDeserializerCanProjectPayloadMoreThanOnce(): void
+    {
+        $schema = new Schema(
+            id: 'smithy.test#Reusable',
+            type: ShapeType::Structure,
+            members: [
+                new Schema(
+                    id: 'smithy.test#Reusable$value',
+                    type: ShapeType::Integer,
+                    memberName: 'value',
+                    memberIndex: 0
+                )
+            ]
+        );
+        $deserializer = (new CborCodec())->createDeserializer(
+            new StringBodyStream(\hex2bin('a16576616c756501'))
+        );
+        $first = [null];
+        $second = [null];
+
+        $deserializer->deserialize($schema, $first);
+        $deserializer->deserialize($schema, $second);
+
+        self::assertSame([1], $first);
+        self::assertSame([1], $second);
     }
 }

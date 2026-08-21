@@ -36,12 +36,13 @@ interface ProtocolInterface
     /**
      * Deserialize an HTTP response into an output shape.
      *
-     * Throws on error responses (status >= 300).
+     * Throws when the response does not satisfy the protocol's success
+     * contract or represents a modeled/unmodeled service error.
      *
      * @param OperationInterface $operation The operation singleton.
      * @param ResponseInterface $response The HTTP response.
      * @return SerializableStructInterface The deserialized output shape.
-     * @throws \Throwable On error responses.
+     * @throws \Throwable On protocol or service error responses.
      */
     public function deserializeResponse(
         OperationInterface $operation,

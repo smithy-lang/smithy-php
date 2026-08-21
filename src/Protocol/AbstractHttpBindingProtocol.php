@@ -7,13 +7,14 @@ namespace Smithy\Protocol;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\StreamInterface;
-use Smithy\Core\Serde\AbstractCodec;
+use Smithy\Codec\AbstractCodec;
 use Smithy\Core\Serde\Schema;
 use Smithy\Core\Serde\SerializableStructInterface;
 use Smithy\Core\Shape\OperationInterface;
 use Smithy\Http\Message\BodyStreamInterface;
-use Smithy\Protocol\Utils\ComponentUri;
 use Smithy\Http\Message\Request;
+use Smithy\Protocol\Exception\ProtocolException;
+use Smithy\Protocol\Utils\ComponentUri;
 
 /**
  * Share HTTP binding logic for protocols that use HTTP binding traits.
@@ -95,14 +96,16 @@ abstract class AbstractHttpBindingProtocol implements ProtocolInterface
         $method = $opInfo->method;
         $defaultPath = $opInfo->path;
         $pathSegments = $opInfo->pathSegments;
-        $pathQueryPairs = $opInfo->pathQueryPairs;
+        $pathQueryString = $opInfo->pathQueryString;
         $bindingInfo = $runtime[1];
 
         if ($bindingInfo !== null) {
             $serializer = new HttpBindingSerializer($this->codec, $bindingInfo);
             $input->serializeMembers($serializer);
             $path = $serializer->serializePath($pathSegments, $defaultPath);
-            $queryString = $serializer->serializeQueryString($pathQueryPairs);
+            $queryString = $serializer->serializeQueryString(
+                $pathQueryString
+            );
             $body = $serializer->serializeBody();
             $headers = $serializer->serializeHeaders();
             $payloadContentType = $serializer->resolveContentType();
@@ -141,9 +144,23 @@ abstract class AbstractHttpBindingProtocol implements ProtocolInterface
         }
 
         $ep = \parse_url($endpoint);
+        if ($ep === false) {
+            throw new ProtocolException(
+                "Unable to parse endpoint URL: {$endpoint}"
+            );
+        }
         $endpointPath = $ep['path'] ?? '';
         if ($endpointPath !== '' && $endpointPath !== '/') {
             $path = \rtrim($endpointPath, '/') . $path;
+        }
+        if (!isset($headers['host']) && isset($ep['host'])) {
+            $host = $ep['host'];
+            if (isset($ep['port'])) {
+                $host .= ':' . $ep['port'];
+            }
+            $headers = [
+                'host' => ['Host', [$host]]
+            ] + $headers;
         }
         $uri = new ComponentUri(
             scheme: $ep['scheme'] ?? 'https',

@@ -14,12 +14,13 @@ use Smithy\Core\Shape\ShapeType;
 use Smithy\Core\Shape\Document\StructDocument;
 use Smithy\Codec\Json\JsonCodec;
 use Smithy\Codec\Json\JsonCodecSettings;
+use Smithy\Http\Message\StringBodyStream;
 use Smithy\Protocol\HttpBindingDeserializer;
 use Smithy\Protocol\HttpStructBindingExtensionProvider;
+use Smithy\Tests\Http\Message\Utils\GenericStreamFixture;
 use Smithy\Tests\Protocol\Utils\HttpBindingFixtureSchemas;
 use Smithy\Tests\Protocol\Utils\HttpBindingOutputShapeFixture;
 use Smithy\Tests\Protocol\Utils\HttpBindingPayloadShapeFixture;
-use Smithy\Tests\Protocol\Utils\StringStreamFixture;
 
 #[CoversClass(HttpBindingDeserializer::class)]
 final class HttpBindingDeserializerTest extends TestCase
@@ -43,7 +44,7 @@ final class HttpBindingDeserializerTest extends TestCase
                 'x-priority' => ['X-Priority', ['7']],
                 'content-length' => ['Content-Length', ['20']]
             ],
-            new StringStreamFixture('{"body":"body text"}'),
+            new StringBodyStream('{"body":"body text"}'),
             202
         );
 
@@ -78,7 +79,7 @@ final class HttpBindingDeserializerTest extends TestCase
                 'x-priority' => ['X-Priority', ['7']],
                 'content-length' => ['Content-Length', ['20']]
             ],
-            new StringStreamFixture('{"body":"body text"}'),
+            new StringBodyStream('{"body":"body text"}'),
             202
         );
 
@@ -106,7 +107,7 @@ final class HttpBindingDeserializerTest extends TestCase
             new JsonCodec(),
             $bindingInfo,
             ['content-length' => ['Content-Length', ['12']]],
-            new StringStreamFixture('payload text')
+            new StringBodyStream('payload text')
         );
 
         $deserializer->deserialize($schema, $members);
@@ -125,7 +126,7 @@ final class HttpBindingDeserializerTest extends TestCase
             new JsonCodec(),
             $bindingInfo,
             [],
-            new StringStreamFixture('payload text', false)
+            new GenericStreamFixture('payload text', false)
         );
 
         $deserializer->deserialize($schema, $members);
@@ -144,7 +145,7 @@ final class HttpBindingDeserializerTest extends TestCase
             new JsonCodec(),
             $bindingInfo,
             ['content-length' => ['Content-Length', ['18']]],
-            new StringStreamFixture('{"value":"nested"}')
+            new StringBodyStream('{"value":"nested"}')
         );
 
         $deserializer->deserialize($schema, $members);
@@ -167,7 +168,7 @@ final class HttpBindingDeserializerTest extends TestCase
             new JsonCodec(),
             $bindingInfo,
             [],
-            new StringStreamFixture('{"value":"nested"}', false)
+            new GenericStreamFixture('{"value":"nested"}', false)
         );
 
         $deserializer->deserialize($schema, $members);
@@ -190,7 +191,26 @@ final class HttpBindingDeserializerTest extends TestCase
             new JsonCodec(),
             $bindingInfo,
             ['content-length' => ['Content-Length', ['0']]],
-            new StringStreamFixture('not-json')
+            new StringBodyStream('not-json')
+        );
+
+        $deserializer->deserialize($schema, $members);
+
+        self::assertNull($members[0]);
+    }
+
+    public function testKnownEmptyStreamSkipsStructuredBody(): void
+    {
+        $schema = HttpBindingFixtureSchemas::structurePayloadResponse();
+        $members = [null];
+        $bindingInfo = $schema->getExtension(
+            HttpStructBindingExtensionProvider::key()
+        );
+        $deserializer = new HttpBindingDeserializer(
+            new JsonCodec(),
+            $bindingInfo,
+            [],
+            new GenericStreamFixture('')
         );
 
         $deserializer->deserialize($schema, $members);
@@ -228,7 +248,7 @@ final class HttpBindingDeserializerTest extends TestCase
             new JsonCodec(),
             $bindingInfo,
             ['content-length' => ['Content-Length', ['18']]],
-            new StringStreamFixture('{"value":"nested"}')
+            new StringBodyStream('{"value":"nested"}')
         );
 
         $deserializer->deserialize($schema, $members);
@@ -262,7 +282,7 @@ final class HttpBindingDeserializerTest extends TestCase
             new JsonCodec(),
             $bindingInfo,
             ['content-length' => ['Content-Length', ['13']]],
-            new StringStreamFixture('{"value":"x"}')
+            new StringBodyStream('{"value":"x"}')
         );
 
         $deserializer->deserialize($schema, $members);
@@ -285,7 +305,7 @@ final class HttpBindingDeserializerTest extends TestCase
             new JsonCodec(),
             $bindingInfo,
             [],
-            new StringStreamFixture('{"body":"body text"}', false)
+            new GenericStreamFixture('{"body":"body text"}', false)
         );
 
         $deserializer->deserialize($schema, $members);
@@ -308,7 +328,7 @@ final class HttpBindingDeserializerTest extends TestCase
             ),
             $bindingInfo,
             [],
-            new StringStreamFixture('{"createdAt":"1970-01-01T00:01:40Z"}')
+            new StringBodyStream('{"createdAt":"1970-01-01T00:01:40Z"}')
         );
 
         $deserializer->deserialize($schema, $members);

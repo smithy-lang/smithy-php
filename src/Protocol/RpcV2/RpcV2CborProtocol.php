@@ -38,7 +38,7 @@ final class RpcV2CborProtocol extends AbstractRpcV2Protocol
 
         parent::__construct(
             $codec,
-            new RpcV2ErrorDeserializer($codec, 'rpc-v2-cbor')
+            new RpcV2ErrorDeserializer($codec, static::$protocolHeaderValue)
         );
     }
 }

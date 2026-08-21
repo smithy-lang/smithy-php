@@ -4,13 +4,19 @@ declare(strict_types=1);
 
 namespace Smithy\Tests\Protocol;
 
+use Psr\Http\Message\StreamInterface;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
+use Smithy\Codec\Json\JsonCodec;
+use Smithy\Protocol\AbstractHttpBindingProtocol;
+use Smithy\Protocol\HttpErrorDeserializer;
 use Smithy\Protocol\HttpOperationBindingExtension;
 use Smithy\Protocol\HttpOperationBindingExtensionProvider;
 use Smithy\Tests\Protocol\Utils\HttpBindingOperationFixture;
 use Smithy\Tests\Protocol\Utils\HttpBindingFixtureSchemas;
+use Smithy\Tests\Protocol\Utils\HttpBindingInputShapeFixture;
 
+#[CoversClass(AbstractHttpBindingProtocol::class)]
 #[CoversClass(HttpOperationBindingExtensionProvider::class)]
 final class HttpOperationBindingExtensionProviderTest extends TestCase
 {
@@ -45,7 +51,7 @@ final class HttpOperationBindingExtensionProviderTest extends TestCase
         self::assertSame('GET', $extension->method);
         self::assertSame('/things/{id}', $extension->path);
         self::assertSame(
-            [['/things/', null, false], [null, 0, false]],
+            [['/things/', null, false], [null, 2, false]],
             $extension->pathSegments
         );
         self::assertSame('fixed=true', $extension->pathQueryString);
@@ -72,5 +78,34 @@ final class HttpOperationBindingExtensionProviderTest extends TestCase
         );
         self::assertNull($operation->getRequestTarget());
         self::assertNull($operation->resolveErrorSchema('Unknown'));
+    }
+
+    public function testProtocolSerializesStaticOperationQuery(): void
+    {
+        $codec = new JsonCodec();
+        $errorDeserializer = new class($codec) extends HttpErrorDeserializer {
+            protected function parseError(StreamInterface $body): array
+            {
+                throw new \LogicException('Not used by this test.');
+            }
+        };
+        $protocol = new class(
+            $codec,
+            $errorDeserializer
+        ) extends AbstractHttpBindingProtocol {
+            protected static string $defaultContentType = 'application/json';
+        };
+        $input = new HttpBindingInputShapeFixture(
+            mode: true,
+            id: 'thing'
+        );
+
+        $request = $protocol->serializeRequest(
+            HttpBindingOperationFixture::instance(),
+            $input,
+            'https://example.com'
+        );
+
+        self::assertSame('mode=true&fixed=true', $request->getUri()->getQuery());
     }
 }
