@@ -11,6 +11,7 @@ use Smithy\Codec\FormUrlEncoded\{
     FormUrlEncodedSerializer
 };
 use Smithy\Tests\Codec\FormUrlEncoded\Utils\FormUrlEncodedSampleStructFixture;
+use Smithy\Tests\Protocol\Utils\StringStreamFixture;
 
 final class FormUrlEncodedCodecTest extends TestCase
 {
@@ -67,6 +68,8 @@ final class FormUrlEncodedCodecTest extends TestCase
             'FormUrlEncodedCodec does not support deserialization.'
         );
 
-        $codec->createDeserializer('name=value');
+        $codec->createDeserializer(
+            new StringStreamFixture('name=value')
+        );
     }
 }
