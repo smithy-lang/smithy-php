@@ -316,4 +316,27 @@ final class HttpBindingDeserializerTest extends TestCase
         self::assertSame(100.0, $members[0]);
     }
 
+    public function testDeserializesClasslessEnumListsAsRawValues(): void
+    {
+        $schema = HttpBindingFixtureSchemas::classlessEnumLists();
+        $members = \array_fill(0, $schema->getMemberCount(), null);
+        $bindingInfo = $schema->getExtension(
+            HttpStructBindingExtensionProvider::key()
+        );
+        $deserializer = new HttpBindingDeserializer(
+            new JsonCodec(),
+            $bindingInfo,
+            [
+                'x-enums' => ['X-Enums', ['open, closed']],
+                'x-int-enums' => ['X-Int-Enums', ['7, 9']]
+            ],
+            null
+        );
+
+        $deserializer->deserialize($schema, $members);
+
+        self::assertSame(['open', 'closed'], $members[0]);
+        self::assertSame([7, 9], $members[1]);
+    }
+
 }

@@ -23,6 +23,7 @@ final class HttpBindingFixtureSchemas
     private static ?Schema $PAYLOAD_SHAPE = null;
     private static ?Schema $TIMESTAMP_REQUEST = null;
     private static ?Schema $TIMESTAMP_RESPONSE = null;
+    private static ?Schema $CLASSLESS_ENUM_LISTS = null;
     private static ?Schema $OPERATION = null;
     private static ?Schema $HTTP_OPERATION = null;
 
@@ -374,6 +375,63 @@ final class HttpBindingFixtureSchemas
                     type: ShapeType::Timestamp,
                     memberName: 'createdAt',
                     memberIndex: 0
+                )
+            ]
+        );
+    }
+
+    /**
+     * Get classless enum-list HTTP binding fixtures.
+     */
+    public static function classlessEnumLists(): Schema
+    {
+        return self::$CLASSLESS_ENUM_LISTS ??= new Schema(
+            id: 'smithy.test#ClasslessEnumLists',
+            type: ShapeType::Structure,
+            members: [
+                new Schema(
+                    id: 'smithy.test#EnumHeaderList',
+                    type: ShapeType::List_,
+                    memberName: 'enumHeaders',
+                    memberIndex: 0,
+                    listMember: new Schema(
+                        id: 'smithy.test#StringEnum',
+                        type: ShapeType::Enum
+                    ),
+                    traits: [Schema::T_HTTP_HEADER => 'X-Enums']
+                ),
+                new Schema(
+                    id: 'smithy.test#IntEnumHeaderList',
+                    type: ShapeType::List_,
+                    memberName: 'intEnumHeaders',
+                    memberIndex: 1,
+                    listMember: new Schema(
+                        id: 'smithy.test#IntegerEnum',
+                        type: ShapeType::IntEnum
+                    ),
+                    traits: [Schema::T_HTTP_HEADER => 'X-Int-Enums']
+                ),
+                new Schema(
+                    id: 'smithy.test#EnumQueryList',
+                    type: ShapeType::List_,
+                    memberName: 'enumQuery',
+                    memberIndex: 2,
+                    listMember: new Schema(
+                        id: 'smithy.test#StringEnum',
+                        type: ShapeType::Enum
+                    ),
+                    traits: [Schema::T_HTTP_QUERY => 'enum']
+                ),
+                new Schema(
+                    id: 'smithy.test#IntEnumQueryList',
+                    type: ShapeType::List_,
+                    memberName: 'intEnumQuery',
+                    memberIndex: 3,
+                    listMember: new Schema(
+                        id: 'smithy.test#IntegerEnum',
+                        type: ShapeType::IntEnum
+                    ),
+                    traits: [Schema::T_HTTP_QUERY => 'intEnum']
                 )
             ]
         );

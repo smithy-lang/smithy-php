@@ -204,4 +204,31 @@ final class HttpBindingSerializerTest extends TestCase
         );
     }
 
+    public function testSerializesClasslessEnumListsAsRawValues(): void
+    {
+        $schema = HttpBindingFixtureSchemas::classlessEnumLists();
+        $members = $schema->getMembersByIndex();
+        $bindingInfo = $schema->getExtension(
+            HttpStructBindingExtensionProvider::key()
+        );
+        $serializer = new HttpBindingSerializer(new JsonCodec(), $bindingInfo);
+
+        $serializer->serializeList($members[0], ['open', 'closed'], 0);
+        $serializer->serializeList($members[1], [7, 9], 1);
+        $serializer->serializeList($members[2], ['open', 'closed'], 2);
+        $serializer->serializeList($members[3], [7, 9], 3);
+
+        self::assertSame(
+            [
+                'x-enums' => ['x-enums', ['open, closed']],
+                'x-int-enums' => ['x-int-enums', ['7, 9']]
+            ],
+            $serializer->serializeHeaders()
+        );
+        self::assertSame(
+            'enum=open&enum=closed&intEnum=7&intEnum=9',
+            $serializer->serializeQueryString(null)
+        );
+    }
+
 }
