@@ -6,7 +6,8 @@ namespace Smithy\Tests\Protocol;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
-use Smithy\Core\Serde\TimestampFormat;
+use Smithy\Core\Serde\{Schema, TimestampFormat};
+use Smithy\Core\Shape\ShapeType;
 use Smithy\Codec\Json\JsonCodec;
 use Smithy\Codec\Json\JsonCodecSettings;
 use Smithy\Protocol\HttpBindingSerializer;
@@ -175,6 +176,40 @@ final class HttpBindingSerializerTest extends TestCase
 
         self::assertSame('{"value":"nested"}', $serializer->serializeBody());
         self::assertNull($serializer->resolveContentType());
+    }
+
+    public function testSerializesEmptyStructurePayload(): void
+    {
+        $schema = HttpBindingFixtureSchemas::structurePayloadRequest();
+        $bindingInfo = $schema->getExtension(
+            HttpStructBindingExtensionProvider::key()
+        );
+        $serializer = new HttpBindingSerializer(new JsonCodec(), $bindingInfo);
+
+        self::assertSame('{}', $serializer->serializeBody());
+    }
+
+    public function testOmitsUnsetUnionPayload(): void
+    {
+        $schema = new Schema(
+            id: 'smithy.test#UnionPayloadRequest',
+            type: ShapeType::Structure,
+            members: [
+                new Schema(
+                    id: 'smithy.test#UnionPayload',
+                    type: ShapeType::Union,
+                    memberName: 'payload',
+                    memberIndex: 0,
+                    traits: [Schema::T_HTTP_PAYLOAD => true]
+                )
+            ]
+        );
+        $bindingInfo = $schema->getExtension(
+            HttpStructBindingExtensionProvider::key()
+        );
+        $serializer = new HttpBindingSerializer(new JsonCodec(), $bindingInfo);
+
+        self::assertSame('', $serializer->serializeBody());
     }
 
     public function testBodySerializationUsesConfiguredCodecSettings(): void
