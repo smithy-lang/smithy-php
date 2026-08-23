@@ -110,6 +110,46 @@ final class StructDocumentTest extends TestCase
         $doc->serializeMembers($serializer);
     }
 
+    public function testSerializeMembersWritesXmlAttributesFirst(): void
+    {
+        $schema = new Schema(
+            id: 'com.example#Struct',
+            type: ShapeType::Structure,
+            members: [
+                new Schema(
+                    id: 'smithy.api#String',
+                    type: ShapeType::String_,
+                    memberName: 'element',
+                    memberIndex: 0
+                ),
+                new Schema(
+                    id: 'smithy.api#String',
+                    type: ShapeType::String_,
+                    memberName: 'attribute',
+                    memberIndex: 1,
+                    traits: [Schema::T_XML_ATTRIBUTE => true]
+                )
+            ]
+        );
+        $doc = StructDocument::fromMembers(
+            $schema,
+            ['element value', 'attribute value']
+        );
+        $calls = [];
+        $serializer = $this->createMock(ShapeSerializerInterface::class);
+        $serializer->expects($this->exactly(2))
+            ->method('serializeString')
+            ->willReturnCallback(
+                static function (Schema $member) use (&$calls): void {
+                    $calls[] = $member->memberName;
+                }
+            );
+
+        $doc->serializeMembers($serializer);
+
+        $this->assertSame(['attribute', 'element'], $calls);
+    }
+
     public function testWithMemberValueReturnsCopiedDocument(): void
     {
         $schema = $this->schema();

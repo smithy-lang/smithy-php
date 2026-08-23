@@ -225,6 +225,51 @@ final class XmlSchemaExtensionTest extends TestCase
         $this->assertSame('CustomName', $info->xmlName);
     }
 
+    public function testHttpPayloadUsesTargetRootXmlName(): void
+    {
+        $target = new Schema(
+            id: 'test#Target',
+            type: ShapeType::Structure,
+            traits: [Schema::T_XML_NAME => 'TargetRoot']
+        );
+        $member = new Schema(
+            id: 'test#Container$value',
+            type: ShapeType::Structure,
+            memberName: 'value',
+            memberIndex: 0,
+            traits: [Schema::T_HTTP_PAYLOAD => true],
+            target: $target
+        );
+
+        $info = $member->getExtension(self::key());
+
+        $this->assertSame('TargetRoot', $info->xmlName);
+    }
+
+    public function testHttpPayloadMemberXmlNameOverridesTargetRoot(): void
+    {
+        $target = new Schema(
+            id: 'test#Target',
+            type: ShapeType::Structure,
+            traits: [Schema::T_XML_NAME => 'TargetRoot']
+        );
+        $member = new Schema(
+            id: 'test#Container$value',
+            type: ShapeType::Structure,
+            memberName: 'value',
+            memberIndex: 0,
+            traits: [
+                Schema::T_XML_NAME => 'MemberRoot',
+                Schema::T_HTTP_PAYLOAD => true
+            ],
+            target: $target
+        );
+
+        $info = $member->getExtension(self::key());
+
+        $this->assertSame('MemberRoot', $info->xmlName);
+    }
+
     public function testListInfoResolvesNonFlattened(): void
     {
         $schema = new Schema(
