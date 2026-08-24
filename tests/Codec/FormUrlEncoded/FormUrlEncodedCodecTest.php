@@ -10,8 +10,8 @@ use Smithy\Codec\FormUrlEncoded\{
     FormUrlEncodedCodec,
     FormUrlEncodedSerializer
 };
-use Smithy\Http\Message\StringBodyStream;
 use Smithy\Tests\Codec\FormUrlEncoded\Utils\FormUrlEncodedSampleStructFixture;
+use Smithy\Tests\Protocol\Utils\StringStreamFixture;
 
 final class FormUrlEncodedCodecTest extends TestCase
 {
@@ -69,7 +69,7 @@ final class FormUrlEncodedCodecTest extends TestCase
         );
 
         $codec->createDeserializer(
-            new StringBodyStream('name=value')
+            new StringStreamFixture('name=value')
         );
     }
 }

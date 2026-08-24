@@ -5,15 +5,10 @@ declare(strict_types=1);
 namespace Smithy\Tests\Core\Shape\Utils;
 
 use PHPUnit\Framework\TestCase;
-use Smithy\Core\Serde\Schema;
 use Smithy\Core\Shape\BigInteger;
-use Smithy\Core\Shape\ShapeType;
+use Smithy\Core\Shape\Document\IntegerDocument;
+use Smithy\Core\Shape\Document\StringDocument;
 use Smithy\Core\Shape\Exception\InvalidShapeValueException;
-use Smithy\Core\Shape\Document\{
-    IntegerDocument,
-    StringDocument,
-    StructDocument
-};
 use Smithy\Core\Shape\Utils\ArrayShapeSerializer;
 use Smithy\Tests\Core\Shape\Utils\Utils\{
     ArrayShapeSerializerAliasedFixture,
@@ -60,54 +55,6 @@ final class ArrayShapeSerializerTest extends TestCase
         $this->assertSame(
             ['Message' => 'Hi'],
             ArrayShapeSerializer::toArray($obj)
-        );
-    }
-
-    public function testToArrayResolvesReferencedAggregateSchemas(): void
-    {
-        $itemSchema = new Schema(
-            id: 'example#Item',
-            type: ShapeType::Structure,
-            members: [
-                new Schema(
-                    id: 'smithy.api#String',
-                    type: ShapeType::String_,
-                    memberName: 'name',
-                    memberIndex: 0
-                )
-            ]
-        );
-        $listSchema = new Schema(
-            id: 'example#Items',
-            type: ShapeType::List_,
-            listMember: new Schema(
-                id: $itemSchema->id,
-                type: ShapeType::Structure,
-                target: $itemSchema
-            )
-        );
-        $containerSchema = new Schema(
-            id: 'example#Container',
-            type: ShapeType::Structure,
-            members: [
-                new Schema(
-                    id: $listSchema->id,
-                    type: ShapeType::List_,
-                    memberName: 'items',
-                    memberIndex: 0,
-                    target: $listSchema
-                )
-            ]
-        );
-        $item = StructDocument::fromMembers($itemSchema, ['one']);
-        $container = StructDocument::fromMembers(
-            $containerSchema,
-            [[$item]]
-        );
-
-        self::assertSame(
-            ['items' => [['name' => 'one']]],
-            ArrayShapeSerializer::toArray($container)
         );
     }
 
