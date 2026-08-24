@@ -49,8 +49,8 @@ final class XmlSchemaExtensionTest extends TestCase
                     memberName: 'renamed',
                     memberIndex: 2,
                     traits: [Schema::T_XML_NAME => 'RenamedField']
-                ),
-            ],
+                )
+            ]
         );
 
         /** @var XmlSchemaExtension $info */
@@ -91,10 +91,10 @@ final class XmlSchemaExtensionTest extends TestCase
                     memberIndex: 1,
                     traits: [
                         Schema::T_XML_ATTRIBUTE => true,
-                        Schema::T_XML_NAME => 'barAttr',
+                        Schema::T_XML_NAME => 'barAttr'
                     ]
-                ),
-            ],
+                )
+            ]
         );
 
         $info = $schema->getExtension(self::key());
@@ -106,9 +106,9 @@ final class XmlSchemaExtensionTest extends TestCase
         $this->assertSame(
             [
                 0 => XmlSchemaExtension::COMPONENT_ELEMENT,
-                1 => XmlSchemaExtension::COMPONENT_ATTRIBUTE,
+                1 => XmlSchemaExtension::COMPONENT_ATTRIBUTE
             ],
-            $info->memberComponentTypes,
+            $info->memberComponentTypes
         );
     }
 
@@ -124,7 +124,7 @@ final class XmlSchemaExtensionTest extends TestCase
             memberName: 'items',
             memberIndex: 0,
             listMember: $listMember,
-            traits: [Schema::T_XML_FLATTENED => true],
+            traits: [Schema::T_XML_FLATTENED => true]
         );
         $schema = new Schema(
             id: 'test#WithFlatList',
@@ -136,8 +136,8 @@ final class XmlSchemaExtensionTest extends TestCase
                     type: ShapeType::String_,
                     memberName: 'name',
                     memberIndex: 1
-                ),
-            ],
+                )
+            ]
         );
 
         $info = $schema->getExtension(self::key());
@@ -172,12 +172,12 @@ final class XmlSchemaExtensionTest extends TestCase
             memberIndex: 0,
             mapKey: $mapKey,
             mapValue: $mapValue,
-            traits: [Schema::T_XML_FLATTENED => true],
+            traits: [Schema::T_XML_FLATTENED => true]
         );
         $schema = new Schema(
             id: 'test#WithFlatMap',
             type: ShapeType::Structure,
-            members: [$mapSchema],
+            members: [$mapSchema]
         );
 
         $info = $schema->getExtension(self::key());
@@ -199,9 +199,9 @@ final class XmlSchemaExtensionTest extends TestCase
             traits: [
                 Schema::T_XML_NAMESPACE => [
                     'uri' => 'http://example.com',
-                    'prefix' => 'ex',
-                ],
-            ],
+                    'prefix' => 'ex'
+                ]
+            ]
         );
 
         $info = $schema->getExtension(self::key());
@@ -217,12 +217,115 @@ final class XmlSchemaExtensionTest extends TestCase
             id: 'test#OriginalName',
             type: ShapeType::Structure,
             members: [],
-            traits: [Schema::T_XML_NAME => 'CustomName'],
+            traits: [Schema::T_XML_NAME => 'CustomName']
         );
 
         $info = $schema->getExtension(self::key());
 
         $this->assertSame('CustomName', $info->xmlName);
+    }
+
+    public function testTargetXmlNameDoesNotRenameRuntimeMember(): void
+    {
+        $target = new Schema(
+            id: 'test#Target',
+            type: ShapeType::Structure,
+            traits: [Schema::T_XML_NAME => 'TargetRoot']
+        );
+        $member = new Schema(
+            id: 'test#Container$value',
+            type: ShapeType::Structure,
+            memberName: 'value',
+            memberIndex: 0,
+            traits: [Schema::T_XML_NAME => 'TargetRoot'],
+            target: $target
+        );
+        $container = new Schema(
+            id: 'test#Container',
+            type: ShapeType::Structure,
+            members: [$member]
+        );
+
+        $containerInfo = $container->getExtension(self::key());
+        $memberInfo = $member->getExtension(self::key());
+
+        $this->assertSame(
+            ['value'],
+            \array_keys($containerInfo->elementMembers)
+        );
+        $this->assertSame('value', $memberInfo->xmlName);
+    }
+
+    public function testDirectRuntimeMemberXmlNameOverridesTargetName(): void
+    {
+        $target = new Schema(
+            id: 'test#Target',
+            type: ShapeType::Structure,
+            traits: [Schema::T_XML_NAME => 'TargetRoot']
+        );
+        $member = new Schema(
+            id: 'test#Container$value',
+            type: ShapeType::Structure,
+            memberName: 'value',
+            memberIndex: 0,
+            traits: [Schema::T_XML_NAME => 'MemberName'],
+            directTraits: [Schema::T_XML_NAME => 'MemberName'],
+            target: $target
+        );
+
+        $info = $member->getExtension(self::key());
+
+        $this->assertSame('MemberName', $info->xmlName);
+    }
+
+    public function testReferencedCollectionsUseTargetMetadata(): void
+    {
+        $listTarget = new Schema(
+            id: 'test#Names',
+            type: ShapeType::List_,
+            listMember: new Schema(
+                id: 'smithy.api#String',
+                type: ShapeType::String_,
+                traits: [Schema::T_XML_NAME => 'name']
+            )
+        );
+        $mapTarget = new Schema(
+            id: 'test#Tags',
+            type: ShapeType::Map,
+            mapKey: new Schema(
+                id: 'smithy.api#String',
+                type: ShapeType::String_,
+                traits: [Schema::T_XML_NAME => 'tagKey']
+            ),
+            mapValue: new Schema(
+                id: 'smithy.api#String',
+                type: ShapeType::String_,
+                traits: [Schema::T_XML_NAME => 'tagValue']
+            )
+        );
+        $listMember = new Schema(
+            id: 'test#Container$names',
+            type: ShapeType::List_,
+            memberName: 'names',
+            memberIndex: 0,
+            target: $listTarget
+        );
+        $mapMember = new Schema(
+            id: 'test#Container$tags',
+            type: ShapeType::Map,
+            memberName: 'tags',
+            memberIndex: 1,
+            target: $mapTarget
+        );
+
+        $listInfo = $listMember->getExtension(self::key());
+        $mapInfo = $mapMember->getExtension(self::key());
+
+        $this->assertSame('name', $listInfo->listMemberName);
+        $this->assertSame($listTarget->listMember, $listInfo->listMemberSchema);
+        $this->assertSame('tagKey', $mapInfo->mapKeyName);
+        $this->assertSame('tagValue', $mapInfo->mapValueName);
+        $this->assertSame($mapTarget->mapValue, $mapInfo->mapValueSchema);
     }
 
     public function testHttpPayloadUsesTargetRootXmlName(): void
@@ -237,7 +340,11 @@ final class XmlSchemaExtensionTest extends TestCase
             type: ShapeType::Structure,
             memberName: 'value',
             memberIndex: 0,
-            traits: [Schema::T_HTTP_PAYLOAD => true],
+            traits: [
+                Schema::T_XML_NAME => 'TargetRoot',
+                Schema::T_HTTP_PAYLOAD => true
+            ],
+            directTraits: [Schema::T_HTTP_PAYLOAD => true],
             target: $target
         );
 
@@ -262,6 +369,10 @@ final class XmlSchemaExtensionTest extends TestCase
                 Schema::T_XML_NAME => 'MemberRoot',
                 Schema::T_HTTP_PAYLOAD => true
             ],
+            directTraits: [
+                Schema::T_XML_NAME => 'MemberRoot',
+                Schema::T_HTTP_PAYLOAD => true
+            ],
             target: $target
         );
 
@@ -279,7 +390,7 @@ final class XmlSchemaExtensionTest extends TestCase
                 id: 'smithy.api#String',
                 type: ShapeType::String_,
                 traits: [Schema::T_XML_NAME => 'item']
-            ),
+            )
         );
 
         $info = $schema->getExtension(self::key());
@@ -296,7 +407,7 @@ final class XmlSchemaExtensionTest extends TestCase
             listMember: new Schema(
                 id: 'smithy.api#String',
                 type: ShapeType::String_
-            ),
+            )
         );
 
         $info = $schema->getExtension(self::key());
@@ -318,9 +429,9 @@ final class XmlSchemaExtensionTest extends TestCase
             traits: [
                 Schema::T_XML_NAMESPACE => [
                     'uri' => 'urn:items',
-                    'prefix' => 'i',
-                ],
-            ],
+                    'prefix' => 'i'
+                ]
+            ]
         );
 
         $info = $schema->getExtension(self::key());
@@ -349,7 +460,7 @@ final class XmlSchemaExtensionTest extends TestCase
                 id: 'smithy.api#String',
                 type: ShapeType::String_,
                 traits: [Schema::T_XML_NAME => 'V']
-            ),
+            )
         );
 
         $info = $schema->getExtension(self::key());
@@ -372,7 +483,7 @@ final class XmlSchemaExtensionTest extends TestCase
             mapValue: new Schema(
                 id: 'smithy.api#String',
                 type: ShapeType::String_
-            ),
+            )
         );
 
         $info = $schema->getExtension(self::key());
@@ -421,8 +532,8 @@ final class XmlSchemaExtensionTest extends TestCase
                     memberName: 'beta',
                     memberIndex: 1,
                     traits: [Schema::T_XML_NAME => 'BetaRenamed']
-                ),
-            ],
+                )
+            ]
         );
 
         $info = $schema->getExtension(self::key());
