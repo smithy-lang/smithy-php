@@ -19,7 +19,6 @@ use Smithy\Codec\Json\{
     JsonCodec,
     JsonCodecSettings
 };
-use Smithy\Http\Message\StringBodyStream;
 use Smithy\Tests\Codec\Json\Fixture\{
     JsonEnumStructFixture,
     JsonIntEnumFixture,
@@ -27,6 +26,7 @@ use Smithy\Tests\Codec\Json\Fixture\{
     JsonStringEnumFixture,
     SampleStruct
 };
+use Smithy\Tests\Protocol\Utils\StringStreamFixture;
 
 final class JsonDeserializerTest extends TestCase
 {
@@ -44,7 +44,7 @@ final class JsonDeserializerTest extends TestCase
         self::assertSame('{"name":"alpha","count":42}', $json);
 
         $fields = \array_fill(0, 5, null);
-        $codec->createDeserializer(new StringBodyStream($json))->deserialize(
+        $codec->createDeserializer(new StringStreamFixture($json))->deserialize(
             SampleStruct::schema(),
             $fields
         );
@@ -65,7 +65,7 @@ final class JsonDeserializerTest extends TestCase
 
         $codec = new JsonCodec();
         $fields = \array_fill(0, 4, null);
-        $codec->createDeserializer(new StringBodyStream($wire))->deserialize(
+        $codec->createDeserializer(new StringStreamFixture($wire))->deserialize(
             JsonEnumStructFixture::schema(),
             $fields
         );
@@ -104,7 +104,7 @@ final class JsonDeserializerTest extends TestCase
         self::assertSame('{"count":2}', $json);
 
         $members = [null];
-        $codec->createDeserializer(new StringBodyStream($json))->deserialize(
+        $codec->createDeserializer(new StringStreamFixture($json))->deserialize(
             JsonSampleUnionFixture::schema(),
             $members
         );
@@ -131,7 +131,7 @@ final class JsonDeserializerTest extends TestCase
 
         $fields = [null];
         (new JsonCodec())->createDeserializer(
-            new StringBodyStream(
+            new StringStreamFixture(
                 '{"value":9223372036854775807123}'
             )
         )->deserialize($schema, $fields);
@@ -162,7 +162,7 @@ final class JsonDeserializerTest extends TestCase
         );
         $fields = [null];
         $codec->createDeserializer(
-            new StringBodyStream(
+            new StringStreamFixture(
                 '{"createdAt":"1970-01-01T00:01:40Z"}'
             )
         )->deserialize($schema, $fields);
@@ -194,7 +194,7 @@ final class JsonDeserializerTest extends TestCase
         );
         $fields = [null];
         $codec->createDeserializer(
-            new StringBodyStream('{"createdAt":100}')
+            new StringStreamFixture('{"createdAt":100}')
         )
             ->deserialize($schema, $fields);
 
@@ -250,7 +250,7 @@ final class JsonDeserializerTest extends TestCase
         $members = [null, null];
 
         (new JsonCodec())->createDeserializer(
-            new StringBodyStream(
+            new StringStreamFixture(
                 '{"child":{"value":"kid"},"choice":{"count":2}}'
             )
         )->deserialize($schema, $members);

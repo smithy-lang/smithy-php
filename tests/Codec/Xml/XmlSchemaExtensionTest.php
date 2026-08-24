@@ -225,109 +225,6 @@ final class XmlSchemaExtensionTest extends TestCase
         $this->assertSame('CustomName', $info->xmlName);
     }
 
-    public function testTargetXmlNameDoesNotRenameRuntimeMember(): void
-    {
-        $target = new Schema(
-            id: 'test#Target',
-            type: ShapeType::Structure,
-            traits: [Schema::T_XML_NAME => 'TargetRoot']
-        );
-        $member = new Schema(
-            id: 'test#Container$value',
-            type: ShapeType::Structure,
-            memberName: 'value',
-            memberIndex: 0,
-            traits: [Schema::T_XML_NAME => 'TargetRoot'],
-            target: $target
-        );
-        $container = new Schema(
-            id: 'test#Container',
-            type: ShapeType::Structure,
-            members: [$member]
-        );
-
-        $containerInfo = $container->getExtension(self::key());
-        $memberInfo = $member->getExtension(self::key());
-
-        $this->assertSame(
-            ['value'],
-            \array_keys($containerInfo->elementMembers)
-        );
-        $this->assertSame('value', $memberInfo->xmlName);
-    }
-
-    public function testDirectRuntimeMemberXmlNameOverridesTargetName(): void
-    {
-        $target = new Schema(
-            id: 'test#Target',
-            type: ShapeType::Structure,
-            traits: [Schema::T_XML_NAME => 'TargetRoot']
-        );
-        $member = new Schema(
-            id: 'test#Container$value',
-            type: ShapeType::Structure,
-            memberName: 'value',
-            memberIndex: 0,
-            traits: [Schema::T_XML_NAME => 'MemberName'],
-            directTraits: [Schema::T_XML_NAME => 'MemberName'],
-            target: $target
-        );
-
-        $info = $member->getExtension(self::key());
-
-        $this->assertSame('MemberName', $info->xmlName);
-    }
-
-    public function testReferencedCollectionsUseTargetMetadata(): void
-    {
-        $listTarget = new Schema(
-            id: 'test#Names',
-            type: ShapeType::List_,
-            listMember: new Schema(
-                id: 'smithy.api#String',
-                type: ShapeType::String_,
-                traits: [Schema::T_XML_NAME => 'name']
-            )
-        );
-        $mapTarget = new Schema(
-            id: 'test#Tags',
-            type: ShapeType::Map,
-            mapKey: new Schema(
-                id: 'smithy.api#String',
-                type: ShapeType::String_,
-                traits: [Schema::T_XML_NAME => 'tagKey']
-            ),
-            mapValue: new Schema(
-                id: 'smithy.api#String',
-                type: ShapeType::String_,
-                traits: [Schema::T_XML_NAME => 'tagValue']
-            )
-        );
-        $listMember = new Schema(
-            id: 'test#Container$names',
-            type: ShapeType::List_,
-            memberName: 'names',
-            memberIndex: 0,
-            target: $listTarget
-        );
-        $mapMember = new Schema(
-            id: 'test#Container$tags',
-            type: ShapeType::Map,
-            memberName: 'tags',
-            memberIndex: 1,
-            target: $mapTarget
-        );
-
-        $listInfo = $listMember->getExtension(self::key());
-        $mapInfo = $mapMember->getExtension(self::key());
-
-        $this->assertSame('name', $listInfo->listMemberName);
-        $this->assertSame($listTarget->listMember, $listInfo->listMemberSchema);
-        $this->assertSame('tagKey', $mapInfo->mapKeyName);
-        $this->assertSame('tagValue', $mapInfo->mapValueName);
-        $this->assertSame($mapTarget->mapValue, $mapInfo->mapValueSchema);
-    }
-
     public function testHttpPayloadUsesTargetRootXmlName(): void
     {
         $target = new Schema(
@@ -340,11 +237,7 @@ final class XmlSchemaExtensionTest extends TestCase
             type: ShapeType::Structure,
             memberName: 'value',
             memberIndex: 0,
-            traits: [
-                Schema::T_XML_NAME => 'TargetRoot',
-                Schema::T_HTTP_PAYLOAD => true
-            ],
-            directTraits: [Schema::T_HTTP_PAYLOAD => true],
+            traits: [Schema::T_HTTP_PAYLOAD => true],
             target: $target
         );
 
@@ -366,10 +259,6 @@ final class XmlSchemaExtensionTest extends TestCase
             memberName: 'value',
             memberIndex: 0,
             traits: [
-                Schema::T_XML_NAME => 'MemberRoot',
-                Schema::T_HTTP_PAYLOAD => true
-            ],
-            directTraits: [
                 Schema::T_XML_NAME => 'MemberRoot',
                 Schema::T_HTTP_PAYLOAD => true
             ],

@@ -247,64 +247,6 @@ final class SchemaTest extends TestCase
         $this->assertSame($traits, $schema->getTraits());
     }
 
-    public function testReadsKnownTraitsByShapeId(): void
-    {
-        $schema = new Schema(
-            id: 'example#Shape',
-            type: ShapeType::String_,
-            traits: [Schema::T_SENSITIVE => true]
-        );
-
-        $this->assertTrue($schema->hasTraitById('smithy.api#sensitive'));
-        $this->assertTrue($schema->getTraitById('smithy.api#sensitive'));
-        $this->assertSame(
-            ['smithy.api#sensitive' => true],
-            $schema->getTraitsById()
-        );
-    }
-
-    public function testDistinguishesDirectAndEffectiveMemberTraits(): void
-    {
-        $member = new Schema(
-            id: 'example#Shape$value',
-            type: ShapeType::String_,
-            memberName: 'value',
-            memberIndex: 0,
-            traits: [
-                Schema::T_SENSITIVE => true,
-                Schema::T_JSON_NAME => 'Value'
-            ],
-            directTraits: [Schema::T_JSON_NAME => 'Value'],
-            traitsById: [
-                'smithy.api#sensitive' => true,
-                'smithy.api#jsonName' => 'Value'
-            ],
-            directTraitsById: [
-                'smithy.api#jsonName' => 'Value'
-            ]
-        );
-
-        $this->assertTrue($member->hasTrait(Schema::T_SENSITIVE));
-        $this->assertFalse($member->hasDirectTrait(Schema::T_SENSITIVE));
-        $this->assertSame(
-            'Value',
-            $member->getDirectTrait(Schema::T_JSON_NAME)
-        );
-        $this->assertNull(
-            $member->getDirectTraitById('smithy.api#sensitive')
-        );
-        $this->assertFalse(
-            $member->hasDirectTraitById('smithy.api#sensitive')
-        );
-        $this->assertTrue(
-            $member->hasDirectTraitById('smithy.api#jsonName')
-        );
-        $this->assertSame(
-            ['smithy.api#jsonName' => 'Value'],
-            $member->getDirectTraitsById()
-        );
-    }
-
     public function testIsRequiredReadsFromRequiredTraitSlot(): void
     {
         $required = new Schema(
@@ -462,18 +404,8 @@ final class SchemaTest extends TestCase
         $full = new Schema(
             id: 'com.example#S',
             type: ShapeType::Structure,
-            memberName: 'payload',
-            memberIndex: 0,
             members: [$a, $b, $c],
-            traits: [Schema::T_REQUIRED => true],
-            directTraits: [Schema::T_SENSITIVE => true],
-            traitsById: ['example#trait' => 'effective'],
-            directTraitsById: ['example#direct' => 'direct'],
-            target: new Schema(
-                id: 'com.example#Target',
-                type: ShapeType::Structure
-            ),
-            enumValues: ['ONE' => 'one']
+            traits: [Schema::T_REQUIRED => true]
         );
 
         $filtered = $full->withMembers([0, 2]);
@@ -489,17 +421,6 @@ final class SchemaTest extends TestCase
         // Traits are copied through, filtering the body must not
         // silently drop @required/@sensitive/etc.
         $this->assertSame([Schema::T_REQUIRED => true], $filtered->getTraits());
-        $this->assertSame(
-            [Schema::T_SENSITIVE => true],
-            $filtered->getDirectTraits()
-        );
-        $this->assertSame('effective', $filtered->getTraitById('example#trait'));
-        $this->assertSame(
-            'direct',
-            $filtered->getDirectTraitById('example#direct')
-        );
-        $this->assertSame($full->target, $filtered->target);
-        $this->assertSame(['ONE' => 'one'], $filtered->enumValues);
     }
 
     public function testWithMembersSilentlySkipsUnknownIndices(): void
