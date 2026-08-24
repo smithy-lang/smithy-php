@@ -462,7 +462,7 @@ final class HttpBindingFixtureSchemas
                     'uri' => '/things/{id}?fixed=true',
                     'pathSegments' => [
                         ['/things/', null, false],
-                        [null, 0, false]
+                        [null, 2, false]
                     ],
                     'pathQueryPairs' => [['fixed', 'true']],
                     'code' => 206
