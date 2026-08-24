@@ -1,0 +1,121 @@
+{
+    "smithy": "2.0",
+    "shapes": {
+        "smithy.example#Settings": {
+            "type": "structure",
+            "members": {
+                "name": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#required": {}
+                    }
+                },
+                "count": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#default": 0
+                    }
+                },
+                "label": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#default": "untitled"
+                    }
+                },
+                "enabled": {
+                    "target": "smithy.api#Boolean",
+                    "traits": {
+                        "smithy.api#default": true
+                    }
+                },
+                "ratio": {
+                    "target": "smithy.api#Double",
+                    "traits": {
+                        "smithy.api#default": 1.5
+                    }
+                },
+                "tags": {
+                    "target": "smithy.example#StringList",
+                    "traits": {
+                        "smithy.api#default": []
+                    }
+                },
+                "status": {
+                    "target": "smithy.example#Status",
+                    "traits": {
+                        "smithy.api#default": "ACTIVE"
+                    }
+                },
+                "priority": {
+                    "target": "smithy.example#Priority",
+                    "traits": {
+                        "smithy.api#default": 1
+                    }
+                },
+                "description": {
+                    "target": "smithy.api#String"
+                },
+                "marker": {
+                    "target": "smithy.example#Status"
+                }
+            }
+        },
+
+        "smithy.example#StringList": {
+            "type": "list",
+            "member": {
+                "target": "smithy.api#String"
+            }
+        },
+        "smithy.example#Status": {
+            "type": "enum",
+            "members": {
+                "ACTIVE": {
+                    "target": "smithy.api#Unit",
+                    "traits": {
+                        "smithy.api#enumValue": "ACTIVE"
+                    }
+                },
+                "INACTIVE": {
+                    "target": "smithy.api#Unit",
+                    "traits": {
+                        "smithy.api#enumValue": "INACTIVE"
+                    }
+                }
+            }
+        },
+        "smithy.example#Priority": {
+            "type": "intEnum",
+            "members": {
+                "LOW": {
+                    "target": "smithy.api#Unit",
+                    "traits": {
+                        "smithy.api#enumValue": 1
+                    }
+                },
+                "HIGH": {
+                    "target": "smithy.api#Unit",
+                    "traits": {
+                        "smithy.api#enumValue": 2
+                    }
+                }
+            }
+        },
+        "smithy.example#UpdateSettings": {
+
+            "type": "operation",
+            "input": {
+                "target": "smithy.example#Settings"
+            }
+        },
+        "smithy.example#DefaultsService": {
+            "type": "service",
+            "version": "2025-01-01",
+            "operations": [
+                {
+                    "target": "smithy.example#UpdateSettings"
+                }
+            ]
+        }
+    }
+}

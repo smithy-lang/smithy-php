@@ -1,0 +1,26 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+$autoloadPaths = [
+    __DIR__ . '/../vendor/autoload.php',
+    __DIR__ . '/../../../autoload.php'
+];
+
+foreach ($autoloadPaths as $autoloadPath) {
+    if (\is_file($autoloadPath)) {
+        require $autoloadPath;
+
+        exit(
+            (new Smithy\Codegen\Cli\CodegenApplication())->run($argv)
+        );
+    }
+}
+
+\fwrite(
+    STDERR,
+    "Error: Composer autoloader not found. Run composer install.\n"
+);
+
+exit(1);
