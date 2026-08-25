@@ -6,7 +6,7 @@
 
 > [!IMPORTANT]
 > All interfaces are subject to change.
-> All modules are still in developer-preview and may contain bugs.
+> All modules are still in development and may contain bugs.
 > No guarantee is made about their API stability. Unstable modules are marked with a warning in their
 > `README.md` and with the `@SmithyUnstableApi` annotation..
 
