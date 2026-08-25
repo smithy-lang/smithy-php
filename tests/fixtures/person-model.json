@@ -1,0 +1,371 @@
+{
+    "smithy": "2.0",
+    "shapes": {
+        "smithy.example#Human": {
+            "type": "structure",
+            "members": {
+                "name": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#required": {}
+                    }
+                },
+                "age": {
+                    "target": "smithy.api#Long",
+                    "traits": {
+                        "smithy.api#required": {}
+                    }
+                },
+                "address": {
+                    "target": "smithy.example#Address",
+                    "traits": {
+                        "smithy.api#required": {}
+                    }
+                },
+                "children": {
+                    "target": "smithy.example#HumanList"
+                },
+                "parents": {
+                    "target": "smithy.example#Parents"
+                }
+            }
+        },
+        "smithy.example#HumanList": {
+            "type": "list",
+            "member": {
+                "target": "smithy.example#Human"
+            }
+        },
+        "smithy.example#Parents": {
+            "type": "structure",
+            "members": {
+                "father": {
+                    "target": "smithy.example#Human"
+                },
+                "mother": {
+                    "target": "smithy.example#Human"
+                }
+            }
+        },
+        "smithy.example#Address": {
+            "type": "structure",
+            "members": {
+                "city": {
+                    "target": "smithy.api#String"
+                }
+            }
+        },
+        "smithy.example#OrderId": {
+            "type": "string",
+            "traits": {
+                "smithy.api#length": {
+                    "min": 1,
+                    "max": 128
+                }
+            }
+        },
+        "smithy.example#Event": {
+            "type": "structure",
+            "members": {
+                "itemId": {
+                    "target": "smithy.example#OrderId",
+                    "traits": {
+                        "smithy.api#required": {}
+                    }
+                },
+                "timestamp": {
+                    "target": "smithy.api#Timestamp",
+                    "traits": {
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#mixin": {}
+            }
+        },
+        "smithy.example#QueryEvent": {
+            "type": "structure",
+            "members": {
+                "itemId": {
+                    "target": "smithy.example#OrderId",
+                    "traits": {
+                        "smithy.api#required": {}
+                    }
+                },
+                "timestamp": {
+                    "target": "smithy.api#Timestamp",
+                    "traits": {
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "Request for item availability"
+            },
+            "mixins": [
+                {
+                    "target": "smithy.example#Event"
+                }
+            ]
+        },
+        "smithy.example#NewOrderEvent": {
+            "type": "structure",
+            "members": {
+                "itemId": {
+                    "target": "smithy.example#OrderId",
+                    "traits": {
+                        "smithy.api#required": {}
+                    }
+                },
+                "timestamp": {
+                    "target": "smithy.api#Timestamp",
+                    "traits": {
+                        "smithy.api#required": {}
+                    }
+                },
+                "quantity": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "Customer ordered an item"
+            },
+            "mixins": [
+                {
+                    "target": "smithy.example#Event"
+                }
+            ]
+        },
+        "smithy.example#ReturnEvent": {
+            "type": "structure",
+            "members": {
+                "itemId": {
+                    "target": "smithy.example#OrderId",
+                    "traits": {
+                        "smithy.api#required": {}
+                    }
+                },
+                "timestamp": {
+                    "target": "smithy.api#Timestamp",
+                    "traits": {
+                        "smithy.api#required": {}
+                    }
+                },
+                "quantity": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#required": {}
+                    }
+                },
+                "reason": {
+                    "target": "smithy.api#String"
+                },
+                "status": {
+                    "target": "smithy.example#Status"
+                },
+                "priority": {
+                    "target": "smithy.example#Priority"
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "Customer returned the item"
+            },
+            "mixins": [
+                {
+                    "target": "smithy.example#Event"
+                }
+            ]
+        },
+        "smithy.example#Status": {
+            "type": "enum",
+            "members": {
+                "ACTIVE": {
+                    "target": "smithy.api#Unit",
+                    "traits": {
+                        "smithy.api#enumValue": "ACTIVE"
+                    }
+                },
+                "INACTIVE": {
+                    "target": "smithy.api#Unit",
+                    "traits": {
+                        "smithy.api#enumValue": "INACTIVE"
+                    }
+                },
+                "PENDING": {
+                    "target": "smithy.api#Unit",
+                    "traits": {
+                        "smithy.api#enumValue": "PENDING",
+                        "smithy.api#documentation": "The item is pending review"
+                    }
+                }
+            }
+        },
+        "smithy.example#Priority": {
+            "type": "intEnum",
+            "members": {
+                "LOW": {
+                    "target": "smithy.api#Unit",
+                    "traits": {
+                        "smithy.api#enumValue": 1
+                    }
+                },
+                "MEDIUM": {
+                    "target": "smithy.api#Unit",
+                    "traits": {
+                        "smithy.api#enumValue": 2
+                    }
+                },
+                "HIGH": {
+                    "target": "smithy.api#Unit",
+                    "traits": {
+                        "smithy.api#enumValue": 3
+                    }
+                }
+            }
+        },
+        "smithy.example#Payload": {
+            "type": "union",
+            "members": {
+                "stringValue": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#documentation": "A string payload"
+                    }
+                },
+                "intValue": {
+                    "target": "smithy.api#Integer"
+                },
+                "event": {
+                    "target": "smithy.example#NewOrderEvent"
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "Tagged union for payload types"
+            }
+        },
+        "smithy.example#ExampleService": {
+            "type": "service",
+            "version": "2020-01-01",
+            "operations": [
+                {
+                    "target": "smithy.example#HttpChecksumRequired"
+                },
+                {
+                    "target": "smithy.example#PutWithContentEncoding"
+                },
+                {
+                    "target": "smithy.example#GreetingWithErrors"
+                }
+            ]
+        },
+        "smithy.example#HttpChecksumRequired": {
+            "type": "operation",
+            "input": {
+                "target": "smithy.example#ExampleInput"
+            },
+            "output": {
+                "target": "smithy.example#ExampleOutput"
+            },
+            "traits": {
+                "smithy.api#httpChecksumRequired": {}
+            }
+        },
+        "smithy.example#PutWithContentEncoding": {
+            "type": "operation",
+            "input": {
+                "target": "smithy.example#ExampleInput"
+            },
+            "output": {
+                "target": "smithy.example#ExampleOutput"
+            },
+            "traits": {
+                "smithy.api#requestCompression": {
+                    "encodings": [
+                        "gzip"
+                    ]
+                }
+            }
+        },
+        "smithy.example#GreetingWithErrors": {
+            "type": "operation",
+            "input": {
+                "target": "smithy.example#ExampleInput"
+            },
+            "output": {
+                "target": "smithy.example#ExampleOutput"
+            },
+            "errors": [
+                {
+                    "target": "smithy.example#ComplexError"
+                },
+                {
+                    "target": "smithy.example#CustomCodeError"
+                }
+            ]
+        },
+        "smithy.example#ExampleInput": {
+            "type": "structure",
+            "members": {
+                "human": {
+                    "target": "smithy.example#Human"
+                },
+                "newOrderEvent": {
+                    "target": "smithy.example#NewOrderEvent"
+                }
+            }
+        },
+        "smithy.example#ExampleOutput": {
+            "type": "structure",
+            "members": {
+                "queryEvent": {
+                    "target": "smithy.example#QueryEvent"
+                },
+                "returnEvent": {
+                    "target": "smithy.example#ReturnEvent"
+                },
+                "payload": {
+                    "target": "smithy.example#Payload"
+                }
+            }
+        },
+        "smithy.example#ComplexError": {
+            "type": "structure",
+            "traits": {
+                "smithy.api#error": "client"
+            }
+        },
+        "smithy.example#CustomCodeError": {
+            "type": "structure",
+            "traits": {
+                "smithy.api#error": "client",
+                "aws.protocols#awsQueryError": {
+                    "code": "Customized",
+                    "httpResponseCode": 400
+                }
+            }
+        },
+        "smithy.api#String": {
+            "type": "string"
+        },
+        "smithy.api#Long": {
+            "type": "long"
+        },
+        "smithy.api#Integer": {
+            "type": "integer"
+        },
+        "smithy.api#Timestamp": {
+            "type": "timestamp"
+        },
+        "smithy.api#Unit": {
+            "type": "structure",
+            "members": {},
+            "traits": {
+                "smithy.api#unitType": {}
+            }
+        }
+    }
+}
