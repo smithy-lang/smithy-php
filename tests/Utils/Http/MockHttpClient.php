@@ -5,14 +5,12 @@ declare(strict_types=1);
 namespace Smithy\Tests\Utils\Http;
 
 use Psr\Http\Message\RequestInterface;
+use Psr\Http\Message\ResponseInterface;
 use Smithy\Http\Client\{
     HttpClientInterface,
     HttpRequestOptions
 };
-use Smithy\Http\Message\{
-    Response,
-    ResponseInterface
-};
+use Smithy\Http\Message\Response;
 
 /**
  * Scriptable in-memory HTTP client for tests.

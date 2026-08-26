@@ -36,7 +36,7 @@ final class RequestContext
         return new self(
             scheme: $scheme,
             host: $uri->getHost(),
-            port: $uri->getPort() ?? ($scheme === 'https' ? 443 : 80),
+            port: self::resolvePort($scheme, $uri->getPort()),
             proxy: $proxy
         );
     }
@@ -50,5 +50,20 @@ final class RequestContext
             target: "{$this->scheme}://{$this->host}:{$this->port}",
             proxy: $this->proxy
         );
+    }
+
+    private static function resolvePort(string $scheme, ?int $port): int
+    {
+        if ($port !== null) {
+            return $port;
+        }
+
+        return match ($scheme) {
+            'https' => 443,
+            'http' => 80,
+            default => throw new \InvalidArgumentException(
+                "URI scheme {$scheme} requires an explicit port."
+            )
+        };
     }
 }

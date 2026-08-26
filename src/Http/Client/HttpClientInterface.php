@@ -6,12 +6,12 @@ namespace Smithy\Http\Client;
 
 use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestInterface;
-use Smithy\Http\Message\ResponseInterface;
+use Psr\Http\Message\ResponseInterface;
 
 /**
  * Define transport-agnostic HTTP client operations.
  *
- * Uses PSR-7 requests and Smithy responses at the transport boundary.
+ * Uses PSR-7 requests and responses at the transport boundary.
  */
 interface HttpClientInterface extends ClientInterface
 {
@@ -21,7 +21,7 @@ interface HttpClientInterface extends ClientInterface
      * @param RequestInterface $request  PSR-7 request to send.
      * @param HttpRequestOptions|null $options Per-request transport options.
      *
-     * @return ResponseInterface Smithy HTTP response.
+     * @return ResponseInterface HTTP response.
      *
      * @throws \Psr\Http\Client\ClientExceptionInterface On transport-level
      *                                                   failures.

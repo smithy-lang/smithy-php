@@ -33,7 +33,7 @@ final class CacheKey implements \Stringable
     {
         $scheme = $uri->getScheme() ?: 'https';
         $host = $uri->getHost();
-        $port = $uri->getPort() ?? ($scheme === 'https' ? 443 : 80);
+        $port = self::resolvePort($scheme, $uri->getPort());
 
         return new self(
             target: "{$scheme}://{$host}:{$port}",
@@ -60,5 +60,20 @@ final class CacheKey implements \Stringable
     {
         return $this->target === $other->target
             && $this->proxy === $other->proxy;
+    }
+
+    private static function resolvePort(string $scheme, ?int $port): int
+    {
+        if ($port !== null) {
+            return $port;
+        }
+
+        return match ($scheme) {
+            'https' => 443,
+            'http' => 80,
+            default => throw new \InvalidArgumentException(
+                "URI scheme {$scheme} requires an explicit port."
+            )
+        };
     }
 }

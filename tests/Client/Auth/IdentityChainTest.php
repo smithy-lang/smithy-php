@@ -6,6 +6,7 @@ namespace Smithy\Tests\Client\Auth;
 
 use PHPUnit\Framework\TestCase;
 use Smithy\Client\Auth\{
+    AnonymousIdentity,
     ChainIdentityProviderInterface,
     ChainSetup,
     IdentityChain,
@@ -297,6 +298,42 @@ final class IdentityChainTest extends TestCase
             'scope' => 'two'
         ]));
         $this->assertSame(2, $resolver->calls);
+    }
+
+    public function testResolveIdentityContinuesAfterWrongIdentityType(): void
+    {
+        $wrongResolver = new SequenceResolverFixture([
+            AnonymousIdentity::instance()
+        ]);
+        $expected = new TestIdentityFixture();
+        $rightResolver = new SequenceResolverFixture([$expected]);
+        $chain = new IdentityChain(
+            TestIdentityFixture::class,
+            providers: [
+                new TestProviderFixture(
+                    'wrong',
+                    OrderingConstraint::standard('slot-a'),
+                    new CallLogFixture(),
+                    resolver: $wrongResolver
+                ),
+                new TestProviderFixture(
+                    'right',
+                    OrderingConstraint::standard('slot-b'),
+                    new CallLogFixture(),
+                    resolver: $rightResolver
+                )
+            ],
+            slotOrder: ['slot-a', 'slot-b']
+        );
+
+        $this->assertSame($expected, $chain->resolveIdentity());
+        $this->assertSame($expected, $chain->resolveIdentity());
+        $this->assertSame(1, $wrongResolver->calls);
+        $this->assertSame(1, $rightResolver->calls);
+        $this->assertSame(
+            'right',
+            $chain->getLastResolvedMetadata()?->providerName
+        );
     }
 
     public function testResolveIdentityAggregatesFailures(): void

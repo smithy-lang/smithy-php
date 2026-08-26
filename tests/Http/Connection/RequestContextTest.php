@@ -23,4 +23,40 @@ final class RequestContextTest extends TestCase
             (string) $context->cacheKey()
         );
     }
+
+    public function testDefaultsHttpPort(): void
+    {
+        $context = RequestContext::fromUri(
+            new ComponentUri(scheme: 'http', host: 'example.com')
+        );
+
+        self::assertSame('http', $context->scheme);
+        self::assertSame(80, $context->port);
+    }
+
+    public function testPreservesExplicitPortForUnknownScheme(): void
+    {
+        $context = RequestContext::fromUri(
+            new ComponentUri(
+                scheme: 'ftp',
+                host: 'example.com',
+                port: 2121
+            )
+        );
+
+        self::assertSame('ftp', $context->scheme);
+        self::assertSame(2121, $context->port);
+    }
+
+    public function testRejectsUnknownSchemeWithoutPort(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage(
+            'URI scheme ftp requires an explicit port.'
+        );
+
+        RequestContext::fromUri(
+            new ComponentUri(scheme: 'ftp', host: 'example.com')
+        );
+    }
 }

@@ -93,6 +93,16 @@ final class IdentityChain implements IdentityChainInterface
                 $identity = $registration->resolver->resolveIdentity(
                     $properties
                 );
+                if (!$identity instanceof $this->identityType) {
+                    throw new \RuntimeException(
+                        'Identity resolver returned '
+                            . $identity::class
+                            . ', expected '
+                            . $this->identityType
+                            . '.'
+                    );
+                }
+
                 $this->cachedIdentity = $identity;
                 $this->cachedIdentityProperties = $properties;
                 $this->lastResolvedMetadata = $registration->metadata;
