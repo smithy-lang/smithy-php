@@ -7,16 +7,13 @@ namespace Smithy\Http\Connection;
 /**
  * A single HTTP connection with state and health tracking.
  *
- * Models the SRA's HTTPConnection: a stateful object wrapping
- * a TCP/TLS socket with a lifecycle state machine and health
- * monitoring. The connection knows its protocol version, TLS
- * context, and target.
+ * Represents a stateful object wrapping a TCP/TLS socket with a lifecycle
+ * state machine and health monitoring. The connection knows its protocol
+ * version and target.
  *
  * Implementations wrap transport-specific handles (e.g. \CurlHandle)
  * and expose them only to their corresponding exchange and factory
  * implementations.
- *
- * @see Smithy Reference Architecture section 3.5.1, HTTPConnection.
  */
 interface HttpConnectionInterface
 {
@@ -58,11 +55,6 @@ interface HttpConnectionInterface
      * The HTTP protocol version negotiated on this connection.
      */
     public function httpVersion(): HttpVersion;
-
-    /**
-     * TLS context captured after the handshake, or null if plaintext.
-     */
-    public function tlsContext(): ?TlsContext;
 
     /**
      * The request context (host, port, scheme, proxy) for this connection.

@@ -9,8 +9,6 @@ namespace Smithy\Http\Connection;
  *
  * Used by the ConnectionManager to decide whether a pooled
  * connection should be reused or discarded.
- *
- * @see Smithy Reference Architecture section 3.5.1, Connection Health.
  */
 enum ConnectionHealthStatus
 {

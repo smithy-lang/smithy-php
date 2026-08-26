@@ -32,10 +32,13 @@ namespace Smithy\Client\Auth;
 final class CachingIdentityResolver implements IdentityResolverInterface
 {
     /**
-     * Cached identity from the inner resolver's most recent successful
-     * call, or null when the cache is cold.
+     * Cached identity from the inner resolver's most recent successful call
+     * for the cached properties, or null when the cache is cold.
      */
     private ?IdentityInterface $cached = null;
+
+    /** @var array<string, mixed>|null */
+    private ?array $cachedProperties = null;
 
     /**
      * @param IdentityResolverInterface $inner Inner resolver that produces
@@ -49,15 +52,29 @@ final class CachingIdentityResolver implements IdentityResolverInterface
     public function __construct(
         private readonly IdentityResolverInterface $inner,
         private readonly int $refreshWindowSeconds = 300
-    ) {}
+    )
+    {
+        if ($refreshWindowSeconds < 0) {
+            throw new \InvalidArgumentException(
+                'Refresh window must be non-negative.'
+            );
+        }
+    }
 
     /** @inheritDoc */
     public function resolveIdentity(array $properties = []): IdentityInterface
     {
-        if ($this->cached !== null && !$this->requiresRefresh($this->cached)) {
+        if ($this->cached !== null
+            && $this->cachedProperties === $properties
+            && !$this->requiresRefresh($this->cached)
+        ) {
             return $this->cached;
         }
-        return $this->cached = $this->inner->resolveIdentity($properties);
+
+        $this->cached = $this->inner->resolveIdentity($properties);
+        $this->cachedProperties = $properties;
+
+        return $this->cached;
     }
 
     /**

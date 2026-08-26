@@ -13,8 +13,6 @@ namespace Smithy\Http\Connection;
  *
  * The Exchange is the unit of work that the ConnectionManager leases
  * to the HttpClient and that the HttpClient returns when done.
- *
- * @see Smithy Reference Architecture section 3.5.1, Exchange.
  */
 interface ExchangeInterface
 {

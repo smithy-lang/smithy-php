@@ -22,7 +22,7 @@ use Smithy\Protocol\ProtocolInterface;
  * protocol, HTTP client, endpoint resolver, retry strategy, auth
  * schemes, and interceptors. `withXxx()` helpers return copies.
  *
- * The `additional` associative bag stores extension state for
+ * The `context` associative bag stores extension state for
  * interceptors and generated client config subclasses.
  */
 class ClientConfig
@@ -43,7 +43,7 @@ class ClientConfig
     public readonly string $retryScope;
 
     /** @var array<string, mixed> */
-    public readonly array $additional;
+    public readonly array $context;
 
     /**
      * @param ProtocolInterface $protocol Protocol implementation for the
@@ -64,7 +64,7 @@ class ClientConfig
      *                                    {@see NoRetryStrategy}.
      * @param string $retryScope Retry scope identifier shared across
      *               executions.
-     * @param array<string, mixed> $additional Extension bag for
+     * @param array<string, mixed> $context Extension bag for
      *                      interceptor state or forward-compatible fields.
      */
     public function __construct(
@@ -76,7 +76,7 @@ class ClientConfig
         ?AuthSchemeResolverInterface $authSchemeResolver = null,
         ?RetryStrategyInterface $retryStrategy = null,
         string $retryScope = '',
-        array $additional = [],
+        array $context = [],
         array $authSchemePreference = []
     )
     {
@@ -102,7 +102,7 @@ class ClientConfig
             ?? ModeledAuthSchemeResolver::instance();
         $this->retryStrategy = $retryStrategy ?? NoRetryStrategy::instance();
         $this->retryScope = $retryScope;
-        $this->additional = $additional;
+        $this->context = $context;
     }
 
     /**
@@ -222,12 +222,12 @@ class ClientConfig
     }
 
     /**
-     * Create a config with a value stored in the `additional` bag.
+     * Create a config with a value stored in the `context` bag.
      */
-    public function withAdditional(string $key, mixed $value): static
+    public function withContext(string $key, mixed $value): static
     {
         return $this->copyWith([
-            'additional' => [...$this->additional, $key => $value]
+            'context' => [...$this->context, $key => $value]
         ]);
     }
 
@@ -274,9 +274,9 @@ class ClientConfig
         $retryScope = \array_key_exists('retryScope', $overrides)
             ? $overrides['retryScope']
             : $this->retryScope;
-        $additional = \array_key_exists('additional', $overrides)
-            ? $overrides['additional']
-            : $this->additional;
+        $context = \array_key_exists('context', $overrides)
+            ? $overrides['context']
+            : $this->context;
 
         return new static(
             protocol: $protocol,
@@ -287,7 +287,7 @@ class ClientConfig
             authSchemeResolver: $authSchemeResolver,
             retryStrategy: $retryStrategy,
             retryScope: $retryScope,
-            additional: $additional,
+            context: $context,
             authSchemePreference: \array_key_exists(
                 'authSchemePreference',
                 $overrides

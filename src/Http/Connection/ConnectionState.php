@@ -9,8 +9,6 @@ namespace Smithy\Http\Connection;
  *
  * Transitions: CONNECTING to CONNECTED to SHUTTING_DOWN to CLOSED.
  * A connected transport may also move directly to CLOSED.
- *
- * @see Smithy Reference Architecture section 3.5.1, Connection State.
  */
 enum ConnectionState
 {

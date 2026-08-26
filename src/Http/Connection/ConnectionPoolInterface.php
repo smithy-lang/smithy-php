@@ -7,13 +7,8 @@ namespace Smithy\Http\Connection;
 /**
  * FIFO pool of idle HTTP connections.
  *
- * The SRA explicitly requires FIFO ordering (section 3.5.2.2):
- *  - LIFO causes imbalanced load: most requests hit recently used connections.
- *  - LIFO leaves old connections idle until the server closes them.
- *  - FIFO rotates through all connections, keeping them alive and
- *    distributing load evenly, preventing mass reconnection storms.
- *
- * @see Smithy Reference Architecture section 3.5.1, ConnectionPool.
+ * FIFO reuse rotates through pooled connections, keeping them active and
+ * distributing load evenly.
  */
 interface ConnectionPoolInterface
 {

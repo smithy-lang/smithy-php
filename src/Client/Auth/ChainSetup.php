@@ -55,7 +55,9 @@ final class ChainSetup
      */
     public function getProperty(string $key, mixed $default = null): mixed
     {
-        return $this->properties[$key] ?? $default;
+        return \array_key_exists($key, $this->properties)
+            ? $this->properties[$key]
+            : $default;
     }
 
     /**

@@ -8,11 +8,11 @@ use Smithy\Client\Auth\{
     IdentityInterface,
     IdentityResolverInterface
 };
+
 /**
  * Test resolver that returns each identity in the given sequence, one
  * per `resolveIdentity` call.
  */
-
 final class SequenceResolverFixture implements IdentityResolverInterface
 {
     public int $calls = 0;
@@ -29,10 +29,3 @@ final class SequenceResolverFixture implements IdentityResolverInterface
         return $identity;
     }
 }
-
-/**
- * Test resolver whose sequence may contain a `\Throwable` at any slot.
- * When the next slot is throwable, `resolveIdentity` throws it instead
- * of returning an identity; the sequence still advances so a subsequent
- * call sees the next slot.
- */

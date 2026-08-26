@@ -26,6 +26,10 @@ final class IdentityChain implements IdentityChainInterface
     private readonly array $detectedSlots;
 
     private ?IdentityInterface $cachedIdentity = null;
+
+    /** @var array<string, mixed>|null */
+    private ?array $cachedIdentityProperties = null;
+
     private ?ResolvedIdentityMetadata $lastResolvedMetadata = null;
 
     /**
@@ -69,6 +73,7 @@ final class IdentityChain implements IdentityChainInterface
     public function resolveIdentity(array $properties = []): IdentityInterface
     {
         if ($this->cachedIdentity !== null
+            && $this->cachedIdentityProperties === $properties
             && !$this->requiresRefresh($this->cachedIdentity)
         ) {
             return $this->cachedIdentity;
@@ -89,6 +94,7 @@ final class IdentityChain implements IdentityChainInterface
                     $properties
                 );
                 $this->cachedIdentity = $identity;
+                $this->cachedIdentityProperties = $properties;
                 $this->lastResolvedMetadata = $registration->metadata;
 
                 return $identity;
@@ -112,6 +118,7 @@ final class IdentityChain implements IdentityChainInterface
     public function invalidate(): void
     {
         $this->cachedIdentity = null;
+        $this->cachedIdentityProperties = null;
         $this->lastResolvedMetadata = null;
 
         foreach ($this->registrations as $registration) {

@@ -18,7 +18,14 @@ final class IdentityResolverRegistration
         public readonly ResolvedIdentityMetadata $metadata,
         public readonly bool $terminal = false,
         private readonly mixed $invalidator = null
-    ) {}
+    )
+    {
+        if ($invalidator !== null && !\is_callable($invalidator)) {
+            throw new \InvalidArgumentException(
+                'Identity resolver invalidator must be callable.'
+            );
+        }
+    }
 
     /**
      * Run the invalidation hook when one is registered.

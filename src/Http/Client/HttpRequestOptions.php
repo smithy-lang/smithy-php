@@ -4,15 +4,8 @@ declare(strict_types=1);
 
 namespace Smithy\Http\Client;
 
-use Smithy\Async\CancellationInterface;
-
 /**
  * Configure transport behavior for one HTTP request.
- *
- * Connection setup belongs to ConnectConfiguration on the connection
- * manager.
- *
- * @see Smithy Reference Architecture section 3.5.1, HTTP Request Options.
  */
 final class HttpRequestOptions
 {
@@ -30,8 +23,7 @@ final class HttpRequestOptions
      */
     public function __construct(
         /**
-         * Buffered request timeout or streamed response header timeout.
-         * 0 = no limit.
+         * Request timeout in seconds. 0 = no limit.
          */
         public readonly float $timeout = 30.0,
 
@@ -41,18 +33,11 @@ final class HttpRequestOptions
         /** Proxy URL (e.g. "http://proxy:8080"), or null for direct. */
         public readonly ?string $proxy = null,
 
-        /** Select buffered, streamed, or content-length-based delivery. */
-        public readonly ResponseBodyMode $responseBodyMode =
-            ResponseBodyMode::Auto,
-
         /** Whether to decode content-encoded (gzip) responses. */
         public readonly bool $decodeContent = true,
 
         /** Request trailer fields for transports that support them. */
         public readonly ?RequestTrailers $trailers = null,
-
-        /** Signal used to cancel connection acquisition or transfer. */
-        public readonly ?CancellationInterface $cancellation = null,
 
         /** Maximum buffered response bytes before transport backpressure. */
         public readonly int $responseBufferSize = 64 * 1024,
@@ -69,7 +54,7 @@ final class HttpRequestOptions
         /** Preferred transport upload buffer size in bytes. */
         public readonly int $uploadBufferSize = 128 * 1024,
 
-        /** Preferred cURL buffer for forced bodyless buffered downloads. */
+        /** Preferred buffer size for buffered response downloads. */
         public readonly int $bufferedDownloadBufferSize = 256 * 1024
     )
     {

@@ -31,11 +31,12 @@ final class RequestContext
         ?string $proxy = null
     ): self
     {
+        $scheme = $uri->getScheme() ?: 'https';
+
         return new self(
-            scheme: $uri->getScheme() ?: 'https',
+            scheme: $scheme,
             host: $uri->getHost(),
-            port: $uri->getPort()
-                ?? ($uri->getScheme() === 'https' ? 443 : 80),
+            port: $uri->getPort() ?? ($scheme === 'https' ? 443 : 80),
             proxy: $proxy
         );
     }

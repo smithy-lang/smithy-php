@@ -18,6 +18,7 @@ use Smithy\Tests\Client\Auth\Utils\{
     CountingResolverFixture,
     CountingThrowingResolverFixture,
     SeenValueFixture,
+    SequenceResolverFixture,
     StaticResolverFixture,
     TestIdentityFixture,
     TestProviderFixture,
@@ -179,6 +180,18 @@ final class IdentityChainTest extends TestCase
         $this->assertSame('test-region', $seen->value);
     }
 
+    public function testChainSetupReturnsStoredNullProperty(): void
+    {
+        $setup = new ChainSetup(['region' => null]);
+
+        $this->assertTrue($setup->hasProperty('region'));
+        $this->assertNull($setup->getProperty('region', 'fallback'));
+        $this->assertSame('fallback', $setup->getProperty(
+            'missing',
+            'fallback'
+        ));
+    }
+
     public function testResolveIdentityTracksWinningResolverMetadata(): void
     {
         $firstLog = new CallLogFixture();
@@ -253,6 +266,39 @@ final class IdentityChainTest extends TestCase
         );
     }
 
+    public function testResolveIdentityCachesByProperties(): void
+    {
+        $first = new TestIdentityFixture();
+        $second = new TestIdentityFixture();
+        $resolver = new SequenceResolverFixture([$first, $second]);
+        $chain = new IdentityChain(
+            TestIdentityFixture::class,
+            providers: [
+                new TestProviderFixture(
+                    'cache',
+                    OrderingConstraint::standard('slot-a'),
+                    new CallLogFixture(),
+                    resolver: $resolver
+                )
+            ],
+            slotOrder: ['slot-a']
+        );
+
+        $this->assertSame($first, $chain->resolveIdentity([
+            'scope' => 'one'
+        ]));
+        $this->assertSame($first, $chain->resolveIdentity([
+            'scope' => 'one'
+        ]));
+        $this->assertSame($second, $chain->resolveIdentity([
+            'scope' => 'two'
+        ]));
+        $this->assertSame($second, $chain->resolveIdentity([
+            'scope' => 'two'
+        ]));
+        $this->assertSame(2, $resolver->calls);
+    }
+
     public function testResolveIdentityAggregatesFailures(): void
     {
         $chain = new IdentityChain(
@@ -312,6 +358,28 @@ final class IdentityChainTest extends TestCase
 
         $this->assertNull($chain->getLastResolvedMetadata());
         $this->assertSame(1, $invalidated);
+    }
+
+    public function testInvalidatorMustBeCallable(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage(
+            'Identity resolver invalidator must be callable.'
+        );
+
+        new IdentityChain(
+            TestIdentityFixture::class,
+            providers: [
+                new TestProviderFixture(
+                    'cache',
+                    OrderingConstraint::standard('slot-a'),
+                    new CallLogFixture(),
+                    resolver: self::staticResolver(),
+                    invalidator: 'not-callable'
+                )
+            ],
+            slotOrder: ['slot-a']
+        );
     }
 
     public function testInvalidateForcesChainToResolveAgain(): void

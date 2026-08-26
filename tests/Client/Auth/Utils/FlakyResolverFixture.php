@@ -8,11 +8,10 @@ use Smithy\Client\Auth\{
     IdentityInterface,
     IdentityResolverInterface
 };
-/**
- * Test resolver that returns each identity in the given sequence, one
- * per `resolveIdentity` call.
- */
 
+/**
+ * Test resolver that returns or throws each entry in sequence.
+ */
 final class FlakyResolverFixture implements IdentityResolverInterface
 {
     public int $calls = 0;

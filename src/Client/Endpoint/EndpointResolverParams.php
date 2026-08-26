@@ -18,9 +18,9 @@ use Smithy\Core\Shape\OperationInterface;
 final class EndpointResolverParams
 {
     /**
-     * ClientConfig::additional key containing endpoint parameter values.
+     * ClientConfig::context key containing endpoint parameter values.
      */
-    public const ADDITIONAL_PARAMETERS = 'smithy.endpointParameters';
+    public const CONTEXT_PARAMETERS = 'smithy.endpointParameters';
 
     /**
      * Create endpoint resolver parameters.

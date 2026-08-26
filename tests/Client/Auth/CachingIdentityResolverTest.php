@@ -38,6 +38,28 @@ final class CachingIdentityResolverTest extends TestCase
         $this->assertSame(1, $inner->calls);
     }
 
+    public function testDifferentPropertiesBypassCachedIdentity(): void
+    {
+        $first = self::identityExpiring(null);
+        $second = self::identityExpiring(null);
+        $inner = new SequenceResolverFixture([$first, $second]);
+        $resolver = new CachingIdentityResolver($inner);
+
+        $this->assertSame($first, $resolver->resolveIdentity([
+            'scope' => 'one'
+        ]));
+        $this->assertSame($first, $resolver->resolveIdentity([
+            'scope' => 'one'
+        ]));
+        $this->assertSame($second, $resolver->resolveIdentity([
+            'scope' => 'two'
+        ]));
+        $this->assertSame($second, $resolver->resolveIdentity([
+            'scope' => 'two'
+        ]));
+        $this->assertSame(2, $inner->calls);
+    }
+
     public function testExpiredIdentityTriggersRefresh(): void
     {
         $expired = self::identityExpiring(\microtime(true) - 60);
@@ -94,6 +116,19 @@ final class CachingIdentityResolverTest extends TestCase
         $resolver->resolveIdentity();
         $resolver->resolveIdentity();
         $this->assertSame(1, $inner->calls);
+    }
+
+    public function testRejectsNegativeRefreshWindow(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage(
+            'Refresh window must be non-negative.'
+        );
+
+        new CachingIdentityResolver(
+            new CountingResolverFixture(self::identityExpiring(null)),
+            refreshWindowSeconds: -1
+        );
     }
 
     public function testGetInnerReturnsWrappedResolver(): void

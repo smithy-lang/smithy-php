@@ -9,7 +9,6 @@ use Smithy\Http\Client\{
     HttpClientInterface,
     HttpRequestOptions
 };
-use Smithy\Http\Connection\ConnectionManagerInterface;
 use Smithy\Http\Message\{
     Response,
     ResponseInterface
@@ -168,7 +167,7 @@ class MockHttpClient implements HttpClientInterface
         return $this->sentOptions;
     }
 
-    public function send(
+    public function sendRequest(
         RequestInterface $request,
         ?HttpRequestOptions $options = null
     ): ResponseInterface
@@ -195,25 +194,6 @@ class MockHttpClient implements HttpClientInterface
         }
 
         return new Response(200, [], 'default');
-    }
-
-    public function sendMulti(
-        array $requests,
-        ?HttpRequestOptions $options = null
-    ): array
-    {
-        return \array_map(
-            fn(RequestInterface $request): ResponseInterface
-                => $this->send($request, $options),
-            $requests
-        );
-    }
-
-    public function getConnectionManager(): ConnectionManagerInterface
-    {
-        throw new \LogicException(
-            'MockHttpClient does not expose a connection manager.'
-        );
     }
 
     private function normalizeResponse(

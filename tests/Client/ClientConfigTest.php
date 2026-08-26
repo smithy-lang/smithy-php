@@ -6,14 +6,9 @@ namespace Smithy\Tests\Client;
 
 use PHPUnit\Framework\TestCase;
 use Smithy\Client\Auth\{
-    AnonymousIdentityResolver,
     AuthSchemeInterface,
-    AuthSchemeResolverInterface,
-    IdentityResolverInterface,
     ModeledAuthSchemeResolver,
     NoAuthScheme,
-    NullSigner,
-    SignerInterface,
     StaticAuthSchemeResolver
 };
 use Smithy\Client\ClientConfig;
@@ -25,13 +20,15 @@ use Smithy\Client\Retry\{
     NoRetryStrategy,
     RetryStrategyInterface
 };
-use Smithy\Core\Shape\OperationInterface;
-use Smithy\Tests\Utils\Http\MockHttpClient;
 use Smithy\Tests\Client\Fake\{
     FakeOperation,
     FakeProtocol,
-    RecordingInterceptor
+    RecordingInterceptor,
+    RegionalClientConfigFixture,
+    TestAuthSchemeFixture
 };
+use Smithy\Tests\Utils\Http\MockHttpClient;
+
 /**
  * Copy-on-write semantics for {@see ClientConfig::withXxx()}.
  *
@@ -203,7 +200,7 @@ final class ClientConfigTest extends TestCase
     public function testWithAddedAuthSchemeAppendsPreservingNoAuth(): void
     {
         $orig = $this->baseConfig();
-        $scheme = $this->stubAuthScheme('example#custom');
+        $scheme = new TestAuthSchemeFixture('example#custom');
 
         $new = $orig->withAddedAuthScheme($scheme);
 
@@ -226,7 +223,7 @@ final class ClientConfigTest extends TestCase
     public function testWithSupportedAuthSchemesPreservesNoAuth(): void
     {
         $orig = $this->baseConfig();
-        $scheme = $this->stubAuthScheme('example#custom');
+        $scheme = new TestAuthSchemeFixture('example#custom');
 
         $new = $orig->withSupportedAuthSchemes([$scheme]);
 
@@ -240,23 +237,23 @@ final class ClientConfigTest extends TestCase
         $this->assertCount(2, $new->supportedAuthSchemes);
     }
 
-    public function testWithAdditionalStoresValueUnderKey(): void
+    public function testWithContextStoresValueUnderKey(): void
     {
         $orig = $this->baseConfig();
 
-        $new = $orig->withAdditional('trace-id', 'abc-123');
+        $new = $orig->withContext('trace-id', 'abc-123');
 
-        $this->assertSame('abc-123', $new->additional['trace-id']);
-        $this->assertArrayNotHasKey('trace-id', $orig->additional);
+        $this->assertSame('abc-123', $new->context['trace-id']);
+        $this->assertArrayNotHasKey('trace-id', $orig->context);
     }
 
-    public function testWithAdditionalPreservesOtherKeys(): void
+    public function testWithContextPreservesOtherKeys(): void
     {
-        $orig = $this->baseConfig()->withAdditional('one', 1);
+        $orig = $this->baseConfig()->withContext('one', 1);
 
-        $new = $orig->withAdditional('two', 2);
+        $new = $orig->withContext('two', 2);
 
-        $this->assertSame(['one' => 1, 'two' => 2], $new->additional);
+        $this->assertSame(['one' => 1, 'two' => 2], $new->context);
     }
 
     /**
@@ -268,130 +265,23 @@ final class ClientConfigTest extends TestCase
      */
     public function testSubclassFieldsSurviveBaseClassWithXxx(): void
     {
-        $orig = new class(
+        $orig = new RegionalClientConfigFixture(
             protocol: new FakeProtocol(),
             httpClient: new MockHttpClient(),
             endpointResolver: new StaticEndpointResolver(
                 new Endpoint('https://a.test')
             ),
             region: 'test-region'
-        ) extends ClientConfig {
-            public function __construct(
-                \Smithy\Protocol\ProtocolInterface $protocol,
-                \Smithy\Http\Client\HttpClientInterface $httpClient,
-                \Smithy\Client\Endpoint\EndpointResolverInterface
-                    $endpointResolver,
-                array $interceptors = [],
-                array $supportedAuthSchemes = [],
-                ?AuthSchemeResolverInterface $authSchemeResolver = null,
-                ?RetryStrategyInterface $retryStrategy = null,
-                string $retryScope = '',
-                array $additional = [],
-                public readonly string $region = ''
-            )
-            {
-                parent::__construct(
-                    $protocol,
-                    $httpClient,
-                    $endpointResolver,
-                    $interceptors,
-                    $supportedAuthSchemes,
-                    $authSchemeResolver,
-                    $retryStrategy,
-                    $retryScope,
-                    $additional
-                );
-            }
+        );
 
-            protected function copyWith(array $overrides): static
-            {
-                $protocol = \array_key_exists('protocol', $overrides)
-                    ? $overrides['protocol']
-                    : $this->protocol;
-                $httpClient = \array_key_exists('httpClient', $overrides)
-                    ? $overrides['httpClient']
-                    : $this->httpClient;
-                $endpointResolver = \array_key_exists(
-                    'endpointResolver',
-                    $overrides
-                )
-                    ? $overrides['endpointResolver']
-                    : $this->endpointResolver;
-                $interceptors = \array_key_exists('interceptors', $overrides)
-                    ? $overrides['interceptors']
-                    : $this->interceptors;
-                $supportedAuthSchemes = \array_key_exists(
-                    'supportedAuthSchemes',
-                    $overrides
-                )
-                    ? $overrides['supportedAuthSchemes']
-                    : $this->supportedAuthSchemes;
-                $authSchemeResolver = \array_key_exists(
-                    'authSchemeResolver',
-                    $overrides
-                )
-                    ? $overrides['authSchemeResolver']
-                    : $this->authSchemeResolver;
-                $retryStrategy = \array_key_exists(
-                    'retryStrategy',
-                    $overrides
-                )
-                    ? $overrides['retryStrategy']
-                    : $this->retryStrategy;
-                $retryScope = \array_key_exists('retryScope', $overrides)
-                    ? $overrides['retryScope']
-                    : $this->retryScope;
-                $additional = \array_key_exists('additional', $overrides)
-                    ? $overrides['additional']
-                    : $this->additional;
-                $region = \array_key_exists('region', $overrides)
-                    ? $overrides['region']
-                    : $this->region;
-
-                return new static(
-                    protocol: $protocol,
-                    httpClient: $httpClient,
-                    endpointResolver: $endpointResolver,
-                    interceptors: $interceptors,
-                    supportedAuthSchemes: $supportedAuthSchemes,
-                    authSchemeResolver: $authSchemeResolver,
-                    retryStrategy: $retryStrategy,
-                    retryScope: $retryScope,
-                    additional: $additional,
-                    region: $region
-                );
-            }
-        };
-
-        $new = $orig->withRetryScope('scope')
+        $new = $orig->withAuthSchemePreference(['sigv4'])
+            ->withRetryScope('scope')
             ->withInterceptor(new RecordingInterceptor())
-            ->withAdditional('foo', 'bar');
+            ->withContext('foo', 'bar');
 
         // Every inherited withXxx() call preserves the subclass field.
         $this->assertSame('test-region', $new->region);
+        $this->assertSame(['sigv4'], $new->authSchemePreference);
     }
 
-    private function stubAuthScheme(string $id): AuthSchemeInterface
-    {
-        return new class($id) implements AuthSchemeInterface {
-            public function __construct(private readonly string $id) {}
-
-            public function getSchemeId(): string
-            {
-                return $this->id;
-            }
-
-            public function getIdentityResolver(
-                ClientConfig $config
-            ): IdentityResolverInterface
-            {
-                return AnonymousIdentityResolver::instance();
-            }
-
-            public function getSigner(): SignerInterface
-            {
-                return NullSigner::instance();
-            }
-        };
-    }
 }
