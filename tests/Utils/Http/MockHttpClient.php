@@ -10,6 +10,7 @@ use Smithy\Http\Client\{
     HttpClientInterface,
     HttpRequestOptions
 };
+use Smithy\Http\Client\Connection\ConnectionManagerInterface;
 use Smithy\Http\Message\Response;
 
 /**
@@ -21,6 +22,7 @@ use Smithy\Http\Message\Response;
 class MockHttpClient implements HttpClientInterface
 {
     private ?HttpRequestOptions $defaultOptions = null;
+    private ?ConnectionManagerInterface $connectionManager = null;
 
     /**
      * @var list<ResponseInterface|\Throwable|callable(
@@ -192,6 +194,12 @@ class MockHttpClient implements HttpClientInterface
         }
 
         return new Response(200, [], 'default');
+    }
+
+    /** @inheritDoc */
+    public function getConnectionManager(): ConnectionManagerInterface
+    {
+        return $this->connectionManager ??= new MockConnectionManager();
     }
 
     private function normalizeResponse(
