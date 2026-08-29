@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Smithy\Tests\Client\Endpoint\Bytecode;
 
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Smithy\Client\Endpoint\Bytecode\StdFunctions;
 
@@ -12,17 +13,18 @@ use Smithy\Client\Endpoint\Bytecode\StdFunctions;
  * function registry.
  *
  * We test each function's spec-defined edge cases directly against the
- * registered instance. The compiler prefers dedicated opcodes for the
+ * registered instance - the compiler prefers dedicated opcodes for the
  * fast-path ones but the registry still needs to be correct for cases
  * the compiler couldn't inline.
  */
+#[CoversClass(StdFunctions::class)]
 final class StdFunctionsTest extends TestCase
 {
-
     public function testIsSet(): void
     {
         $fn = StdFunctions::get('isSet');
         $this->assertTrue($fn->apply1('anything'));
+        // False is set by presence, not truthiness.
         $this->assertTrue($fn->apply1(false));
         $this->assertTrue($fn->apply1(0));
         $this->assertTrue($fn->apply1(''));
@@ -64,6 +66,53 @@ final class StdFunctionsTest extends TestCase
         $this->assertNull($fn->apply2(['Thing1' => 'foo'], 'Missing'));
     }
 
+    public function testGetAttrNestedPath(): void
+    {
+        $fn = StdFunctions::get('getAttr');
+
+        $this->assertSame(
+            'value',
+            $fn->apply2(
+                ['Parent' => ['Child' => 'value']],
+                'Parent.Child'
+            )
+        );
+    }
+
+    public function testGetAttrNestedIndexedPath(): void
+    {
+        $fn = StdFunctions::get('getAttr');
+
+        $this->assertSame(
+            'second',
+            $fn->apply2(
+                [
+                    'Parent' => [
+                        'Items' => [
+                            ['Name' => 'first'],
+                            ['Name' => 'second']
+                        ]
+                    ]
+                ],
+                'Parent.Items[1].Name'
+            )
+        );
+        $this->assertSame(
+            'second',
+            $fn->apply2(
+                [
+                    'Parent' => [
+                        'Items' => [
+                            ['Name' => 'first'],
+                            ['Name' => 'second']
+                        ]
+                    ]
+                ],
+                'Parent.Items[-1].Name'
+            )
+        );
+    }
+
     public function testGetAttrPositiveIndex(): void
     {
         $fn = StdFunctions::get('getAttr');
@@ -77,10 +126,23 @@ final class StdFunctionsTest extends TestCase
     {
         $fn = StdFunctions::get('getAttr');
         $arr = ['Items' => ['a', 'b', 'c']];
-        // Spec supports negative indexing: [-1] is last, and [-2] is
-        // second to last.
+        // Spec supports negative indexing: [-1] is last, [-2] is second-to-last.
         $this->assertSame('c', $fn->apply2($arr, 'Items[-1]'));
         $this->assertSame('b', $fn->apply2($arr, 'Items[-2]'));
+    }
+
+    public function testGetAttrRejectsInvalidInputs(): void
+    {
+        $fn = StdFunctions::get('getAttr');
+
+        $this->assertNull($fn->apply2('not-an-array', 'Items'));
+        $this->assertNull($fn->apply2([], 1));
+        $this->assertNull(
+            $fn->apply2(['Items' => 'not-an-array'], 'Items[0]')
+        );
+        $this->assertNull(
+            $fn->apply2(['Items' => ['a']], 'Items[-2]')
+        );
     }
 
     public function testSubstringForward(): void
@@ -94,7 +156,7 @@ final class StdFunctionsTest extends TestCase
     {
         $fn = StdFunctions::get('substring');
         // Spec example: `substring("abcde", 0, 3, true) == "cde"`.
-        // last three characters.
+        // Reverse mode counts back from the end of the string.
         $this->assertSame('cde', $fn->apply(['abcde', 0, 3, true]));
     }
 
@@ -116,6 +178,15 @@ final class StdFunctionsTest extends TestCase
         $fn = StdFunctions::get('substring');
         $this->assertNull($fn->apply(['abcde', 2, 2, false]));
         $this->assertNull($fn->apply(['abcde', 3, 1, false]));
+    }
+
+    public function testSubstringRejectsInvalidTypes(): void
+    {
+        $fn = StdFunctions::get('substring');
+
+        $this->assertNull($fn->apply([1, 0, 1, false]));
+        $this->assertNull($fn->apply(['abc', '0', 1, false]));
+        $this->assertNull($fn->apply(['abc', 0, '1', false]));
     }
 
     public function testUriEncodeUnreservedUntouched(): void
@@ -162,6 +233,15 @@ final class StdFunctionsTest extends TestCase
         $this->assertNull($fn->apply1('https://example.com?foo=bar'));
     }
 
+    public function testParseUrlRejectsFragmentAndUnsupportedScheme(): void
+    {
+        $fn = StdFunctions::get('parseURL');
+
+        $this->assertNull($fn->apply1('https://example.com#fragment'));
+        $this->assertNull($fn->apply1('ftp://example.com'));
+        $this->assertNull($fn->apply1(1));
+    }
+
     public function testParseUrlIPv4(): void
     {
         $fn = StdFunctions::get('parseURL');
@@ -191,6 +271,9 @@ final class StdFunctionsTest extends TestCase
         $fn = StdFunctions::get('parseURL');
         $this->assertNull($fn->apply1('not a url at all'));
         $this->assertNull($fn->apply1('://missing-scheme.com'));
+        $this->assertNull($fn->apply1('https://exa mple.com/path'));
+        $this->assertNull($fn->apply1('https://foo-.example.com/path'));
+        $this->assertNull($fn->apply1('https://user:pass@example.com/path'));
     }
 
     public function testValidHostLabelSingle(): void
@@ -198,13 +281,20 @@ final class StdFunctionsTest extends TestCase
         $fn = StdFunctions::get('isValidHostLabel');
         $this->assertTrue($fn->apply2('example', false));
         $this->assertTrue($fn->apply2('a-b', false));
+        // One character is the minimum valid label length.
         $this->assertTrue($fn->apply2('a', false));
+        // 63 characters is the maximum valid label length.
         $this->assertTrue($fn->apply2(\str_repeat('a', 63), false));
 
         $this->assertFalse($fn->apply2('', false));
+        // Labels cannot start with a hyphen.
         $this->assertFalse($fn->apply2('-bad', false));
+        // Dots are not allowed when subdomains are disabled.
         $this->assertFalse($fn->apply2('foo.bar', false));
+        // Labels cannot exceed 63 characters.
         $this->assertFalse($fn->apply2(\str_repeat('a', 64), false));
+        // Labels cannot end with a hyphen.
+        $this->assertFalse($fn->apply2('foo-', false));
     }
 
     public function testValidHostLabelSubdomains(): void
@@ -213,8 +303,12 @@ final class StdFunctionsTest extends TestCase
         $this->assertTrue($fn->apply2('a.b.c', true));
         $this->assertTrue($fn->apply2('foo.example', true));
 
+        // Subdomains cannot contain empty labels.
         $this->assertFalse($fn->apply2('a..b', true));
+        // Subdomain labels cannot start with a hyphen.
         $this->assertFalse($fn->apply2('a.-b', true));
+        // Subdomain labels cannot end with a hyphen.
+        $this->assertFalse($fn->apply2('foo-.example', true));
     }
 
     public function testCoalesceFirstNonNull(): void
@@ -272,6 +366,28 @@ final class StdFunctionsTest extends TestCase
         $this->assertSame([''], $fn->apply(['', '--', 0]));
     }
 
+    public function testSplitRejectsInvalidInputs(): void
+    {
+        $fn = StdFunctions::get('split');
+
+        $this->assertNull($fn->apply([1, '-', 0]));
+        $this->assertNull($fn->apply(['a-b', 1, 0]));
+        $this->assertNull($fn->apply(['a-b', '', 0]));
+        $this->assertNull($fn->apply(['a-b', '-', '0']));
+        $this->assertNull($fn->apply(['a-b', '-', -1]));
+    }
+
+    public function testFunctionsExposeRegistryMetadata(): void
+    {
+        foreach (StdFunctions::all() as $name => $function) {
+            self::assertSame($name, $function->getName());
+            self::assertSame(
+                StdFunctions::class,
+                $function->getRegistryClass()
+            );
+        }
+    }
+
     public function testItePicksBranch(): void
     {
         $fn = StdFunctions::get('ite');
@@ -311,7 +427,7 @@ final class StdFunctionsTest extends TestCase
             'isValidHostLabel',
             'coalesce',
             'split',
-            'ite'
+            'ite',
         ];
         \sort($names);
         \sort($expected);
