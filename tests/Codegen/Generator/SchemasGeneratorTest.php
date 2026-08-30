@@ -215,4 +215,46 @@ final class SchemasGeneratorTest extends TestCase
             $file->content
         );
     }
+
+    public function testPreservesEndpointContextParamTraitById(): void
+    {
+        $model = SmithyModel::fromJson(\json_encode([
+            'smithy' => '2.0',
+            'shapes' => [
+                'smithy.example#Input' => [
+                    'type' => 'structure',
+                    'members' => [
+                        'region' => [
+                            'target' => 'smithy.api#String',
+                            'traits' => [
+                                'smithy.rules#contextParam' => [
+                                    'name' => 'Region'
+                                ]
+                            ]
+                        ]
+                    ]
+                ]
+            ]
+        ], JSON_THROW_ON_ERROR));
+        $settings = new CodegenSettings(
+            namespace: 'Smithy\\Example',
+            outputDir: '/tmp/out',
+            organization: 'flat'
+        );
+        $generator = new SchemasGenerator(
+            $model,
+            new PhpSymbolProvider($model, $settings),
+            $settings
+        );
+
+        $file = $generator->generate([
+            'smithy.example#Input' => true
+        ]);
+
+        $this->assertStringContainsString(
+            "directTraitsById: ['smithy.rules#contextParam' => "
+                . "['name' => 'Region']]",
+            $file->content
+        );
+    }
 }

@@ -183,6 +183,49 @@ final class OperationGeneratorTest extends TestCase
         );
     }
 
+    public function testPreservesEndpointOperationTraitsById(): void
+    {
+        $model = SmithyModel::fromJson(\json_encode([
+            'smithy' => '2.0',
+            'shapes' => [
+                'smithy.example#ExampleOperation' => [
+                    'type' => 'operation',
+                    'traits' => [
+                        'smithy.rules#operationContextParams' => [
+                            'Account' => ['path' => 'accountId']
+                        ],
+                        'smithy.rules#staticContextParams' => [
+                            'Stage' => ['value' => 'prod']
+                        ]
+                    ]
+                ]
+            ]
+        ], JSON_THROW_ON_ERROR));
+        $settings = new CodegenSettings(
+            namespace: 'Smithy\\Example',
+            outputDir: '/tmp/out',
+            organization: 'flat'
+        );
+        $generator = new OperationGenerator(
+            $model,
+            new PhpSymbolProvider($model, $settings),
+            $settings
+        );
+
+        $file = $generator->generate('smithy.example#ExampleOperation');
+
+        $this->assertStringContainsString(
+            "'smithy.rules#operationContextParams' => "
+                . "['Account' => ['path' => 'accountId']]",
+            $file->content
+        );
+        $this->assertStringContainsString(
+            "'smithy.rules#staticContextParams' => "
+                . "['Stage' => ['value' => 'prod']]",
+            $file->content
+        );
+    }
+
     public function testUsesConfiguredErrorDiscriminatorsAndSchemaTraits(): void
     {
         $model = SmithyModel::fromJson(\json_encode([
