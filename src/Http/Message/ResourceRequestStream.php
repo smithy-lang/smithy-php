@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace Smithy\Http\Message;
 
 /**
- * Resource-backed body stream.
+ * Resource-backed request stream.
  */
-final class ResourceBodyStream implements BodyStreamInterface
+final class ResourceRequestStream implements RequestStreamInterface
 {
     /** @var resource|null */
     private $resource;
@@ -60,7 +60,7 @@ final class ResourceBodyStream implements BodyStreamInterface
 
         if (!self::isStreamResource($resource)) {
             throw new \InvalidArgumentException(
-                'ResourceBodyStream requires a valid PHP stream resource.'
+                'ResourceRequestStream requires a valid PHP stream resource.'
             );
         }
 
@@ -71,7 +71,7 @@ final class ResourceBodyStream implements BodyStreamInterface
     }
 
     /**
-     * Create a lazily opened, replayable resource body.
+     * Create a lazily opened, replayable resource request.
      *
      * The opener must return a fresh resource positioned at the logical body
      * start each time it is invoked.
@@ -93,7 +93,7 @@ final class ResourceBodyStream implements BodyStreamInterface
     }
 
     /**
-     * Create a lazily opened, replayable file body.
+     * Create a lazily opened, replayable file request.
      */
     public static function fromFile(string $path): self
     {
@@ -120,7 +120,7 @@ final class ResourceBodyStream implements BodyStreamInterface
     }
 
     /**
-     * Create a temporary resource body containing the provided bytes.
+     * Create a temporary resource request containing the provided bytes.
      */
     public static function temp(string $content = ''): self
     {

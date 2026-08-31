@@ -6,14 +6,14 @@ namespace Smithy\Tests\Http\Client\Curl\Utils;
 
 use Smithy\Async\EventLoopInterface;
 use Smithy\Http\Message\{
-    AsyncBodyStream,
-    AsyncBodyStreamInterface
+    AsyncRequestStream,
+    AsyncRequestStreamInterface
 };
 
-final class FailingCleanupAsyncBodyStreamFixture implements
-    AsyncBodyStreamInterface
+final class FailingCleanupAsyncRequestStreamFixture implements
+    AsyncRequestStreamInterface
 {
-    private readonly AsyncBodyStream $inner;
+    private readonly AsyncRequestStream $inner;
 
     public function __construct(
         private readonly \Throwable $cleanupError,
@@ -21,7 +21,7 @@ final class FailingCleanupAsyncBodyStreamFixture implements
         ?int $expectedLength = null
     )
     {
-        $this->inner = new AsyncBodyStream(
+        $this->inner = new AsyncRequestStream(
             $eventLoop,
             expectedLength: $expectedLength
         );

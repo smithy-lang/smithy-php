@@ -6,14 +6,14 @@ namespace Smithy\Tests\Http\Message;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
-use Smithy\Http\Message\ResourceBodyStream;
+use Smithy\Http\Message\ResourceRequestStream;
 
-#[CoversClass(ResourceBodyStream::class)]
-final class ResourceBodyStreamTest extends TestCase
+#[CoversClass(ResourceRequestStream::class)]
+final class ResourceRequestStreamTest extends TestCase
 {
     public function testUsesRemainingLength(): void
     {
-        $stream = ResourceBodyStream::temp('abcdef');
+        $stream = ResourceRequestStream::temp('abcdef');
         $stream->seek(2);
 
         $this->assertSame(4, $stream->length());
@@ -30,7 +30,7 @@ final class ResourceBodyStreamTest extends TestCase
 
     public function testTracksNativeResourceReads(): void
     {
-        $stream = ResourceBodyStream::temp('abcdef');
+        $stream = ResourceRequestStream::temp('abcdef');
         $resource = $stream->getResource();
 
         $this->assertSame('abc', \fread($resource, 3));
@@ -55,7 +55,7 @@ final class ResourceBodyStreamTest extends TestCase
 
         \fwrite($resource, 'abcdef');
         \rewind($resource);
-        $stream = new ResourceBodyStream($resource, length: 3);
+        $stream = new ResourceRequestStream($resource, length: 3);
 
         $this->assertSame(3, $stream->length());
         $this->assertSame(3, $stream->getSize());
@@ -77,7 +77,7 @@ final class ResourceBodyStreamTest extends TestCase
 
         $this->assertSame(
             'abc',
-            (string) new ResourceBodyStream($resource, length: 3)
+            (string) new ResourceRequestStream($resource, length: 3)
         );
     }
 
@@ -90,7 +90,7 @@ final class ResourceBodyStreamTest extends TestCase
 
         \fwrite($resource, 'abcdef');
         \rewind($resource);
-        $stream = new ResourceBodyStream($resource, length: 3);
+        $stream = new ResourceRequestStream($resource, length: 3);
 
         $stream->seek(2);
 
@@ -109,7 +109,7 @@ final class ResourceBodyStreamTest extends TestCase
         }
 
         try {
-            $stream = new ResourceBodyStream($resource, length: 7);
+            $stream = new ResourceRequestStream($resource, length: 7);
 
             $this->assertFalse($stream->isSeekable());
             $this->assertFalse($stream->isReplayable());
@@ -127,7 +127,7 @@ final class ResourceBodyStreamTest extends TestCase
 
     public function testReadZeroReturnsEmptyString(): void
     {
-        $stream = ResourceBodyStream::temp('payload');
+        $stream = ResourceRequestStream::temp('payload');
 
         $this->assertSame('', $stream->read(0));
         $this->assertSame('pay', $stream->read(3));
@@ -135,7 +135,7 @@ final class ResourceBodyStreamTest extends TestCase
 
     public function testReadRejectsNegativeLength(): void
     {
-        $stream = ResourceBodyStream::temp('payload');
+        $stream = ResourceRequestStream::temp('payload');
 
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage(
@@ -147,7 +147,7 @@ final class ResourceBodyStreamTest extends TestCase
 
     public function testHashesExplicitLengthForLazyResource(): void
     {
-        $stream = ResourceBodyStream::create(
+        $stream = ResourceRequestStream::create(
             static function () {
                 $resource = \fopen('php://temp', 'r+');
                 if ($resource === false) {
@@ -174,7 +174,7 @@ final class ResourceBodyStreamTest extends TestCase
     {
         $openCount = 0;
         $openedResources = [];
-        $stream = ResourceBodyStream::create(
+        $stream = ResourceRequestStream::create(
             static function () use (
                 &$openCount,
                 &$openedResources
@@ -222,7 +222,7 @@ final class ResourceBodyStreamTest extends TestCase
     public function testHashesWithIndependentResource(): void
     {
         $openCount = 0;
-        $stream = ResourceBodyStream::create(
+        $stream = ResourceRequestStream::create(
             static function () use (&$openCount) {
                 ++$openCount;
                 $resource = \fopen('php://temp', 'r+');
@@ -249,7 +249,7 @@ final class ResourceBodyStreamTest extends TestCase
 
     public function testHashFailureRestoresResourcePosition(): void
     {
-        $stream = ResourceBodyStream::temp('abcdef');
+        $stream = ResourceRequestStream::temp('abcdef');
         $stream->seek(3);
         $failed = false;
 
@@ -276,7 +276,7 @@ final class ResourceBodyStreamTest extends TestCase
         $stream = null;
 
         try {
-            $stream = ResourceBodyStream::fromFile($path);
+            $stream = ResourceRequestStream::fromFile($path);
 
             $this->assertSame(7, $stream->length());
             $this->assertSame('payload', $stream->getContents());
@@ -292,7 +292,7 @@ final class ResourceBodyStreamTest extends TestCase
 
     public function testRejectsInvalidOpenerResult(): void
     {
-        $stream = ResourceBodyStream::create(
+        $stream = ResourceRequestStream::create(
             static fn() => 'not a resource'
         );
 
@@ -311,10 +311,10 @@ final class ResourceBodyStreamTest extends TestCase
         try {
             $this->expectException(\InvalidArgumentException::class);
             $this->expectExceptionMessage(
-                'ResourceBodyStream requires a valid PHP stream resource.'
+                'ResourceRequestStream requires a valid PHP stream resource.'
             );
 
-            new ResourceBodyStream($process);
+            new ResourceRequestStream($process);
         } finally {
             if (\is_resource($process)) {
                 \proc_close($process);
@@ -325,7 +325,7 @@ final class ResourceBodyStreamTest extends TestCase
     public function testRejectsNonStreamResourceFromOpener(): void
     {
         $process = self::openProcessResource();
-        $stream = ResourceBodyStream::create(static fn() => $process);
+        $stream = ResourceRequestStream::create(static fn() => $process);
 
         try {
             $this->expectException(\RuntimeException::class);

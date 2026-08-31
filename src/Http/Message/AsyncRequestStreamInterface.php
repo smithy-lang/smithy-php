@@ -7,7 +7,7 @@ namespace Smithy\Http\Message;
 /**
  * Expose readiness for incrementally produced request bodies.
  */
-interface AsyncBodyStreamInterface extends BodyStreamInterface
+interface AsyncRequestStreamInterface extends RequestStreamInterface
 {
     /**
      * Determine whether a read can return data, EOF, or an error.

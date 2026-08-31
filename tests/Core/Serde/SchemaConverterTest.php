@@ -16,7 +16,7 @@ use Smithy\Core\Serde\{
 };
 use Smithy\Core\Shape\Document\StructDocument;
 use Smithy\Core\Shape\ShapeType;
-use Smithy\Http\Message\StringBodyStream;
+use Smithy\Http\Message\StringRequestStream;
 
 #[CoversClass(SchemaConverter::class)]
 final class SchemaConverterTest extends TestCase
@@ -525,7 +525,7 @@ final class SchemaConverterTest extends TestCase
         $members = \array_fill(0, $node->getMemberCount(), null);
 
         (new JsonCodec())->createDeserializer(
-            new StringBodyStream(
+            new StringRequestStream(
                 '{"id":"root","displayName":"Root",'
                 . '"next":{"id":"child","displayName":"Child"}}'
             )

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Smithy\Http\Client\Curl;
 
-use Smithy\Http\Message\ResponseBodyStream;
+use Smithy\Http\Message\StreamingResponseStream;
 use Smithy\Http\Message\ResponseTrailers;
 
 /**
@@ -38,13 +38,13 @@ final class CurlResponseState
     private ?float $lastReadActivityAt = null;
     private int $receivedBodyBytes = 0;
     private string $bufferedBody = '';
-    private ?ResponseBodyStream $ownedBody;
+    private ?StreamingResponseStream $ownedBody;
     private ?\WeakReference $bodyReference = null;
     private readonly ResponseTrailers $trailers;
     private bool $proxyConnectResponseIgnored = false;
 
     public function __construct(
-        ?ResponseBodyStream $body,
+        ?StreamingResponseStream $body,
         private readonly bool $followRedirects,
         private readonly bool $decodeContent = true,
         private readonly int $maxResponseBodyBytes = 0,
@@ -62,7 +62,7 @@ final class CurlResponseState
     /**
      * Get the streamed response body while it remains available.
      */
-    public function body(): ?ResponseBodyStream
+    public function body(): ?StreamingResponseStream
     {
         if ($this->ownedBody !== null) {
             return $this->ownedBody;
@@ -70,7 +70,7 @@ final class CurlResponseState
 
         $body = $this->bodyReference?->get();
 
-        return $body instanceof ResponseBodyStream ? $body : null;
+        return $body instanceof StreamingResponseStream ? $body : null;
     }
 
     /**
@@ -111,7 +111,7 @@ final class CurlResponseState
      *
      * @return void
      */
-    public function activateStreamingBody(ResponseBodyStream $body): void
+    public function activateStreamingBody(StreamingResponseStream $body): void
     {
         if ($this->isStreaming()) {
             throw new \LogicException(

@@ -35,15 +35,16 @@ use Smithy\Http\Client\Exception\{
     RequestException
 };
 use Smithy\Http\Message\{
-    AsyncBodyStream,
+    AsyncRequestStream,
     Request,
-    ResourceBodyStream,
-    ResponseBodyStream,
+    ResourceRequestStream,
+    Stream,
+    StreamingResponseStream,
     ResponseInterface,
-    StringBodyStream
+    StringRequestStream
 };
 use Smithy\Tests\Http\Client\Curl\Utils\{
-    FailingCleanupAsyncBodyStreamFixture,
+    FailingCleanupAsyncRequestStreamFixture,
     FailingResourceStreamWrapperFixture,
     FailingStreamFixture,
     H2ServerFixture,
@@ -132,7 +133,7 @@ final class CurlClientTest extends TestCase
     public function testSendsKnownLengthStreamBody(): void
     {
         $server = LocalServerFixture::start();
-        $body = ResourceBodyStream::temp('payload');
+        $body = ResourceRequestStream::temp('payload');
 
         try {
             $response = $this->sendRequest(
@@ -157,7 +158,7 @@ final class CurlClientTest extends TestCase
     {
         $server = LocalServerFixture::start();
         $openCount = 0;
-        $body = ResourceBodyStream::create(
+        $body = ResourceRequestStream::create(
             static function () use (&$openCount) {
                 ++$openCount;
                 $resource = \fopen('php://temp', 'r+');
@@ -192,7 +193,7 @@ final class CurlClientTest extends TestCase
     {
         $server = LocalServerFixture::start();
         $payload = \str_repeat('payload', 32 * 1024);
-        $body = ResourceBodyStream::temp($payload);
+        $body = ResourceRequestStream::temp($payload);
         $options = new HttpRequestOptions(
             uploadBufferSize: 256 * 1024,
             bufferedDownloadBufferSize: 256 * 1024
@@ -240,7 +241,7 @@ final class CurlClientTest extends TestCase
     public function testSendsResourceBodyFromCurrentOffset(): void
     {
         $server = LocalServerFixture::start();
-        $body = ResourceBodyStream::temp('prefix-payload');
+        $body = ResourceRequestStream::temp('prefix-payload');
         $body->seek(7);
 
         try {
@@ -287,7 +288,7 @@ final class CurlClientTest extends TestCase
         try {
             $response = $this->sendRequest(
                 $server,
-                ResourceBodyStream::temp('payload'),
+                ResourceRequestStream::temp('payload'),
                 ['Transfer-Encoding' => 'chunked']
             );
             $capture = $server->capture();
@@ -335,7 +336,7 @@ final class CurlClientTest extends TestCase
         $request = new Request(
             'POST',
             'https://example.test/upload',
-            body: ResourceBodyStream::temp('payload')
+            body: ResourceRequestStream::temp('payload')
         );
         $options = new HttpRequestOptions(
             trailers: RequestTrailers::fromArray([
@@ -403,7 +404,7 @@ final class CurlClientTest extends TestCase
 
             $this->sendRequest(
                 $server,
-                ResourceBodyStream::temp('payload-extra'),
+                ResourceRequestStream::temp('payload-extra'),
                 ['Content-Length' => '7']
             );
         } finally {
@@ -446,7 +447,7 @@ final class CurlClientTest extends TestCase
 
             $this->sendRequest(
                 $server,
-                ResourceBodyStream::temp('payload'),
+                ResourceRequestStream::temp('payload'),
                 ['Content-Length' => '7, 7']
             );
         } finally {
@@ -579,7 +580,7 @@ final class CurlClientTest extends TestCase
         try {
             $response = $this->sendRequest(
                 $server,
-                ResourceBodyStream::temp($body)
+                ResourceRequestStream::temp($body)
             );
             $capture = $server->capture();
         } finally {
@@ -694,7 +695,7 @@ final class CurlClientTest extends TestCase
         try {
             $response = $this->sendToEndpoint(
                 $server->endpoint(),
-                ResourceBodyStream::temp('payload'),
+                ResourceRequestStream::temp('payload'),
                 client: $client
             );
             $capture = $server->capture();
@@ -735,7 +736,7 @@ final class CurlClientTest extends TestCase
         $server = H2ServerFixture::start();
         $client = $this->createHttp2Client();
         $eventLoop = $client->getEventLoop();
-        $body = new AsyncBodyStream(
+        $body = new AsyncRequestStream(
             $eventLoop,
             expectedLength: 7
         );
@@ -783,7 +784,7 @@ final class CurlClientTest extends TestCase
         try {
             $response = $this->sendToEndpoint(
                 $server->endpoint(),
-                ResourceBodyStream::temp('payload'),
+                ResourceRequestStream::temp('payload'),
                 client: $client
             );
             $capture = $server->capture();
@@ -871,7 +872,7 @@ final class CurlClientTest extends TestCase
         );
         $resource = \fopen("{$scheme}://body", 'r');
         \assert(\is_resource($resource));
-        $body = new ResourceBodyStream($resource);
+        $body = new ResourceRequestStream($resource);
         $server = LocalServerFixture::start();
 
         try {
@@ -932,7 +933,7 @@ final class CurlClientTest extends TestCase
                 throw $cause;
             }
         );
-        $body = ResourceBodyStream::temp('payload');
+        $body = ResourceRequestStream::temp('payload');
         $request = new Request(
             'POST',
             'https://example.invalid/upload',
@@ -1114,7 +1115,7 @@ final class CurlClientTest extends TestCase
         $cause = new \RuntimeException('unsubscribe failed');
         $client = new CurlClient();
         $eventLoop = $client->getEventLoop();
-        $body = new FailingCleanupAsyncBodyStreamFixture(
+        $body = new FailingCleanupAsyncRequestStreamFixture(
             $cause,
             $eventLoop,
             7
@@ -1372,7 +1373,7 @@ final class CurlClientTest extends TestCase
         $server = LocalServerFixture::start();
         $client = new CurlClient();
         $eventLoop = $client->getEventLoop();
-        $body = new AsyncBodyStream(
+        $body = new AsyncRequestStream(
             $eventLoop,
             expectedLength: 7
         );
@@ -1411,7 +1412,7 @@ final class CurlClientTest extends TestCase
         $server = LocalServerFixture::start();
         $client = new CurlClient();
         $eventLoop = $client->getEventLoop();
-        $body = new AsyncBodyStream(
+        $body = new AsyncRequestStream(
             $eventLoop,
             expectedLength: 7,
             highWaterMark: 4
@@ -1451,7 +1452,7 @@ final class CurlClientTest extends TestCase
         $server = LocalServerFixture::start();
         $client = new CurlClient();
         $eventLoop = $client->getEventLoop();
-        $body = new AsyncBodyStream(
+        $body = new AsyncRequestStream(
             $eventLoop,
             expectedLength: 7
         );
@@ -1491,7 +1492,7 @@ final class CurlClientTest extends TestCase
         $server = LocalServerFixture::start();
         $client = new CurlClient();
         $eventLoop = $client->getEventLoop();
-        $body = new AsyncBodyStream(
+        $body = new AsyncRequestStream(
             $eventLoop,
             expectedLength: 7
         );
@@ -1522,7 +1523,7 @@ final class CurlClientTest extends TestCase
                 $error->getPrevious()
             );
             $this->assertStringContainsString(
-                'Async body stream write exceeds expected length of 7 bytes.',
+                'Async request stream write exceeds expected length of 7 bytes.',
                 $error->getMessage()
             );
         } finally {
@@ -1559,7 +1560,7 @@ final class CurlClientTest extends TestCase
     public function testRejectsRedirectsForOffsetBackedResourceUpload(): void
     {
         $server = LocalServerFixture::start();
-        $body = ResourceBodyStream::temp('prefix-payload');
+        $body = ResourceRequestStream::temp('prefix-payload');
         $body->seek(7);
         $request = new Request(
             'POST',
@@ -1589,7 +1590,7 @@ final class CurlClientTest extends TestCase
         $server = LocalServerFixture::start();
         $client = new CurlClient();
         $eventLoop = $client->getEventLoop();
-        $body = new AsyncBodyStream(
+        $body = new AsyncRequestStream(
             $eventLoop,
             expectedLength: 7
         );
@@ -1632,7 +1633,7 @@ final class CurlClientTest extends TestCase
         $server = LocalServerFixture::start();
         $client = new CurlClient();
         $eventLoop = $client->getEventLoop();
-        $body = new AsyncBodyStream($eventLoop);
+        $body = new AsyncRequestStream($eventLoop);
         $failure = new \RuntimeException('producer failed');
         $request = new Request(
             'POST',
@@ -1671,7 +1672,7 @@ final class CurlClientTest extends TestCase
         $manager = new CurlConnectionManager();
         $client = new CurlClient(connectionManager: $manager);
         $eventLoop = $client->getEventLoop();
-        $body = new AsyncBodyStream($eventLoop);
+        $body = new AsyncRequestStream($eventLoop);
         $request = new Request(
             'POST',
             $server->endpoint() . '/upload',
@@ -1735,7 +1736,7 @@ final class CurlClientTest extends TestCase
             $body = $response->getBody();
             $client->getEventLoop()->delay(0.1);
 
-            $this->assertInstanceOf(ResponseBodyStream::class, $body);
+            $this->assertInstanceOf(StreamingResponseStream::class, $body);
             $this->assertLessThanOrEqual(
                 16 * 1024,
                 $body->bufferedBytes()
@@ -2102,7 +2103,7 @@ final class CurlClientTest extends TestCase
         }
 
         $this->assertInstanceOf(
-            ResponseBodyStream::class,
+            StreamingResponseStream::class,
             $response->getBody()
         );
         $this->assertSame('firstsecond', $contents);
@@ -2156,7 +2157,8 @@ final class CurlClientTest extends TestCase
                 null,
                 options: new HttpRequestOptions(
                     timeout: 1.0,
-                    maxBufferedResponseBytes: 0                )
+                    maxBufferedResponseBytes: 0
+                )
             );
             $body = $response->getBody();
             $contents = $body->read(1);
@@ -2166,7 +2168,6 @@ final class CurlClientTest extends TestCase
 
         $this->assertSame('', $contents);
         $this->assertTrue($body->eof());
-        $this->assertTrue($body->fullyConsumed());
     }
 
     public function testDiscardsPartiallyReadStreamedResponse(): void
@@ -2837,14 +2838,14 @@ final class CurlClientTest extends TestCase
         }
 
         $body = $responses[0]->getBody();
-        $this->assertInstanceOf(StringBodyStream::class, $body);
+        $this->assertInstanceOf(Stream::class, $body);
         $this->assertSame(1024 * 1024, $body->getSize());
         $this->assertSame(
             \hash(
                 'sha256',
                 \str_repeat('0123456789abcdef', 65536)
             ),
-            $body->hash()
+            \hash('sha256', (string) $body)
         );
     }
 
@@ -2870,14 +2871,14 @@ final class CurlClientTest extends TestCase
         }
 
         $body = $responses[0]->getBody();
-        $this->assertInstanceOf(StringBodyStream::class, $body);
+        $this->assertInstanceOf(Stream::class, $body);
         $this->assertSame(768 * 1024, $body->getSize());
         $this->assertSame(
             \hash(
                 'sha256',
                 \str_repeat('0123456789abcdef', 49152)
             ),
-            $body->hash()
+            \hash('sha256', (string) $body)
         );
     }
 
@@ -2904,7 +2905,7 @@ final class CurlClientTest extends TestCase
             $server->stop();
         }
 
-        $this->assertInstanceOf(ResponseBodyStream::class, $body);
+        $this->assertInstanceOf(StreamingResponseStream::class, $body);
         $this->assertSame(1024 * 1024 + 16, \strlen($contents));
         $this->assertSame(
             \hash(
@@ -2938,7 +2939,7 @@ final class CurlClientTest extends TestCase
             $server->stop();
         }
 
-        $this->assertInstanceOf(ResponseBodyStream::class, $body);
+        $this->assertInstanceOf(StreamingResponseStream::class, $body);
         $this->assertSame(64 * 1024, \strlen($contents));
         $this->assertSame(
             \hash(

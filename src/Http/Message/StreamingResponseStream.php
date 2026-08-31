@@ -13,7 +13,7 @@ use Smithy\Async\EventLoopInterface;
  * available. The transport pauses production when append() reaches the high
  * water mark and resumes it after the consumer drains to the low water mark.
  */
-final class ResponseBodyStream implements BodyStreamInterface
+final class StreamingResponseStream implements ResponseStreamInterface
 {
     private readonly int $lowWaterMark;
     /** @var \SplQueue<string> */
@@ -24,8 +24,8 @@ final class ResponseBodyStream implements BodyStreamInterface
     private int $blockedChunkLength = 0;
     private int $position = 0;
     private bool $started = false;
-    private bool $ended = false;
-    private bool $closed = false;
+    private StreamingResponseStreamState $state =
+        StreamingResponseStreamState::OPEN;
     private bool $discarding = false;
     private ?\Throwable $failure = null;
     private ?\Closure $reader = null;
@@ -79,22 +79,7 @@ final class ResponseBodyStream implements BodyStreamInterface
      */
     public function close(): void
     {
-        if ($this->closed) {
-            return;
-        }
-
-        $producerActive = !$this->ended && $this->failure === null;
-        $this->closed = true;
-        $this->blockedChunkLength = 0;
-        $this->clearBuffer();
-        $this->wakeWaiters();
-        $onClose = $this->onClose;
-        $this->onSpaceAvailable = null;
-        $this->onClose = null;
-
-        if ($producerActive && $onClose !== null) {
-            $onClose();
-        }
+        $this->markClosed();
     }
 
     /**
@@ -110,7 +95,7 @@ final class ResponseBodyStream implements BodyStreamInterface
     }
 
     /**
-     * Get the response length when known.
+     * Streaming response length is not known.
      */
     public function getSize(): ?int
     {
@@ -118,7 +103,7 @@ final class ResponseBodyStream implements BodyStreamInterface
     }
 
     /**
-     * Get the response length when known.
+     * Streaming response length is not known.
      */
     public function length(): ?int
     {
@@ -138,9 +123,9 @@ final class ResponseBodyStream implements BodyStreamInterface
      */
     public function eof(): bool
     {
-        return $this->closed
+        return $this->state === StreamingResponseStreamState::CLOSED
             || (
-                $this->ended
+                $this->state === StreamingResponseStreamState::ENDED
                 && $this->failure === null
                 && $this->bufferedBytes === 0
             );
@@ -218,7 +203,7 @@ final class ResponseBodyStream implements BodyStreamInterface
      */
     public function isReadable(): bool
     {
-        return !$this->closed;
+        return $this->state !== StreamingResponseStreamState::CLOSED;
     }
 
     /**
@@ -232,7 +217,7 @@ final class ResponseBodyStream implements BodyStreamInterface
             );
         }
 
-        $this->ensureOpen();
+        $this->ensureReadable();
         if ($length === 0) {
             return '';
         }
@@ -244,11 +229,11 @@ final class ResponseBodyStream implements BodyStreamInterface
         }
 
         while ($this->bufferedBytes === 0
-            && !$this->ended
+            && $this->state === StreamingResponseStreamState::OPEN
             && $this->failure === null
         ) {
             $this->awaitReadable();
-            $this->ensureOpen();
+            $this->ensureReadable();
         }
 
         if ($this->bufferedBytes === 0) {
@@ -304,7 +289,7 @@ final class ResponseBodyStream implements BodyStreamInterface
      */
     public function discard(): void
     {
-        $this->ensureOpen();
+        $this->ensureReadable();
 
         if ($this->discarding || $this->reader !== null) {
             throw new \RuntimeException(
@@ -320,10 +305,7 @@ final class ResponseBodyStream implements BodyStreamInterface
         $this->notifySpaceAvailable();
 
         try {
-            while (!$this->ended
-                && $this->failure === null
-                && !$this->closed
-            ) {
+            while ($this->isProducerOpen()) {
                 $this->awaitTerminal();
             }
 
@@ -331,7 +313,7 @@ final class ResponseBodyStream implements BodyStreamInterface
                 throw $this->failure;
             }
 
-            $this->ensureOpen();
+            $this->ensureReadable();
         } finally {
             $this->discarding = false;
         }
@@ -342,7 +324,7 @@ final class ResponseBodyStream implements BodyStreamInterface
      */
     public function getContents(): string
     {
-        $this->ensureOpen();
+        $this->ensureReadable();
         $parts = [];
 
         while (!$this->eof()) {
@@ -383,7 +365,8 @@ final class ResponseBodyStream implements BodyStreamInterface
     /** @inheritDoc */
     public function isAvailable(): bool
     {
-        return !$this->closed && !$this->started;
+        return $this->state !== StreamingResponseStreamState::CLOSED
+            && !$this->started;
     }
 
     /**
@@ -399,7 +382,8 @@ final class ResponseBodyStream implements BodyStreamInterface
      */
     public function fullyConsumed(): bool
     {
-        return $this->eof() && !$this->closed;
+        return $this->eof()
+            && $this->state !== StreamingResponseStreamState::CLOSED;
     }
 
     /**
@@ -415,9 +399,7 @@ final class ResponseBodyStream implements BodyStreamInterface
      */
     public function canAppend(int $length): bool
     {
-        return !$this->closed
-            && !$this->ended
-            && $this->failure === null
+        return $this->isProducerOpen()
             && (
                 $this->discarding
                 || $this->bufferedBytes === 0
@@ -449,10 +431,7 @@ final class ResponseBodyStream implements BodyStreamInterface
 
         $length = \strlen($chunk);
         if (!$this->canAppend($length)) {
-            if (!$this->closed
-                && !$this->ended
-                && $this->failure === null
-            ) {
+            if ($this->isProducerOpen()) {
                 $this->blockedChunkLength = $length;
             }
 
@@ -480,15 +459,7 @@ final class ResponseBodyStream implements BodyStreamInterface
      */
     public function end(): void
     {
-        if ($this->closed || $this->ended || $this->failure !== null) {
-            return;
-        }
-
-        $this->ended = true;
-        $this->blockedChunkLength = 0;
-        $this->onSpaceAvailable = null;
-        $this->onClose = null;
-        $this->wakeWaiters();
+        $this->markEnded();
     }
 
     /**
@@ -498,15 +469,7 @@ final class ResponseBodyStream implements BodyStreamInterface
      */
     public function fail(\Throwable $failure): void
     {
-        if ($this->closed || $this->ended || $this->failure !== null) {
-            return;
-        }
-
-        $this->failure = $failure;
-        $this->blockedChunkLength = 0;
-        $this->onSpaceAvailable = null;
-        $this->onClose = null;
-        $this->wakeWaiters();
+        $this->markFailed($failure);
     }
 
     /**
@@ -535,11 +498,10 @@ final class ResponseBodyStream implements BodyStreamInterface
                 callable $resume,
                 callable $throw
             ): void
-{
+            {
                 if ($this->bufferedBytes > 0
-                    || $this->ended
+                    || $this->state !== StreamingResponseStreamState::OPEN
                     || $this->failure !== null
-                    || $this->closed
                 ) {
                     $resume();
 
@@ -569,11 +531,8 @@ final class ResponseBodyStream implements BodyStreamInterface
                 callable $resume,
                 callable $throw
             ): void
-{
-                if ($this->ended
-                    || $this->failure !== null
-                    || $this->closed
-                ) {
+            {
+                if (!$this->isProducerOpen()) {
                     $resume();
 
                     return;
@@ -627,6 +586,76 @@ final class ResponseBodyStream implements BodyStreamInterface
     }
 
     /**
+     * Determine whether the transport may still append bytes.
+     */
+    private function isProducerOpen(): bool
+    {
+        return $this->state === StreamingResponseStreamState::OPEN;
+    }
+
+    /**
+     * Mark normal transport completion and wake waiters.
+     *
+     * @return void
+     */
+    private function markEnded(): void
+    {
+        if (!$this->isProducerOpen()) {
+            return;
+        }
+
+        $this->state = StreamingResponseStreamState::ENDED;
+        $this->blockedChunkLength = 0;
+        $this->onSpaceAvailable = null;
+        $this->onClose = null;
+        $this->wakeWaiters();
+    }
+
+    /**
+     * Mark transport failure and wake waiters.
+     *
+     * @return void
+     */
+    private function markFailed(\Throwable $failure): void
+    {
+        if (!$this->isProducerOpen()) {
+            return;
+        }
+
+        $this->failure = $failure;
+        $this->state = StreamingResponseStreamState::FAILED;
+        $this->blockedChunkLength = 0;
+        $this->onSpaceAvailable = null;
+        $this->onClose = null;
+        $this->wakeWaiters();
+    }
+
+    /**
+     * Mark closure, discard queued bytes, and abort active production.
+     *
+     * @return void
+     */
+    private function markClosed(): void
+    {
+        if ($this->state === StreamingResponseStreamState::CLOSED) {
+            return;
+        }
+
+        $producerActive = $this->isProducerOpen();
+        $this->state = StreamingResponseStreamState::CLOSED;
+        $this->blockedChunkLength = 0;
+        $this->clearBuffer();
+        $this->wakeWaiters();
+        $onClose = $this->onClose;
+        $this->onSpaceAvailable = null;
+        $this->onClose = null;
+
+        if ($producerActive && $onClose !== null) {
+            $onClose();
+        }
+    }
+
+    /**
      * Release all queued and partially consumed response bytes.
      *
      * @return void
@@ -644,9 +673,9 @@ final class ResponseBodyStream implements BodyStreamInterface
      *
      * @return void
      */
-    private function ensureOpen(): void
+    private function ensureReadable(): void
     {
-        if ($this->closed) {
+        if ($this->state === StreamingResponseStreamState::CLOSED) {
             throw new \RuntimeException(
                 'Streamed response body is closed.'
             );

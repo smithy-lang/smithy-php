@@ -6,14 +6,14 @@ namespace Smithy\Tests\Http\Message;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
-use Smithy\Http\Message\StringBodyStream;
+use Smithy\Http\Message\StringRequestStream;
 
-#[CoversClass(StringBodyStream::class)]
-final class StringBodyStreamTest extends TestCase
+#[CoversClass(StringRequestStream::class)]
+final class StringRequestStreamTest extends TestCase
 {
     public function testReadsAndTracksConsumption(): void
     {
-        $stream = new StringBodyStream('abcdef');
+        $stream = new StringRequestStream('abcdef');
 
         $this->assertSame('abcdef', (string) $stream);
         $this->assertSame(6, $stream->getSize());
@@ -31,7 +31,7 @@ final class StringBodyStreamTest extends TestCase
 
     public function testRewindsForRetry(): void
     {
-        $stream = new StringBodyStream('abcdef');
+        $stream = new StringRequestStream('abcdef');
         $stream->getContents();
 
         $stream->rewindForRetry();
@@ -44,7 +44,7 @@ final class StringBodyStreamTest extends TestCase
 
     public function testSeeksFromEachOrigin(): void
     {
-        $stream = new StringBodyStream('abcdef');
+        $stream = new StringRequestStream('abcdef');
 
         $stream->seek(2);
         $this->assertSame(2, $stream->tell());
@@ -60,7 +60,7 @@ final class StringBodyStreamTest extends TestCase
 
     public function testRejectsInvalidSeekOrigin(): void
     {
-        $stream = new StringBodyStream('abcdef');
+        $stream = new StringRequestStream('abcdef');
 
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage('Invalid whence: 99');
@@ -70,7 +70,7 @@ final class StringBodyStreamTest extends TestCase
 
     public function testRejectsSeekOutsideContent(): void
     {
-        $stream = new StringBodyStream('abcdef');
+        $stream = new StringRequestStream('abcdef');
 
         $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage('Unable to seek to position 7.');
@@ -80,7 +80,7 @@ final class StringBodyStreamTest extends TestCase
 
     public function testExposesReadOnlyStreamCapabilities(): void
     {
-        $stream = new StringBodyStream('payload');
+        $stream = new StringRequestStream('payload');
 
         $this->assertTrue($stream->isReadable());
         $this->assertTrue($stream->isSeekable());
@@ -94,11 +94,11 @@ final class StringBodyStreamTest extends TestCase
 
     public function testRejectsWrites(): void
     {
-        $stream = new StringBodyStream('payload');
+        $stream = new StringRequestStream('payload');
 
         $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage(
-            'StringBodyStream is not writable.'
+            'StringRequestStream is not writable.'
         );
 
         $stream->write('updated');
@@ -106,7 +106,7 @@ final class StringBodyStreamTest extends TestCase
 
     public function testHashesCompleteContentWithoutMovingCursor(): void
     {
-        $stream = new StringBodyStream('payload');
+        $stream = new StringRequestStream('payload');
         $stream->seek(3);
 
         $this->assertSame(
@@ -122,8 +122,8 @@ final class StringBodyStreamTest extends TestCase
 
     public function testReusesEmptyInstance(): void
     {
-        $first = StringBodyStream::empty();
-        $second = StringBodyStream::empty();
+        $first = StringRequestStream::empty();
+        $second = StringRequestStream::empty();
 
         $this->assertSame($first, $second);
         $this->assertSame(0, $first->length());

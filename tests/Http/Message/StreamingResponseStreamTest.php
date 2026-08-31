@@ -7,15 +7,15 @@ namespace Smithy\Tests\Http\Message;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Smithy\Async\RevoltEventLoop;
-use Smithy\Http\Message\ResponseBodyStream;
+use Smithy\Http\Message\StreamingResponseStream;
 
-#[CoversClass(ResponseBodyStream::class)]
-final class ResponseBodyStreamTest extends TestCase
+#[CoversClass(StreamingResponseStream::class)]
+final class StreamingResponseStreamTest extends TestCase
 {
     public function testReturnsOneQueuedChunkAndPartialHead(): void
     {
         $spaceAvailable = 0;
-        $body = new ResponseBodyStream(
+        $body = new StreamingResponseStream(
             new RevoltEventLoop(),
             12,
             static function () use (&$spaceAvailable): void {
@@ -45,7 +45,7 @@ final class ResponseBodyStreamTest extends TestCase
 
     public function testReadZeroReturnsEmptyString(): void
     {
-        $body = new ResponseBodyStream(
+        $body = new StreamingResponseStream(
             new RevoltEventLoop(),
             8,
             static function (): void {},
@@ -57,7 +57,7 @@ final class ResponseBodyStreamTest extends TestCase
 
     public function testReadRejectsNegativeLength(): void
     {
-        $body = new ResponseBodyStream(
+        $body = new StreamingResponseStream(
             new RevoltEventLoop(),
             8,
             static function (): void {},
@@ -74,7 +74,7 @@ final class ResponseBodyStreamTest extends TestCase
 
     public function testEnforcesHighWaterMarkAcrossQueuedChunks(): void
     {
-        $body = new ResponseBodyStream(
+        $body = new StreamingResponseStream(
             new RevoltEventLoop(),
             8,
             static function (): void {},
@@ -98,7 +98,7 @@ final class ResponseBodyStreamTest extends TestCase
 
     public function testAcceptsOversizedChunkWhenBufferIsEmpty(): void
     {
-        $body = new ResponseBodyStream(
+        $body = new StreamingResponseStream(
             new RevoltEventLoop(),
             4,
             static function (): void {},
@@ -114,7 +114,7 @@ final class ResponseBodyStreamTest extends TestCase
 
     public function testResumesProducerAtLowWaterMark(): void
     {
-        $body = new ResponseBodyStream(
+        $body = new StreamingResponseStream(
             new RevoltEventLoop(),
             8,
             static function (): void {},
@@ -138,7 +138,7 @@ final class ResponseBodyStreamTest extends TestCase
     public function testNotifiesBlockedProducerOnceChunkCanResume(): void
     {
         $spaceAvailable = 0;
-        $body = new ResponseBodyStream(
+        $body = new StreamingResponseStream(
             new RevoltEventLoop(),
             8,
             static function () use (&$spaceAvailable): void {
@@ -162,7 +162,7 @@ final class ResponseBodyStreamTest extends TestCase
     public function testGetsContentsAcrossProducerCycles(): void
     {
         $eventLoop = new RevoltEventLoop();
-        $body = new ResponseBodyStream(
+        $body = new StreamingResponseStream(
             $eventLoop,
             4,
             static function (): void {},
@@ -195,7 +195,7 @@ final class ResponseBodyStreamTest extends TestCase
         $eventLoop = new RevoltEventLoop();
         $spaceAvailable = 0;
         $closed = 0;
-        $body = new ResponseBodyStream(
+        $body = new StreamingResponseStream(
             $eventLoop,
             8,
             static function () use (&$spaceAvailable): void {
@@ -228,7 +228,7 @@ final class ResponseBodyStreamTest extends TestCase
     {
         $eventLoop = new RevoltEventLoop();
         $failure = new \RuntimeException('response failed');
-        $body = new ResponseBodyStream(
+        $body = new StreamingResponseStream(
             $eventLoop,
             8,
             static function (): void {},
@@ -256,7 +256,7 @@ final class ResponseBodyStreamTest extends TestCase
 
     public function testDiscardIsIdempotentAfterCompletion(): void
     {
-        $body = new ResponseBodyStream(
+        $body = new StreamingResponseStream(
             new RevoltEventLoop(),
             8,
             static function (): void {},
@@ -274,7 +274,7 @@ final class ResponseBodyStreamTest extends TestCase
 
     public function testGetContentsRejectsClosedStream(): void
     {
-        $body = new ResponseBodyStream(
+        $body = new StreamingResponseStream(
             new RevoltEventLoop(),
             8,
             static function (): void {},

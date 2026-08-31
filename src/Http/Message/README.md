@@ -18,7 +18,8 @@ composer require smithy/http
 | `Response` | Immutable PSR-7 response with body discard and trailer access |
 | `Uri` | Immutable PSR-7 URI |
 | `Stream` | PSR-7 stream backed by a PHP resource |
-| `BodyStreamInterface` | Body length, replay, availability, and consumption state |
+| `RequestStreamInterface` | Request length, hashing, replay, and consumption state |
+| `ResponseStreamInterface` | Transport-controlled response streaming and discard |
 | `ResponseTrailers` | Trailer fields and their transport lifecycle |
 
 Message constructors validate methods, status codes, protocol versions,
@@ -55,15 +56,15 @@ When the `Host` header is omitted, `Request` derives it from the URI.
 headers in the internal normalized representation. Protocol serializers use
 these factories to skip repeated header normalization.
 
-## Body Streams
+## Streams
 
-`BodyStreamInterface` extends `Psr\Http\Message\StreamInterface` with state
+`RequestStreamInterface` extends `Psr\Http\Message\StreamInterface` with state
 needed by transports and retry policies:
 
-- known body length
+- known request length
 - content hashing
 - replay support and retry rewind
-- body availability
+- request availability
 - transfer start and completion state
 
 The package provides these stream implementations:
@@ -71,44 +72,44 @@ The package provides these stream implementations:
 | Type | Use |
 |---|---|
 | `Stream` | General PHP resource or temporary PSR-7 stream |
-| `StringBodyStream` | Immutable in-memory string body |
-| `ResourceBodyStream` | File or resource body with optional replay |
-| `StreamBodyAdapter` | Body metadata around another PSR-7 stream |
-| `AsyncBodyStream` | Incrementally produced request body |
-| `ResponseBodyStream` | Bounded streamed response body |
+| `StringRequestStream` | Immutable in-memory request body |
+| `ResourceRequestStream` | File or resource request body with optional replay |
+| `StreamBodyAdapter` | Request metadata around another PSR-7 stream |
+| `AsyncRequestStream` | Incrementally produced request body |
+| `StreamingResponseStream` | Transport-fed streaming response body |
 
 ### Resource Bodies
 
-`ResourceBodyStream::fromFile()` opens a file when consumption starts and
+`ResourceRequestStream::fromFile()` opens a file when consumption starts and
 reopens it when a retry rewinds the body.
 
 ```php
 use Smithy\Http\Message\Request;
-use Smithy\Http\Message\ResourceBodyStream;
+use Smithy\Http\Message\ResourceRequestStream;
 
 $request = new Request(
     method: 'PUT',
     uri: 'https://example.com/archive',
     headers: ['Content-Type' => 'application/octet-stream'],
-    body: ResourceBodyStream::fromFile('/path/to/archive.bin')
+    body: ResourceRequestStream::fromFile('/path/to/archive.bin')
 );
 ```
 
-`ResourceBodyStream::create()` accepts a resource opener and an optional
+`ResourceRequestStream::create()` accepts a resource opener and an optional
 length. The opener must return a fresh resource positioned at the logical
-body start. `ResourceBodyStream::temp()` creates a seekable temporary body.
+body start. `ResourceRequestStream::temp()` creates a seekable temporary body.
 
 ### Incremental Request Bodies
 
-`AsyncBodyStream` allows a producer to write chunks while a transport
+`AsyncRequestStream` allows a producer to write chunks while a transport
 consumes earlier chunks. Its bounded queue suspends the producer when
 buffered bytes reach the configured high-water mark.
 
 ```php
 use Smithy\Async\RevoltEventLoop;
-use Smithy\Http\Message\AsyncBodyStream;
+use Smithy\Http\Message\AsyncRequestStream;
 
-$body = new AsyncBodyStream(
+$body = new AsyncRequestStream(
     new RevoltEventLoop(),
     expectedLength: $contentLength,
     highWaterMark: 64 * 1024
@@ -119,13 +120,17 @@ $body->end();
 ```
 
 Call `end()` after the final chunk. Call `fail()` to terminate reads with the
-producer error. `AsyncBodyStream` supports one forward-only transfer.
+producer error. `AsyncRequestStream` supports one forward-only transfer.
 
 ### Streamed Response Bodies
 
-`ResponseBodyStream` buffers a bounded number of bytes between the transport
-and the consumer. Reads suspend until bytes arrive or the stream reaches a
-terminal state. Consuming bytes allows a paused transport to resume.
+`ResponseStreamInterface` extends `Psr\Http\Message\StreamInterface` with
+transport-facing methods for appending bytes, ending the stream, failing the
+stream, and discarding unread bytes.
+
+`StreamingResponseStream` buffers a bounded number of bytes between the
+transport and the consumer. Reads suspend until bytes arrive or the stream
+reaches a terminal state. Consuming bytes allows a paused transport to resume.
 
 Call `discard()` to drain the active transfer. Closing the stream aborts the
 body.

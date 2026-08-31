@@ -10,7 +10,7 @@ use Smithy\Codec\Json\{
     JsonDeserializer,
     JsonSerializer
 };
-use Smithy\Http\Message\StringBodyStream;
+use Smithy\Http\Message\StringRequestStream;
 use Smithy\Tests\Codec\Json\Fixture\SampleStruct;
 
 final class JsonCodecTest extends TestCase
@@ -60,7 +60,7 @@ final class JsonCodecTest extends TestCase
 
         self::assertInstanceOf(
             JsonDeserializer::class,
-            $codec->createDeserializer(new StringBodyStream('{}'))
+            $codec->createDeserializer(new StringRequestStream('{}'))
         );
     }
 
@@ -100,7 +100,7 @@ final class JsonCodecTest extends TestCase
 
         $codec = new JsonCodec();
         $deserializer = $codec->createDeserializer(
-            new StringBodyStream($wire)
+            new StringRequestStream($wire)
         );
         $fields = \array_fill(0, 5, null);
         $deserializer->deserialize(SampleStruct::schema(), $fields);
@@ -129,7 +129,7 @@ final class JsonCodecTest extends TestCase
         $json = $serializer->flush();
 
         $deserializer = $codec->createDeserializer(
-            new StringBodyStream($json)
+            new StringRequestStream($json)
         );
         $fields = \array_fill(0, 5, null);
         $deserializer->deserialize(SampleStruct::schema(), $fields);
@@ -160,7 +160,7 @@ final class JsonCodecTest extends TestCase
 
         $codec = new JsonCodec();
         $deserializer = $codec->createDeserializer(
-            new StringBodyStream($wire)
+            new StringRequestStream($wire)
         );
         $fields = \array_fill(0, 5, null);
         $deserializer->deserialize(SampleStruct::schema(), $fields);

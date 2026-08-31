@@ -125,12 +125,14 @@ final class Response implements ResponseInterface
                 : $this->setHeaders($headers);
         }
 
-        if ($body instanceof StreamInterface) {
-            $this->body = StreamBodyAdapter::wrap($body);
+        if ($body instanceof ResponseStreamInterface) {
+            $this->body = $body;
+        } elseif ($body instanceof StreamInterface) {
+            $this->body = $body;
         } elseif (\is_string($body) && $body !== '') {
-            $this->body = new StringBodyStream($body);
+            $this->body = Stream::create($body);
         } else {
-            $this->body = StringBodyStream::empty();
+            $this->body = Stream::empty();
         }
     }
 
@@ -202,7 +204,7 @@ final class Response implements ResponseInterface
      */
     public function discardBody(): void
     {
-        if ($this->body instanceof ResponseBodyStream) {
+        if ($this->body instanceof ResponseStreamInterface) {
             $this->body->discard();
 
             return;

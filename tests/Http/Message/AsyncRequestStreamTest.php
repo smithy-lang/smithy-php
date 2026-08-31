@@ -7,14 +7,14 @@ namespace Smithy\Tests\Http\Message;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Smithy\Async\RevoltEventLoop;
-use Smithy\Http\Message\AsyncBodyStream;
+use Smithy\Http\Message\AsyncRequestStream;
 
-#[CoversClass(AsyncBodyStream::class)]
-final class AsyncBodyStreamTest extends TestCase
+#[CoversClass(AsyncRequestStream::class)]
+final class AsyncRequestStreamTest extends TestCase
 {
     public function testSignalsReadableTransitions(): void
     {
-        $stream = new AsyncBodyStream(
+        $stream = new AsyncRequestStream(
             new RevoltEventLoop(),
             expectedLength: 7
         );
@@ -43,7 +43,7 @@ final class AsyncBodyStreamTest extends TestCase
 
     public function testSignalsFailure(): void
     {
-        $stream = new AsyncBodyStream(new RevoltEventLoop());
+        $stream = new AsyncRequestStream(new RevoltEventLoop());
         $failure = new \RuntimeException('producer failed');
         $notifications = 0;
         $stream->subscribe(
@@ -61,9 +61,38 @@ final class AsyncBodyStreamTest extends TestCase
         $stream->read(1);
     }
 
+    public function testSubscriberFailureDoesNotBlockLaterSubscribers(): void
+    {
+        $stream = new AsyncRequestStream(new RevoltEventLoop());
+        $failure = new \RuntimeException('subscriber failed');
+        $calls = [];
+
+        $stream->subscribe(
+            static function () use (&$calls, $failure): void {
+                $calls[] = 'first';
+
+                throw $failure;
+            }
+        );
+        $stream->subscribe(
+            static function () use (&$calls): void {
+                $calls[] = 'second';
+            }
+        );
+
+        try {
+            $stream->write('a');
+            $this->fail('Expected subscriber failure.');
+        } catch (\RuntimeException $e) {
+            $this->assertSame($failure, $e);
+        }
+
+        $this->assertSame(['first', 'second'], $calls);
+    }
+
     public function testReadsAcrossQueuedChunks(): void
     {
-        $stream = new AsyncBodyStream(
+        $stream = new AsyncRequestStream(
             new RevoltEventLoop(),
             expectedLength: 8
         );
@@ -81,14 +110,14 @@ final class AsyncBodyStreamTest extends TestCase
 
     public function testReadZeroReturnsEmptyString(): void
     {
-        $stream = new AsyncBodyStream(new RevoltEventLoop());
+        $stream = new AsyncRequestStream(new RevoltEventLoop());
 
         $this->assertSame('', $stream->read(0));
     }
 
     public function testReadRejectsNegativeLength(): void
     {
-        $stream = new AsyncBodyStream(new RevoltEventLoop());
+        $stream = new AsyncRequestStream(new RevoltEventLoop());
 
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage(
@@ -101,7 +130,7 @@ final class AsyncBodyStreamTest extends TestCase
     public function testBackpressuresProducer(): void
     {
         $eventLoop = new RevoltEventLoop();
-        $stream = new AsyncBodyStream(
+        $stream = new AsyncRequestStream(
             $eventLoop,
             expectedLength: 8,
             highWaterMark: 4
@@ -140,7 +169,7 @@ final class AsyncBodyStreamTest extends TestCase
 
     public function testAcceptsOversizedWriteWhenEmpty(): void
     {
-        $stream = new AsyncBodyStream(
+        $stream = new AsyncRequestStream(
             new RevoltEventLoop(),
             expectedLength: 8,
             highWaterMark: 4
@@ -154,7 +183,7 @@ final class AsyncBodyStreamTest extends TestCase
     public function testReleasesWriterWhenConsumerDetaches(): void
     {
         $eventLoop = new RevoltEventLoop();
-        $stream = new AsyncBodyStream(
+        $stream = new AsyncRequestStream(
             $eventLoop,
             expectedLength: 8,
             highWaterMark: 4
@@ -162,7 +191,7 @@ final class AsyncBodyStreamTest extends TestCase
 
         $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage(
-            'Async body stream is no longer writable.'
+            'Async request stream is no longer writable.'
         );
 
         $eventLoop->run([
@@ -176,7 +205,7 @@ final class AsyncBodyStreamTest extends TestCase
 
     public function testCloseWithUnreadBytesIsNotFullyConsumed(): void
     {
-        $stream = new AsyncBodyStream(
+        $stream = new AsyncRequestStream(
             new RevoltEventLoop(),
             expectedLength: 7
         );
@@ -190,7 +219,7 @@ final class AsyncBodyStreamTest extends TestCase
 
     public function testCloseMakesStreamUnavailable(): void
     {
-        $stream = new AsyncBodyStream(new RevoltEventLoop());
+        $stream = new AsyncRequestStream(new RevoltEventLoop());
 
         $this->assertTrue($stream->isAvailable());
 
@@ -202,29 +231,29 @@ final class AsyncBodyStreamTest extends TestCase
 
     public function testReadRejectsClosedStream(): void
     {
-        $stream = new AsyncBodyStream(new RevoltEventLoop());
+        $stream = new AsyncRequestStream(new RevoltEventLoop());
         $stream->close();
 
         $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage('Async body stream is closed.');
+        $this->expectExceptionMessage('Async request stream is closed.');
 
         $stream->read(1);
     }
 
     public function testGetContentsRejectsClosedStream(): void
     {
-        $stream = new AsyncBodyStream(new RevoltEventLoop());
+        $stream = new AsyncRequestStream(new RevoltEventLoop());
         $stream->close();
 
         $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage('Async body stream is closed.');
+        $this->expectExceptionMessage('Async request stream is closed.');
 
         $stream->getContents();
     }
 
     public function testRejectsWritesBeyondExpectedLength(): void
     {
-        $stream = new AsyncBodyStream(
+        $stream = new AsyncRequestStream(
             new RevoltEventLoop(),
             expectedLength: 3
         );
@@ -232,7 +261,7 @@ final class AsyncBodyStreamTest extends TestCase
 
         $this->expectException(\LengthException::class);
         $this->expectExceptionMessage(
-            'Async body stream write exceeds expected length of 3 bytes.'
+            'Async request stream write exceeds expected length of 3 bytes.'
         );
 
         $stream->write('x');
@@ -240,7 +269,7 @@ final class AsyncBodyStreamTest extends TestCase
 
     public function testRejectsEndBeforeExpectedLength(): void
     {
-        $stream = new AsyncBodyStream(
+        $stream = new AsyncRequestStream(
             new RevoltEventLoop(),
             expectedLength: 4
         );
@@ -248,7 +277,7 @@ final class AsyncBodyStreamTest extends TestCase
 
         $this->expectException(\LengthException::class);
         $this->expectExceptionMessage(
-            'Async body stream ended after 3 bytes, expected 4 bytes.'
+            'Async request stream ended after 3 bytes, expected 4 bytes.'
         );
 
         $stream->end();
@@ -257,7 +286,7 @@ final class AsyncBodyStreamTest extends TestCase
     public function testDetachConsumerReleasesWriterWithOtherSubscriber(): void
     {
         $eventLoop = new RevoltEventLoop();
-        $stream = new AsyncBodyStream(
+        $stream = new AsyncRequestStream(
             $eventLoop,
             expectedLength: 8,
             highWaterMark: 4
@@ -290,7 +319,7 @@ final class AsyncBodyStreamTest extends TestCase
 
         $this->assertInstanceOf(\RuntimeException::class, $error);
         $this->assertSame(
-            'Async body stream consumer detached while a write '
+            'Async request stream consumer detached while a write '
                 . 'was waiting for capacity.',
             $error->getMessage()
         );
@@ -303,7 +332,7 @@ final class AsyncBodyStreamTest extends TestCase
             'Request buffer size must be positive.'
         );
 
-        new AsyncBodyStream(
+        new AsyncRequestStream(
             new RevoltEventLoop(),
             highWaterMark: 0
         );

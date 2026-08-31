@@ -9,7 +9,7 @@ use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\UriInterface;
 use Smithy\Http\Message\Request;
-use Smithy\Http\Message\StringBodyStream;
+use Smithy\Http\Message\StringRequestStream;
 use Smithy\Http\Message\Uri;
 
 #[CoversClass(Request::class)]
@@ -103,7 +103,7 @@ final class RequestTest extends TestCase
             ],
             'original'
         );
-        $body = new StringBodyStream('updated');
+        $body = new StringRequestStream('updated');
 
         $updated = $request
             ->withProtocolVersion('2')

@@ -13,7 +13,7 @@ use Smithy\Async\EventLoopInterface;
  * subscribe to readiness. Writes suspend cooperatively while the buffer is
  * full.
  */
-final class AsyncBodyStream implements AsyncBodyStreamInterface
+final class AsyncRequestStream implements AsyncRequestStreamInterface
 {
     private const DEFAULT_HIGH_WATER_MARK = 64 * 1024;
 
@@ -24,8 +24,8 @@ final class AsyncBodyStream implements AsyncBodyStreamInterface
     private int $bufferedBytes = 0;
     private int $position = 0;
     private bool $started = false;
-    private bool $ended = false;
-    private bool $closed = false;
+    private AsyncRequestStreamState $state =
+        AsyncRequestStreamState::OPEN;
     private bool $discarded = false;
     private bool $consumerDetached = false;
     private ?\Throwable $failure = null;
@@ -88,19 +88,7 @@ final class AsyncBodyStream implements AsyncBodyStreamInterface
      */
     public function close(): void
     {
-        $wasReady = $this->isReady();
-        $this->closed = true;
-        if (!$this->ended || $this->bufferedBytes > 0) {
-            $this->discarded = true;
-        }
-        $this->consumerDetached = true;
-        $this->chunks = new \SplQueue();
-        $this->currentChunk = null;
-        $this->currentChunkOffset = 0;
-        $this->bufferedBytes = 0;
-        $this->ended = true;
-        $this->finishNotifications($wasReady);
-        $this->scheduleWriterResume();
+        $this->markClosed();
     }
 
     /**
@@ -144,7 +132,10 @@ final class AsyncBodyStream implements AsyncBodyStreamInterface
      */
     public function eof(): bool
     {
-        return $this->ended
+        return (
+                $this->state === AsyncRequestStreamState::ENDED
+                || $this->state === AsyncRequestStreamState::CLOSED
+            )
             && $this->failure === null
             && $this->bufferedBytes === 0;
     }
@@ -166,7 +157,7 @@ final class AsyncBodyStream implements AsyncBodyStreamInterface
     public function seek(int $offset, int $whence = SEEK_SET): void
     {
         throw new \RuntimeException(
-            'Async body streams are not seekable.'
+            'Async request streams are not seekable.'
         );
     }
 
@@ -179,7 +170,7 @@ final class AsyncBodyStream implements AsyncBodyStreamInterface
     public function rewind(): void
     {
         throw new \RuntimeException(
-            'Async body streams are not seekable.'
+            'Async request streams are not seekable.'
         );
     }
 
@@ -192,7 +183,7 @@ final class AsyncBodyStream implements AsyncBodyStreamInterface
     public function rewindForRetry(): void
     {
         throw new \RuntimeException(
-            'Async body streams cannot be replayed.'
+            'Async request streams cannot be replayed.'
         );
     }
 
@@ -201,10 +192,7 @@ final class AsyncBodyStream implements AsyncBodyStreamInterface
      */
     public function isWritable(): bool
     {
-        return !$this->closed
-            && !$this->consumerDetached
-            && !$this->ended
-            && $this->failure === null;
+        return $this->isProducerOpen();
     }
 
     /**
@@ -219,7 +207,7 @@ final class AsyncBodyStream implements AsyncBodyStreamInterface
     {
         if (!$this->isWritable()) {
             throw new \RuntimeException(
-                'Async body stream is no longer writable.'
+                'Async request stream is no longer writable.'
             );
         }
 
@@ -234,7 +222,7 @@ final class AsyncBodyStream implements AsyncBodyStreamInterface
 
             if (!$this->isWritable()) {
                 throw new \RuntimeException(
-                    'Async body stream is no longer writable.'
+                    'Async request stream is no longer writable.'
                 );
             }
         }
@@ -255,7 +243,7 @@ final class AsyncBodyStream implements AsyncBodyStreamInterface
      */
     public function isReadable(): bool
     {
-        return !$this->closed;
+        return $this->state !== AsyncRequestStreamState::CLOSED;
     }
 
     /**
@@ -263,7 +251,7 @@ final class AsyncBodyStream implements AsyncBodyStreamInterface
      */
     public function read(int $length): string
     {
-        $this->ensureOpen();
+        $this->ensureReadable();
 
         if ($length < 0) {
             throw new \InvalidArgumentException(
@@ -336,7 +324,7 @@ final class AsyncBodyStream implements AsyncBodyStreamInterface
      */
     public function getContents(): string
     {
-        $this->ensureOpen();
+        $this->ensureReadable();
 
         if ($this->failure !== null) {
             throw $this->failure;
@@ -360,14 +348,14 @@ final class AsyncBodyStream implements AsyncBodyStreamInterface
     }
 
     /**
-     * Reject hashing before the body is fully available.
+     * Reject hashing an async producer stream.
      *
      * @throws \RuntimeException Always.
      */
     public function hash(string $algo = 'sha256', bool $raw = false): string
     {
         throw new \RuntimeException(
-            'Async body streams cannot be hashed before consumption.'
+            'Async request streams cannot be hashed.'
         );
     }
 
@@ -380,7 +368,7 @@ final class AsyncBodyStream implements AsyncBodyStreamInterface
     /** @inheritDoc */
     public function isAvailable(): bool
     {
-        return !$this->closed
+        return $this->state !== AsyncRequestStreamState::CLOSED
             && !$this->started
             && $this->failure === null;
     }
@@ -415,7 +403,8 @@ final class AsyncBodyStream implements AsyncBodyStreamInterface
     public function isReady(): bool
     {
         return $this->bufferedBytes > 0
-            || $this->ended
+            || $this->state === AsyncRequestStreamState::ENDED
+            || $this->state === AsyncRequestStreamState::CLOSED
             || $this->failure !== null;
     }
 
@@ -462,7 +451,7 @@ final class AsyncBodyStream implements AsyncBodyStreamInterface
 
         if ($this->writer !== null) {
             $this->writerFailure = new \RuntimeException(
-                'Async body stream consumer detached while a write '
+                'Async request stream consumer detached while a write '
                     . 'was waiting for capacity.'
             );
             $this->scheduleWriterResume();
@@ -476,7 +465,7 @@ final class AsyncBodyStream implements AsyncBodyStreamInterface
      */
     public function end(): void
     {
-        if ($this->ended || $this->failure !== null) {
+        if ($this->state !== AsyncRequestStreamState::OPEN) {
             return;
         }
 
@@ -485,19 +474,16 @@ final class AsyncBodyStream implements AsyncBodyStreamInterface
         ) {
             $producedBytes = $this->producedBytes();
             $failure = new \LengthException(
-                'Async body stream ended after '
+                'Async request stream ended after '
                     . "{$producedBytes} bytes, expected "
                     . "{$this->expectedLength} bytes."
             );
-            $this->fail($failure);
+            $this->markFailed($failure);
 
             throw $failure;
         }
 
-        $wasReady = $this->isReady();
-        $this->ended = true;
-        $this->finishNotifications($wasReady);
-        $this->scheduleWriterResume();
+        $this->markEnded();
     }
 
     /**
@@ -507,12 +493,77 @@ final class AsyncBodyStream implements AsyncBodyStreamInterface
      */
     public function fail(\Throwable $failure): void
     {
-        if ($this->ended || $this->failure !== null) {
+        $this->markFailed($failure);
+    }
+
+    /**
+     * Determine whether producer writes may still be accepted.
+     */
+    private function isProducerOpen(): bool
+    {
+        return $this->state === AsyncRequestStreamState::OPEN
+            && !$this->consumerDetached;
+    }
+
+    /**
+     * Mark producer completion and notify blocked consumers.
+     *
+     * @return void
+     */
+    private function markEnded(): void
+    {
+        if ($this->state !== AsyncRequestStreamState::OPEN) {
+            return;
+        }
+
+        $wasReady = $this->isReady();
+        $this->state = AsyncRequestStreamState::ENDED;
+        $this->finishNotifications($wasReady);
+        $this->scheduleWriterResume();
+    }
+
+    /**
+     * Mark producer failure and notify blocked consumers.
+     *
+     * @return void
+     */
+    private function markFailed(\Throwable $failure): void
+    {
+        if ($this->state !== AsyncRequestStreamState::OPEN) {
             return;
         }
 
         $wasReady = $this->isReady();
         $this->failure = $failure;
+        $this->state = AsyncRequestStreamState::FAILED;
+        $this->finishNotifications($wasReady);
+        $this->scheduleWriterResume();
+    }
+
+    /**
+     * Mark closure, discard queued bytes, and release waiters.
+     *
+     * @return void
+     */
+    private function markClosed(): void
+    {
+        if ($this->state === AsyncRequestStreamState::CLOSED) {
+            return;
+        }
+
+        $wasReady = $this->isReady();
+        if ($this->state !== AsyncRequestStreamState::ENDED
+            || $this->bufferedBytes > 0
+        ) {
+            $this->discarded = true;
+        }
+
+        $this->consumerDetached = true;
+        $this->chunks = new \SplQueue();
+        $this->currentChunk = null;
+        $this->currentChunkOffset = 0;
+        $this->bufferedBytes = 0;
+        $this->state = AsyncRequestStreamState::CLOSED;
         $this->finishNotifications($wasReady);
         $this->scheduleWriterResume();
     }
@@ -542,7 +593,7 @@ final class AsyncBodyStream implements AsyncBodyStreamInterface
         }
 
         $failure = new \LengthException(
-            'Async body stream write exceeds expected length of '
+            'Async request stream write exceeds expected length of '
                 . "{$this->expectedLength} bytes."
         );
         $this->fail($failure);
@@ -563,10 +614,10 @@ final class AsyncBodyStream implements AsyncBodyStreamInterface
      *
      * @return void
      */
-    private function ensureOpen(): void
+    private function ensureReadable(): void
     {
-        if ($this->closed) {
-            throw new \RuntimeException('Async body stream is closed.');
+        if ($this->state === AsyncRequestStreamState::CLOSED) {
+            throw new \RuntimeException('Async request stream is closed.');
         }
     }
 
@@ -664,8 +715,17 @@ final class AsyncBodyStream implements AsyncBodyStreamInterface
      */
     private function notifyReady(): void
     {
+        $firstError = null;
         foreach ($this->subscribers as $subscriber) {
-            $subscriber();
+            try {
+                $subscriber();
+            } catch (\Throwable $error) {
+                $firstError ??= $error;
+            }
+        }
+
+        if ($firstError !== null) {
+            throw $firstError;
         }
     }
 

@@ -25,11 +25,11 @@ use Smithy\Http\Client\Exception\HttpException;
 use Smithy\Http\Client\Exception\NetworkException;
 use Smithy\Http\Client\Exception\RequestCancelledException;
 use Smithy\Http\Client\Exception\RequestException;
-use Smithy\Http\Message\AsyncBodyStreamInterface;
-use Smithy\Http\Message\BodyStreamInterface;
-use Smithy\Http\Message\ResourceBodyStream;
+use Smithy\Http\Message\AsyncRequestStreamInterface;
+use Smithy\Http\Message\RequestStreamInterface;
+use Smithy\Http\Message\ResourceRequestStream;
 use Smithy\Http\Message\Response;
-use Smithy\Http\Message\ResponseBodyStream;
+use Smithy\Http\Message\StreamingResponseStream;
 use Smithy\Http\Message\ResponseInterface;
 use Smithy\Http\Message\StreamBodyAdapter;
 
@@ -160,7 +160,7 @@ final class CurlClient extends AbstractHttpClient
     ): ResponseInterface
     {
         if ($this->closed) {
-            $body = $request->getBody() instanceof BodyStreamInterface
+            $body = $request->getBody() instanceof RequestStreamInterface
                 ? $request->getBody()
                 : null;
 
@@ -504,7 +504,7 @@ final class CurlClient extends AbstractHttpClient
                 \curl_setopt_array($handle, $uploadOptions);
 
                 if ($uploadState->body
-                        instanceof AsyncBodyStreamInterface
+                        instanceof AsyncRequestStreamInterface
                 ) {
                     $uploadState->readinessSubscription =
                         $uploadState->body->subscribe(
@@ -644,7 +644,7 @@ final class CurlClient extends AbstractHttpClient
 
                                 if ($uploadState->body
                                         instanceof
-                                            AsyncBodyStreamInterface
+                                            AsyncRequestStreamInterface
                                     && !$uploadState->body->isReady()
                                 ) {
                                     $uploadState->paused = true;
@@ -725,7 +725,7 @@ final class CurlClient extends AbstractHttpClient
                                     if ($chunk === '') {
                                         if ($uploadState->body
                                                 instanceof
-                                                    AsyncBodyStreamInterface
+                                                    AsyncRequestStreamInterface
                                             && !$uploadState
                                                 ->body
                                                 ->isReady()
@@ -788,7 +788,7 @@ final class CurlClient extends AbstractHttpClient
                                     ) {
                                         if ($uploadState->body
                                                 instanceof
-                                                    AsyncBodyStreamInterface
+                                                    AsyncRequestStreamInterface
                                             && !$uploadState
                                                 ->body
                                                 ->isReady()
@@ -894,7 +894,7 @@ final class CurlClient extends AbstractHttpClient
                             $responseState
                                 ->activateStreamingBody(
                                     $this
-                                        ->createResponseBodyStream(
+                                        ->createStreamingResponseStream(
                                             $handleId,
                                             $options
                                         )
@@ -1102,7 +1102,7 @@ final class CurlClient extends AbstractHttpClient
             );
 
             if (!\is_string($result)
-                && !$result instanceof BodyStreamInterface
+                && !$result instanceof RequestStreamInterface
                 && !$result instanceof ResponseInterface
             ) {
                 throw new \LogicException(
@@ -1424,7 +1424,7 @@ final class CurlClient extends AbstractHttpClient
                     $madeProgress = true;
                     $pending->uploadedBytes = $uploaded;
                     $body = $pending->uploadState?->body;
-                    if ($body instanceof ResourceBodyStream) {
+                    if ($body instanceof ResourceRequestStream) {
                         $body->recordTransportRead($uploaded);
                     }
                 }
@@ -2114,7 +2114,7 @@ final class CurlClient extends AbstractHttpClient
     {
         $body = $uploadState?->body;
         if ($body === null
-            && $request->getBody() instanceof BodyStreamInterface
+            && $request->getBody() instanceof RequestStreamInterface
         ) {
             $body = $request->getBody();
         }
@@ -2146,7 +2146,7 @@ final class CurlClient extends AbstractHttpClient
 
         $body = $uploadState?->body;
         if ($body === null
-            && $request->getBody() instanceof BodyStreamInterface
+            && $request->getBody() instanceof RequestStreamInterface
         ) {
             $body = $request->getBody();
         }
@@ -2205,10 +2205,10 @@ final class CurlClient extends AbstractHttpClient
      * Determine whether cURL can read and rewind the body natively.
      */
     private static function canUseNativeReadData(
-        BodyStreamInterface $body
+        RequestStreamInterface $body
     ): bool
     {
-        return $body instanceof ResourceBodyStream
+        return $body instanceof ResourceRequestStream
             && $body->isReadable()
             && $body->getMetadata('wrapper_type') !== 'user-space';
     }
@@ -2217,10 +2217,10 @@ final class CurlClient extends AbstractHttpClient
      * Determine whether native cURL upload rewind preserves the body start.
      */
     private static function nativeReadDataStartsAtOffsetZero(
-        BodyStreamInterface $body
+        RequestStreamInterface $body
     ): bool
     {
-        if (!$body instanceof ResourceBodyStream) {
+        if (!$body instanceof ResourceRequestStream) {
             return true;
         }
 
@@ -2328,7 +2328,7 @@ final class CurlClient extends AbstractHttpClient
         $uploadState->retainedFinalChunk = null;
 
         if (!$uploadState->body
-                instanceof AsyncBodyStreamInterface
+                instanceof AsyncRequestStreamInterface
         ) {
             return;
         }
@@ -2373,12 +2373,12 @@ final class CurlClient extends AbstractHttpClient
     /**
      * Create a bounded response body attached to one cURL transfer.
      */
-    private function createResponseBodyStream(
+    private function createStreamingResponseStream(
         int $handleId,
         HttpRequestOptions $options
-    ): ResponseBodyStream
+    ): StreamingResponseStream
     {
-        return new ResponseBodyStream(
+        return new StreamingResponseStream(
             $this->eventLoop,
             $options->responseBufferSize,
             function () use ($handleId): void {
