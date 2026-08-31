@@ -473,6 +473,41 @@ final class SchemaConverterTest extends TestCase
         );
     }
 
+    public function testPreservesRecursiveCollectionMemberMetadata(): void
+    {
+        $listConverter = new SchemaConverter($this->recursiveCollectionModel());
+        $groupList = $listConverter->getSchema('example#GroupList');
+        $group = $groupList->getListMember()?->resolveTarget();
+        $childGroups = $group?->getMember('childGroups');
+
+        self::assertNotNull($childGroups);
+        self::assertInstanceOf(SchemaReference::class, $childGroups->target);
+        self::assertSame(ShapeType::List_->value, $childGroups->type);
+        self::assertNotNull($childGroups->getListMember());
+        self::assertSame(
+            $group,
+            $childGroups->getListMember()?->resolveTarget()
+        );
+
+        $mapConverter = new SchemaConverter($this->recursiveCollectionModel());
+        $groupMap = $mapConverter->getSchema('example#GroupMap');
+        $mappedGroup = $groupMap->getMapValue()?->resolveTarget();
+        $childMap = $mappedGroup?->getMember('childMap');
+
+        self::assertNotNull($childMap);
+        self::assertInstanceOf(SchemaReference::class, $childMap->target);
+        self::assertSame(ShapeType::Map->value, $childMap->type);
+        self::assertSame(
+            ShapeType::String_->value,
+            $childMap->getMapKey()?->type
+        );
+        self::assertNotNull($childMap->getMapValue());
+        self::assertSame(
+            $mappedGroup,
+            $childMap->getMapValue()?->resolveTarget()
+        );
+    }
+
     public function testPreservesOriginalShapeIds(): void
     {
         $converter = new SchemaConverter($this->model());
@@ -510,6 +545,35 @@ final class SchemaConverterTest extends TestCase
                 $next->getSchema()->getMember('name')
             )
         );
+    }
+
+    private function recursiveCollectionModel(): SmithyModel
+    {
+        return SmithyModel::fromArray([
+            'smithy' => '2.0',
+            'shapes' => [
+                'example#Group' => [
+                    'type' => 'structure',
+                    'members' => [
+                        'childGroups' => [
+                            'target' => 'example#GroupList'
+                        ],
+                        'childMap' => [
+                            'target' => 'example#GroupMap'
+                        ]
+                    ]
+                ],
+                'example#GroupList' => [
+                    'type' => 'list',
+                    'member' => ['target' => 'example#Group']
+                ],
+                'example#GroupMap' => [
+                    'type' => 'map',
+                    'key' => ['target' => 'smithy.api#String'],
+                    'value' => ['target' => 'example#Group']
+                ]
+            ]
+        ]);
     }
 
     private function model(): SmithyModel

@@ -45,9 +45,9 @@ final class TypeRegistry
             ? $canonicalId
             : $shapeId;
 
-        $canReuseCanonicalSchema = $conversionId === $canonicalId
-            && isset($this->schemas[$canonicalId]);
-        if ($canReuseCanonicalSchema) {
+        if ($conversionId === $canonicalId
+            && isset($this->schemas[$canonicalId])
+        ) {
             return $this->schemas[$shapeId] = $this->schemas[$canonicalId];
         }
         if (isset($this->schemas[$conversionId])) {
@@ -57,7 +57,7 @@ final class TypeRegistry
         $schema = $this->converter->getSchema($conversionId);
         $this->schemas[$shapeId] = $schema;
         $this->schemas[$schema->id] ??= $schema;
-        $this->schemasById[$schema->id] ??= $schema;
+        $this->schemasById[$conversionId] ??= $schema;
 
         return $schema;
     }

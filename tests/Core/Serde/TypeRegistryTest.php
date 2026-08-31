@@ -81,6 +81,13 @@ final class TypeRegistryTest extends TestCase
         self::assertNotSame($first, $second);
         self::assertSame(['first'], \array_keys($first->getMembers()));
         self::assertSame(['second'], \array_keys($second->getMembers()));
+        self::assertSame(
+            [
+                'example#FirstGeneratedInput' => $first,
+                'example#SecondGeneratedInput' => $second
+            ],
+            $registry->all()
+        );
     }
 
     public function testCachesSchemasByRequestedAndCanonicalIds(): void

@@ -95,8 +95,7 @@ final class SchemaConverter
         $mapValue = null;
         $enumValues = [];
 
-        if (
-            $shapeType === ShapeType::Structure
+        if ($shapeType === ShapeType::Structure
             || $shapeType === ShapeType::Union
         ) {
             $index = 0;
@@ -208,24 +207,107 @@ final class SchemaConverter
                 fn(): Schema => $this->getSchema($targetId)
             )
             : $this->convert($targetId, $building);
-        $concreteTarget = $target instanceof Schema ? $target : null;
+        if ($target instanceof Schema) {
+            $members = $target->getMembersByIndex();
+            $listMember = $target->getListMember();
+            $mapKey = $target->getMapKey();
+            $mapValue = $target->getMapValue();
+            $enumValues = $target->enumValues;
+        } elseif ($targetType === ShapeType::List_
+            || $targetType === ShapeType::Map
+        ) {
+            $members = [];
+            $enumValues = [];
+            [$listMember, $mapKey, $mapValue] =
+                $this->convertRecursiveCollectionMembers(
+                    $targetId,
+                    $targetType,
+                    $building
+                );
+        } else {
+            $members = [];
+            $listMember = null;
+            $mapKey = null;
+            $mapValue = null;
+            $enumValues = [];
+        }
 
         return new Schema(
             id: "{$containerId}\${$memberName}",
             type: $targetType,
             memberName: $memberName,
             memberIndex: $memberIndex,
-            members: $concreteTarget?->getMembersByIndex() ?? [],
-            listMember: $concreteTarget?->getListMember(),
-            mapKey: $concreteTarget?->getMapKey(),
-            mapValue: $concreteTarget?->getMapValue(),
+            members: $members,
+            listMember: $listMember,
+            mapKey: $mapKey,
+            mapValue: $mapValue,
             traits: $effective['dense'],
             directTraits: $direct['dense'],
             traitsById: $effective['byId'],
             directTraitsById: $direct['byId'],
             target: $target,
-            enumValues: $concreteTarget?->enumValues ?? []
+            enumValues: $enumValues
         );
+    }
+
+    /**
+     * Convert shallow collection metadata for a recursive collection target.
+     *
+     * @param array<string, true> $building Shapes currently being converted.
+     *
+     * @return array{Schema|null, Schema|null, Schema|null}
+     */
+    private function convertRecursiveCollectionMembers(
+        string $targetId,
+        ShapeType $targetType,
+        array &$building
+    ): array
+    {
+        $shape = $this->model->expectShape($targetId);
+        if ($targetType === ShapeType::List_) {
+            $member = $shape['member'] ?? [];
+            if (($member['target'] ?? null) === $targetId) {
+                return [null, null, null];
+            }
+
+            return [
+                $this->convertMember(
+                    $targetId,
+                    'member',
+                    0,
+                    $member,
+                    $building
+                ),
+                null,
+                null
+            ];
+        }
+        if ($targetType === ShapeType::Map) {
+            $key = $shape['key'] ?? [];
+            $value = $shape['value'] ?? [];
+
+            return [
+                null,
+                $this->convertMember(
+                    $targetId,
+                    'key',
+                    0,
+                    $key,
+                    $building
+                ),
+                ($value['target'] ?? null) === $targetId
+                    ? null
+                    : $this->convertMember(
+                        $targetId,
+                        'value',
+                        1,
+                        $value,
+                        $building
+                    )
+            ];
+        }
+
+        return [null, null, null];
     }
 
     /**
