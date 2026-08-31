@@ -44,4 +44,14 @@ interface HttpClientInterface extends ClientInterface
      * in long-running processes.
      */
     public function getConnectionManager(): ConnectionManagerInterface;
+
+    /**
+     * Release resources held by the client.
+     *
+     * Implementations should reject new requests after close. Active
+     * requests may be failed during shutdown.
+     *
+     * @return void
+     */
+    public function close(): void;
 }

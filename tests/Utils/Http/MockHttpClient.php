@@ -202,6 +202,9 @@ class MockHttpClient implements HttpClientInterface
         return $this->connectionManager ??= new MockConnectionManager();
     }
 
+    /** @inheritDoc */
+    public function close(): void {}
+
     private function normalizeResponse(
         ResponseInterface|string $response,
         int $status,

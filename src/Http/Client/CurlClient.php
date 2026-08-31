@@ -68,6 +68,7 @@ final class CurlClient extends AbstractHttpClient
     private float $pollInterval = self::MIN_POLL_INTERVAL;
     private ?string $timeoutTimerId = null;
     private ?float $timeoutDeadline = null;
+    private bool $closed = false;
 
     /**
      * @throws \RuntimeException If cURL or required options are unavailable.
@@ -158,6 +159,20 @@ final class CurlClient extends AbstractHttpClient
         ?HttpRequestOptions $options = null
     ): ResponseInterface
     {
+        if ($this->closed) {
+            $body = $request->getBody() instanceof BodyStreamInterface
+                ? $request->getBody()
+                : null;
+
+            throw new NetworkException(
+                'HTTP client is closed.',
+                request: $request,
+                requestBodyStarted: $body?->started() ?? false,
+                requestBodyFullyConsumed: $body?->fullyConsumed() ?? false,
+                requestBodySeekable: $body?->isSeekable()
+            );
+        }
+
         $options ??= $this->defaultOptions;
         $this->validateRequestOptions($request, $options);
         $this->throwIfCancelled(
@@ -1137,26 +1152,58 @@ final class CurlClient extends AbstractHttpClient
     }
 
     /**
-     * Release active transfers and close the multi handle.
-     *
-     * @return void
+     * @inheritDoc
      */
-    public function __destruct()
+    public function close(): void
     {
+        if ($this->closed) {
+            return;
+        }
+
+        $this->closed = true;
         $this->cancelPollTimer();
         $this->cancelTimeoutTimer();
 
         foreach (\array_keys($this->pending) as $handleId) {
             $pending = $this->takePendingRequest($handleId);
             if ($pending !== null) {
+                $uploadBody = $pending->uploadState?->body;
                 $pending->exchange
                     ->getCurlConnection()
                     ->markUnhealthy();
-                $this->finalizePendingRequest($pending);
+                $this->failPendingRequest(
+                    $pending,
+                    new NetworkException(
+                        'HTTP client was closed.',
+                        request: $pending->request,
+                        requestBodyStarted:
+                            $uploadBody?->started() ?? false,
+                        requestBodyFullyConsumed:
+                            $uploadBody?->fullyConsumed() ?? false,
+                        requestBodySeekable:
+                            $uploadBody?->isSeekable()
+                    )
+                );
             }
         }
 
+        try {
+            $this->connectionManager->clear();
+        } catch (\Throwable) {
+            // close() is also used by __destruct(), where throwing would be
+            // fatal. Pending requests have already been failed above.
+        }
         \curl_multi_close($this->multiHandle);
+    }
+
+    /**
+     * Release active transfers and close the multi handle.
+     *
+     * @return void
+     */
+    public function __destruct()
+    {
+        $this->close();
     }
 
     private function startPolling(
@@ -1164,6 +1211,10 @@ final class CurlClient extends AbstractHttpClient
         ?float $delay = null
     ): void
     {
+        if ($this->closed) {
+            return;
+        }
+
         if ($this->polling) {
             $this->pollImmediately = $this->pollImmediately
                 || $immediate;
@@ -1205,7 +1256,7 @@ final class CurlClient extends AbstractHttpClient
         $this->pollScheduled = false;
         $this->pollTimerId = null;
 
-        if ($this->pending === []) {
+        if ($this->closed || $this->pending === []) {
             return;
         }
 
@@ -1247,7 +1298,7 @@ final class CurlClient extends AbstractHttpClient
         $immediate = $this->pollImmediately;
         $this->pollImmediately = false;
 
-        if ($this->pending === []) {
+        if ($this->closed || $this->pending === []) {
             $this->resetProductivePolling();
 
             return;

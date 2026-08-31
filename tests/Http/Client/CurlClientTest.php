@@ -67,6 +67,18 @@ final class CurlClientTest extends TestCase
         }
     }
 
+    public function testCloseRejectsFutureRequests(): void
+    {
+        $client = new CurlClient();
+        $client->close();
+        $client->close();
+
+        $this->expectException(NetworkExceptionInterface::class);
+        $this->expectExceptionMessage('HTTP client is closed.');
+
+        $client->sendRequest(new Request('GET', 'https://example.com'));
+    }
+
     #[DataProvider('progressBodyProvider')]
     public function testPollLoopYieldsAfterProductiveBurst(
         string|StreamInterface $body

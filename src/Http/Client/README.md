@@ -186,6 +186,11 @@ Connection manager defaults are:
 to `CurlClient`. It also exposes `prune()`, `clear()`, `idleCount()`, and its
 configuration for long-running processes.
 
+Call `HttpClientInterface::close()` when a client is no longer needed. For
+`CurlClient`, this fails active transfers, clears pooled easy handles, cancels
+transport timers, and closes the shared cURL multi handle. New requests are
+rejected after close.
+
 ## HTTP and TLS Configuration
 
 `ConnectConfiguration` controls connection establishment:

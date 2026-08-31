@@ -422,6 +422,9 @@ final class AsyncBodyStream implements AsyncBodyStreamInterface
     /**
      * Subscribe to transitions from unavailable to readable.
      *
+     * The callback receives no arguments. It is a readiness signal only:
+     * after it runs, a read can return data, EOF, or an error.
+     *
      * @param \Closure(): void $callback
      *
      * @return int Subscription identifier.

@@ -13,7 +13,7 @@ use Psr\Http\Message\StreamInterface;
  * etc.) and provides the full StreamInterface contract.
  *
  * For string bodies, use Stream::create($string) which writes the
- * string into php://temp and returns a seekable, readable stream.
+ * string into php://memory and returns a seekable, readable stream.
  */
 final class Stream implements StreamInterface
 {
@@ -41,10 +41,10 @@ final class Stream implements StreamInterface
      */
     public static function create(string $content = ''): self
     {
-        $resource = \fopen('php://temp', 'r+');
+        $resource = \fopen('php://memory', 'r+');
         if ($resource === false) {
             throw new \RuntimeException(
-                'Unable to create a temporary stream.'
+                'Unable to create an in-memory stream.'
             );
         }
 
@@ -64,7 +64,12 @@ final class Stream implements StreamInterface
         return self::create('');
     }
 
-    /** @inheritDoc */
+    /**
+     * @inheritDoc
+     *
+     * This reads the stream contents into memory as required by PSR-7.
+     * Large bodies should be consumed incrementally with read().
+     */
     public function __toString(): string
     {
         try {

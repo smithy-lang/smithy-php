@@ -11,11 +11,12 @@ use Smithy\Http\Message\Stream;
 #[CoversClass(Stream::class)]
 final class StreamTest extends TestCase
 {
-    public function testCreatesTemporaryStreamFromString(): void
+    public function testCreatesInMemoryStreamFromString(): void
     {
         $stream = Stream::create('payload');
 
         $this->assertSame('payload', $stream->getContents());
+        $this->assertSame('php://memory', $stream->getMetadata('uri'));
     }
 
     public function testReadZeroReturnsEmptyString(): void
