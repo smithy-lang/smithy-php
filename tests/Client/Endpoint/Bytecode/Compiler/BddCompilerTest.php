@@ -26,7 +26,7 @@ final class BddCompilerTest extends TestCase
             1,
             -1,
             0,
-            Bytecode::RESULT_OFFSET,
+            Bytecode::RESULT_OFFSET + 1,
             -2
         ];
 
@@ -54,6 +54,31 @@ final class BddCompilerTest extends TestCase
         );
 
         BddCompiler::decodeNodes(\base64_encode(\pack('N', 1)), 1);
+    }
+
+    public function testCompilesImplicitNoMatchResultInSlotZero(): void
+    {
+        $bytecode = (new BddCompiler(StdFunctions::all()))->compile(
+            $this->trait(root: Bytecode::RESULT_OFFSET)
+        );
+
+        self::assertSame([0], $bytecode->resultOffsets);
+        self::assertSame([null], $bytecode->constants);
+        self::assertSame(
+            [
+                Opcodes::LOAD_CONST,
+                0,
+                Opcodes::RETURN_VALUE
+            ],
+            $bytecode->code
+        );
+
+        $this->expectException(RulesEvaluationException::class);
+        $this->expectExceptionMessage(
+            'No endpoint matched the supplied parameters'
+        );
+
+        (new Evaluator($bytecode))->evaluate([]);
     }
 
     public function testCompilesParametersAndFastConditions(): void
@@ -153,7 +178,7 @@ final class BddCompilerTest extends TestCase
                     ]
                 ]
             ],
-            root: Bytecode::RESULT_OFFSET
+            root: Bytecode::RESULT_OFFSET + 1
         );
         $bytecode = (new BddCompiler(StdFunctions::all()))
             ->compile($trait);
@@ -200,7 +225,7 @@ final class BddCompilerTest extends TestCase
                     ]
                 ]
             ],
-            root: Bytecode::RESULT_OFFSET
+            root: Bytecode::RESULT_OFFSET + 1
         );
         $bytecode = (new BddCompiler(StdFunctions::all()))
             ->compile($trait);
@@ -226,7 +251,7 @@ final class BddCompilerTest extends TestCase
                     'error' => 'Missing endpoint for {Region}'
                 ]
             ],
-            root: Bytecode::RESULT_OFFSET
+            root: Bytecode::RESULT_OFFSET + 1
         );
         $bytecode = (new BddCompiler(StdFunctions::all()))
             ->compile($trait);
@@ -248,7 +273,7 @@ final class BddCompilerTest extends TestCase
             1,
             -1,
             0,
-            Bytecode::RESULT_OFFSET,
+            Bytecode::RESULT_OFFSET + 1,
             -1
         ];
         $trait = $this->trait(
@@ -442,7 +467,7 @@ final class BddCompilerTest extends TestCase
                     'endpoint' => ['url' => 'https://{First}']
                 ]
             ],
-            root: Bytecode::RESULT_OFFSET
+            root: Bytecode::RESULT_OFFSET + 1
         ));
 
         $second = $compiler->compile($this->trait(
@@ -453,7 +478,7 @@ final class BddCompilerTest extends TestCase
                     'endpoint' => ['url' => 'https://{Second}']
                 ]
             ],
-            root: Bytecode::RESULT_OFFSET
+            root: Bytecode::RESULT_OFFSET + 1
         ));
 
         self::assertSame(['Second' => 0], $second->inputRegisterMap);

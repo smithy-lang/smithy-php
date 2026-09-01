@@ -198,7 +198,7 @@ final class BytecodeEndpointResolverTest extends TestCase
         self::assertSame('https://configured.example', $endpoint->url);
     }
 
-    public function testOperationContextOverridesConfiguredParameters(): void
+    public function testConfiguredParametersOverrideOperationContext(): void
     {
         $inputSchema = $this->inputSchema();
         $operation = $this->operation(
@@ -224,7 +224,7 @@ final class BytecodeEndpointResolverTest extends TestCase
             )
         );
 
-        self::assertSame('https://operation.example', $endpoint->url);
+        self::assertSame('https://configured.example', $endpoint->url);
     }
 
     public function testOmitsNullInputContextValue(): void
@@ -534,7 +534,7 @@ final class BytecodeEndpointResolverTest extends TestCase
             ],
             'nodes' => \base64_encode($nodeBytes),
             'nodeCount' => 1,
-            'root' => Bytecode::RESULT_OFFSET
+            'root' => Bytecode::RESULT_OFFSET + 1
         ];
 
         return (new BddCompiler(StdFunctions::all()))->compile(

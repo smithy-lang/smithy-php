@@ -413,9 +413,9 @@ final class BytecodeEndpointResolverSharedCacheTest extends TestCase
         // the evaluator jumps straight to the result program without
         // touching the BDD node array.
         //
-        // Result-ref numbering is zero-based: the first defined result
-        // is `100_000_000`. The implicit `NoMatchRule` is represented
-        // by terminal refs and is not present in the serialized list.
+        // Result-ref numbering follows the SEP: `100_000_000` is the
+        // implicit `NoMatchRule`, so the first serialized result is
+        // `100_000_001`.
         //
         // We still include one BDD node in the payload so `nodeCount`
         // matches (BddCompiler validates the blob length against
@@ -441,7 +441,7 @@ final class BytecodeEndpointResolverSharedCacheTest extends TestCase
             ],
             'nodes' => \base64_encode($nodeBytes),
             'nodeCount' => 1,
-            'root' => 100_000_000,
+            'root' => 100_000_001,
         ];
 
         return (new BddCompiler(StdFunctions::all()))->compile($trait);
