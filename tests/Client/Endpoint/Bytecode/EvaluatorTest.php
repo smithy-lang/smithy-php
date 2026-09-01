@@ -947,9 +947,16 @@ final class EvaluatorTest extends TestCase
     public function testRejectsResultProgramThatReturnsValue(): void
     {
         $bytecode = $this->bytecode(
-            [Opcodes::LIST0, Opcodes::RETURN_VALUE],
-            bddRoot: Bytecode::RESULT_OFFSET,
-            resultOffsets: [0]
+            [
+                Opcodes::LOAD_CONST,
+                0,
+                Opcodes::RETURN_VALUE,
+                Opcodes::LIST0,
+                Opcodes::RETURN_VALUE
+            ],
+            constants: [null],
+            bddRoot: Bytecode::RESULT_OFFSET + 1,
+            resultOffsets: [0, 3]
         );
 
         $this->expectException(RulesEvaluationException::class);
@@ -1120,14 +1127,17 @@ final class EvaluatorTest extends TestCase
             [
                 Opcodes::LOAD_CONST,
                 0,
+                Opcodes::RETURN_VALUE,
+                Opcodes::LOAD_CONST,
+                1,
                 Opcodes::RETURN_ENDPOINT,
                 0
             ],
-            constants: ['https://example.test'],
+            constants: [null, 'https://example.test'],
             registers: $registers,
             inputRegisterMap: $inputRegisterMap,
-            bddRoot: Bytecode::RESULT_OFFSET,
-            resultOffsets: [0]
+            bddRoot: Bytecode::RESULT_OFFSET + 1,
+            resultOffsets: [0, 3]
         );
     }
 
@@ -1147,6 +1157,12 @@ final class EvaluatorTest extends TestCase
     {
         $code = $conditionCode ?? [];
         $conditionOffset = 0;
+        $noMatchOffset = \count($code);
+        $noMatchConstant = \count($constants);
+        $constants[] = null;
+        $code[] = Opcodes::LOAD_CONST;
+        $code[] = $noMatchConstant;
+        $code[] = Opcodes::RETURN_VALUE;
         $highOffset = \count($code);
         $highConstant = \count($constants);
         $constants[] = 'https://high';
@@ -1180,12 +1196,12 @@ final class EvaluatorTest extends TestCase
                 1,
                 -1,
                 0,
-                Bytecode::RESULT_OFFSET,
-                Bytecode::RESULT_OFFSET + 1
+                Bytecode::RESULT_OFFSET + 1,
+                Bytecode::RESULT_OFFSET + 2
             ],
             bddRoot: $root,
             conditionOffsets: [$conditionOffset],
-            resultOffsets: [$highOffset, $lowOffset],
+            resultOffsets: [$noMatchOffset, $highOffset, $lowOffset],
             conditionTypes: [$conditionType],
             conditionOperands: [$operand]
         );

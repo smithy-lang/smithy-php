@@ -43,10 +43,10 @@ final class BytecodeSourceGeneratorTest extends TestCase
                 ]
             ],
             inputRegisterMap: ['Region' => 0],
-            bddNodes: [0, 100_000_000, -1],
+            bddNodes: [0, 100_000_001, -1],
             bddRoot: 2,
             conditionOffsets: [0],
-            resultOffsets: [4],
+            resultOffsets: [0, 4],
             conditionTypes: [1],
             conditionOperands: [0]
         );
