@@ -194,7 +194,15 @@ final class ClientGeneratorTest extends TestCase
             $file->content
         );
         $this->assertStringContainsString(
-            '$plugins[] = new VendorPlugin();',
+            'use Smithy\\Client\\Plugin\\PluginCollection;',
+            $file->content
+        );
+        $this->assertStringContainsString(
+            'PluginCollection $plugins = new PluginCollection()',
+            $file->content
+        );
+        $this->assertStringContainsString(
+            '$plugins = $plugins->add(new VendorPlugin());',
             $file->content
         );
     }

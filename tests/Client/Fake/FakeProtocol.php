@@ -6,7 +6,8 @@ namespace Smithy\Tests\Client\Fake;
 
 use Psr\Http\Message\{
     RequestInterface,
-    ResponseInterface
+    ResponseInterface,
+    StreamInterface
 };
 use Smithy\Protocol\ProtocolInterface;
 use Smithy\Core\Serde\SerializableStructInterface;
@@ -28,7 +29,8 @@ final class FakeProtocol implements ProtocolInterface
      * Create a fake protocol.
      */
     public function __construct(
-        public ?\Throwable $deserializeError = null
+        public ?\Throwable $deserializeError = null,
+        private readonly ?StreamInterface $requestBody = null
     ) {}
 
     public function serializeRequest(
@@ -43,7 +45,7 @@ final class FakeProtocol implements ProtocolInterface
             'POST',
             new Uri($endpoint),
             [],
-            'input:' . $input->value
+            $this->requestBody ?? 'input:' . $input->value
         );
     }
 

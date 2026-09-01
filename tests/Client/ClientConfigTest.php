@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace Smithy\Tests\Client;
 
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Smithy\Client\Auth\{
+    AuthSchemeResolver,
     AuthSchemeInterface,
-    ModeledAuthSchemeResolver,
     NoAuthScheme,
     StaticAuthSchemeResolver
 };
@@ -16,6 +17,7 @@ use Smithy\Client\Endpoint\{
     Endpoint,
     StaticEndpointResolver
 };
+use Smithy\Client\Interceptor\IdempotencyTokenInterceptor;
 use Smithy\Client\Retry\{
     NoRetryStrategy,
     RetryStrategyInterface
@@ -37,6 +39,7 @@ use Smithy\Tests\Utils\Http\MockHttpClient;
  * separately) survive every base-class `withXxx()` because `copyWith()`
  * dispatches through `new static(...)`.
  */
+#[CoversClass(ClientConfig::class)]
 final class ClientConfigTest extends TestCase
 {
     private function baseConfig(): ClientConfig
@@ -153,20 +156,36 @@ final class ClientConfigTest extends TestCase
         $this->baseConfig()->withAuthSchemePreference(['sigv4', '']);
     }
 
-    public function testDefaultsToModeledAuthSchemeResolver(): void
+    public function testDefaultsToAuthSchemeResolver(): void
     {
         $config = $this->baseConfig();
+        $endpoint = new Endpoint('https://a.test');
 
-        $this->assertSame(
-            ModeledAuthSchemeResolver::instance(),
+        $this->assertInstanceOf(
+            AuthSchemeResolver::class,
             $config->authSchemeResolver
         );
         $this->assertSame(
-            [NoAuthScheme::ID],
+            NoAuthScheme::instance(),
             $config->authSchemeResolver->resolveAuthScheme(
                 FakeOperation::instance(),
+                $endpoint,
                 $config
-            )
+            )->scheme
+        );
+    }
+
+    public function testIndexesSupportedAuthSchemesById(): void
+    {
+        $scheme = new TestAuthSchemeFixture('smithy.test#auth');
+        $config = $this->baseConfig()->withAddedAuthScheme($scheme);
+
+        $this->assertSame(
+            $scheme,
+            $config->getSupportedAuthScheme('smithy.test#auth')
+        );
+        $this->assertNull(
+            $config->getSupportedAuthScheme('smithy.test#unsupported')
         );
     }
 
@@ -178,10 +197,36 @@ final class ClientConfigTest extends TestCase
 
         $new = $orig->withInterceptor($a)->withInterceptor($b);
 
-        $this->assertCount(0, $orig->interceptors);
-        $this->assertCount(2, $new->interceptors);
-        $this->assertSame($a, $new->interceptors[0]);
-        $this->assertSame($b, $new->interceptors[1]);
+        $this->assertTrue($orig->interceptorChain->isEmpty());
+        $this->assertFalse($new->interceptorChain->isEmpty());
+        $this->assertTrue(
+            $new->interceptorChain->contains(RecordingInterceptor::class)
+        );
+        $this->assertNotSame(
+            $orig->interceptorChain,
+            $new->interceptorChain
+        );
+    }
+
+    public function testWithPrependedInterceptorPreservesOriginal(): void
+    {
+        $existing = new IdempotencyTokenInterceptor();
+        $prepended = new RecordingInterceptor();
+        $orig = $this->baseConfig()->withInterceptor($existing);
+
+        $new = $orig->withPrependedInterceptor($prepended);
+
+        $this->assertFalse(
+            $orig->interceptorChain->contains(RecordingInterceptor::class)
+        );
+        $this->assertTrue(
+            $new->interceptorChain->contains(RecordingInterceptor::class)
+        );
+        $this->assertTrue(
+            $new->interceptorChain->contains(
+                IdempotencyTokenInterceptor::class
+            )
+        );
     }
 
     public function testWithInterceptorsReplaces(): void
@@ -189,12 +234,18 @@ final class ClientConfigTest extends TestCase
         $orig = $this->baseConfig()->withInterceptor(
             new RecordingInterceptor('A')
         );
-        $b = new RecordingInterceptor('B');
+        $b = new IdempotencyTokenInterceptor();
 
-        $new = $orig->withInterceptors([$b]);
+        $new = $orig->withInterceptors($b);
 
-        $this->assertCount(1, $new->interceptors);
-        $this->assertSame($b, $new->interceptors[0]);
+        $this->assertFalse(
+            $new->interceptorChain->contains(RecordingInterceptor::class)
+        );
+        $this->assertTrue(
+            $new->interceptorChain->contains(
+                IdempotencyTokenInterceptor::class
+            )
+        );
     }
 
     public function testWithAddedAuthSchemeAppendsPreservingNoAuth(): void

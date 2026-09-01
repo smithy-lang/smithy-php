@@ -10,7 +10,7 @@ use Smithy\Client\Auth\{
 };
 use Smithy\Client\ClientConfig;
 use Smithy\Client\Endpoint\EndpointResolverInterface;
-use Smithy\Client\Interceptor\InterceptorInterface;
+use Smithy\Client\Interceptor\InterceptorChain;
 use Smithy\Client\Retry\RetryStrategyInterface;
 use Smithy\Http\Client\HttpClientInterface;
 use Smithy\Protocol\ProtocolInterface;
@@ -21,7 +21,6 @@ use Smithy\Protocol\ProtocolInterface;
 final class RegionalClientConfigFixture extends ClientConfig
 {
     /**
-     * @param list<InterceptorInterface> $interceptors
      * @param list<AuthSchemeInterface> $supportedAuthSchemes
      * @param list<string> $authSchemePreference
      * @param array<string, mixed> $context
@@ -30,7 +29,7 @@ final class RegionalClientConfigFixture extends ClientConfig
         ProtocolInterface $protocol,
         HttpClientInterface $httpClient,
         EndpointResolverInterface $endpointResolver,
-        array $interceptors = [],
+        InterceptorChain $interceptors = new InterceptorChain(),
         array $supportedAuthSchemes = [],
         ?AuthSchemeResolverInterface $authSchemeResolver = null,
         ?RetryStrategyInterface $retryStrategy = null,
@@ -69,7 +68,7 @@ final class RegionalClientConfigFixture extends ClientConfig
                 : $this->endpointResolver,
             interceptors: \array_key_exists('interceptors', $overrides)
                 ? $overrides['interceptors']
-                : $this->interceptors,
+                : $this->interceptorChain,
             supportedAuthSchemes: \array_key_exists(
                 'supportedAuthSchemes',
                 $overrides
