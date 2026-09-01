@@ -12,7 +12,7 @@ use Smithy\Core\Serde\Schema;
 use Smithy\Core\Shape\Document\StructDocument;
 use Smithy\Core\Shape\Exception\DocumentException;
 use Smithy\Core\Shape\ShapeType;
-use Smithy\Http\Message\BodyStreamInterface;
+use Smithy\Http\Message\RequestStreamInterface;
 use Smithy\Http\Message\Request;
 use Smithy\Http\Message\Response;
 use Smithy\Protocol\Exception\ProtocolException;
@@ -120,7 +120,7 @@ final class RpcV2CborProtocolTest extends TestCase
 
     public function testContentLengthZeroDoesNotReadSuccessBody(): void
     {
-        $body = $this->createMock(BodyStreamInterface::class);
+        $body = $this->createMock(RequestStreamInterface::class);
         $body->expects(self::never())->method('getSize');
         $body->expects(self::never())->method('getContents');
 
@@ -225,7 +225,7 @@ final class RpcV2CborProtocolTest extends TestCase
 
     public function testContentLengthZeroDoesNotReadErrorBody(): void
     {
-        $body = $this->createMock(BodyStreamInterface::class);
+        $body = $this->createMock(RequestStreamInterface::class);
         $body->expects(self::never())->method('getSize');
         $body->expects(self::never())->method('getContents');
 
@@ -250,7 +250,7 @@ final class RpcV2CborProtocolTest extends TestCase
 
     public function testInvalidErrorProtocolHeaderDoesNotReadBody(): void
     {
-        $body = $this->createMock(BodyStreamInterface::class);
+        $body = $this->createMock(RequestStreamInterface::class);
         $body->expects(self::never())->method('getSize');
         $body->expects(self::never())->method('getContents');
 

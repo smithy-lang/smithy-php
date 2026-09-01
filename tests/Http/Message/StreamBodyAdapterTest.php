@@ -8,7 +8,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\StreamInterface;
 use Smithy\Http\Message\StreamBodyAdapter;
-use Smithy\Http\Message\StringBodyStream;
+use Smithy\Http\Message\StringRequestStream;
 use Smithy\Tests\Http\Message\Utils\GenericStreamFixture;
 
 #[CoversClass(StreamBodyAdapter::class)]
@@ -16,7 +16,7 @@ final class StreamBodyAdapterTest extends TestCase
 {
     public function testReturnsExistingBodyStream(): void
     {
-        $inner = new StringBodyStream('abcdef');
+        $inner = new StringRequestStream('abcdef');
 
         $this->assertSame($inner, StreamBodyAdapter::wrap($inner));
     }

@@ -107,9 +107,7 @@ final class ApiExceptionTest extends TestCase
         // SDK-specific bases (AwsException, etc.) extend ApiException.
         // The class must not be `final`, pin that by actually
         // subclassing it here.
-        $subclass = new class ('boom', ErrorFault::Client) extends ApiException
-        {
-        };
+        $subclass = new class ('boom', ErrorFault::Client) extends ApiException {};
 
         $this->assertInstanceOf(ApiException::class, $subclass);
         $this->assertSame('boom', $subclass->getMessage());

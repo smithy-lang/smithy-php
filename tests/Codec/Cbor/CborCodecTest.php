@@ -16,7 +16,7 @@ use Smithy\Core\Serde\{
     TimestampFormat
 };
 use Smithy\Core\Shape\ShapeType;
-use Smithy\Http\Message\StringBodyStream;
+use Smithy\Http\Message\StringRequestStream;
 use Smithy\Tests\Http\Message\Utils\GenericStreamFixture;
 
 /**
@@ -114,7 +114,7 @@ final class CborCodecTest extends TestCase
         $wire = $serializer->flush();
 
         $deserializer = $codec->createDeserializer(
-            new StringBodyStream($wire)
+            new StringRequestStream($wire)
         );
         self::assertInstanceOf(CborDeserializer::class, $deserializer);
 
@@ -160,7 +160,7 @@ final class CborCodecTest extends TestCase
 
         $fields = [null];
         $codec->createDeserializer(
-            new StringBodyStream($wire)
+            new StringRequestStream($wire)
         )->deserialize($schema, $fields);
 
         self::assertSame(100.0, $fields[0]);
@@ -209,7 +209,7 @@ final class CborCodecTest extends TestCase
             ]
         );
         $deserializer = (new CborCodec())->createDeserializer(
-            new StringBodyStream(\hex2bin('a16576616c756501'))
+            new StringRequestStream(\hex2bin('a16576616c756501'))
         );
         $first = [null];
         $second = [null];
