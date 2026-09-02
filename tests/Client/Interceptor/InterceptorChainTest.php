@@ -97,8 +97,12 @@ final class InterceptorChainTest extends TestCase
             ['prepended:modifyBeforeAttemptCompletion'],
             $prepended->calls
         );
-        self::assertSame([], $existing->calls);
+        self::assertSame(
+            ['existing:modifyBeforeAttemptCompletion'],
+            $existing->calls
+        );
 
+        $existing->calls = [];
         try {
             $original->modifyBeforeAttemptCompletion($ctx, $error);
             self::fail('Expected the completion error to be forwarded.');
@@ -266,7 +270,7 @@ final class InterceptorChainTest extends TestCase
         );
     }
 
-    public function testCompletionStagesPassOriginalErrorToEachInterceptor(): void
+    public function testCompletionStagesClearErrorAfterOutputReplacement(): void
     {
         $error = new \RuntimeException('original');
         $first = $this->createMock(InterceptorInterface::class);
@@ -472,6 +476,48 @@ final class InterceptorChainTest extends TestCase
         );
     }
 
+    public function testAttemptCompletionRecoversAfterForwardedError(): void
+    {
+        $error = new \RuntimeException('attempt');
+        $output = new FakeOutput('recovered');
+        $rescuer = $this->createMock(InterceptorInterface::class);
+        $rescuer->expects(self::once())
+            ->method('modifyBeforeAttemptCompletion')
+            ->with(self::isInstanceOf(OutputContext::class), $error)
+            ->willReturn($output);
+
+        $result = (new InterceptorChain(
+            new IdempotencyTokenInterceptor(),
+            $rescuer
+        ))->modifyBeforeAttemptCompletion(
+            $this->outputContext(),
+            $error
+        );
+
+        self::assertSame($output, $result);
+    }
+
+    public function testExecutionCompletionRecoversAfterForwardedError(): void
+    {
+        $error = new \RuntimeException('execution');
+        $output = new FakeOutput('recovered');
+        $rescuer = $this->createMock(InterceptorInterface::class);
+        $rescuer->expects(self::once())
+            ->method('modifyBeforeCompletion')
+            ->with(self::isInstanceOf(OutputContext::class), $error)
+            ->willReturn($output);
+
+        $result = (new InterceptorChain(
+            new IdempotencyTokenInterceptor(),
+            $rescuer
+        ))->modifyBeforeCompletion(
+            $this->outputContext(),
+            $error
+        );
+
+        self::assertSame($output, $result);
+    }
+
     public function testAttemptCompletionStopsAtFirstError(): void
     {
         $error = new \RuntimeException('stop');
@@ -551,11 +597,10 @@ final class InterceptorChainTest extends TestCase
                 ?\Throwable $error
             ) use (
                 $firstOutput,
-                $secondOutput,
-                $expectedError
+                $secondOutput
             ) {
                 self::assertSame($firstOutput, $ctx->output);
-                self::assertSame($expectedError, $error);
+                self::assertNull($error);
 
                 return $secondOutput;
             }

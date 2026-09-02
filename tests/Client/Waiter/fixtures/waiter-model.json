@@ -1,0 +1,80 @@
+{
+    "smithy": "2.0",
+    "shapes": {
+        "smithy.waiter#Waiter": {
+            "type": "service",
+            "version": "2026-08-04",
+            "operations": [
+                {
+                    "target": "smithy.waiter#GetThing"
+                }
+            ],
+            "traits": {
+                "smithy.protocols#rpcv2Cbor": {}
+            }
+        },
+        "smithy.waiter#GetThing": {
+            "type": "operation",
+            "input": {
+                "target": "smithy.waiter#GetThingInput"
+            },
+            "output": {
+                "target": "smithy.waiter#GetThingOutput"
+            },
+            "traits": {
+                "smithy.waiters#waitable": {
+                    "ThingReady": {
+                        "documentation": "Wait until the thing is ready.",
+                        "minDelay": 1,
+                        "maxDelay": 2,
+                        "acceptors": [
+                            {
+                                "state": "failure",
+                                "matcher": {
+                                    "output": {
+                                        "path": "status",
+                                        "expected": "failed",
+                                        "comparator": "stringEquals"
+                                    }
+                                },
+                                "message": "failureReason"
+                            },
+                            {
+                                "state": "success",
+                                "matcher": {
+                                    "output": {
+                                        "path": "status",
+                                        "expected": "ready",
+                                        "comparator": "stringEquals"
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
+        },
+        "smithy.waiter#GetThingInput": {
+            "type": "structure",
+            "members": {
+                "thingId": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#required": {}
+                    }
+                }
+            }
+        },
+        "smithy.waiter#GetThingOutput": {
+            "type": "structure",
+            "members": {
+                "status": {
+                    "target": "smithy.api#String"
+                },
+                "failureReason": {
+                    "target": "smithy.api#String"
+                }
+            }
+        }
+    }
+}

@@ -151,12 +151,12 @@ final class AuthSchemeResolverTest extends TestCase
                 ['httpBearerAuth'],
                 self::BEARER
             ],
-            'preference may override endpoint auth' => [
+            'preference cannot override endpoint auth' => [
                 [self::SIGV4, self::BEARER],
                 [self::SIGV4, self::BEARER],
                 [self::BEARER],
                 ['sigv4'],
-                self::SIGV4
+                self::BEARER
             ],
             'preference cannot add modeled auth' => [
                 [self::SIGV4, self::BEARER],

@@ -71,13 +71,16 @@ final class ClientPipeline
     {
         $config = $this->config;
         $interceptor = $config->interceptorChain;
-        $defaultHttpOptions = $config
-            ->httpClient
-            ->getDefaultRequestOptions();
-        $httpOptions = $overrides?->resolveHttpOptions($defaultHttpOptions);
-        $effectiveHttpOptions = $httpOptions ?? $defaultHttpOptions;
 
         if ($interceptor->isEmpty()) {
+            $defaultHttpOptions = $config
+                ->httpClient
+                ->getDefaultRequestOptions();
+            $httpOptions = $overrides?->resolveHttpOptions(
+                $defaultHttpOptions
+            );
+            $effectiveHttpOptions = $httpOptions ?? $defaultHttpOptions;
+
             return $this->executeWithoutInterceptors(
                 $operation,
                 $input,
@@ -96,6 +99,14 @@ final class ClientPipeline
         try {
             $inputCtx = new InputContext($operation, $input, $config);
             $interceptor->readBeforeExecution($inputCtx);
+
+            $defaultHttpOptions = $config
+                ->httpClient
+                ->getDefaultRequestOptions();
+            $httpOptions = $overrides?->resolveHttpOptions(
+                $defaultHttpOptions
+            );
+            $effectiveHttpOptions = $httpOptions ?? $defaultHttpOptions;
 
             $input = $interceptor->modifyBeforeSerialization($inputCtx);
             if ($input !== $inputCtx->input) {

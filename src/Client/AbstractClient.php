@@ -8,6 +8,11 @@ use Smithy\Client\Plugin\{
     IdempotencyTokenPlugin,
     PluginCollection
 };
+use Smithy\Client\Pagination\PaginatedRequestInterface;
+use Smithy\Client\Pagination\Paginator;
+use Smithy\Client\Waiter\Acceptor;
+use Smithy\Client\Waiter\Waiter;
+use Smithy\Client\Waiter\WaiterConfig;
 use Smithy\Core\Serde\SerializableStructInterface;
 use Smithy\Core\Shape\OperationInterface;
 
@@ -79,5 +84,48 @@ abstract class AbstractClient implements ClientInterface
     ): SerializableStructInterface
     {
         return $this->pipeline->execute($operation, $input, $overrides);
+    }
+
+    /**
+     * Create a paginator bound to this client.
+     */
+    protected function createPaginator(
+        OperationInterface $operation,
+        PaginatedRequestInterface $input
+    ): Paginator
+    {
+        return new Paginator($this, $operation, $input);
+    }
+
+    /**
+     * Create a waiter bound to an operation on this client.
+     *
+     * @param list<Acceptor> $acceptors Ordered acceptors.
+     * @param int<1, max> $minDelay Modeled minimum delay in seconds.
+     * @param int<1, max> $maxDelay Modeled maximum delay in seconds.
+     *
+     * @throws \InvalidArgumentException When resolved delay bounds are
+     *                                   invalid.
+     */
+    protected function createWaiter(
+        OperationInterface $operation,
+        array $acceptors,
+        int $minDelay,
+        int $maxDelay,
+        ?WaiterConfig $config = null
+    ): Waiter
+    {
+        return new Waiter(
+            fn(
+                SerializableStructInterface $input
+            ): SerializableStructInterface => $this->executeOperation(
+                $operation,
+                $input,
+                $config?->requestOverrides
+            ),
+            $acceptors,
+            $config?->minDelay ?? $minDelay,
+            $config?->maxDelay ?? $maxDelay
+        );
     }
 }

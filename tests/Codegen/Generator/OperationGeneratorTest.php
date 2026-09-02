@@ -183,6 +183,37 @@ final class OperationGeneratorTest extends TestCase
         );
     }
 
+    public function testEmitsDedicatedPaginationTraitKey(): void
+    {
+        $model = SmithyModel::fromFile(
+            __DIR__
+                . '/../../Client/Pagination/fixtures/pagination-model.json'
+        );
+        $settings = new CodegenSettings(
+            namespace: 'Smithy\\Example',
+            outputDir: '/tmp/out',
+            organization: 'flat'
+        );
+        $generator = new OperationGenerator(
+            $model,
+            new PhpSymbolProvider($model, $settings),
+            $settings
+        );
+
+        $file = $generator->generate(
+            'smithy.pagination#ListStrings'
+        );
+
+        $this->assertStringContainsString(
+            'Schema::T_PAGINATED => [',
+            $file->content
+        );
+        $this->assertStringNotContainsString(
+            'PaginationSchemaExtensionProvider',
+            $file->content
+        );
+    }
+
     public function testPreservesEndpointOperationTraitsById(): void
     {
         $model = SmithyModel::fromJson(\json_encode([

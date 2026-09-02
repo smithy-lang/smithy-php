@@ -169,6 +169,36 @@ final class ClientPipelineTest extends TestCase
         $this->assertSame(8.0, $http->sentOptions[0]->readTimeout);
     }
 
+    public function testInvalidHttpOverrideRunsExecutionLifecycle(): void
+    {
+        $recorder = new RecordingInterceptor();
+        [$pipeline, $http] = $this->buildPipeline([$recorder]);
+        $overrides = RequestOverrideConfig::fromArray([
+            '@http' => ['timeout' => 'invalid']
+        ]);
+
+        try {
+            $pipeline->execute(
+                FakeOperation::instance(),
+                new FakeInput(),
+                $overrides
+            );
+            $this->fail('Expected HTTP override resolution to fail.');
+        } catch (\InvalidArgumentException $error) {
+            $this->assertSame(
+                '@http.timeout must be numeric.',
+                $error->getMessage()
+            );
+        }
+
+        $this->assertSame([
+            'readBeforeExecution',
+            'modifyBeforeCompletion',
+            'readAfterExecution'
+        ], $recorder->calls);
+        $this->assertSame(0, $http->sendCallCount);
+    }
+
     public function testHookOrderOnSuccess(): void
     {
         $rec = new RecordingInterceptor();
@@ -514,7 +544,7 @@ final class ClientPipelineTest extends TestCase
         );
     }
 
-    public function testPreferenceCanOverrideEndpointAuthWithModeledScheme(): void
+    public function testEndpointAuthRemainsAuthoritativeOverPreference(): void
     {
         $seen = (object) ['selectedScheme' => null];
         $http = (new MockHttpClient())->willReturn('body');
@@ -547,7 +577,10 @@ final class ClientPipelineTest extends TestCase
 
         $pipeline->execute(FakeOperation::instance(), new FakeInput());
 
-        $this->assertSame('aws.auth#sigv4', $seen->selectedScheme);
+        $this->assertSame(
+            'smithy.api#httpBearerAuth',
+            $seen->selectedScheme
+        );
     }
 
     public function testIdentityFailureDoesNotFallBackToAnotherScheme(): void

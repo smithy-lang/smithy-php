@@ -13,7 +13,8 @@ use Smithy\Core\Serde\SerializableStructInterface;
  *
  * Each hook invokes the corresponding hook on every interceptor in
  * registration order. Modify hooks pass their result to the next
- * interceptor.
+ * interceptor. Completion hooks also carry the current error: rethrowing
+ * that same error forwards it, while returning an output suppresses it.
  */
 final readonly class InterceptorChain implements InterceptorInterface
 {
@@ -250,13 +251,20 @@ final readonly class InterceptorChain implements InterceptorInterface
     {
         $output = $ctx->output;
         foreach ($this->interceptors as $interceptor) {
-            $output = $interceptor->modifyBeforeAttemptCompletion(
-                $ctx->withOutput($output),
-                $error
-            );
+            try {
+                $output = $interceptor->modifyBeforeAttemptCompletion(
+                    $ctx->withOutput($output),
+                    $error
+                );
+                $error = null;
+            } catch (\Throwable $e) {
+                if ($e !== $error) {
+                    throw $e;
+                }
+            }
         }
 
-        if ($error !== null && $this->interceptors === []) {
+        if ($error !== null) {
             throw $error;
         }
 
@@ -291,13 +299,20 @@ final readonly class InterceptorChain implements InterceptorInterface
     {
         $output = $ctx->output;
         foreach ($this->interceptors as $interceptor) {
-            $output = $interceptor->modifyBeforeCompletion(
-                $ctx->withOutput($output),
-                $error
-            );
+            try {
+                $output = $interceptor->modifyBeforeCompletion(
+                    $ctx->withOutput($output),
+                    $error
+                );
+                $error = null;
+            } catch (\Throwable $e) {
+                if ($e !== $error) {
+                    throw $e;
+                }
+            }
         }
 
-        if ($error !== null && $this->interceptors === []) {
+        if ($error !== null) {
             throw $error;
         }
 

@@ -1,0 +1,151 @@
+{
+    "smithy": "2.0",
+    "shapes": {
+        "smithy.pagination#Pagination": {
+            "type": "service",
+            "version": "2026-08-03",
+            "operations": [
+                {
+                    "target": "smithy.pagination#ListMaps"
+                },
+                {
+                    "target": "smithy.pagination#ListStrings"
+                },
+                {
+                    "target": "smithy.pagination#ListWithoutPageSize"
+                }
+            ],
+            "traits": {
+                "smithy.protocols#rpcv2Cbor": {}
+            }
+        },
+        "smithy.pagination#ListMaps": {
+            "type": "operation",
+            "input": {
+                "target": "smithy.pagination#ListMapsInput"
+            },
+            "output": {
+                "target": "smithy.pagination#ListMapsOutput"
+            },
+            "traits": {
+                "smithy.api#paginated": {
+                    "inputToken": "exclusiveStartKey",
+                    "outputToken": "lastEvaluatedKey",
+                    "pageSize": "limit",
+                    "items": "items"
+                }
+            }
+        },
+        "smithy.pagination#ListMapsInput": {
+            "type": "structure",
+            "members": {
+                "exclusiveStartKey": {
+                    "target": "smithy.pagination#PaginationTokenMap"
+                },
+                "limit": {
+                    "target": "smithy.api#Integer"
+                }
+            }
+        },
+        "smithy.pagination#ListMapsOutput": {
+            "type": "structure",
+            "members": {
+                "items": {
+                    "target": "smithy.pagination#Items"
+                },
+                "lastEvaluatedKey": {
+                    "target": "smithy.pagination#PaginationTokenMap"
+                }
+            }
+        },
+        "smithy.pagination#ListStrings": {
+            "type": "operation",
+            "input": {
+                "target": "smithy.pagination#ListStringsInput"
+            },
+            "output": {
+                "target": "smithy.pagination#ListStringsOutput"
+            },
+            "traits": {
+                "smithy.api#paginated": {
+                    "inputToken": "nextToken",
+                    "outputToken": "nextToken",
+                    "pageSize": "pageSize",
+                    "items": "items"
+                }
+            }
+        },
+        "smithy.pagination#ListStringsInput": {
+            "type": "structure",
+            "members": {
+                "nextToken": {
+                    "target": "smithy.api#String"
+                },
+                "pageSize": {
+                    "target": "smithy.api#Integer"
+                }
+            }
+        },
+        "smithy.pagination#ListStringsOutput": {
+            "type": "structure",
+            "members": {
+                "items": {
+                    "target": "smithy.pagination#Items"
+                },
+                "nextToken": {
+                    "target": "smithy.api#String"
+                }
+            }
+        },
+        "smithy.pagination#ListWithoutPageSize": {
+            "type": "operation",
+            "input": {
+                "target": "smithy.pagination#ListWithoutPageSizeInput"
+            },
+            "output": {
+                "target": "smithy.pagination#ListWithoutPageSizeOutput"
+            },
+            "traits": {
+                "smithy.api#paginated": {
+                    "inputToken": "cursor",
+                    "outputToken": "cursor",
+                    "items": "items"
+                }
+            }
+        },
+        "smithy.pagination#ListWithoutPageSizeInput": {
+            "type": "structure",
+            "members": {
+                "cursor": {
+                    "target": "smithy.api#String"
+                }
+            }
+        },
+        "smithy.pagination#ListWithoutPageSizeOutput": {
+            "type": "structure",
+            "members": {
+                "items": {
+                    "target": "smithy.pagination#Items"
+                },
+                "cursor": {
+                    "target": "smithy.api#String"
+                }
+            }
+        },
+        "smithy.pagination#Items": {
+            "type": "list",
+            "member": {
+                "target": "smithy.api#String"
+            }
+        },
+        "smithy.pagination#PaginationTokenMap": {
+            "type": "map",
+            "key": {
+                "target": "smithy.api#String"
+            },
+            "value": {
+                "target": "smithy.api#String"
+            }
+        }
+    }
+}

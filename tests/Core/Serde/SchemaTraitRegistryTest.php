@@ -82,5 +82,17 @@ final class SchemaTraitRegistryTest extends TestCase
                 Schema::T_TIMESTAMP_FORMAT
             )
         );
+        self::assertSame(
+            Schema::T_PAGINATED,
+            SchemaTraitRegistry::getDefaultKey(
+                'smithy.api#paginated'
+            )
+        );
+        self::assertSame(
+            'smithy.api#paginated',
+            SchemaTraitRegistry::getDefaultId(
+                Schema::T_PAGINATED
+            )
+        );
     }
 }

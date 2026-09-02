@@ -98,30 +98,16 @@ class AuthSchemeResolver implements AuthSchemeResolverInterface
         $candidates = [];
         $seen = [];
         foreach ($preference as $preferredName) {
-            $matchedEndpoint = false;
             foreach ($endpoint->authSchemes as $endpointScheme) {
-                if (self::authSchemeName($endpointScheme->schemeId)
-                    === $preferredName
+                if (!isset($seen[$endpointScheme->schemeId])
+                    && self::authSchemeName($endpointScheme->schemeId)
+                        === $preferredName
                 ) {
                     $candidates[] = [
                         $endpointScheme->schemeId,
                         $endpointScheme->properties
                     ];
                     $seen[$endpointScheme->schemeId] = true;
-                    $matchedEndpoint = true;
-                }
-            }
-
-            if ($matchedEndpoint) {
-                continue;
-            }
-
-            foreach ($modeledIds as $modeledId) {
-                if (!isset($seen[$modeledId])
-                    && self::authSchemeName($modeledId) === $preferredName
-                ) {
-                    $candidates[] = [$modeledId, []];
-                    $seen[$modeledId] = true;
                 }
             }
         }
