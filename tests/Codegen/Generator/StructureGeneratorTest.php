@@ -51,6 +51,53 @@ final class StructureGeneratorTest extends TestCase
         );
     }
 
+    public function testGeneratesPrivateWritablePaginationMembers(): void
+    {
+        $model = SmithyModel::fromFile(
+            __DIR__
+                . '/../../Client/Pagination/fixtures/pagination-model.json'
+        );
+        $settings = new CodegenSettings(
+            namespace: 'Smithy\\Example',
+            outputDir: '/tmp/out',
+            organization: 'flat'
+        );
+        $generator = new StructureGenerator(
+            $model,
+            new PhpSymbolProvider($model, $settings),
+            $settings
+        );
+
+        $file = $generator->generate(
+            'smithy.pagination#ListStringsInput'
+        );
+
+        $this->assertStringContainsString(
+            'withPaginationToken(string|array|null $token): self',
+            $file->content
+        );
+        $this->assertStringContainsString(
+            'private ?string $nextToken;',
+            $file->content
+        );
+        $this->assertStringContainsString(
+            'private ?int $pageSize;',
+            $file->content
+        );
+        $this->assertStringNotContainsString(
+            'public readonly ?string $nextToken',
+            $file->content
+        );
+        $this->assertStringContainsString(
+            '$copy->nextToken = $token;',
+            $file->content
+        );
+        $this->assertStringContainsString(
+            '$copy->pageSize = $pageSize;',
+            $file->content
+        );
+    }
+
     public function testConstructorArgsRenderMembersAsNullableWithDefaults(): void
     {
         // Address has a single optional string member `city`.

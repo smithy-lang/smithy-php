@@ -161,6 +161,15 @@ class MockHttpClient implements HttpClientInterface
         return $this->defaultOptions ??= new HttpRequestOptions();
     }
 
+    public function withDefaultRequestOptions(
+        HttpRequestOptions $options
+    ): self
+    {
+        $this->defaultOptions = $options;
+
+        return $this;
+    }
+
     /** @return list<HttpRequestOptions> */
     public function getSentOptions(): array
     {

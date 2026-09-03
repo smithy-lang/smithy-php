@@ -18,7 +18,11 @@ use Smithy\Client\ClientConfig;
  */
 final class TestAuthSchemeFixture implements AuthSchemeInterface
 {
-    public function __construct(private readonly string $id) {}
+    public function __construct(
+        private readonly string $id,
+        private readonly ?IdentityResolverInterface $identityResolver = null,
+        private readonly ?SignerInterface $signer = null
+    ) {}
 
     public function getSchemeId(): string
     {
@@ -29,11 +33,12 @@ final class TestAuthSchemeFixture implements AuthSchemeInterface
         ClientConfig $config
     ): IdentityResolverInterface
     {
-        return AnonymousIdentityResolver::instance();
+        return $this->identityResolver
+            ?? AnonymousIdentityResolver::instance();
     }
 
     public function getSigner(): SignerInterface
     {
-        return NullSigner::instance();
+        return $this->signer ?? NullSigner::instance();
     }
 }
