@@ -145,6 +145,11 @@ final class FailingCleanupAsyncRequestStreamFixture implements
         return $this->inner->isReady();
     }
 
+    public function awaitReadable(): void
+    {
+        $this->inner->awaitReadable();
+    }
+
     public function subscribe(\Closure $callback): int
     {
         return $this->inner->subscribe($callback);

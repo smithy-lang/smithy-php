@@ -41,6 +41,26 @@ final class AsyncRequestStreamTest extends TestCase
         $this->assertTrue($stream->fullyConsumed());
     }
 
+    public function testAwaitsReadableTransition(): void
+    {
+        $eventLoop = new RevoltEventLoop();
+        $stream = new AsyncRequestStream($eventLoop);
+
+        $results = $eventLoop->run([
+            static function () use ($stream): string {
+                $stream->awaitReadable();
+
+                return $stream->read(1);
+            },
+            static function () use ($stream): void {
+                $stream->write('a');
+                $stream->end();
+            }
+        ]);
+
+        $this->assertSame('a', $results[0]);
+    }
+
     public function testSignalsFailure(): void
     {
         $stream = new AsyncRequestStream(new RevoltEventLoop());

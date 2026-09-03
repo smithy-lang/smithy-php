@@ -207,6 +207,69 @@ final class ClientGeneratorTest extends TestCase
         );
     }
 
+    public function testRegistersCompressionBeforeChecksum(): void
+    {
+        $model = SmithyModel::fromJson(\json_encode([
+            'smithy' => '2.0',
+            'shapes' => [
+                'smithy.example#ExampleService' => [
+                    'type' => 'service',
+                    'version' => '2026-09-04',
+                    'operations' => [
+                        ['target' => 'smithy.example#PutThing']
+                    ]
+                ],
+                'smithy.example#PutThing' => [
+                    'type' => 'operation',
+                    'input' => ['target' => 'smithy.example#PutThingInput'],
+                    'output' => [
+                        'target' => 'smithy.example#PutThingOutput'
+                    ],
+                    'traits' => [
+                        'smithy.api#requestCompression' => [
+                            'encodings' => ['gzip']
+                        ],
+                        'smithy.api#httpChecksumRequired' => []
+                    ]
+                ],
+                'smithy.example#PutThingInput' => [
+                    'type' => 'structure',
+                    'members' => []
+                ],
+                'smithy.example#PutThingOutput' => [
+                    'type' => 'structure',
+                    'members' => []
+                ]
+            ]
+        ], JSON_THROW_ON_ERROR));
+        $settings = new CodegenSettings(
+            namespace: 'Smithy\\Example',
+            outputDir: '/tmp/out',
+            organization: 'flat'
+        );
+        $generator = new ClientGenerator(
+            $model,
+            new PhpSymbolProvider($model, $settings),
+            $settings
+        );
+
+        $file = $generator->generate(
+            'smithy.example#ExampleService'
+        );
+        $compression = \strpos(
+            $file->content,
+            '$plugins = $plugins->add(new RequestCompressionPlugin());'
+        );
+        $checksum = \strpos(
+            $file->content,
+            '$plugins = $plugins->add(new HttpChecksumPlugin());'
+        );
+
+        self::assertNotFalse($compression);
+        self::assertNotFalse($checksum);
+        self::assertLessThan($checksum, $compression);
+    }
+
     public function testUsesConfiguredWaiterResourceInitialisms(): void
     {
         $model = SmithyModel::fromJson(\json_encode([
