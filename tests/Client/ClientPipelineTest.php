@@ -31,6 +31,7 @@ use Smithy\Client\Endpoint\{
 };
 use Smithy\Client\Interceptor\{
     AbstractInterceptor,
+    HttpChecksumInterceptor,
     InputContext,
     InterceptorChain,
     OutputContext,
@@ -42,8 +43,12 @@ use Smithy\Client\Retry\{
     RetryStrategyInterface,
     TokenAcquisitionFailedException
 };
-use Smithy\Core\Serde\SerializableStructInterface;
+use Smithy\Core\Serde\{
+    Schema,
+    SerializableStructInterface
+};
 use Smithy\Core\Shape\OperationInterface;
+use Smithy\Core\Shape\ShapeType;
 use Smithy\Http\Client\{
     HttpRequestOptions,
     RequestTrailers
@@ -718,6 +723,62 @@ final class ClientPipelineTest extends TestCase
         );
     }
 
+    public function testChecksumBufferedBodySurvivesRetry(): void
+    {
+        $bodies = [];
+        $checksums = [];
+        $capture = static function (
+            RequestInterface $request
+        ) use (&$bodies, &$checksums): void {
+            $bodies[] = $request->getBody()->getContents();
+            $checksums[] = $request->getHeaderLine('Content-MD5');
+        };
+        $http = (new MockHttpClient())
+            ->queueHandler(
+                static function (
+                    RequestInterface $request
+                ) use ($capture): Response {
+                    $capture($request);
+
+                    throw new \RuntimeException('temporary');
+                }
+            )
+            ->queueHandler(
+                static function (
+                    RequestInterface $request
+                ) use ($capture): Response {
+                    $capture($request);
+
+                    return new Response(200, [], 'server-body');
+                }
+            );
+        [$pipeline] = $this->buildPipeline(
+            interceptors: [new HttpChecksumInterceptor()],
+            http: $http,
+            protocol: new FakeProtocol(
+                requestBody: new TestStreamFixture(
+                    'payload',
+                    sizeKnown: true,
+                    seekable: false
+                )
+            ),
+            retryStrategy: $this->retryOnceStrategy()
+        );
+
+        $pipeline->execute(
+            $this->operationWithTraits([
+                Schema::T_HTTP_CHECKSUM_REQUIRED => true
+            ]),
+            new FakeInput()
+        );
+
+        $this->assertSame(['payload', 'payload'], $bodies);
+        $this->assertSame([
+            'Mhw89IbtUJFk7eweGYH+yA==',
+            'Mhw89IbtUJFk7eweGYH+yA=='
+        ], $checksums);
+    }
+
     #[DataProvider('retryPipelineModes')]
     public function testRetriesRewindBodiesAndTrailers(
         bool $withInterceptors
@@ -1324,6 +1385,25 @@ final class ClientPipelineTest extends TestCase
         $strategy->method('maxAttempts')->willReturn(2);
 
         return $strategy;
+    }
+
+    /**
+     * @param array<int, mixed> $traits
+     */
+    private function operationWithTraits(array $traits): OperationInterface
+    {
+        $operation = $this->createStub(OperationInterface::class);
+        $operation->method('getName')->willReturn('Fake');
+        $operation->method('getEffectiveAuthSchemes')->willReturn([
+            'smithy.api#noAuth'
+        ]);
+        $operation->method('getSchema')->willReturn(new Schema(
+            id: 'smithy.tests#Fake',
+            type: ShapeType::Operation,
+            traits: $traits
+        ));
+
+        return $operation;
     }
 
     /**
