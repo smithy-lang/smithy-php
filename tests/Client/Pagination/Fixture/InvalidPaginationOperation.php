@@ -28,6 +28,11 @@ final class InvalidPaginationOperation implements OperationInterface
         return 'smithy.tests#InvalidPagination';
     }
 
+    public function getServiceId(): ?string
+    {
+        return null;
+    }
+
     public function getRuntimeIdentity(): string
     {
         return self::class;

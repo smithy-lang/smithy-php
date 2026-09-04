@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Smithy\Tests\Protocol\RpcV2\Cbor;
 
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Smithy\Codec\Cbor\CborCodec;
 use Smithy\Core\Exception\ApiException;
@@ -61,6 +62,63 @@ final class RpcV2CborProtocolTest extends TestCase
         self::assertSame('Host', \array_key_first($request->getHeaders()));
         self::assertFalse($request->hasHeader('Content-Type'));
         self::assertSame('', (string) $request->getBody());
+    }
+
+    public function testPrefersExplicitRequestTarget(): void
+    {
+        $schema = self::unitSchema();
+        $operation = self::operation(
+            inputSchema: $schema,
+            outputSchema: $schema,
+            requestTarget: 'CustomService.CustomOperation'
+        );
+
+        $request = (new RpcV2CborProtocol())->serializeRequest(
+            $operation,
+            StructDocument::fromMembers($schema, []),
+            'https://example.amazonaws.com/base'
+        );
+
+        self::assertSame(
+            '/base/service/CustomService/operation/CustomOperation',
+            $request->getUri()->getPath()
+        );
+    }
+
+    #[DataProvider('malformedRequestTargets')]
+    public function testRejectsMalformedExplicitRequestTarget(
+        string $requestTarget
+    ): void
+    {
+        $schema = self::unitSchema();
+        $operation = self::operation(
+            inputSchema: $schema,
+            outputSchema: $schema,
+            requestTarget: $requestTarget
+        );
+
+        $this->expectException(ProtocolException::class);
+        $this->expectExceptionMessage(
+            'RPC v2 request targets must use the '
+                . '"<Service>.<Operation>" form.'
+        );
+
+        (new RpcV2CborProtocol())->serializeRequest(
+            $operation,
+            StructDocument::fromMembers($schema, []),
+            'https://example.amazonaws.com'
+        );
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function malformedRequestTargets(): iterable
+    {
+        yield 'missing separator' => ['MalformedTarget'];
+        yield 'empty service' => ['.Operation'];
+        yield 'empty operation' => ['Service.'];
+        yield 'empty service and operation' => ['.'];
     }
 
     public function testTreatsReferencedUnitShapesAsUnit(): void
@@ -278,12 +336,14 @@ final class RpcV2CborProtocolTest extends TestCase
     private static function operation(
         Schema $inputSchema,
         Schema $outputSchema,
-        array $errorSchemas = []
+        array $errorSchemas = [],
+        ?string $requestTarget = null
     ): RpcV2CborOperationFixture {
         return new RpcV2CborOperationFixture(
             inputSchema: $inputSchema,
             outputSchema: $outputSchema,
-            errorSchemas: $errorSchemas
+            errorSchemas: $errorSchemas,
+            requestTarget: $requestTarget
         );
     }
 

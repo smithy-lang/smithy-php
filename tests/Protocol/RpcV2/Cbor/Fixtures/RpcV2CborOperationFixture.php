@@ -18,7 +18,8 @@ final class RpcV2CborOperationFixture implements OperationInterface
     public function __construct(
         private readonly Schema $inputSchema,
         private readonly Schema $outputSchema,
-        private readonly array $errorSchemas = []
+        private readonly array $errorSchemas = [],
+        private readonly ?string $requestTarget = null
     ) {}
 
     public function getName(): string
@@ -29,6 +30,11 @@ final class RpcV2CborOperationFixture implements OperationInterface
     public function getId(): string
     {
         return 'smithy.example#GetThing';
+    }
+
+    public function getServiceId(): ?string
+    {
+        return 'smithy.example#ExampleService';
     }
 
     public function getRuntimeIdentity(): string
@@ -82,7 +88,7 @@ final class RpcV2CborOperationFixture implements OperationInterface
 
     public function getRequestTarget(): ?string
     {
-        return 'ExampleService.GetThing';
+        return $this->requestTarget;
     }
 
     public function resolveErrorSchema(string $discriminator): ?Schema

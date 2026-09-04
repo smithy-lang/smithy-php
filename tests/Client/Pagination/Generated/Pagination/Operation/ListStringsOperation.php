@@ -38,6 +38,11 @@ final class ListStringsOperation implements OperationInterface
         return self::ID;
     }
 
+    public function getServiceId(): ?string
+    {
+        return 'smithy.pagination#Pagination';
+    }
+
     public function getRuntimeIdentity(): string
     {
         return self::class;

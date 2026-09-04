@@ -25,6 +25,8 @@ use Smithy\Http\Message\{
  */
 final class FakeProtocol implements ProtocolInterface
 {
+    public const ID = 'smithy.tests#fakeProtocol';
+
     /**
      * Create a fake protocol.
      */
@@ -32,6 +34,11 @@ final class FakeProtocol implements ProtocolInterface
         public ?\Throwable $deserializeError = null,
         private readonly ?StreamInterface $requestBody = null
     ) {}
+
+    public function getId(): string
+    {
+        return self::ID;
+    }
 
     public function serializeRequest(
         OperationInterface $operation,

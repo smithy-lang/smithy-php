@@ -28,6 +28,11 @@ final class NotPaginatedOperation implements OperationInterface
         return 'smithy.tests#NotPaginated';
     }
 
+    public function getServiceId(): ?string
+    {
+        return null;
+    }
+
     public function getRuntimeIdentity(): string
     {
         return self::class;

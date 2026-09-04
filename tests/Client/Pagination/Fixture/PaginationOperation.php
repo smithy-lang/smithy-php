@@ -29,6 +29,11 @@ class PaginationOperation implements OperationInterface
         return 'smithy.tests#Paginate';
     }
 
+    public function getServiceId(): ?string
+    {
+        return null;
+    }
+
     public function getRuntimeIdentity(): string
     {
         return static::class;

@@ -38,6 +38,11 @@ final class GetThingOperation implements OperationInterface
         return self::ID;
     }
 
+    public function getServiceId(): ?string
+    {
+        return 'smithy.waiters#Waiter';
+    }
+
     public function getRuntimeIdentity(): string
     {
         return self::class;
