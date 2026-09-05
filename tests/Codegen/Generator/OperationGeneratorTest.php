@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Smithy\Tests\Codegen\Generator;
 
 use PHPUnit\Framework\TestCase;
+use Smithy\Codegen\CodeGenerator;
 use Smithy\Codegen\CodegenSettings;
 use Smithy\Codegen\Generator\OperationGenerator;
 use Smithy\Codegen\Model\SmithyModel;
@@ -325,6 +326,125 @@ final class OperationGeneratorTest extends TestCase
             "27 => ['name' => 'value']",
             $file->content
         );
+    }
+
+    public function testUsesPreservedInputMemberIndexes(): void
+    {
+        $outputDir = \sys_get_temp_dir()
+            . \DIRECTORY_SEPARATOR
+            . 'smithy-php-operation-order-'
+            . \bin2hex(\random_bytes(4));
+        \mkdir($outputDir, 0755, true);
+        $schemasPath = $outputDir . \DIRECTORY_SEPARATOR . 'Schemas.php';
+        \file_put_contents($schemasPath, <<<'PHP'
+<?php
+
+final class Schemas
+{
+    public static function getThingInput(): mixed
+    {
+        return new Schema(
+            id: 'smithy.example#GetThingInput',
+            type: ShapeType::Structure,
+            members: [
+                new Schema(
+                    id: 'smithy.api#String',
+                    type: ShapeType::String_,
+                    memberName: 'label',
+                    memberIndex: 0
+                ),
+                new Schema(
+                    id: 'smithy.example#StreamingBlob',
+                    type: ShapeType::Blob,
+                    memberName: 'stream',
+                    memberIndex: 1
+                ),
+                new Schema(
+                    id: 'smithy.api#Integer',
+                    type: ShapeType::Integer,
+                    memberName: 'count',
+                    memberIndex: 2
+                )
+            ]
+        );
+    }
+}
+PHP);
+
+        try {
+            $model = SmithyModel::fromJson(\json_encode([
+                'smithy' => '2.0',
+                'shapes' => [
+                    'smithy.example#GetThing' => [
+                        'type' => 'operation',
+                        'input' => [
+                            'target' => 'smithy.example#GetThingInput'
+                        ],
+                        'traits' => [
+                            'smithy.api#http' => [
+                                'method' => 'PUT',
+                                'uri' => '/{label}',
+                                'code' => 200
+                            ]
+                        ]
+                    ],
+                    'smithy.example#GetThingInput' => [
+                        'type' => 'structure',
+                        'members' => [
+                            'label' => [
+                                'target' => 'smithy.api#String',
+                                'traits' => [
+                                    'smithy.api#httpLabel' => new \stdClass()
+                                ]
+                            ],
+                            'stream' => [
+                                'target' => 'smithy.example#StreamingBlob'
+                            ],
+                            'count' => [
+                                'target' => 'smithy.api#Integer',
+                                'traits' => [
+                                    'smithy.api#default' => 0
+                                ]
+                            ]
+                        ]
+                    ],
+                    'smithy.example#StreamingBlob' => [
+                        'type' => 'blob',
+                        'traits' => [
+                            'smithy.api#streaming' => new \stdClass()
+                        ]
+                    ]
+                ]
+            ], JSON_THROW_ON_ERROR));
+            $settings = new CodegenSettings(
+                namespace: 'Smithy\\Example',
+                outputDir: $outputDir,
+                organization: 'flat'
+            );
+            $files = (new CodeGenerator($settings, $model))->generate();
+            $content = null;
+            foreach ($files as $file) {
+                if (\basename($file->path) === 'GetThingOperation.php') {
+                    $content = $file->content;
+                    break;
+                }
+            }
+            $this->assertNotNull($content);
+
+            $this->assertStringContainsString(
+                "'pathSegments' => [['/', null, false], "
+                    . '[null, 0, false]]',
+                $content
+            );
+            $this->assertStringContainsString(
+                'return GetThingInput::schema()'
+                    . '->getMembersByIndex()[1];',
+                $content
+            );
+        } finally {
+            @\unlink($schemasPath);
+            @\rmdir($outputDir);
+        }
     }
 
     public function testGeneratesRequestTargetForRpcV2Cbor(): void
