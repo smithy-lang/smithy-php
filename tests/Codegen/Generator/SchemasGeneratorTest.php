@@ -9,6 +9,7 @@ use Smithy\Codegen\CodegenSettings;
 use Smithy\Codegen\Generator\SchemasGenerator;
 use Smithy\Codegen\Model\SmithyModel;
 use Smithy\Codegen\PhpSymbolProvider;
+use Smithy\Codegen\PriorCodegenEvaluator;
 
 final class SchemasGeneratorTest extends TestCase
 {
@@ -256,5 +257,174 @@ final class SchemasGeneratorTest extends TestCase
                 . "['name' => 'Region']]",
             $file->content
         );
+    }
+
+    public function testInlineStructureUsesTargetConstructorOrder(): void
+    {
+        $model = SmithyModel::fromJson(\json_encode([
+            'smithy' => '2.0',
+            'shapes' => [
+                'smithy.example#Container' => [
+                    'type' => 'structure',
+                    'members' => [
+                        'items' => [
+                            'target' => 'smithy.example#ItemList'
+                        ]
+                    ]
+                ],
+                'smithy.example#ItemList' => [
+                    'type' => 'list',
+                    'member' => [
+                        'target' => 'smithy.example#Item'
+                    ]
+                ],
+                'smithy.example#Item' => [
+                    'type' => 'structure',
+                    'members' => [
+                        'name' => [
+                            'target' => 'smithy.api#String'
+                        ],
+                        'count' => [
+                            'target' => 'smithy.api#Integer',
+                            'traits' => [
+                                'smithy.api#default' => 0
+                            ]
+                        ]
+                    ]
+                ]
+            ]
+        ], JSON_THROW_ON_ERROR));
+        $settings = new CodegenSettings(
+            namespace: 'Smithy\\Example',
+            outputDir: '/tmp/out',
+            organization: 'flat'
+        );
+        $generator = new SchemasGenerator(
+            $model,
+            new PhpSymbolProvider($model, $settings),
+            $settings
+        );
+
+        $content = $generator->generate([
+            'smithy.example#Container' => true
+        ])->content;
+        $count = \strpos(
+            $content,
+            "memberName: 'count', memberIndex: 0"
+        );
+        $name = \strpos(
+            $content,
+            "memberName: 'name', memberIndex: 1"
+        );
+
+        $this->assertIsInt($count);
+        $this->assertIsInt($name);
+        $this->assertLessThan($name, $count);
+    }
+
+    public function testInlineStructurePreservesTargetPriorOrder(): void
+    {
+        $outputDir = \sys_get_temp_dir()
+            . \DIRECTORY_SEPARATOR
+            . 'smithy-php-inline-order-'
+            . \bin2hex(\random_bytes(4));
+        \mkdir($outputDir, 0755, true);
+        $schemasPath = $outputDir . \DIRECTORY_SEPARATOR . 'Schemas.php';
+        \file_put_contents($schemasPath, <<<'PHP'
+<?php
+
+final class Schemas
+{
+    public static function item(): mixed
+    {
+        return new Schema(
+            id: 'smithy.example#Item',
+            type: ShapeType::Structure,
+            members: [
+                new Schema(
+                    id: 'smithy.api#String',
+                    type: ShapeType::String_,
+                    memberName: 'name',
+                    memberIndex: 0
+                ),
+                new Schema(
+                    id: 'smithy.api#Integer',
+                    type: ShapeType::Integer,
+                    memberName: 'count',
+                    memberIndex: 1
+                )
+            ]
+        );
+    }
+}
+PHP);
+
+        try {
+            $model = SmithyModel::fromJson(\json_encode([
+                'smithy' => '2.0',
+                'shapes' => [
+                    'smithy.example#Container' => [
+                        'type' => 'structure',
+                        'members' => [
+                            'items' => [
+                                'target' => 'smithy.example#ItemList'
+                            ]
+                        ]
+                    ],
+                    'smithy.example#ItemList' => [
+                        'type' => 'list',
+                        'member' => [
+                            'target' => 'smithy.example#Item'
+                        ]
+                    ],
+                    'smithy.example#Item' => [
+                        'type' => 'structure',
+                        'members' => [
+                            'name' => [
+                                'target' => 'smithy.api#String'
+                            ],
+                            'count' => [
+                                'target' => 'smithy.api#Integer',
+                                'traits' => [
+                                    'smithy.api#default' => 0
+                                ]
+                            ]
+                        ]
+                    ]
+                ]
+            ], JSON_THROW_ON_ERROR));
+            $settings = new CodegenSettings(
+                namespace: 'Smithy\\Example',
+                outputDir: $outputDir,
+                organization: 'flat'
+            );
+            $priorCodegen = PriorCodegenEvaluator::inspect($outputDir);
+            $this->assertNotNull($priorCodegen);
+            $generator = new SchemasGenerator(
+                $model,
+                new PhpSymbolProvider($model, $settings),
+                $settings,
+                $priorCodegen
+            );
+
+            $content = $generator->generate([
+                'smithy.example#Container' => true
+            ])->content;
+            $name = \strpos(
+                $content,
+                "memberName: 'name', memberIndex: 0"
+            );
+            $count = \strpos(
+                $content,
+                "memberName: 'count', memberIndex: 1"
+            );
+
+            $this->assertIsInt($name);
+            $this->assertIsInt($count);
+            $this->assertLessThan($count, $name);
+        } finally {
+            @\unlink($schemasPath);
+            @\rmdir($outputDir);
+        }
     }
 }

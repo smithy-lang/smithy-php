@@ -9,6 +9,7 @@ use Smithy\Codegen\CodegenSettings;
 use Smithy\Codegen\Generator\StructureGenerator;
 use Smithy\Codegen\Model\SmithyModel;
 use Smithy\Codegen\PhpSymbolProvider;
+use Smithy\Codegen\PriorCodegenEvaluator;
 
 final class StructureGeneratorTest extends TestCase
 {
@@ -156,6 +157,94 @@ final class StructureGeneratorTest extends TestCase
             'public readonly ?Address $address = null,',
             $file->content
         );
+    }
+
+    public function testConstructorUsesPreservedSchemaMemberOrder(): void
+    {
+        $outputDir = \sys_get_temp_dir()
+            . \DIRECTORY_SEPARATOR
+            . 'smithy-php-structure-order-'
+            . \bin2hex(\random_bytes(4));
+        \mkdir($outputDir, 0755, true);
+        $schemasPath = $outputDir . \DIRECTORY_SEPARATOR . 'Schemas.php';
+        \file_put_contents($schemasPath, <<<'PHP'
+<?php
+
+final class Schemas
+{
+    public static function settings(): mixed
+    {
+        return new Schema(
+            id: 'smithy.example#Settings',
+            type: ShapeType::Structure,
+            members: [
+                new Schema(
+                    id: 'smithy.api#String',
+                    type: ShapeType::String_,
+                    memberName: 'description',
+                    memberIndex: 0
+                ),
+                new Schema(
+                    id: 'smithy.api#Integer',
+                    type: ShapeType::Integer,
+                    memberName: 'count',
+                    memberIndex: 1
+                ),
+                new Schema(
+                    id: 'smithy.api#String',
+                    type: ShapeType::String_,
+                    memberName: 'name',
+                    memberIndex: 2
+                )
+            ]
+        );
+    }
+}
+PHP);
+
+        try {
+            $model = SmithyModel::fromFile(
+                __DIR__ . '/../../fixtures/defaults-model.json'
+            );
+            $settings = new CodegenSettings(
+                namespace: 'Smithy\\Example',
+                outputDir: $outputDir,
+                organization: 'flat'
+            );
+            $priorCodegen = PriorCodegenEvaluator::inspect($outputDir);
+            $this->assertNotNull($priorCodegen);
+            $generator = new StructureGenerator(
+                $model,
+                new PhpSymbolProvider($model, $settings),
+                $settings,
+                $priorCodegen
+            );
+
+            $content = $generator->generate(
+                'smithy.example#Settings'
+            )->content;
+            $description = \strpos(
+                $content,
+                'public readonly ?string $description = null,'
+            );
+            $count = \strpos(
+                $content,
+                'public readonly int $count = 0,'
+            );
+            $name = \strpos(
+                $content,
+                'public readonly ?string $name = null,'
+            );
+
+            $this->assertIsInt($description);
+            $this->assertIsInt($count);
+            $this->assertIsInt($name);
+            $this->assertLessThan($count, $description);
+            $this->assertLessThan($name, $count);
+        } finally {
+            @\unlink($schemasPath);
+            @\rmdir($outputDir);
+        }
     }
 
     public function testStructureUsesCategorySubNamespace(): void
