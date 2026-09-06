@@ -176,6 +176,9 @@ final class AsyncTest extends TestCase
 
     public function testMapReturnsEmptyArrayForEmptyInput(): void
     {
+        $loop = new RecordingEventLoopFixture();
+        Async::configure($loop);
+
         $this->assertSame(
             [],
             Async::map(
@@ -183,6 +186,7 @@ final class AsyncTest extends TestCase
                 static fn(mixed $value): mixed => $value
             )
         );
+        $this->assertSame(0, $loop->runCalls);
     }
 
     public function testMapRejectsInvalidConcurrency(): void
