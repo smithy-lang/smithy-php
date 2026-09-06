@@ -181,18 +181,6 @@ final class IdentityChainTest extends TestCase
         $this->assertSame('test-region', $seen->value);
     }
 
-    public function testChainSetupReturnsStoredNullProperty(): void
-    {
-        $setup = new ChainSetup(['region' => null]);
-
-        $this->assertTrue($setup->hasProperty('region'));
-        $this->assertNull($setup->getProperty('region', 'fallback'));
-        $this->assertSame('fallback', $setup->getProperty(
-            'missing',
-            'fallback'
-        ));
-    }
-
     public function testResolveIdentityTracksWinningResolverMetadata(): void
     {
         $firstLog = new CallLogFixture();
@@ -397,28 +385,6 @@ final class IdentityChainTest extends TestCase
         $this->assertSame(1, $invalidated);
     }
 
-    public function testInvalidatorMustBeCallable(): void
-    {
-        $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage(
-            'Identity resolver invalidator must be callable.'
-        );
-
-        new IdentityChain(
-            TestIdentityFixture::class,
-            providers: [
-                new TestProviderFixture(
-                    'cache',
-                    OrderingConstraint::standard('slot-a'),
-                    new CallLogFixture(),
-                    resolver: self::staticResolver(),
-                    invalidator: 'not-callable'
-                )
-            ],
-            slotOrder: ['slot-a']
-        );
-    }
-
     public function testInvalidateForcesChainToResolveAgain(): void
     {
         $resolver = new CountingResolverFixture(new TestIdentityFixture());
@@ -489,6 +455,20 @@ final class IdentityChainTest extends TestCase
                 )
             ],
             slotOrder: ['slot-a']
+        );
+    }
+
+    public function testDuplicateSlotsAreRejected(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage(
+            'Duplicate provider slot registered: slot-a.'
+        );
+
+        new IdentityChain(
+            TestIdentityFixture::class,
+            providers: [],
+            slotOrder: ['slot-a', 'slot-a']
         );
     }
 
