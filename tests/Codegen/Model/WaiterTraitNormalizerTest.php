@@ -20,6 +20,16 @@ final class WaiterTraitNormalizerTest extends TestCase
         );
     }
 
+    public function testTreatsNullTraitAsAbsent(): void
+    {
+        $model = $this->model(null);
+
+        $this->assertSame(
+            [],
+            $model->getValidatedWaiters('smithy.example#GetThing')
+        );
+    }
+
     public function testNormalizesDefaultsAndPreservesAcceptorOrder(): void
     {
         $model = $this->model([
@@ -120,6 +130,36 @@ final class WaiterTraitNormalizerTest extends TestCase
             ['resource', 'terminal'],
             $normalized['tags']
         );
+    }
+
+    public function testTreatsNullOptionalMetadataAsAbsent(): void
+    {
+        $waiter = self::validWaiter([
+            'documentation' => null,
+            'minDelay' => null,
+            'maxDelay' => null,
+            'deprecated' => null,
+            'tags' => null,
+            'acceptors' => [
+                [
+                    'state' => 'success',
+                    'matcher' => ['success' => true],
+                    'message' => null
+                ]
+            ]
+        ]);
+        $model = $this->model(['ThingReady' => $waiter]);
+
+        $normalized = $model->getValidatedWaiters(
+            'smithy.example#GetThing'
+        )['ThingReady'];
+
+        $this->assertNull($normalized['documentation']);
+        $this->assertSame(2, $normalized['minDelay']);
+        $this->assertSame(120, $normalized['maxDelay']);
+        $this->assertFalse($normalized['deprecated']);
+        $this->assertSame([], $normalized['tags']);
+        $this->assertNull($normalized['acceptors'][0]['message']);
     }
 
     public function testNormalizesInputOutputMatcher(): void

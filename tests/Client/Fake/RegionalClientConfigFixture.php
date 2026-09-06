@@ -57,48 +57,23 @@ final class RegionalClientConfigFixture extends ClientConfig
     protected function copyWith(array $overrides): static
     {
         return new static(
-            protocol: \array_key_exists('protocol', $overrides)
-                ? $overrides['protocol']
-                : $this->protocol,
-            httpClient: \array_key_exists('httpClient', $overrides)
-                ? $overrides['httpClient']
-                : $this->httpClient,
-            endpointResolver: \array_key_exists('endpointResolver', $overrides)
-                ? $overrides['endpointResolver']
-                : $this->endpointResolver,
-            interceptors: \array_key_exists('interceptors', $overrides)
-                ? $overrides['interceptors']
-                : $this->interceptorChain,
-            supportedAuthSchemes: \array_key_exists(
-                'supportedAuthSchemes',
-                $overrides
-            )
-                ? $overrides['supportedAuthSchemes']
-                : $this->supportedAuthSchemes,
-            authSchemeResolver: \array_key_exists(
-                'authSchemeResolver',
-                $overrides
-            )
-                ? $overrides['authSchemeResolver']
-                : $this->authSchemeResolver,
-            retryStrategy: \array_key_exists('retryStrategy', $overrides)
-                ? $overrides['retryStrategy']
-                : $this->retryStrategy,
-            retryScope: \array_key_exists('retryScope', $overrides)
-                ? $overrides['retryScope']
-                : $this->retryScope,
-            context: \array_key_exists('context', $overrides)
-                ? $overrides['context']
-                : $this->context,
-            authSchemePreference: \array_key_exists(
-                'authSchemePreference',
-                $overrides
-            )
-                ? $overrides['authSchemePreference']
-                : $this->authSchemePreference,
-            region: \array_key_exists('region', $overrides)
-                ? $overrides['region']
-                : $this->region
+            protocol: $overrides['protocol'] ?? $this->protocol,
+            httpClient: $overrides['httpClient'] ?? $this->httpClient,
+            endpointResolver: $overrides['endpointResolver']
+                ?? $this->endpointResolver,
+            interceptors: $overrides['interceptors']
+                ?? $this->interceptorChain,
+            supportedAuthSchemes: $overrides['supportedAuthSchemes']
+                ?? $this->supportedAuthSchemes,
+            authSchemeResolver: $overrides['authSchemeResolver']
+                ?? $this->authSchemeResolver,
+            retryStrategy: $overrides['retryStrategy']
+                ?? $this->retryStrategy,
+            retryScope: $overrides['retryScope'] ?? $this->retryScope,
+            context: $overrides['context'] ?? $this->context,
+            authSchemePreference: $overrides['authSchemePreference']
+                ?? $this->authSchemePreference,
+            region: $overrides['region'] ?? $this->region
         );
     }
 }

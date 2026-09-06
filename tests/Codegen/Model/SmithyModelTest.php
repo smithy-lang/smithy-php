@@ -250,6 +250,57 @@ final class SmithyModelTest extends TestCase
         );
     }
 
+    public function testIsMemberRequiredTreatsNullTraitAsAbsent(): void
+    {
+        $model = SmithyModel::fromJson(\json_encode(
+            [
+                'smithy' => '2.0',
+                'shapes' => [
+                    'smithy.example#Struct' => [
+                        'type' => 'structure',
+                        'members' => [
+                            'x' => [
+                                'target' => 'smithy.api#Integer',
+                                'traits' => [
+                                    'smithy.api#required' => null
+                                ]
+                            ]
+                        ]
+                    ]
+                ]
+            ],
+            JSON_THROW_ON_ERROR
+        ));
+
+        $this->assertFalse(
+            $model->isMemberRequired('smithy.example#Struct', 'x')
+        );
+    }
+
+    public function testPaginationTreatsNullTraitAsAbsent(): void
+    {
+        $model = SmithyModel::fromJson(\json_encode(
+            [
+                'smithy' => '2.0',
+                'shapes' => [
+                    'smithy.example#ListThings' => [
+                        'type' => 'operation',
+                        'traits' => [
+                            'smithy.api#paginated' => null
+                        ]
+                    ]
+                ]
+            ],
+            JSON_THROW_ON_ERROR
+        ));
+
+        $this->assertNull(
+            $model->getEffectivePaginationTrait(
+                'smithy.example#ListThings'
+            )
+        );
+    }
+
     public function testIsMemberDefaultedRecognizesRenderableDefaults(): void
     {
         $model = SmithyModel::fromFile(
