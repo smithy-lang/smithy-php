@@ -77,7 +77,7 @@ final class RequestOverrideConfigTest extends TestCase
         self::assertNotNull($resolved);
         self::assertSame(2.0, $resolved->timeout);
         self::assertTrue($resolved->followRedirects);
-        self::assertNull($resolved->proxy);
+        self::assertSame('http://proxy.example', $resolved->proxy);
         self::assertFalse($resolved->decodeContent);
         self::assertSame($trailers, $resolved->trailers);
         self::assertSame($cancellation, $resolved->cancellation);
@@ -90,6 +90,48 @@ final class RequestOverrideConfigTest extends TestCase
             32768,
             $resolved->bufferedDownloadBufferSize
         );
+    }
+
+    public function testIgnoresExplicitNullOverrides(): void
+    {
+        $trailers = RequestTrailers::fromArray(['x-checksum' => 'value']);
+        $cancellation = new Cancellation();
+        $defaults = new HttpRequestOptions(
+            timeout: 9.0,
+            followRedirects: false,
+            proxy: 'http://proxy.example',
+            decodeContent: true,
+            trailers: $trailers,
+            cancellation: $cancellation,
+            responseBufferSize: 32768
+        );
+        $overrides = RequestOverrideConfig::fromArray([
+            RequestOverrideConfig::HTTP => [
+                'timeout' => null,
+                'allow_redirects' => null,
+                'follow_redirects' => true,
+                'proxy' => null,
+                'decode_content' => null,
+                'trailers' => null,
+                'cancellation' => null,
+                'response_buffer_size' => null
+            ],
+            RequestOverrideConfig::RETRIES => null,
+            RequestOverrideConfig::AUTH => null
+        ]);
+
+        $resolved = $overrides->resolveHttpOptions($defaults);
+
+        self::assertNotNull($resolved);
+        self::assertSame(9.0, $resolved->timeout);
+        self::assertTrue($resolved->followRedirects);
+        self::assertSame('http://proxy.example', $resolved->proxy);
+        self::assertTrue($resolved->decodeContent);
+        self::assertSame($trailers, $resolved->trailers);
+        self::assertSame($cancellation, $resolved->cancellation);
+        self::assertSame(32768, $resolved->responseBufferSize);
+        self::assertNull($overrides->maxAttempts);
+        self::assertNull($overrides->authSchemePreference);
     }
 
     public function testExtractsHeadersRetriesAndAuthPreference(): void

@@ -432,6 +432,18 @@ final class CodegenSettingsTest extends TestCase
         ]);
     }
 
+    public function testFromArrayIgnoresNullAliasValues(): void
+    {
+        $settings = CodegenSettings::fromArray([
+            'namespace' => 'Smithy\\Example',
+            'outputDir' => '/tmp/output',
+            'generateClient' => null,
+            'generate_client' => false
+        ]);
+
+        $this->assertFalse($settings->generateClient);
+    }
+
     public function testConstructorRejectsInvalidOrganization(): void
     {
         $this->expectException(\InvalidArgumentException::class);
