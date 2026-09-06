@@ -69,6 +69,14 @@ final class BytecodeSourceGeneratorTest extends TestCase
             'use Smithy\\Client\\Endpoint\\Bytecode\\StdFunctions;',
             $source
         );
+        self::assertDoesNotMatchRegularExpression(
+            '/,\n\s*[\]\)]/',
+            $source
+        );
+        self::assertStringNotContainsString(
+            'private static ?Bytecode $instance',
+            $source
+        );
 
         eval($this->withoutOpeningTag($source));
 
