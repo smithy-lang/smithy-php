@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Smithy\Tests\Client\Endpoint\Bytecode\Compiler;
 
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Smithy\Client\Endpoint\Bytecode\{
     Bytecode,
@@ -353,7 +354,7 @@ final class BddCompilerTest extends TestCase
         yield 'byte overflow' => [256];
     }
 
-    #[\PHPUnit\Framework\Attributes\DataProvider('invalidExtendedOpcodeProvider')]
+    #[DataProvider('invalidExtendedOpcodeProvider')]
     public function testRejectsInvalidExtendedOpcode(int $opcode): void
     {
         $this->expectException(\InvalidArgumentException::class);
@@ -450,7 +451,8 @@ final class BddCompilerTest extends TestCase
 
         $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage(
-            'Endpoint rules function coalesce expects at least 2 arguments, got 1'
+            'Endpoint rules function coalesce expects at least 2 '
+                . 'arguments, got 1'
         );
 
         (new BddCompiler(StdFunctions::all()))->compile($trait);
@@ -556,7 +558,7 @@ final class BddCompilerTest extends TestCase
         yield 'non-numeric index' => ['items[abc]'];
     }
 
-    #[\PHPUnit\Framework\Attributes\DataProvider('malformedGetAttrIndexProvider')]
+    #[DataProvider('malformedGetAttrIndexProvider')]
     public function testRejectsMalformedGetAttrIndex(string $path): void
     {
         $this->expectException(\RuntimeException::class);
@@ -591,7 +593,7 @@ final class BddCompilerTest extends TestCase
         yield 'empty segment before index' => ['items.[0]'];
     }
 
-    #[\PHPUnit\Framework\Attributes\DataProvider('malformedGetAttrPathProvider')]
+    #[DataProvider('malformedGetAttrPathProvider')]
     public function testRejectsMalformedGetAttrPath(string $path): void
     {
         $this->expectException(\RuntimeException::class);

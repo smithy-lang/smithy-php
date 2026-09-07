@@ -427,7 +427,7 @@ final class StdFunctionsTest extends TestCase
             'isValidHostLabel',
             'coalesce',
             'split',
-            'ite',
+            'ite'
         ];
         \sort($names);
         \sort($expected);
