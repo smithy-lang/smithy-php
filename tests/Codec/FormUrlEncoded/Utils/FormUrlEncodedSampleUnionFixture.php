@@ -53,7 +53,7 @@ final class FormUrlEncodedSampleUnionFixture implements UnionInterface
                     memberIndex: 1,
                     traits: [
                         Schema::T_XML_NAME => 'countValue',
-                        Schema::T_EC2_QUERY_NAME => 'Counter',
+                        Schema::T_EC2_QUERY_NAME => 'Counter'
                     ]
                 ),
                 new Schema(
@@ -76,7 +76,10 @@ final class FormUrlEncodedSampleUnionFixture implements UnionInterface
     }
 
     /** @inheritDoc */
-    public function serialize(ShapeSerializerInterface $serializer, int $idx): void
+    public function serialize(
+        ShapeSerializerInterface $serializer,
+        int $idx
+    ): void
     {
         $serializer->serializeUnion(self::schema(), $this, $idx);
     }

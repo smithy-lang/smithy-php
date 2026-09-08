@@ -59,7 +59,10 @@ final class FormUrlEncodedStringEnumFixture implements EnumInterface
         return self::schema();
     }
 
-    public function serialize(ShapeSerializerInterface $serializer, int $idx): void
+    public function serialize(
+        ShapeSerializerInterface $serializer,
+        int $idx
+    ): void
     {
         $serializer->serializeString(self::schema(), $this->value, $idx);
     }

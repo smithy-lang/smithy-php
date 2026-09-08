@@ -7,17 +7,18 @@ namespace Smithy\Tests\Codec\FormUrlEncoded;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Smithy\Codec\Exception\SerializationException;
+use Smithy\Codec\FormUrlEncoded\{
+    FormUrlEncodedCodecSettings,
+    FormUrlEncodedSerializer
+};
 use Smithy\Core\Serde\Schema;
-use Smithy\Core\Shape\ShapeType;
+use Smithy\Core\Serde\TimestampFormat;
 use Smithy\Core\Shape\{
     BigDecimal,
     BigInteger,
     Document\AbstractDocument
 };
-use Smithy\Codec\FormUrlEncoded\{
-    FormUrlEncodedCodecSettings,
-    FormUrlEncodedSerializer
-};
+use Smithy\Core\Shape\ShapeType;
 use Smithy\Tests\Codec\FormUrlEncoded\Utils\{
     FormUrlEncodedIntEnumFixture,
     FormUrlEncodedNestedStructFixture,
@@ -57,7 +58,7 @@ final class FormUrlEncodedSerializerTest extends TestCase
         );
     }
 
-    public function testSerializeStructHandlesListsMapsNestedStructsAndUnion(): void
+    public function testSerializeStructHandlesCollectionsAndAggregates(): void
     {
         $serializer = new FormUrlEncodedSerializer();
 
@@ -80,6 +81,89 @@ final class FormUrlEncodedSerializerTest extends TestCase
             . 'scores.entry.2.key=b&scores.entry.2.value=2&scoreEntry.1.k='
             . 'x&scoreEntry.1.v=ex&scoreEntry.2.k=y&scoreEntry.2.v=why&'
             . 'child.value=kid&choice.countValue=2',
+            $serializer->flush()
+        );
+    }
+
+    public function testSerializesNestedAggregateCollections(): void
+    {
+        $listSchema = new Schema(
+            id: 'smithy.test#Children',
+            type: ShapeType::List_,
+            memberName: 'children',
+            memberIndex: 0,
+            listMember: new Schema(
+                id: 'smithy.test#Children$member',
+                type: ShapeType::Structure,
+                memberName: 'member',
+                memberIndex: 0,
+                targetClass: FormUrlEncodedNestedStructFixture::class,
+                members: FormUrlEncodedNestedStructFixture::schema()
+                    ->getMembersByIndex()
+            )
+        );
+        $mapSchema = new Schema(
+            id: 'smithy.test#ChildrenByName',
+            type: ShapeType::Map,
+            memberName: 'childrenByName',
+            memberIndex: 1,
+            mapKey: new Schema(
+                id: 'smithy.test#ChildrenByName$key',
+                type: ShapeType::String_,
+                memberName: 'key',
+                memberIndex: 0
+            ),
+            mapValue: new Schema(
+                id: 'smithy.test#ChildrenByName$value',
+                type: ShapeType::Structure,
+                memberName: 'value',
+                memberIndex: 1,
+                targetClass: FormUrlEncodedNestedStructFixture::class,
+                members: FormUrlEncodedNestedStructFixture::schema()
+                    ->getMembersByIndex()
+            )
+        );
+        $tailSchema = new Schema(
+            id: 'smithy.test#AggregateCollections$tail',
+            type: ShapeType::String_,
+            memberName: 'tail',
+            memberIndex: 2
+        );
+        $root = new Schema(
+            id: 'smithy.test#AggregateCollections',
+            type: ShapeType::Structure,
+            members: [$listSchema, $mapSchema, $tailSchema]
+        );
+
+        $serializer = new FormUrlEncodedSerializer();
+        $serializer->beginRootStruct($root);
+        $serializer->serializeList(
+            $listSchema,
+            [
+                new FormUrlEncodedNestedStructFixture('one'),
+                null,
+                new FormUrlEncodedNestedStructFixture('three')
+            ],
+            0
+        );
+        $serializer->serializeMap(
+            $mapSchema,
+            [
+                'first' => new FormUrlEncodedNestedStructFixture('alpha'),
+                'second' => new FormUrlEncodedNestedStructFixture('beta')
+            ],
+            1
+        );
+        $serializer->serializeString($tailSchema, 'done', 2);
+
+        self::assertSame(
+            'children.member.1.value=one'
+                . '&children.member.3.value=three'
+                . '&childrenByName.entry.1.key=first'
+                . '&childrenByName.entry.1.value.value=alpha'
+                . '&childrenByName.entry.2.key=second'
+                . '&childrenByName.entry.2.value.value=beta'
+                . '&tail=done',
             $serializer->flush()
         );
     }
@@ -130,6 +214,53 @@ final class FormUrlEncodedSerializerTest extends TestCase
 
         self::assertSame(
             'renamed=beta&notes=memo',
+            $serializer->flush()
+        );
+    }
+
+    public function testCanCapitalizeRawMemberNames(): void
+    {
+        $serializer = new FormUrlEncodedSerializer(
+            new FormUrlEncodedCodecSettings(
+                honorXmlName: false,
+                capitalizeResolvedWireNames: true
+            )
+        );
+        $serializer->beginRootStruct(
+            FormUrlEncodedSampleStructFixture::schema()
+        );
+
+        (new FormUrlEncodedSampleStructFixture(
+            name: 'alpha',
+            renamed: 'beta',
+            notes: 'memo'
+        ))->serializeMembers($serializer);
+
+        self::assertSame(
+            'Name=alpha&Renamed=beta&Notes=memo',
+            $serializer->flush()
+        );
+    }
+
+    public function testCanIgnoreTimestampFormatTraits(): void
+    {
+        $serializer = new FormUrlEncodedSerializer(
+            new FormUrlEncodedCodecSettings(
+                defaultTimestampFormat: TimestampFormat::DateTime,
+                honorTimestampFormatTrait: false
+            )
+        );
+        $serializer->beginRootStruct(
+            FormUrlEncodedSampleStructFixture::schema()
+        );
+
+        (new FormUrlEncodedSampleStructFixture(created: 0.0))
+            ->serializeMembers($serializer);
+
+        self::assertSame(
+            'created=' . \rawurlencode(
+                TimestampFormat::DateTime->format(0.0)
+            ),
             $serializer->flush()
         );
     }
