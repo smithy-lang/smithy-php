@@ -51,7 +51,10 @@ final class FormUrlEncodedNestedStructFixture
         return self::schema();
     }
 
-    public function serialize(ShapeSerializerInterface $serializer, int $idx): void
+    public function serialize(
+        ShapeSerializerInterface $serializer,
+        int $idx
+    ): void
     {
         $serializer->serializeStruct(self::schema(), $this, $idx);
     }

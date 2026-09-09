@@ -112,7 +112,7 @@ final class FormUrlEncodedSampleStructFixture
                     memberIndex: 1,
                     traits: [
                         Schema::T_XML_NAME => 'wireName',
-                        Schema::T_EC2_QUERY_NAME => 'Wire',
+                        Schema::T_EC2_QUERY_NAME => 'Wire'
                     ]
                 ),
                 new Schema(
@@ -188,7 +188,7 @@ final class FormUrlEncodedSampleStructFixture
                     listMember: $flatTagMember,
                     traits: [
                         Schema::T_XML_FLATTENED => true,
-                        Schema::T_XML_NAME => 'tag',
+                        Schema::T_XML_NAME => 'tag'
                     ]
                 ),
                 new Schema(
@@ -208,7 +208,7 @@ final class FormUrlEncodedSampleStructFixture
                     mapValue: $flatScoreValue,
                     traits: [
                         Schema::T_XML_FLATTENED => true,
-                        Schema::T_XML_NAME => 'scoreEntry',
+                        Schema::T_XML_NAME => 'scoreEntry'
                     ]
                 ),
                 new Schema(
@@ -240,7 +240,10 @@ final class FormUrlEncodedSampleStructFixture
         return self::schema();
     }
 
-    public function serialize(ShapeSerializerInterface $serializer, int $idx): void
+    public function serialize(
+        ShapeSerializerInterface $serializer,
+        int $idx
+    ): void
     {
         $serializer->serializeStruct(self::schema(), $this, $idx);
     }
