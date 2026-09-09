@@ -5,16 +5,14 @@ declare(strict_types=1);
 namespace Smithy\Client\Dynamic;
 
 use Smithy\Client\Auth\AuthSchemeInterface;
-use Smithy\Client\Endpoint\Bytecode\{
-    RulesFunctionInterface,
-    StdFunctions
-};
+use Smithy\Client\Endpoint\Bytecode\RulesFunctionInterface;
 use Smithy\Core\Serde\SchemaTraitRegistry;
 use Smithy\Protocol\ProtocolInterface;
-use Smithy\Protocol\RpcV2\RpcV2CborProtocol;
 
 /**
  * Runtime implementations available to dynamic clients.
+ *
+ * @internal Used by dynamic client implementations and provider subclasses.
  */
 final class DynamicClientRuntime
 {
@@ -67,24 +65,11 @@ final class DynamicClientRuntime
     }
 
     /**
-     * Return the built-in Smithy runtime implementations.
-     */
-    public static function defaults(): self
-    {
-        return new self(
-            protocols: [
-                RpcV2CborProtocol::ID => new RpcV2CborProtocol()
-            ],
-            endpointFunctions: StdFunctions::all()
-        );
-    }
-
-    /**
      * Merge another runtime over this one.
      */
-    public function merge(?self $runtime): self
+    public function merge(self $runtime): self
     {
-        if ($runtime === null || $runtime === $this) {
+        if ($runtime === $this) {
             return $this;
         }
 

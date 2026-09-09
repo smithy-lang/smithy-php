@@ -16,36 +16,13 @@ use Smithy\Tests\Client\Fake\TestAuthSchemeFixture;
 #[CoversClass(DynamicClientRuntime::class)]
 final class DynamicClientRuntimeTest extends TestCase
 {
-    public function testProvidesDefaultRuntimeImplementations(): void
-    {
-        $runtime = DynamicClientRuntime::defaults();
-
-        self::assertInstanceOf(
-            RpcV2CborProtocol::class,
-            $runtime->getProtocols()['smithy.protocols#rpcv2Cbor']
-        );
-        self::assertNotEmpty($runtime->getEndpointFunctions());
-    }
-
-    public function testReturnsFreshDefaultRuntimeImplementations(): void
-    {
-        $first = DynamicClientRuntime::defaults();
-        $second = DynamicClientRuntime::defaults();
-
-        self::assertNotSame($first, $second);
-        self::assertNotSame(
-            $first->getProtocols()['smithy.protocols#rpcv2Cbor'],
-            $second->getProtocols()['smithy.protocols#rpcv2Cbor']
-        );
-    }
-
     public function testMergesRegisteredRuntimeImplementations(): void
     {
         $protocol = new IdentifiedProtocolFixture('example#protocol');
         $authScheme = new TestAuthSchemeFixture('example#auth');
         $function = new VariadicFunctionFixture();
         $traits = new SchemaTraitRegistry();
-        $runtime = DynamicClientRuntime::defaults()->merge(
+        $runtime = (new DynamicClientRuntime())->merge(
             new DynamicClientRuntime(
                 protocols: ['example#protocol' => $protocol],
                 authSchemes: [$authScheme],

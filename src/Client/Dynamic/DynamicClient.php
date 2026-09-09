@@ -15,6 +15,7 @@ use Smithy\Client\Auth\{
 };
 use Smithy\Client\Endpoint\{
     Bytecode\RulesFunctionInterface,
+    Bytecode\StdFunctions,
     EndpointResolverInterface
 };
 use Smithy\Client\Interceptor\InterceptorChain;
@@ -35,7 +36,10 @@ use Smithy\Core\Shape\Document\{
 };
 use Smithy\Http\Client\HttpClientInterface;
 use Smithy\Http\Client\CurlClient;
-use Smithy\Protocol\ProtocolInterface;
+use Smithy\Protocol\{
+    ProtocolInterface,
+    RpcV2\RpcV2CborProtocol
+};
 
 /**
  * Execute a runtime-loaded Smithy service without generated types.
@@ -115,14 +119,12 @@ class DynamicClient extends AbstractClient
         ?RetryStrategyInterface $retryStrategy = null,
         string $retryScope = '',
         array $context = [],
-        PluginCollection $plugins = new PluginCollection(),
-        ?DynamicClientRuntime $runtime = null
+        PluginCollection $plugins = new PluginCollection()
     ): static
     {
-        $runtime = static::getDefaultRuntime()->merge($runtime);
-
-        return DynamicClientResolver::resolve(
+        return DynamicClientFactory::create(
             model: $model,
+            runtime: static::getDefaultRuntime(),
             serviceId: $serviceId,
             protocolId: $protocolId,
             protocol: $protocol,
@@ -142,7 +144,6 @@ class DynamicClient extends AbstractClient
             retryScope: $retryScope,
             context: $context,
             plugins: $plugins,
-            runtime: $runtime,
             clientClass: static::class
         );
     }
@@ -151,13 +152,13 @@ class DynamicClient extends AbstractClient
      * Build the resolved client configuration.
      *
      * Dynamic client subclasses may override this to supply a specialized
-     * configuration while retaining the shared dependency resolver.
+     * configuration while retaining the shared client factory.
      *
      * @param list<AuthSchemeInterface> $supportedAuthSchemes
      * @param list<string>|null $authSchemePreference
      * @param array<string, mixed> $context
      *
-     * @internal Called by {@see DynamicClientResolver}.
+     * @internal Called by {@see DynamicClientFactory}.
      */
     public static function createClientConfig(
         SmithyModel $model,
@@ -219,7 +220,11 @@ class DynamicClient extends AbstractClient
                 }
             }
         }
-        $overrides = [...$inputOverrides, ...$overrides];
+        if ($inputOverrides !== []) {
+            $overrides = $overrides === []
+                ? $inputOverrides
+                : [...$inputOverrides, ...$overrides];
+        }
 
         $modeledInput = $operation->createInputFromValue($input);
         $output = $this->executeOperation(
@@ -301,7 +306,12 @@ class DynamicClient extends AbstractClient
      */
     protected static function getDefaultRuntime(): DynamicClientRuntime
     {
-        return DynamicClientRuntime::defaults();
+        return new DynamicClientRuntime(
+            protocols: [
+                RpcV2CborProtocol::ID => new RpcV2CborProtocol()
+            ],
+            endpointFunctions: StdFunctions::all()
+        );
     }
 
     /**

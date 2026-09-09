@@ -10,8 +10,7 @@ use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\RequestInterface;
 use Smithy\Client\{
     ClientConfig,
-    Dynamic\DynamicClient,
-    Dynamic\DynamicClientRuntime
+    Dynamic\DynamicClient
 };
 use Smithy\Client\Endpoint\{
     Endpoint,
@@ -25,7 +24,6 @@ use Smithy\Client\Interceptor\{
 use Smithy\Client\Plugin\RequestCompressionPlugin;
 use Smithy\Core\Exception\ApiException;
 use Smithy\Core\Model\SmithyModel;
-use Smithy\Core\Serde\SchemaTraitRegistry;
 use Smithy\Core\Shape\Document\{
     AbstractDocument,
     BlobValue,
@@ -42,7 +40,6 @@ use Smithy\Tests\Client\Dynamic\Utils\{
     InputRecordingInterceptorFixture,
     TestDynamicClient
 };
-use Smithy\Tests\Client\Fake\TestAuthSchemeFixture;
 use Smithy\Tests\Utils\Http\MockHttpClient;
 
 #[CoversClass(DynamicClient::class)]
@@ -293,24 +290,16 @@ final class DynamicClientTest extends TestCase
 
     public function testSelectsInjectedProtocolMapping(): void
     {
-        $registered = new IdentifiedProtocolFixture(
-            'example.protocols#custom'
-        );
         $protocol = new IdentifiedProtocolFixture(
             'example.protocols#custom'
         );
-        $client = DynamicClient::create(
+        $client = TestDynamicClient::create(
             model: $this->model('example.protocols#custom'),
             protocols: [
                 'example.protocols#custom' => $protocol
             ],
             httpClient: $this->httpClient(),
-            endpoint: 'https://example.com',
-            runtime: new DynamicClientRuntime(
-                protocols: [
-                    'example.protocols#custom' => $registered
-                ]
-            )
+            endpoint: 'https://example.com'
         );
 
         self::assertSame($protocol, $client->getConfig()->protocol);
@@ -340,31 +329,7 @@ final class DynamicClientTest extends TestCase
 
     public function testUsesRegisteredRuntimeImplementations(): void
     {
-        $protocol = new IdentifiedProtocolFixture(
-            'example.protocols#custom'
-        );
-        $authScheme = new TestAuthSchemeFixture('example.auth#custom');
         $endpointFunction = new AlwaysTrueFunctionFixture();
-        $traitRegistry = new SchemaTraitRegistry();
-        $traitRegistry->register(
-            'example#upper',
-            materializer: static fn(mixed $value): string =>
-                \strtoupper((string) $value)
-        );
-        $runtime = new DynamicClientRuntime(
-            protocols: [
-                'example.protocols#custom' => $protocol
-            ],
-            authSchemes: [$authScheme],
-            endpointFunctions: [
-                $endpointFunction->getName() => $endpointFunction
-            ],
-            endpointAuthSchemeIds: [
-                'custom' => $authScheme->getSchemeId()
-            ],
-            protocolPreference: ['example.protocols#custom'],
-            traitRegistry: $traitRegistry
-        );
         $client = TestDynamicClient::create(
             model: $this->model(
                 endpointBdd: $this->endpointBdd(
@@ -386,8 +351,7 @@ final class DynamicClientTest extends TestCase
                 ]
             ),
             httpClient: $this->httpClient(),
-            endpointParameters: ['Host' => 'example.com'],
-            runtime: $runtime
+            endpointParameters: ['Host' => 'example.com']
         );
 
         $output = $client->call('Echo', ['message' => 'hello']);
@@ -400,12 +364,15 @@ final class DynamicClientTest extends TestCase
         $message = $operation->getInputSchema()->getMember('message');
         self::assertNotNull($message);
 
-        self::assertSame($protocol, $client->getConfig()->protocol);
-        self::assertTrue(
-            \in_array(
-                $authScheme,
-                $client->getConfig()->supportedAuthSchemes,
-                true
+        self::assertInstanceOf(
+            IdentifiedProtocolFixture::class,
+            $client->getConfig()->protocol
+        );
+        self::assertContains(
+            'example.auth#custom',
+            \array_map(
+                static fn($scheme): string => $scheme->getSchemeId(),
+                $client->getConfig()->supportedAuthSchemes
             )
         );
         self::assertSame(

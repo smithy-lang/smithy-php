@@ -25,16 +25,18 @@ use Smithy\Http\Client\HttpClientInterface;
 use Smithy\Protocol\ProtocolInterface;
 
 /**
- * Resolve the runtime dependencies used to create a dynamic client.
+ * Resolve runtime dependencies and construct a dynamic client.
+ *
+ * @internal Called by {@see DynamicClient::create()}.
  */
-final class DynamicClientResolver
+final class DynamicClientFactory
 {
     private const ENDPOINT_BDD = 'smithy.rules#endpointBdd';
 
     private function __construct() {}
 
     /**
-     * Resolve a model and client dependencies into a dynamic client.
+     * Create a dynamic client from a model and runtime dependencies.
      *
      * @template T of DynamicClient
      *
@@ -54,8 +56,9 @@ final class DynamicClientResolver
      * @throws \InvalidArgumentException When client configuration is invalid.
      * @throws \RuntimeException When no modeled protocol implementation is available.
      */
-    public static function resolve(
+    public static function create(
         SmithyModel|string $model,
+        DynamicClientRuntime $runtime,
         ?string $serviceId = null,
         ?string $protocolId = null,
         ?ProtocolInterface $protocol = null,
@@ -75,7 +78,6 @@ final class DynamicClientResolver
         string $retryScope = '',
         array $context = [],
         PluginCollection $plugins = new PluginCollection(),
-        ?DynamicClientRuntime $runtime = null,
         string $clientClass = DynamicClient::class
     ): DynamicClient
     {
@@ -92,15 +94,13 @@ final class DynamicClientResolver
             : $model;
         $serviceId = self::resolveServiceId($model, $serviceId);
         $serviceTraits = $model->getTraits($serviceId);
-        $runtime = DynamicClientRuntime::defaults()
-            ->merge($runtime)
-            ->merge(new DynamicClientRuntime(
-                protocols: $protocols,
-                authSchemes: $supportedAuthSchemes,
-                endpointFunctions: $endpointFunctions,
-                endpointAuthSchemeIds: $endpointAuthSchemeIds,
-                protocolPreference: $protocolPreference
-            ));
+        $runtime = $runtime->merge(new DynamicClientRuntime(
+            protocols: $protocols,
+            authSchemes: $supportedAuthSchemes,
+            endpointFunctions: $endpointFunctions,
+            endpointAuthSchemeIds: $endpointAuthSchemeIds,
+            protocolPreference: $protocolPreference
+        ));
         $protocols = $runtime->getProtocols();
         $protocolPreference = $runtime->getProtocolPreference();
         $supportedAuthSchemes = $runtime->getAuthSchemes();

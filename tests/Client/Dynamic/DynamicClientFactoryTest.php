@@ -8,21 +8,24 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Smithy\Client\Dynamic\{
     DynamicClient,
-    DynamicClientResolver
+    DynamicClientFactory,
+    DynamicClientRuntime
 };
+use Smithy\Client\Endpoint\Bytecode\StdFunctions;
 use Smithy\Core\Model\SmithyModel;
 use Smithy\Protocol\RpcV2\RpcV2CborProtocol;
 use Smithy\Tests\Client\Dynamic\Utils\IdentifiedProtocolFixture;
 use Smithy\Tests\Client\Fake\TestAuthSchemeFixture;
 use Smithy\Tests\Utils\Http\MockHttpClient;
 
-#[CoversClass(DynamicClientResolver::class)]
-final class DynamicClientResolverTest extends TestCase
+#[CoversClass(DynamicClientFactory::class)]
+final class DynamicClientFactoryTest extends TestCase
 {
     public function testResolvesClientFromModelPath(): void
     {
-        $client = DynamicClientResolver::resolve(
+        $client = DynamicClientFactory::create(
             model: __DIR__ . '/fixtures/dynamic-model.json',
+            runtime: self::runtime(),
             httpClient: new MockHttpClient(),
             endpoint: 'https://example.com'
         );
@@ -43,11 +46,12 @@ final class DynamicClientResolverTest extends TestCase
             . DynamicClient::class
         );
 
-        DynamicClientResolver::resolve(
+        DynamicClientFactory::create(
             model: SmithyModel::fromArray([
                 'smithy' => '2.0',
                 'shapes' => []
             ]),
+            runtime: self::runtime(),
             clientClass: \stdClass::class
         );
     }
@@ -59,8 +63,9 @@ final class DynamicClientResolverTest extends TestCase
             'A dynamic client requires an endpoint resolver'
         );
 
-        DynamicClientResolver::resolve(
+        DynamicClientFactory::create(
             model: __DIR__ . '/fixtures/dynamic-model.json',
+            runtime: self::runtime(),
             httpClient: new MockHttpClient()
         );
     }
@@ -73,8 +78,9 @@ final class DynamicClientResolverTest extends TestCase
             . 'example#Service.'
         );
 
-        DynamicClientResolver::resolve(
+        DynamicClientFactory::create(
             model: __DIR__ . '/fixtures/dynamic-model.json',
+            runtime: self::runtime(),
             protocolId: 'example.protocols#unmodeled',
             protocols: [
                 'example.protocols#unmodeled' =>
@@ -95,8 +101,9 @@ final class DynamicClientResolverTest extends TestCase
             . 'match configured protocol smithy.protocols#rpcv2Cbor.'
         );
 
-        DynamicClientResolver::resolve(
+        DynamicClientFactory::create(
             model: __DIR__ . '/fixtures/dynamic-model.json',
+            runtime: self::runtime(),
             protocolId: RpcV2CborProtocol::ID,
             protocol: new IdentifiedProtocolFixture(
                 'example.protocols#custom'
@@ -111,13 +118,24 @@ final class DynamicClientResolverTest extends TestCase
             'Authentication scheme IDs cannot be empty.'
         );
 
-        DynamicClientResolver::resolve(
+        DynamicClientFactory::create(
             model: __DIR__ . '/fixtures/dynamic-model.json',
+            runtime: self::runtime(),
             httpClient: new MockHttpClient(),
             endpoint: 'https://example.com',
             supportedAuthSchemes: [
                 new TestAuthSchemeFixture('')
             ]
+        );
+    }
+
+    private static function runtime(): DynamicClientRuntime
+    {
+        return new DynamicClientRuntime(
+            protocols: [
+                RpcV2CborProtocol::ID => new RpcV2CborProtocol()
+            ],
+            endpointFunctions: StdFunctions::all()
         );
     }
 }
