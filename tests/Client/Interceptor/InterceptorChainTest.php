@@ -25,6 +25,7 @@ use Smithy\Client\Interceptor\{
     RequestContext,
     ResponseContext
 };
+use Smithy\Core\Serde\SerializableStructInterface;
 use Smithy\Tests\Client\Fake\{
     FakeInput,
     FakeOperation,
@@ -37,6 +38,92 @@ use Smithy\Tests\Utils\Http\MockHttpClient;
 #[CoversClass(InterceptorChain::class)]
 final class InterceptorChainTest extends TestCase
 {
+    public function testCallWrappersNestAndSkipNonWrappingInterceptors(): void
+    {
+        $calls = new \ArrayObject();
+        $outer = $this->callWrapper('outer', $calls);
+        $ordinary = $this->getMockBuilder(AbstractInterceptor::class)
+            ->onlyMethods(['interceptCall'])
+            ->getMock();
+        $ordinary->expects(self::never())->method('interceptCall');
+        $inner = $this->callWrapper('inner', $calls);
+        $output = new FakeOutput('output');
+        $terminal = function (InputContext $ctx) use ($calls, $output) {
+            $calls[] = 'call';
+
+            return $output;
+        };
+        $chain = new InterceptorChain($outer, $ordinary, $inner);
+
+        self::assertTrue($chain->interceptCalls());
+        self::assertSame(
+            $output,
+            $chain->interceptCall($this->inputContext(), $terminal)
+        );
+        self::assertSame([
+            'outer-before',
+            'inner-before',
+            'call',
+            'inner-after',
+            'outer-after'
+        ], $calls->getArrayCopy());
+    }
+
+    public function testNextCallCanBeInvokedMoreThanOnce(): void
+    {
+        $calls = new \ArrayObject();
+        $duplicator = new class extends AbstractInterceptor {
+            public function interceptCalls(): bool
+            {
+                return true;
+            }
+
+            public function interceptCall(
+                InputContext $ctx,
+                callable $next
+            ): SerializableStructInterface
+            {
+                $next($ctx);
+
+                return $next($ctx);
+            }
+        };
+        $inner = $this->callWrapper('inner', $calls);
+        $terminal = function (InputContext $ctx) use ($calls) {
+            $calls[] = 'call';
+
+            return new FakeOutput();
+        };
+
+        (new InterceptorChain($duplicator, $inner))
+            ->interceptCall($this->inputContext(), $terminal);
+
+        self::assertSame([
+            'inner-before',
+            'call',
+            'inner-after',
+            'inner-before',
+            'call',
+            'inner-after'
+        ], $calls->getArrayCopy());
+    }
+
+    public function testAbstractInterceptorDoesNotWrapCallsByDefault(): void
+    {
+        $interceptor = new IdempotencyTokenInterceptor();
+        $chain = new InterceptorChain($interceptor);
+        $output = new FakeOutput();
+
+        self::assertFalse($chain->interceptCalls());
+        self::assertSame(
+            $output,
+            $interceptor->interceptCall(
+                $this->inputContext(),
+                static fn(InputContext $ctx): FakeOutput => $output
+            )
+        );
+    }
+
     public function testReportsWhetherChainIsEmpty(): void
     {
         self::assertTrue((new InterceptorChain())->isEmpty());
@@ -614,6 +701,38 @@ final class InterceptorChainTest extends TestCase
             $input ?? new FakeInput(),
             $this->config()
         );
+    }
+
+    private function callWrapper(
+        string $name,
+        \ArrayObject $calls
+    ): AbstractInterceptor
+    {
+        return new class($name, $calls) extends AbstractInterceptor {
+            public function __construct(
+                private readonly string $name,
+                private readonly \ArrayObject $calls
+            ) {}
+
+            public function interceptCalls(): bool
+            {
+                return true;
+            }
+
+            public function interceptCall(
+                InputContext $ctx,
+                callable $next
+            ): SerializableStructInterface
+            {
+                $this->calls[] = "{$this->name}-before";
+
+                try {
+                    return $next($ctx);
+                } finally {
+                    $this->calls[] = "{$this->name}-after";
+                }
+            }
+        };
     }
 
     private function requestContext(
