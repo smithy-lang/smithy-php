@@ -14,8 +14,14 @@ use Smithy\Client\Endpoint\{
     Endpoint,
     StaticEndpointResolver
 };
-use Smithy\Client\Interceptor\IdempotencyTokenInterceptor;
+use Smithy\Client\Interceptor\{
+    AbstractInterceptor,
+    IdempotencyTokenInterceptor,
+    InputContext,
+    InterceptorChain
+};
 use Smithy\Client\Plugin\PluginCollection;
+use Smithy\Core\Serde\SerializableStructInterface;
 use Smithy\Tests\Client\Fake\{
     FakeInput,
     FakeOperation,
@@ -72,14 +78,93 @@ final class AbstractClientTest extends TestCase
         self::assertSame('result', $output->value);
     }
 
-    private function config(string $response = 'response'): ClientConfig
+    public function testCallInterceptorCanShortCircuitPipeline(): void
+    {
+        $http = (new MockHttpClient())->willReturn('transport');
+        $interceptor = new class extends AbstractInterceptor {
+            public ?\Smithy\Client\ClientInterface $client = null;
+
+            public function interceptCalls(): bool
+            {
+                return true;
+            }
+
+            public function interceptCall(
+                InputContext $ctx,
+                callable $next
+            ): SerializableStructInterface
+            {
+                $this->client = $ctx->client;
+
+                return new FakeOutput('short-circuited');
+            }
+        };
+        $client = new TestClientFixture(
+            $this->config(http: $http, interceptors: new InterceptorChain(
+                $interceptor
+            ))
+        );
+
+        $output = $client->executeOperation(
+            FakeOperation::instance(),
+            new FakeInput('request')
+        );
+
+        self::assertSame('short-circuited', $output->value);
+        self::assertSame($client, $interceptor->client);
+        self::assertSame(0, $http->sendCallCount);
+    }
+
+    public function testCallInterceptorCanSubstituteInput(): void
+    {
+        $http = (new MockHttpClient())->willReturn('transport');
+        $interceptor = new class extends AbstractInterceptor {
+            public function interceptCalls(): bool
+            {
+                return true;
+            }
+
+            public function interceptCall(
+                InputContext $ctx,
+                callable $next
+            ): SerializableStructInterface
+            {
+                return $next(
+                    $ctx->withInput(new FakeInput('substituted'))
+                );
+            }
+        };
+        $client = new TestClientFixture(
+            $this->config(http: $http, interceptors: new InterceptorChain(
+                $interceptor
+            ))
+        );
+
+        $output = $client->executeOperation(
+            FakeOperation::instance(),
+            new FakeInput('original')
+        );
+
+        self::assertSame('transport', $output->value);
+        self::assertSame(
+            'input:substituted',
+            (string) $http->sentRequests[0]->getBody()
+        );
+    }
+
+    private function config(
+        string $response = 'response',
+        ?MockHttpClient $http = null,
+        ?InterceptorChain $interceptors = null
+    ): ClientConfig
     {
         return new ClientConfig(
             protocol: new FakeProtocol(),
-            httpClient: (new MockHttpClient())->willReturn($response),
+            httpClient: $http ?? (new MockHttpClient())->willReturn($response),
             endpointResolver: new StaticEndpointResolver(
                 new Endpoint('https://example.test')
-            )
+            ),
+            interceptors: $interceptors ?? new InterceptorChain()
         );
     }
 }
