@@ -24,6 +24,8 @@ final readonly class InterceptorChain implements InterceptorInterface
     /** @var list<InterceptorInterface> */
     private array $callInterceptors;
 
+    private bool $interceptsCalls;
+
     /** @param InterceptorInterface ...$interceptors Interceptors in execution order. */
     public function __construct(InterceptorInterface ...$interceptors)
     {
@@ -36,6 +38,7 @@ final readonly class InterceptorChain implements InterceptorInterface
         }
 
         $this->callInterceptors = $callInterceptors;
+        $this->interceptsCalls = $callInterceptors !== [];
     }
 
     /**
@@ -81,7 +84,7 @@ final readonly class InterceptorChain implements InterceptorInterface
     /** @inheritDoc */
     public function interceptCalls(): bool
     {
-        return $this->callInterceptors !== [];
+        return $this->interceptsCalls;
     }
 
     /** @inheritDoc */
