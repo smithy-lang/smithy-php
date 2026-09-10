@@ -17,6 +17,7 @@ use Smithy\Client\Endpoint\{
 };
 use Smithy\Client\Interceptor\{
     AbstractInterceptor,
+    CallContext,
     IdempotencyTokenInterceptor,
     InputContext,
     InterceptorChain,
@@ -38,6 +39,44 @@ use Smithy\Tests\Utils\Http\MockHttpClient;
 #[CoversClass(InterceptorChain::class)]
 final class InterceptorChainTest extends TestCase
 {
+    public function testModifyBeforeCallThreadsConfiguration(): void
+    {
+        $alternate = new FakeProtocol(requestPrefix: 'alternate:');
+        $first = new class extends AbstractInterceptor {
+            public function modifyBeforeCall(
+                CallContext $ctx
+            ): ClientConfig {
+                return $ctx->config->withContext('first', true);
+            }
+        };
+        $second = new class($alternate) extends AbstractInterceptor {
+            public function __construct(
+                private readonly FakeProtocol $protocol
+            ) {}
+
+            public function modifyBeforeCall(
+                CallContext $ctx
+            ): ClientConfig {
+                \PHPUnit\Framework\Assert::assertTrue(
+                    $ctx->config->context['first']
+                );
+
+                return $ctx->config->withProtocol($this->protocol);
+            }
+        };
+        $config = $this->inputContext()->config;
+
+        $result = (new InterceptorChain($first, $second))
+            ->modifyBeforeCall(new CallContext(
+                FakeOperation::instance(),
+                new FakeInput(),
+                $config
+            ));
+
+        self::assertTrue($result->context['first']);
+        self::assertSame($alternate, $result->protocol);
+    }
+
     public function testCallWrappersNestAndSkipNonWrappingInterceptors(): void
     {
         $calls = new \ArrayObject();

@@ -202,7 +202,9 @@ final class ClientGeneratorTest extends TestCase
             $file->content
         );
         $this->assertStringContainsString(
-            '$plugins = $plugins->add(new VendorPlugin());',
+            "\$plugins = \$plugins->merge(new PluginCollection(\n"
+            . "            new VendorPlugin()\n"
+            . '        ));',
             $file->content
         );
     }
@@ -258,11 +260,11 @@ final class ClientGeneratorTest extends TestCase
         );
         $compression = \strpos(
             $file->content,
-            '$plugins = $plugins->add(new RequestCompressionPlugin());'
+            'new RequestCompressionPlugin(),'
         );
         $checksum = \strpos(
             $file->content,
-            '$plugins = $plugins->add(new HttpChecksumPlugin());'
+            'new HttpChecksumPlugin()'
         );
 
         self::assertNotFalse($compression);

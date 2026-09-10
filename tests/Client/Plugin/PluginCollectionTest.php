@@ -65,6 +65,21 @@ final class PluginCollectionTest extends TestCase
         self::assertSame(['first'], $calls->getArrayCopy());
     }
 
+    public function testMergePreservesReceiverPluginsFirst(): void
+    {
+        $calls = new \ArrayObject();
+        $first = new RecordingPluginFixture('first', $calls);
+        $second = new SecondaryRecordingPluginFixture('second', $calls);
+        $duplicate = new RecordingPluginFixture('duplicate', $calls);
+
+        $merged = (new PluginCollection($first))->merge(
+            new PluginCollection($duplicate, $second)
+        );
+        $merged->apply($this->config());
+
+        self::assertSame(['first', 'second'], $calls->getArrayCopy());
+    }
+
     private function config(): ClientConfig
     {
         return new ClientConfig(

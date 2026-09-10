@@ -7,11 +7,16 @@ namespace Smithy\Tests\Client;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Smithy\Client\RequestOverrideConfig;
+use Smithy\Client\Plugin\{
+    PluginCollection,
+    PluginInterface
+};
 use Smithy\Http\Client\{
     HttpRequestOptions,
     RequestTrailers
 };
 use Smithy\Http\Client\Cancellation\Cancellation;
+use Smithy\Tests\Client\Plugin\Utils\RecordingPluginFixture;
 
 #[CoversClass(RequestOverrideConfig::class)]
 final class RequestOverrideConfigTest extends TestCase
@@ -24,9 +29,47 @@ final class RequestOverrideConfigTest extends TestCase
         self::assertNull($overrides->httpOptions);
         self::assertNull($overrides->maxAttempts);
         self::assertNull($overrides->authSchemePreference);
+        self::assertTrue($overrides->plugins->isEmpty());
         self::assertNull(
             $overrides->resolveHttpOptions(new HttpRequestOptions())
         );
+    }
+
+    public function testAcceptsCallScopedPlugins(): void
+    {
+        $calls = new \ArrayObject();
+        $plugin = new RecordingPluginFixture('plugin', $calls);
+        $collection = new PluginCollection($plugin);
+
+        $fromCollection = RequestOverrideConfig::fromArray([
+            RequestOverrideConfig::PLUGINS => $collection
+        ]);
+        $fromList = RequestOverrideConfig::fromArray([
+            RequestOverrideConfig::PLUGINS => [$plugin]
+        ]);
+        $fromMethod = RequestOverrideConfig::fromArray([])
+            ->withPlugin($plugin);
+
+        self::assertSame(
+            [$plugin],
+            $fromCollection->plugins->getPlugins()
+        );
+        self::assertSame([$plugin], $fromList->plugins->getPlugins());
+        self::assertSame([$plugin], $fromMethod->plugins->getPlugins());
+    }
+
+    public function testRejectsInvalidCallScopedPlugins(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage(
+            '@plugins must contain only PluginInterface instances.'
+        );
+
+        RequestOverrideConfig::fromArray([
+            RequestOverrideConfig::PLUGINS => [
+                new \stdClass()
+            ]
+        ]);
     }
 
     public function testAcceptsCompleteHttpRequestOptions(): void
