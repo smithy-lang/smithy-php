@@ -21,7 +21,10 @@ use Smithy\Client\Interceptor\{
     AbstractInterceptor,
     InterceptorChain
 };
-use Smithy\Client\Plugin\RequestCompressionPlugin;
+use Smithy\Client\Plugin\{
+    PluginCollection,
+    RequestCompressionPlugin
+};
 use Smithy\Core\Exception\ApiException;
 use Smithy\Core\Model\SmithyModel;
 use Smithy\Core\Shape\Document\{
@@ -131,6 +134,43 @@ final class DynamicClientTest extends TestCase
         self::assertSame(
             \base64_encode(\md5($body, true)),
             $request->getHeaderLine('Content-MD5')
+        );
+    }
+
+    public function testExplicitPluginOverridesModeledDefault(): void
+    {
+        if (!\extension_loaded('zlib')) {
+            self::markTestSkipped('The zlib extension is not available.');
+        }
+
+        $http = $this->httpClient();
+        $client = DynamicClient::create(
+            model: $this->model(operationTraits: [
+                'smithy.api#requestCompression' => [
+                    'encodings' => ['gzip']
+                ]
+            ]),
+            httpClient: $http,
+            endpoint: 'https://example.com',
+            context: [
+                self::MIN_COMPRESSION_SIZE => 0
+            ],
+            plugins: new PluginCollection(
+                new RequestCompressionPlugin(disabled: true)
+            )
+        );
+
+        $output = $client->call('Echo', ['message' => 'hello']);
+        $request = $http->getLastRequest();
+
+        self::assertSame(
+            'hello',
+            $this->memberValue($output, 'message')
+        );
+        self::assertNotNull($request);
+        self::assertSame(
+            '',
+            $request->getHeaderLine('Content-Encoding')
         );
     }
 

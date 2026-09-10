@@ -32,7 +32,8 @@ final class FakeProtocol implements ProtocolInterface
      */
     public function __construct(
         public ?\Throwable $deserializeError = null,
-        private readonly ?StreamInterface $requestBody = null
+        private readonly ?StreamInterface $requestBody = null,
+        private readonly string $requestPrefix = 'input:'
     ) {}
 
     public function getId(): string
@@ -52,7 +53,7 @@ final class FakeProtocol implements ProtocolInterface
             'POST',
             new Uri($endpoint),
             [],
-            $this->requestBody ?? 'input:' . $input->value
+            $this->requestBody ?? $this->requestPrefix . $input->value
         );
     }
 
