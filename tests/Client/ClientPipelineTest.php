@@ -19,14 +19,18 @@ use Smithy\Client\{
 use Smithy\Client\Auth\{
     AnonymousIdentity,
     AuthSchemeInterface,
+    AuthSchemeResolverInterface,
     IdentityInterface,
     IdentityResolverInterface,
+    ResolvedAuthScheme,
     SignerInterface,
     StaticAuthSchemeResolver
 };
 use Smithy\Client\Endpoint\{
     Endpoint,
     EndpointAuthScheme,
+    EndpointResolverInterface,
+    EndpointResolverParams,
     StaticEndpointResolver
 };
 use Smithy\Client\Interceptor\{
@@ -94,7 +98,7 @@ final class ClientPipelineTest extends TestCase
         );
     }
 
-    public function testSerializedRequestReachesTransportWithoutConversion(): void
+    public function testSerializedRequestIsBoundToEndpointBeforeTransport(): void
     {
         $serializedRequest = null;
         $observer = $this->getMockBuilder(AbstractInterceptor::class)
@@ -112,9 +116,14 @@ final class ClientPipelineTest extends TestCase
         $pipeline->execute(FakeOperation::instance(), new FakeInput('hello'));
 
         $this->assertInstanceOf(Request::class, $http->sentRequests[0]);
-        $this->assertSame(
+        $this->assertNotSame(
             $serializedRequest,
             $http->sentRequests[0]
+        );
+        $this->assertSame('/', (string) $serializedRequest->getUri());
+        $this->assertSame(
+            'https://example.test/',
+            (string) $http->sentRequests[0]->getUri()
         );
         $this->assertSame(
             (string) $serializedRequest->getBody(),
@@ -346,6 +355,12 @@ final class ClientPipelineTest extends TestCase
             ): SerializableStructInterface =>
                 new FakeOutput((string) $response->getBody())
         );
+        $protocol->method('setServiceEndpoint')->willReturnCallback(
+            static fn(
+                RequestInterface $request,
+                Endpoint $endpoint
+            ): RequestInterface => $request->withUri(new Uri($endpoint->url))
+        );
 
         $config = new ClientConfig(
             protocol: $protocol,
@@ -392,6 +407,12 @@ final class ClientPipelineTest extends TestCase
                 \Psr\Http\Message\ResponseInterface $response
             ): SerializableStructInterface =>
                 new FakeOutput((string) $response->getBody())
+        );
+        $protocol->method('setServiceEndpoint')->willReturnCallback(
+            static fn(
+                RequestInterface $request,
+                Endpoint $endpoint
+            ): RequestInterface => $request->withUri(new Uri($endpoint->url))
         );
 
         $pipeline = new ClientPipeline(new ClientConfig(
@@ -682,14 +703,173 @@ final class ClientPipelineTest extends TestCase
 
         $this->assertSame([1.25], $loop->delays);
         $this->assertSame(2, $transport->sendCallCount);
-        $this->assertSame(
+        $this->assertNotSame(
             $transport->sentRequests[0],
             $transport->sentRequests[1]
+        );
+        $this->assertSame(
+            (string) $transport->sentRequests[0]->getUri(),
+            (string) $transport->sentRequests[1]->getUri()
         );
         $this->assertInstanceOf(Request::class, $transport->sentRequests[0]);
         $this->assertInstanceOf(Request::class, $transport->sentRequests[1]);
         $this->assertSame(2, $successfulState?->attempt);
         $this->assertSame('server-body', $out->value);
+    }
+
+    #[DataProvider('attemptScopedResolutionCases')]
+    public function testResolvesAuthAndEndpointForEveryAttempt(
+        bool $withInterceptors
+    ): void
+    {
+        $events = [];
+        $signedUris = [];
+        $identityResolver = $this->createMock(
+            IdentityResolverInterface::class
+        );
+        $identityResolver
+            ->expects($this->exactly(2))
+            ->method('resolveIdentity')
+            ->willReturnCallback(
+                static function () use (&$events): IdentityInterface {
+                    $events[] = 'identity';
+
+                    return AnonymousIdentity::instance();
+                }
+            );
+        $signer = $this->createMock(SignerInterface::class);
+        $signer
+            ->expects($this->exactly(2))
+            ->method('sign')
+            ->willReturnCallback(
+                static function (
+                    RequestInterface $request,
+                    IdentityInterface $identity,
+                    array $properties = []
+                ) use (&$events, &$signedUris): RequestInterface {
+                    $events[] = 'sign';
+                    $signedUris[] = (string) $request->getUri();
+
+                    return $request;
+                }
+            );
+        $scheme = new TestAuthSchemeFixture(
+            'smithy.test#auth',
+            $identityResolver,
+            $signer
+        );
+        $authResolver = $this->createMock(
+            AuthSchemeResolverInterface::class
+        );
+        $authResolver
+            ->expects($this->exactly(2))
+            ->method('resolveAuthScheme')
+            ->willReturnCallback(
+                static function () use (
+                    &$events,
+                    $scheme
+                ): ResolvedAuthScheme {
+                    $events[] = 'auth';
+
+                    return new ResolvedAuthScheme($scheme);
+                }
+            );
+        $endpointResolver = $this->createMock(
+            EndpointResolverInterface::class
+        );
+        $endpointCall = 0;
+        $endpointResolver
+            ->expects($this->exactly(2))
+            ->method('resolveEndpoint')
+            ->willReturnCallback(
+                static function (
+                    EndpointResolverParams $params
+                ) use (&$events, &$endpointCall): Endpoint {
+                    $events[] = 'endpoint';
+                    ++$endpointCall;
+
+                    return new Endpoint(
+                        "https://endpoint-{$endpointCall}.test/base"
+                    );
+                }
+            );
+        $protocol = $this->createMock(ProtocolInterface::class);
+        $protocol
+            ->expects($this->once())
+            ->method('serializeRequest')
+            ->with(
+                FakeOperation::instance(),
+                $this->isInstanceOf(FakeInput::class),
+                '/'
+            )
+            ->willReturn(new Request(
+                'POST',
+                new Uri('/operation'),
+                [],
+                'input'
+            ));
+        $protocol
+            ->expects($this->exactly(2))
+            ->method('setServiceEndpoint')
+            ->willReturnCallback(
+                static function (
+                    RequestInterface $request,
+                    Endpoint $endpoint
+                ): RequestInterface {
+                    $uri = new Uri(
+                        \rtrim($endpoint->url, '/')
+                            . $request->getUri()->getPath()
+                    );
+
+                    return $request->withUri($uri);
+                }
+            );
+        $protocol
+            ->method('deserializeResponse')
+            ->willReturn(new FakeOutput('server-body'));
+        $http = (new MockHttpClient())
+            ->queueException(new \RuntimeException('temporary'))
+            ->queueResponse('server-body');
+        $interceptors = $withInterceptors
+            ? new InterceptorChain(new RecordingInterceptor())
+            : new InterceptorChain();
+        $pipeline = new ClientPipeline(new ClientConfig(
+            protocol: $protocol,
+            httpClient: $http,
+            endpointResolver: $endpointResolver,
+            interceptors: $interceptors,
+            retryStrategy: $this->retryOnceStrategy(),
+            supportedAuthSchemes: [$scheme],
+            authSchemeResolver: $authResolver
+        ));
+
+        $pipeline->execute(FakeOperation::instance(), new FakeInput());
+
+        $this->assertSame([
+            'auth',
+            'identity',
+            'endpoint',
+            'sign',
+            'auth',
+            'identity',
+            'endpoint',
+            'sign'
+        ], $events);
+        $this->assertSame([
+            'https://endpoint-1.test/base/operation',
+            'https://endpoint-2.test/base/operation'
+        ], $signedUris);
+    }
+
+    /**
+     * @return array<string, array{bool}>
+     */
+    public static function attemptScopedResolutionCases(): array
+    {
+        return [
+            'without interceptors' => [false],
+            'with interceptors' => [true]
+        ];
     }
 
     public function testRetriesStartFromRequestBeforeAttemptMutations(): void
@@ -1444,7 +1624,7 @@ final class ClientPipelineTest extends TestCase
         $pipeline->execute(FakeOperation::instance(), new FakeInput());
 
         $this->assertSame(
-            ['scope' => 'endpoint'],
+            [],
             $seen->identityProperties
         );
         $this->assertSame(

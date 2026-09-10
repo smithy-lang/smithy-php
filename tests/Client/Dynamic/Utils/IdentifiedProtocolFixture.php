@@ -8,6 +8,7 @@ use Psr\Http\Message\{
     RequestInterface,
     ResponseInterface
 };
+use Smithy\Client\Endpoint\Endpoint;
 use Smithy\Core\Serde\SerializableStructInterface;
 use Smithy\Core\Shape\OperationInterface;
 use Smithy\Protocol\ProtocolInterface;
@@ -37,6 +38,14 @@ final class IdentifiedProtocolFixture implements ProtocolInterface
             $input,
             $endpoint
         );
+    }
+
+    public function setServiceEndpoint(
+        RequestInterface $request,
+        Endpoint $endpoint
+    ): RequestInterface
+    {
+        return $this->delegate->setServiceEndpoint($request, $endpoint);
     }
 
     public function deserializeResponse(

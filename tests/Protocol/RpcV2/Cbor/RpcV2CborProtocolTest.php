@@ -8,6 +8,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Smithy\Codec\Cbor\CborCodec;
+use Smithy\Client\Endpoint\Endpoint;
 use Smithy\Core\Exception\ApiException;
 use Smithy\Core\Serde\Schema;
 use Smithy\Core\Shape\Document\StructDocument;
@@ -62,6 +63,42 @@ final class RpcV2CborProtocolTest extends TestCase
         self::assertSame('Host', \array_key_first($request->getHeaders()));
         self::assertFalse($request->hasHeader('Content-Type'));
         self::assertSame('', (string) $request->getBody());
+    }
+
+    public function testBindsEndpointAfterUnresolvedSerialization(): void
+    {
+        $schema = self::unitSchema();
+        $operation = self::operation(
+            inputSchema: $schema,
+            outputSchema: $schema
+        );
+        $protocol = new RpcV2CborProtocol();
+        $request = $protocol->serializeRequest(
+            $operation,
+            StructDocument::fromMembers($schema, []),
+            '/'
+        );
+
+        self::assertSame(
+            '/service/ExampleService/operation/GetThing',
+            (string) $request->getUri()
+        );
+        self::assertSame('', $request->getHeaderLine('Host'));
+
+        $request = $protocol->setServiceEndpoint(
+            $request,
+            new Endpoint('https://example.amazonaws.com:8443/base')
+        );
+
+        self::assertSame(
+            'https://example.amazonaws.com:8443/base/service/'
+                . 'ExampleService/operation/GetThing',
+            (string) $request->getUri()
+        );
+        self::assertSame(
+            'example.amazonaws.com:8443',
+            $request->getHeaderLine('Host')
+        );
     }
 
     public function testPrefersExplicitRequestTarget(): void
