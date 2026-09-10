@@ -447,7 +447,7 @@ PHP);
         }
     }
 
-    public function testGeneratesRequestTargetForRpcV2Cbor(): void
+    public function testGeneratesServiceIdentityForRpcV2Cbor(): void
     {
         $model = $this->createRequestTargetModel([
             'smithy.protocols#rpcv2Cbor' => []
@@ -466,11 +466,15 @@ PHP);
         $file = $generator->generate('smithy.example#GetThing');
 
         $this->assertStringContainsString(
-            "public const TARGET = 'ExampleService.GetThing';",
+            "public const SERVICE_ID = 'smithy.example#ExampleService';",
             $file->content
         );
         $this->assertStringContainsString(
-            'return self::TARGET;',
+            'return self::SERVICE_ID;',
+            $file->content
+        );
+        $this->assertStringNotContainsString(
+            'public const TARGET',
             $file->content
         );
     }
@@ -506,10 +510,10 @@ PHP);
         );
     }
 
-    public function testConfiguredRequestTargetOverridesRpcV2Target(): void
+    public function testPreservesConfiguredTargetForCustomProtocol(): void
     {
         $model = $this->createRequestTargetModel([
-            'smithy.protocols#rpcv2Cbor' => []
+            'example.protocols#customRpc' => []
         ]);
         $settings = new CodegenSettings(
             namespace: 'Smithy\\Example',
@@ -533,8 +537,8 @@ PHP);
             "public const TARGET = 'Custom.GetThing';",
             $file->content
         );
-        $this->assertStringNotContainsString(
-            'ExampleService.GetThing',
+        $this->assertStringContainsString(
+            'return self::TARGET;',
             $file->content
         );
     }

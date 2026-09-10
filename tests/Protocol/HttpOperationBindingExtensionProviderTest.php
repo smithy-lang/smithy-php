@@ -94,6 +94,11 @@ final class HttpOperationBindingExtensionProviderTest extends TestCase
             $errorDeserializer
         ) extends AbstractHttpBindingProtocol {
             protected static string $defaultContentType = 'application/json';
+
+            public function getId(): string
+            {
+                return 'smithy.tests#httpBinding';
+            }
         };
         $input = new HttpBindingInputShapeFixture(
             mode: true,

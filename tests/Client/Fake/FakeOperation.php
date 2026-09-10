@@ -35,6 +35,11 @@ final class FakeOperation implements OperationInterface
         return 'smithy.tests#Fake';
     }
 
+    public function getServiceId(): ?string
+    {
+        return null;
+    }
+
     public function getRuntimeIdentity(): string
     {
         return self::class;

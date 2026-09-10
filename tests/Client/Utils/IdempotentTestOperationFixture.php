@@ -31,6 +31,11 @@ final class IdempotentTestOperationFixture implements OperationInterface
         return 'smithy.tests#IdempotentTest';
     }
 
+    public function getServiceId(): ?string
+    {
+        return null;
+    }
+
     public function getRuntimeIdentity(): string
     {
         return self::class;

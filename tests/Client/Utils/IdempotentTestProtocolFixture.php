@@ -14,6 +14,11 @@ use Smithy\Protocol\ProtocolInterface;
 
 final class IdempotentTestProtocolFixture implements ProtocolInterface
 {
+    public function getId(): string
+    {
+        return 'smithy.tests#idempotentTestProtocol';
+    }
+
     public function serializeRequest(
         OperationInterface $operation,
         SerializableStructInterface $input,

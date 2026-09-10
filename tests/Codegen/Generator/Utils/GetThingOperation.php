@@ -28,6 +28,11 @@ final class GetThingOperation implements OperationInterface
         return 'smithy.example#GetThing';
     }
 
+    public function getServiceId(): ?string
+    {
+        return null;
+    }
+
     public function getRuntimeIdentity(): string
     {
         return self::class;

@@ -43,6 +43,11 @@ final class HttpBindingOperationFixture implements OperationInterface
         return self::ID;
     }
 
+    public function getServiceId(): ?string
+    {
+        return null;
+    }
+
     /**
      * Return the runtime identity.
      */
