@@ -572,7 +572,11 @@ final class ClientPipelineTest extends TestCase
 
     public function testEndpointAuthRemainsAuthoritativeOverPreference(): void
     {
-        $seen = (object) ['selectedScheme' => null];
+        $seen = (object) [
+            'identityProperties' => null,
+            'selectedScheme' => null,
+            'signerProperties' => null
+        ];
         $http = (new MockHttpClient())->willReturn('body');
         $pipeline = new ClientPipeline(new ClientConfig(
             protocol: new FakeProtocol(),
@@ -588,10 +592,20 @@ final class ClientPipelineTest extends TestCase
                 )
             ),
             supportedAuthSchemes: [
-                $this->recordingAuthScheme('aws.auth#sigv4', $seen),
+                $this->recordingAuthScheme(
+                    'aws.auth#sigv4',
+                    $seen,
+                    ['identity' => 'modeled'],
+                    ['signer' => 'modeled']
+                ),
                 $this->recordingAuthScheme(
                     'smithy.api#httpBearerAuth',
-                    $seen
+                    $seen,
+                    ['identity' => 'endpoint'],
+                    [
+                        'signer' => 'endpoint',
+                        'scope' => 'scheme'
+                    ]
                 )
             ],
             authSchemeResolver: new StaticAuthSchemeResolver([
@@ -606,6 +620,17 @@ final class ClientPipelineTest extends TestCase
         $this->assertSame(
             'smithy.api#httpBearerAuth',
             $seen->selectedScheme
+        );
+        $this->assertSame(
+            ['identity' => 'endpoint'],
+            $seen->identityProperties
+        );
+        $this->assertSame(
+            [
+                'signer' => 'endpoint',
+                'scope' => 'scheme'
+            ],
+            $seen->signerProperties
         );
     }
 
@@ -774,6 +799,18 @@ final class ClientPipelineTest extends TestCase
                     return new ResolvedAuthScheme($scheme);
                 }
             );
+        $authResolver
+            ->expects($this->exactly(2))
+            ->method('resolveEndpointAuthScheme')
+            ->willReturnCallback(
+                static function (
+                    ResolvedAuthScheme $resolvedAuthScheme
+                ) use (&$events): ResolvedAuthScheme {
+                    $events[] = 'endpoint-auth';
+
+                    return $resolvedAuthScheme;
+                }
+            );
         $endpointResolver = $this->createMock(
             EndpointResolverInterface::class
         );
@@ -849,10 +886,12 @@ final class ClientPipelineTest extends TestCase
             'auth',
             'identity',
             'endpoint',
+            'endpoint-auth',
             'sign',
             'auth',
             'identity',
             'endpoint',
+            'endpoint-auth',
             'sign'
         ], $events);
         $this->assertSame([
@@ -1599,7 +1638,15 @@ final class ClientPipelineTest extends TestCase
         ];
         $scheme = $this->recordingAuthScheme(
             'smithy.test#endpointAuth',
-            $seen
+            $seen,
+            [
+                'identity' => 'scheme',
+                'shared' => 'identity'
+            ],
+            [
+                'signer' => 'scheme',
+                'scope' => 'scheme'
+            ]
         );
         $http = (new MockHttpClient())->willReturn('body');
         $pipeline = new ClientPipeline(new ClientConfig(
@@ -1624,19 +1671,31 @@ final class ClientPipelineTest extends TestCase
         $pipeline->execute(FakeOperation::instance(), new FakeInput());
 
         $this->assertSame(
-            [],
+            [
+                'identity' => 'scheme',
+                'shared' => 'identity'
+            ],
             $seen->identityProperties
         );
         $this->assertSame(
-            ['scope' => 'endpoint'],
+            [
+                'signer' => 'scheme',
+                'scope' => 'endpoint'
+            ],
             $seen->signerProperties
         );
         $this->assertSame(1, $http->sendCallCount);
     }
 
+    /**
+     * @param array<string, mixed> $identityProperties
+     * @param array<string, mixed> $signerProperties
+     */
     private function recordingAuthScheme(
         string $schemeId,
-        object $seen
+        object $seen,
+        array $identityProperties = [],
+        array $signerProperties = []
     ): AuthSchemeInterface
     {
         $identityResolver = $this->createMock(
@@ -1670,7 +1729,9 @@ final class ClientPipelineTest extends TestCase
         return new TestAuthSchemeFixture(
             $schemeId,
             $identityResolver,
-            $signer
+            $signer,
+            $identityProperties,
+            $signerProperties
         );
     }
 

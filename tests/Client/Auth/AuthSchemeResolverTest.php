@@ -17,6 +17,7 @@ use Smithy\Client\Auth\{
 use Smithy\Client\ClientConfig;
 use Smithy\Client\Endpoint\{
     Endpoint,
+    EndpointAuthScheme,
     StaticEndpointResolver
 };
 use Smithy\Core\Shape\OperationInterface;
@@ -62,6 +63,154 @@ final class AuthSchemeResolverTest extends TestCase
         );
 
         $this->assertSame($expected, $resolved->scheme->getSchemeId());
+    }
+
+    public function testResolvesSeparateSchemeProperties(): void
+    {
+        $scheme = new TestAuthSchemeFixture(
+            self::SIGV4,
+            identityProperties: ['identity' => 'default'],
+            signerProperties: ['signer' => 'default']
+        );
+        $config = new ClientConfig(
+            protocol: new FakeProtocol(),
+            httpClient: new MockHttpClient(),
+            endpointResolver: new StaticEndpointResolver(
+                new Endpoint('https://example.test')
+            ),
+            supportedAuthSchemes: [$scheme]
+        );
+
+        $resolved = $config->authSchemeResolver->resolveAuthScheme(
+            $this->operation([self::SIGV4]),
+            $config
+        );
+
+        $this->assertSame(
+            ['identity' => 'default'],
+            $resolved->identityProperties
+        );
+        $this->assertSame(
+            ['signer' => 'default'],
+            $resolved->signerProperties
+        );
+    }
+
+    public function testEndpointPropertiesOverrideOnlySignerProperties(): void
+    {
+        $scheme = new TestAuthSchemeFixture(
+            self::SIGV4,
+            identityProperties: [
+                'identity' => 'default',
+                'shared' => 'identity'
+            ],
+            signerProperties: [
+                'signer' => 'default',
+                'scope' => 'default'
+            ]
+        );
+        $config = new ClientConfig(
+            protocol: new FakeProtocol(),
+            httpClient: new MockHttpClient(),
+            endpointResolver: new StaticEndpointResolver(
+                new Endpoint('https://example.test')
+            ),
+            supportedAuthSchemes: [$scheme]
+        );
+        $operation = $this->operation([self::SIGV4]);
+        $resolved = $config->authSchemeResolver->resolveAuthScheme(
+            $operation,
+            $config
+        );
+
+        $endpointResolved = $config
+            ->authSchemeResolver
+            ->resolveEndpointAuthScheme(
+                $resolved,
+                $operation,
+                $config,
+                [
+                    new EndpointAuthScheme(
+                        self::SIGV4,
+                        ['scope' => 'endpoint']
+                    )
+                ]
+            );
+
+        $this->assertSame($scheme, $endpointResolved->scheme);
+        $this->assertSame(
+            [
+                'identity' => 'default',
+                'shared' => 'identity'
+            ],
+            $endpointResolved->identityProperties
+        );
+        $this->assertSame(
+            [
+                'signer' => 'default',
+                'scope' => 'endpoint'
+            ],
+            $endpointResolved->signerProperties
+        );
+    }
+
+    public function testEndpointReplacementLoadsSchemeDefaults(): void
+    {
+        $modeledScheme = new TestAuthSchemeFixture(
+            self::SIGV4,
+            identityProperties: ['identity' => 'modeled'],
+            signerProperties: ['signer' => 'modeled']
+        );
+        $endpointScheme = new TestAuthSchemeFixture(
+            self::BEARER,
+            identityProperties: ['identity' => 'endpoint'],
+            signerProperties: [
+                'signer' => 'endpoint',
+                'scope' => 'default'
+            ]
+        );
+        $config = new ClientConfig(
+            protocol: new FakeProtocol(),
+            httpClient: new MockHttpClient(),
+            endpointResolver: new StaticEndpointResolver(
+                new Endpoint('https://example.test')
+            ),
+            supportedAuthSchemes: [$modeledScheme, $endpointScheme]
+        );
+        $operation = $this->operation([self::SIGV4]);
+        $resolved = $config->authSchemeResolver->resolveAuthScheme(
+            $operation,
+            $config
+        );
+
+        $endpointResolved = $config
+            ->authSchemeResolver
+            ->resolveEndpointAuthScheme(
+                $resolved,
+                $operation,
+                $config,
+                [
+                    new EndpointAuthScheme(self::SIGV4),
+                    new EndpointAuthScheme(
+                        self::BEARER,
+                        ['scope' => 'endpoint']
+                    )
+                ],
+                ['httpBearerAuth']
+            );
+
+        $this->assertSame($endpointScheme, $endpointResolved->scheme);
+        $this->assertSame(
+            ['identity' => 'endpoint'],
+            $endpointResolved->identityProperties
+        );
+        $this->assertSame(
+            [
+                'signer' => 'endpoint',
+                'scope' => 'endpoint'
+            ],
+            $endpointResolved->signerProperties
+        );
     }
 
     /**
