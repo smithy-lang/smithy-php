@@ -32,17 +32,25 @@ final class IdentityChain implements IdentityChainInterface
 
     private ?ResolvedIdentityMetadata $lastResolvedMetadata = null;
 
+    private bool $refreshRequired = false;
+
+    /** @var \Closure(IdentityInterface, IdentityInterface): bool */
+    private readonly \Closure $identityMatcher;
+
     /**
      * @param class-string<IdentityInterface> $identityType
      * @param list<ChainIdentityProviderInterface> $providers
      * @param list<string> $slotOrder
      * @param array<string, mixed> $properties
+     * @param null|callable(IdentityInterface, IdentityInterface): bool
+     *     $identityMatcher Compare the cached identity to a rejected identity.
      */
     public function __construct(
         string $identityType,
         array $providers,
         array $slotOrder,
-        array $properties = []
+        array $properties = [],
+        ?callable $identityMatcher = null
     )
     {
         if (!\is_a($identityType, IdentityInterface::class, true)) {
@@ -54,6 +62,12 @@ final class IdentityChain implements IdentityChainInterface
         }
 
         $this->identityType = $identityType;
+        $this->identityMatcher = $identityMatcher === null
+            ? static fn(
+                IdentityInterface $cached,
+                IdentityInterface $rejected
+            ): bool => $cached === $rejected
+            : \Closure::fromCallable($identityMatcher);
         $sortedProviders = self::sortProviders($providers, $slotOrder);
         $setup = new ChainSetup($properties);
 
@@ -70,69 +84,76 @@ final class IdentityChain implements IdentityChainInterface
     }
 
     /** @inheritDoc */
-    public function resolveIdentity(array $properties = []): IdentityInterface
+    public function resolveIdentity(array $properties = []): IdentityResult
     {
         if ($this->cachedIdentity !== null
             && $this->cachedIdentityProperties === $properties
+            && !$this->refreshRequired
             && !$this->requiresRefresh($this->cachedIdentity)
         ) {
-            return $this->cachedIdentity;
+            return IdentityResult::success($this->cachedIdentity);
         }
 
         if ($this->registrations === []) {
-            throw new \RuntimeException(
+            return IdentityResult::notFound(
+                self::class,
                 'No identity resolvers were registered in the chain.'
             );
         }
 
         $failures = [];
-        $previous = null;
 
         foreach ($this->registrations as $registration) {
-            try {
-                $identity = $registration->resolver->resolveIdentity(
-                    $properties
-                );
-                if (!$identity instanceof $this->identityType) {
-                    throw new \RuntimeException(
-                        'Identity resolver returned '
-                            . $identity::class
-                            . ', expected '
-                            . $this->identityType
-                            . '.'
-                    );
-                }
-
-                $this->cachedIdentity = $identity;
-                $this->cachedIdentityProperties = $properties;
-                $this->lastResolvedMetadata = $registration->metadata;
-
-                return $identity;
-            } catch (\Throwable $e) {
+            $result = $registration->resolver->resolveIdentity($properties);
+            $identity = $result->identity;
+            if ($identity === null) {
                 $failures[] = $registration->metadata->providerName
                     . ': '
-                    . $e->getMessage();
-                $previous = $e;
+                    . $result->error;
+
+                continue;
             }
+
+            if (!$identity instanceof $this->identityType) {
+                throw new \RuntimeException(
+                    'Identity resolver returned '
+                        . $identity::class
+                        . ', expected '
+                        . $this->identityType
+                        . '.'
+                );
+            }
+
+            $this->cachedIdentity = $identity;
+            $this->cachedIdentityProperties = $properties;
+            $this->lastResolvedMetadata = $registration->metadata;
+            $this->refreshRequired = false;
+
+            return $result;
         }
 
-        throw new \RuntimeException(
+        return IdentityResult::notFound(
+            self::class,
             'Unable to resolve identity from any provider in the chain. '
                 . 'Tried: '
-                . \implode('; ', $failures),
-            previous: $previous
+                . \implode('; ', $failures)
         );
     }
 
     /** @inheritDoc */
-    public function invalidate(): void
+    public function invalidate(IdentityInterface $rejectedIdentity): void
     {
-        $this->cachedIdentity = null;
-        $this->cachedIdentityProperties = null;
-        $this->lastResolvedMetadata = null;
+        if ($this->cachedIdentity !== null
+            && ($this->identityMatcher)(
+                $this->cachedIdentity,
+                $rejectedIdentity
+            )
+        ) {
+            $this->refreshRequired = true;
+        }
 
         foreach ($this->registrations as $registration) {
-            $registration->invalidate();
+            $registration->invalidate($rejectedIdentity);
         }
     }
 

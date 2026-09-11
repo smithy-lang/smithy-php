@@ -6,14 +6,17 @@ namespace Smithy\Tests\Client\Auth\Utils;
 
 use Smithy\Client\Auth\{
     IdentityInterface,
-    IdentityResolverInterface
+    IdentityResolverInterface,
+    IdentityResult
 };
 final class StaticResolverFixture implements IdentityResolverInterface
 {
     public function __construct(private readonly IdentityInterface $identity) {}
 
-    public function resolveIdentity(array $properties = []): IdentityInterface
+    public function resolveIdentity(array $properties = []): IdentityResult
     {
-        return $this->identity;
+        return IdentityResult::success($this->identity);
     }
+
+    public function invalidate(IdentityInterface $rejectedIdentity): void {}
 }

@@ -21,7 +21,9 @@ use Smithy\Client\Auth\{
     AuthSchemeInterface,
     AuthSchemeResolverInterface,
     IdentityInterface,
+    IdentityNotFoundException,
     IdentityResolverInterface,
+    IdentityResult,
     ResolvedAuthScheme,
     SignerInterface,
     StaticAuthSchemeResolver
@@ -64,7 +66,7 @@ use Smithy\Http\Message\{
 };
 use Smithy\Protocol\ProtocolInterface;
 use Smithy\Tests\Async\Utils\RecordingEventLoopFixture;
-use Smithy\Tests\Client\Auth\Utils\ThrowingResolverFixture;
+use Smithy\Tests\Client\Auth\Utils\NotFoundResolverFixture;
 use Smithy\Tests\Client\Fake\{
     FakeInput,
     FakeOperation,
@@ -634,7 +636,77 @@ final class ClientPipelineTest extends TestCase
         );
     }
 
-    public function testIdentityFailureDoesNotFallBackToAnotherScheme(): void
+    public function testAttemptContextTracksEndpointSelectedIdentity(): void
+    {
+        $modeledIdentity = new class implements IdentityInterface {
+            public function getExpirationTime(): ?float
+            {
+                return null;
+            }
+        };
+        $endpointIdentity = new class implements IdentityInterface {
+            public function getExpirationTime(): ?float
+            {
+                return null;
+            }
+        };
+        $modeledResolver = $this->createMock(
+            IdentityResolverInterface::class
+        );
+        $modeledResolver->method('resolveIdentity')->willReturn(
+            IdentityResult::success($modeledIdentity)
+        );
+        $endpointResolver = $this->createMock(
+            IdentityResolverInterface::class
+        );
+        $endpointResolver->method('resolveIdentity')->willReturn(
+            IdentityResult::success($endpointIdentity)
+        );
+        $modeledScheme = new TestAuthSchemeFixture(
+            'smithy.test#modeled',
+            $modeledResolver
+        );
+        $endpointScheme = new TestAuthSchemeFixture(
+            'smithy.test#endpoint',
+            $endpointResolver
+        );
+        $observer = new class extends AbstractInterceptor {
+            public ?OutputContext $attempt = null;
+
+            public function readAfterAttempt(
+                OutputContext $ctx,
+                ?\Throwable $error
+            ): void
+            {
+                $this->attempt = $ctx;
+            }
+        };
+        $pipeline = new ClientPipeline(new ClientConfig(
+            protocol: new FakeProtocol(),
+            httpClient: (new MockHttpClient())->willReturn('body'),
+            endpointResolver: new StaticEndpointResolver(new Endpoint(
+                'https://example.test',
+                authSchemes: [
+                    new EndpointAuthScheme('smithy.test#endpoint')
+                ]
+            )),
+            interceptors: new InterceptorChain($observer),
+            supportedAuthSchemes: [$modeledScheme, $endpointScheme],
+            authSchemeResolver: new StaticAuthSchemeResolver([
+                'smithy.test#modeled'
+            ])
+        ));
+
+        $pipeline->execute(FakeOperation::instance(), new FakeInput());
+
+        $this->assertSame($endpointIdentity, $observer->attempt?->identity);
+        $this->assertSame(
+            $endpointResolver,
+            $observer->attempt?->identityResolver
+        );
+    }
+
+    public function testIdentityMissDoesNotFallBackToAnotherScheme(): void
     {
         $seen = (object) ['selectedScheme' => null];
         $http = (new MockHttpClient())->willReturn('body');
@@ -645,7 +717,7 @@ final class ClientPipelineTest extends TestCase
                 new Endpoint('https://example.test')
             ),
             supportedAuthSchemes: [
-                $this->failingAuthScheme(
+                $this->missingAuthScheme(
                     'smithy.api#httpBearerAuth',
                     'token resolution failed'
                 ),
@@ -661,8 +733,8 @@ final class ClientPipelineTest extends TestCase
         try {
             $pipeline->execute(FakeOperation::instance(), new FakeInput());
             $this->fail('Expected identity resolution to fail.');
-        } catch (\RuntimeException $error) {
-            $this->assertSame(
+        } catch (IdentityNotFoundException $error) {
+            $this->assertStringContainsString(
                 'token resolution failed',
                 $error->getMessage()
             );
@@ -756,10 +828,12 @@ final class ClientPipelineTest extends TestCase
             ->expects($this->exactly(2))
             ->method('resolveIdentity')
             ->willReturnCallback(
-                static function () use (&$events): IdentityInterface {
+                static function () use (&$events): IdentityResult {
                     $events[] = 'identity';
 
-                    return AnonymousIdentity::instance();
+                    return IdentityResult::success(
+                        AnonymousIdentity::instance()
+                    );
                 }
             );
         $signer = $this->createMock(SignerInterface::class);
@@ -1704,10 +1778,12 @@ final class ClientPipelineTest extends TestCase
         $identityResolver->method('resolveIdentity')->willReturnCallback(
             static function (array $properties = []) use (
                 $seen
-            ): IdentityInterface {
+            ): IdentityResult {
                 $seen->identityProperties = $properties;
 
-                return AnonymousIdentity::instance();
+                return IdentityResult::success(
+                    AnonymousIdentity::instance()
+                );
             }
         );
         $signer = $this->createMock(SignerInterface::class);
@@ -1735,14 +1811,14 @@ final class ClientPipelineTest extends TestCase
         );
     }
 
-    private function failingAuthScheme(
+    private function missingAuthScheme(
         string $schemeId,
         string $message
     ): AuthSchemeInterface
     {
         return new TestAuthSchemeFixture(
             $schemeId,
-            new ThrowingResolverFixture($message)
+            new NotFoundResolverFixture($message)
         );
     }
 }

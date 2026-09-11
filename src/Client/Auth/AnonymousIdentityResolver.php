@@ -22,8 +22,11 @@ final class AnonymousIdentityResolver implements IdentityResolverInterface
     private function __construct() {}
 
     /** @inheritDoc */
-    public function resolveIdentity(array $properties = []): IdentityInterface
+    public function resolveIdentity(array $properties = []): IdentityResult
     {
-        return AnonymousIdentity::instance();
+        return IdentityResult::success(AnonymousIdentity::instance());
     }
+
+    /** @inheritDoc */
+    public function invalidate(IdentityInterface $rejectedIdentity): void {}
 }

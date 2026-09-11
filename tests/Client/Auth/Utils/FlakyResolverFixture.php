@@ -6,7 +6,8 @@ namespace Smithy\Tests\Client\Auth\Utils;
 
 use Smithy\Client\Auth\{
     IdentityInterface,
-    IdentityResolverInterface
+    IdentityResolverInterface,
+    IdentityResult
 };
 
 /**
@@ -16,10 +17,10 @@ final class FlakyResolverFixture implements IdentityResolverInterface
 {
     public int $calls = 0;
 
-    /** @param list<IdentityInterface|\Throwable> $sequence */
+    /** @param list<IdentityInterface|IdentityResult|\Throwable> $sequence */
     public function __construct(private readonly array $sequence) {}
 
-    public function resolveIdentity(array $properties = []): IdentityInterface
+    public function resolveIdentity(array $properties = []): IdentityResult
     {
         $entry = $this->sequence[$this->calls] ?? null;
         $this->calls++;
@@ -27,6 +28,10 @@ final class FlakyResolverFixture implements IdentityResolverInterface
             throw $entry;
         }
 
-        return $entry;
+        return $entry instanceof IdentityResult
+            ? $entry
+            : IdentityResult::success($entry);
     }
+
+    public function invalidate(IdentityInterface $rejectedIdentity): void {}
 }

@@ -19,7 +19,7 @@ final class StaticTokenProviderTest extends TestCase
         $identity = (new StaticTokenProvider(
             'token',
             123.0
-        ))->resolveIdentity();
+        ))->resolveIdentity()->unwrap();
 
         self::assertInstanceOf(BearerToken::class, $identity);
         self::assertSame('token', $identity->token);
@@ -32,7 +32,7 @@ final class StaticTokenProviderTest extends TestCase
 
         self::assertSame(
             $token,
-            (new StaticTokenProvider($token))->resolveIdentity()
+            (new StaticTokenProvider($token))->resolveIdentity()->unwrap()
         );
     }
 }
