@@ -9,6 +9,7 @@ use Psr\Http\Message\{
     ResponseInterface,
     StreamInterface
 };
+use Smithy\Client\Endpoint\Endpoint;
 use Smithy\Protocol\ProtocolInterface;
 use Smithy\Core\Serde\SerializableStructInterface;
 use Smithy\Core\Shape\OperationInterface;
@@ -54,6 +55,27 @@ final class FakeProtocol implements ProtocolInterface
             new Uri($endpoint),
             [],
             $this->requestBody ?? $this->requestPrefix . $input->value
+        );
+    }
+
+    public function setServiceEndpoint(
+        RequestInterface $request,
+        Endpoint $endpoint
+    ): RequestInterface
+    {
+        $endpointUri = new Uri($endpoint->url);
+        $requestUri = $request->getUri();
+        $endpointPath = $endpointUri->getPath();
+        $path = $endpointPath !== '' && $endpointPath !== '/'
+            ? \rtrim($endpointPath, '/') . $requestUri->getPath()
+            : $requestUri->getPath();
+
+        return $request->withUri(
+            $endpointUri
+                ->withPath($path)
+                ->withQuery($requestUri->getQuery())
+                ->withFragment('')
+                ->withUserInfo('')
         );
     }
 

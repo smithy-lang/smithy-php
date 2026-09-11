@@ -35,7 +35,6 @@ final class StaticAuthSchemeResolverTest extends TestCase
 
         $resolved = $resolver->resolveAuthScheme(
             FakeOperation::instance(),
-            $endpoint,
             $config
         );
 
@@ -49,7 +48,6 @@ final class StaticAuthSchemeResolverTest extends TestCase
 
         $resolved = StaticAuthSchemeResolver::noAuth()->resolveAuthScheme(
             $this->createStub(OperationInterface::class),
-            $endpoint,
             $config
         );
 

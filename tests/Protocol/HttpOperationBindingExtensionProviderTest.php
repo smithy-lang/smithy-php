@@ -8,6 +8,7 @@ use Psr\Http\Message\StreamInterface;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Smithy\Codec\Json\JsonCodec;
+use Smithy\Client\Endpoint\Endpoint;
 use Smithy\Protocol\AbstractHttpBindingProtocol;
 use Smithy\Protocol\HttpErrorDeserializer;
 use Smithy\Protocol\HttpOperationBindingExtension;
@@ -115,5 +116,53 @@ final class HttpOperationBindingExtensionProviderTest extends TestCase
             'mode=true&fixed=true',
             $request->getUri()->getQuery()
         );
+    }
+
+    public function testProtocolBindsEndpointAfterRelativeSerialization(): void
+    {
+        $codec = new JsonCodec();
+        $errorDeserializer = new class($codec) extends HttpErrorDeserializer {
+            protected function parseError(StreamInterface $body): array
+            {
+                throw new \LogicException('Not used by this test.');
+            }
+        };
+        $protocol = new class(
+            $codec,
+            $errorDeserializer
+        ) extends AbstractHttpBindingProtocol {
+            protected static string $defaultContentType = 'application/json';
+
+            public function getId(): string
+            {
+                return 'smithy.tests#httpBinding';
+            }
+        };
+        $input = new HttpBindingInputShapeFixture(
+            mode: true,
+            id: 'thing'
+        );
+        $request = $protocol->serializeRequest(
+            HttpBindingOperationFixture::instance(),
+            $input,
+            '/'
+        );
+
+        self::assertSame(
+            '/things/thing?mode=true&fixed=true',
+            (string) $request->getUri()
+        );
+        self::assertSame('', $request->getHeaderLine('Host'));
+
+        $request = $protocol->setServiceEndpoint(
+            $request,
+            new Endpoint('https://example.com/base')
+        );
+
+        self::assertSame(
+            'https://example.com/base/things/thing?mode=true&fixed=true',
+            (string) $request->getUri()
+        );
+        self::assertSame('example.com', $request->getHeaderLine('Host'));
     }
 }

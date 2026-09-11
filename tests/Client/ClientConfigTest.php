@@ -169,7 +169,6 @@ final class ClientConfigTest extends TestCase
             NoAuthScheme::instance(),
             $config->authSchemeResolver->resolveAuthScheme(
                 FakeOperation::instance(),
-                $endpoint,
                 $config
             )->scheme
         );
