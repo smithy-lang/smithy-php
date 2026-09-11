@@ -11,19 +11,21 @@ use Smithy\Client\Auth\{
     ChainSetup,
     IdentityChain,
     IdentityInterface,
+    IdentityNotFoundException,
     IdentityResolverInterface,
     OrderingConstraint
 };
 use Smithy\Tests\Client\Auth\Utils\{
     CallLogFixture,
+    CountingNotFoundResolverFixture,
     CountingResolverFixture,
     CountingThrowingResolverFixture,
+    NotFoundResolverFixture,
     SeenValueFixture,
     SequenceResolverFixture,
     StaticResolverFixture,
     TestIdentityFixture,
-    TestProviderFixture,
-    ThrowingResolverFixture
+    TestProviderFixture
 };
 
 final class IdentityChainTest extends TestCase
@@ -192,7 +194,7 @@ final class IdentityChainTest extends TestCase
                     'first',
                     OrderingConstraint::standard('slot-a'),
                     $firstLog,
-                    resolver: new ThrowingResolverFixture('nope')
+                    resolver: new NotFoundResolverFixture('nope')
                 ),
                 new TestProviderFixture(
                     'second',
@@ -205,7 +207,7 @@ final class IdentityChainTest extends TestCase
             slotOrder: ['slot-a', 'slot-b']
         );
 
-        $identity = $chain->resolveIdentity();
+        $identity = $chain->resolveIdentity()->unwrap();
 
         $this->assertInstanceOf(TestIdentityFixture::class, $identity);
         $this->assertSame(
@@ -220,7 +222,7 @@ final class IdentityChainTest extends TestCase
 
     public function testResolveIdentityCachesWinningResolver(): void
     {
-        $firstResolver = new CountingThrowingResolverFixture('nope');
+        $firstResolver = new CountingNotFoundResolverFixture('nope');
         $secondResolver = new CountingResolverFixture(
             new TestIdentityFixture()
         );
@@ -243,8 +245,8 @@ final class IdentityChainTest extends TestCase
             slotOrder: ['slot-a', 'slot-b']
         );
 
-        $first = $chain->resolveIdentity();
-        $second = $chain->resolveIdentity();
+        $first = $chain->resolveIdentity()->unwrap();
+        $second = $chain->resolveIdentity()->unwrap();
 
         $this->assertSame($first, $second);
         $this->assertSame(1, $firstResolver->calls);
@@ -275,20 +277,20 @@ final class IdentityChainTest extends TestCase
 
         $this->assertSame($first, $chain->resolveIdentity([
             'scope' => 'one'
-        ]));
+        ])->unwrap());
         $this->assertSame($first, $chain->resolveIdentity([
             'scope' => 'one'
-        ]));
+        ])->unwrap());
         $this->assertSame($second, $chain->resolveIdentity([
             'scope' => 'two'
-        ]));
+        ])->unwrap());
         $this->assertSame($second, $chain->resolveIdentity([
             'scope' => 'two'
-        ]));
+        ])->unwrap());
         $this->assertSame(2, $resolver->calls);
     }
 
-    public function testResolveIdentityContinuesAfterWrongIdentityType(): void
+    public function testResolveIdentityRejectsWrongIdentityType(): void
     {
         $wrongResolver = new SequenceResolverFixture([
             AnonymousIdentity::instance()
@@ -314,14 +316,19 @@ final class IdentityChainTest extends TestCase
             slotOrder: ['slot-a', 'slot-b']
         );
 
-        $this->assertSame($expected, $chain->resolveIdentity());
-        $this->assertSame($expected, $chain->resolveIdentity());
+        try {
+            $chain->resolveIdentity();
+            $this->fail('Expected the wrong identity type to fail.');
+        } catch (\RuntimeException $error) {
+            $this->assertStringContainsString(
+                'expected ' . TestIdentityFixture::class,
+                $error->getMessage()
+            );
+        }
+
         $this->assertSame(1, $wrongResolver->calls);
-        $this->assertSame(1, $rightResolver->calls);
-        $this->assertSame(
-            'right',
-            $chain->getLastResolvedMetadata()?->providerName
-        );
+        $this->assertSame(0, $rightResolver->calls);
+        $this->assertNull($chain->getLastResolvedMetadata());
     }
 
     public function testResolveIdentityAggregatesFailures(): void
@@ -333,25 +340,63 @@ final class IdentityChainTest extends TestCase
                     'one',
                     OrderingConstraint::standard('slot-a'),
                     new CallLogFixture(),
-                    resolver: new ThrowingResolverFixture('missing env')
+                    resolver: new NotFoundResolverFixture('missing env')
                 ),
                 new TestProviderFixture(
                     'two',
                     OrderingConstraint::standard('slot-b'),
                     new CallLogFixture(),
-                    resolver: new ThrowingResolverFixture('expired token')
+                    resolver: new NotFoundResolverFixture('expired token')
                 )
             ],
             slotOrder: ['slot-a', 'slot-b']
         );
 
-        $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage(
+        $result = $chain->resolveIdentity();
+
+        $this->assertNull($result->identity);
+        $this->assertSame(
             'Unable to resolve identity from any provider in the chain. '
-                . 'Tried: one: missing env; two: expired token'
+                . 'Tried: one: missing env; two: expired token',
+            $result->error
         );
 
-        $chain->resolveIdentity();
+        $this->expectException(IdentityNotFoundException::class);
+        $result->unwrap();
+    }
+
+    public function testResolveIdentityPropagatesUnexpectedFailure(): void
+    {
+        $throwing = new CountingThrowingResolverFixture('malformed config');
+        $later = new CountingResolverFixture(new TestIdentityFixture());
+        $chain = new IdentityChain(
+            TestIdentityFixture::class,
+            providers: [
+                new TestProviderFixture(
+                    'throwing',
+                    OrderingConstraint::standard('slot-a'),
+                    new CallLogFixture(),
+                    resolver: $throwing
+                ),
+                new TestProviderFixture(
+                    'later',
+                    OrderingConstraint::standard('slot-b'),
+                    new CallLogFixture(),
+                    resolver: $later
+                )
+            ],
+            slotOrder: ['slot-a', 'slot-b']
+        );
+
+        try {
+            $chain->resolveIdentity();
+            $this->fail('Expected the resolver failure to propagate.');
+        } catch (\RuntimeException $error) {
+            $this->assertSame('malformed config', $error->getMessage());
+        }
+
+        $this->assertSame(1, $throwing->calls);
+        $this->assertSame(0, $later->calls);
     }
 
     public function testInvalidateClearsLastMetadataAndRunsInvalidators(): void

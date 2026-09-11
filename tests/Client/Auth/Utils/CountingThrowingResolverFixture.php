@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Smithy\Tests\Client\Auth\Utils;
 
 use Smithy\Client\Auth\{
-    IdentityInterface,
-    IdentityResolverInterface
+    IdentityResolverInterface,
+    IdentityResult
 };
 final class CountingThrowingResolverFixture implements IdentityResolverInterface
 {
@@ -14,7 +14,7 @@ final class CountingThrowingResolverFixture implements IdentityResolverInterface
 
     public function __construct(private readonly string $message) {}
 
-    public function resolveIdentity(array $properties = []): IdentityInterface
+    public function resolveIdentity(array $properties = []): IdentityResult
     {
         $this->calls++;
 
