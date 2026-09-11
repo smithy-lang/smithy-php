@@ -6,7 +6,8 @@ namespace Smithy\Tests\Client\Auth\Utils;
 
 use Smithy\Client\Auth\{
     IdentityInterface,
-    IdentityResolverInterface
+    IdentityResolverInterface,
+    IdentityResult
 };
 
 /**
@@ -20,12 +21,12 @@ final class SequenceResolverFixture implements IdentityResolverInterface
     /** @param list<IdentityInterface> $sequence */
     public function __construct(private readonly array $sequence) {}
 
-    public function resolveIdentity(array $properties = []): IdentityInterface
+    public function resolveIdentity(array $properties = []): IdentityResult
     {
         $identity = $this->sequence[$this->calls]
             ?? $this->sequence[\array_key_last($this->sequence)];
         $this->calls++;
 
-        return $identity;
+        return IdentityResult::success($identity);
     }
 }

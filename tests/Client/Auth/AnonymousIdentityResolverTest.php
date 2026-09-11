@@ -21,7 +21,7 @@ final class AnonymousIdentityResolverTest extends TestCase
         self::assertSame($resolver, AnonymousIdentityResolver::instance());
         self::assertSame(
             AnonymousIdentity::instance(),
-            $resolver->resolveIdentity()
+            $resolver->resolveIdentity()->unwrap()
         );
     }
 }

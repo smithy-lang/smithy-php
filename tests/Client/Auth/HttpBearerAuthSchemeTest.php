@@ -35,7 +35,10 @@ final class HttpBearerAuthSchemeTest extends TestCase
             )
         );
 
-        $identity = $scheme->getIdentityResolver($config)->resolveIdentity();
+        $identity = $scheme
+            ->getIdentityResolver($config)
+            ->resolveIdentity()
+            ->unwrap();
 
         self::assertSame(HttpBearerAuthScheme::ID, $scheme->getSchemeId());
         self::assertInstanceOf(BearerToken::class, $identity);
