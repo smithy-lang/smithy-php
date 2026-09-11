@@ -10,9 +10,11 @@ use PHPUnit\Framework\Attributes\{
 };
 use PHPUnit\Framework\TestCase;
 use Smithy\Client\Auth\{
+    AuthSchemeOption,
     AuthSchemeResolver,
     NoAuthScheme,
-    ResolvedAuthScheme
+    ResolvedAuthScheme,
+    StaticAuthSchemeResolver
 };
 use Smithy\Client\ClientConfig;
 use Smithy\Client\Endpoint\{
@@ -92,6 +94,137 @@ final class AuthSchemeResolverTest extends TestCase
         );
         $this->assertSame(
             ['signer' => 'default'],
+            $resolved->signerProperties
+        );
+    }
+
+    public function testMergesAuthSchemeOptionOverrides(): void
+    {
+        $scheme = new TestAuthSchemeFixture(
+            self::SIGV4,
+            identityProperties: [
+                'identity' => 'default',
+                'shared' => 'default'
+            ],
+            signerProperties: [
+                'signer' => 'default',
+                'scope' => 'default'
+            ]
+        );
+        $config = new ClientConfig(
+            protocol: new FakeProtocol(),
+            httpClient: new MockHttpClient(),
+            endpointResolver: new StaticEndpointResolver(
+                new Endpoint('https://example.test')
+            ),
+            supportedAuthSchemes: [$scheme]
+        );
+        $resolver = new StaticAuthSchemeResolver([
+            new AuthSchemeOption(
+                self::SIGV4,
+                [
+                    'shared' => 'option',
+                    'identityOption' => true
+                ],
+                [
+                    'scope' => 'option',
+                    'signerOption' => true
+                ]
+            )
+        ]);
+
+        $resolved = $resolver->resolveAuthScheme(
+            $this->operation([self::SIGV4]),
+            $config
+        );
+
+        $this->assertSame(
+            [
+                'identity' => 'default',
+                'shared' => 'option',
+                'identityOption' => true
+            ],
+            $resolved->identityProperties
+        );
+        $this->assertSame(
+            [
+                'signer' => 'default',
+                'scope' => 'option',
+                'signerOption' => true
+            ],
+            $resolved->signerProperties
+        );
+    }
+
+    public function testSkipsUnsupportedAuthSchemeOptions(): void
+    {
+        $scheme = new TestAuthSchemeFixture(
+            self::SIGV4,
+            identityProperties: ['identity' => 'default']
+        );
+        $config = new ClientConfig(
+            protocol: new FakeProtocol(),
+            httpClient: new MockHttpClient(),
+            endpointResolver: new StaticEndpointResolver(
+                new Endpoint('https://example.test')
+            ),
+            supportedAuthSchemes: [$scheme]
+        );
+        $resolver = new StaticAuthSchemeResolver([
+            new AuthSchemeOption(
+                'smithy.test#unsupported',
+                ['identity' => 'unsupported']
+            ),
+            new AuthSchemeOption(
+                self::SIGV4,
+                ['identity' => 'supported']
+            )
+        ]);
+
+        $resolved = $resolver->resolveAuthScheme(
+            $this->operation([self::SIGV4]),
+            $config
+        );
+
+        $this->assertSame($scheme, $resolved->scheme);
+        $this->assertSame(
+            ['identity' => 'supported'],
+            $resolved->identityProperties
+        );
+    }
+
+    public function testPreferenceReordersOptionsWithTheirOverrides(): void
+    {
+        $sigV4 = new TestAuthSchemeFixture(self::SIGV4);
+        $bearer = new TestAuthSchemeFixture(self::BEARER);
+        $config = new ClientConfig(
+            protocol: new FakeProtocol(),
+            httpClient: new MockHttpClient(),
+            endpointResolver: new StaticEndpointResolver(
+                new Endpoint('https://example.test')
+            ),
+            supportedAuthSchemes: [$sigV4, $bearer]
+        );
+        $resolver = new StaticAuthSchemeResolver([
+            new AuthSchemeOption(
+                self::SIGV4,
+                signerPropertyOverrides: ['selected' => 'sigv4']
+            ),
+            new AuthSchemeOption(
+                self::BEARER,
+                signerPropertyOverrides: ['selected' => 'bearer']
+            )
+        ]);
+
+        $resolved = $resolver->resolveAuthScheme(
+            $this->operation([self::SIGV4, self::BEARER]),
+            $config,
+            ['httpBearerAuth']
+        );
+
+        $this->assertSame($bearer, $resolved->scheme);
+        $this->assertSame(
+            ['selected' => 'bearer'],
             $resolved->signerProperties
         );
     }
