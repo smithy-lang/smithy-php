@@ -18,6 +18,9 @@ final class SequenceResolverFixture implements IdentityResolverInterface
 {
     public int $calls = 0;
 
+    /** @var list<IdentityInterface> */
+    public array $invalidated = [];
+
     /** @param list<IdentityInterface> $sequence */
     public function __construct(private readonly array $sequence) {}
 
@@ -28,5 +31,10 @@ final class SequenceResolverFixture implements IdentityResolverInterface
         $this->calls++;
 
         return IdentityResult::success($identity);
+    }
+
+    public function invalidate(IdentityInterface $rejectedIdentity): void
+    {
+        $this->invalidated[] = $rejectedIdentity;
     }
 }

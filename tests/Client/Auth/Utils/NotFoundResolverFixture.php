@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Smithy\Tests\Client\Auth\Utils;
 
 use Smithy\Client\Auth\{
+    IdentityInterface,
     IdentityResolverInterface,
     IdentityResult
 };
@@ -20,4 +21,6 @@ final class NotFoundResolverFixture implements IdentityResolverInterface
     {
         return IdentityResult::notFound(self::class, $this->message);
     }
+
+    public function invalidate(IdentityInterface $rejectedIdentity): void {}
 }

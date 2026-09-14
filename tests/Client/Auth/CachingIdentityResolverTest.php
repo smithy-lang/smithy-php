@@ -145,6 +145,58 @@ final class CachingIdentityResolverTest extends TestCase
         $this->assertSame($inner, $resolver->getInner());
     }
 
+    public function testMatchingInvalidationRefreshesCachedIdentity(): void
+    {
+        $initial = self::identityExpiring(null);
+        $fresh = self::identityExpiring(null);
+        $inner = new SequenceResolverFixture([$initial, $fresh]);
+        $resolver = new CachingIdentityResolver($inner);
+
+        $this->assertSame($initial, $resolver->resolveIdentity()->unwrap());
+        $resolver->invalidate($initial);
+
+        $this->assertSame($fresh, $resolver->resolveIdentity()->unwrap());
+        $this->assertSame(2, $inner->calls);
+        $this->assertSame([$initial], $inner->invalidated);
+    }
+
+    public function testStaleInvalidationPreservesCachedIdentity(): void
+    {
+        $current = self::identityExpiring(null);
+        $stale = self::identityExpiring(null);
+        $inner = new CountingResolverFixture($current);
+        $resolver = new CachingIdentityResolver($inner);
+
+        $this->assertSame($current, $resolver->resolveIdentity()->unwrap());
+        $resolver->invalidate($stale);
+
+        $this->assertSame($current, $resolver->resolveIdentity()->unwrap());
+        $this->assertSame(1, $inner->calls);
+        $this->assertSame([$stale], $inner->invalidated);
+    }
+
+    public function testCustomMatcherInvalidatesEquivalentIdentity(): void
+    {
+        $initial = self::identityExpiring(null);
+        $equivalent = self::identityExpiring(null);
+        $fresh = self::identityExpiring(null);
+        $inner = new SequenceResolverFixture([$initial, $fresh]);
+        $resolver = new CachingIdentityResolver(
+            $inner,
+            identityMatcher: static fn(
+                IdentityInterface $cached,
+                IdentityInterface $rejected
+            ): bool => $cached->getExpirationTime()
+                === $rejected->getExpirationTime()
+        );
+
+        $this->assertSame($initial, $resolver->resolveIdentity()->unwrap());
+        $resolver->invalidate($equivalent);
+
+        $this->assertSame($fresh, $resolver->resolveIdentity()->unwrap());
+        $this->assertSame(2, $inner->calls);
+    }
+
     public function testInnerThrowIsNotCached(): void
     {
         $identity = self::identityExpiring(null);

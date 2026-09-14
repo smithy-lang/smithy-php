@@ -12,18 +12,14 @@ use Smithy\Client\Auth\{
 };
 final class TestProviderFixture implements ChainIdentityProviderInterface
 {
-    /**
-     * @param list<string> $featureIds
-     * @param null|callable(): void $invalidator
-     */
+    /** @param list<string> $featureIds */
     public function __construct(
         private readonly string $name,
         private readonly OrderingConstraint $ordering,
         private readonly CallLogFixture $log,
         private readonly ?IdentityResolverInterface $resolver = null,
         private readonly array $featureIds = [],
-        private readonly bool $terminal = false,
-        private readonly mixed $invalidator = null
+        private readonly bool $terminal = false
     ) {}
 
     public function name(): string
@@ -51,10 +47,10 @@ final class TestProviderFixture implements ChainIdentityProviderInterface
         }
 
         if ($this->terminal) {
-            $setup->addTerminalResolver($this->resolver, $this->invalidator);
+            $setup->addTerminalResolver($this->resolver);
             return;
         }
 
-        $setup->addResolver($this->resolver, $this->invalidator);
+        $setup->addResolver($this->resolver);
     }
 }

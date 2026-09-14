@@ -32,4 +32,6 @@ final class FlakyResolverFixture implements IdentityResolverInterface
             ? $entry
             : IdentityResult::success($entry);
     }
+
+    public function invalidate(IdentityInterface $rejectedIdentity): void {}
 }
