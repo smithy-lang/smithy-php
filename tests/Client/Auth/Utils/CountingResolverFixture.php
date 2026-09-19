@@ -16,6 +16,9 @@ final class CountingResolverFixture implements IdentityResolverInterface
 {
     public int $calls = 0;
 
+    /** @var list<IdentityInterface> */
+    public array $invalidated = [];
+
     public function __construct(private readonly IdentityInterface $identity) {}
 
     public function resolveIdentity(array $properties = []): IdentityResult
@@ -23,5 +26,10 @@ final class CountingResolverFixture implements IdentityResolverInterface
         $this->calls++;
 
         return IdentityResult::success($this->identity);
+    }
+
+    public function invalidate(IdentityInterface $rejectedIdentity): void
+    {
+        $this->invalidated[] = $rejectedIdentity;
     }
 }

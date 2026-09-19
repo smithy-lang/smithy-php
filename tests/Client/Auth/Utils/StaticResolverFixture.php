@@ -17,4 +17,6 @@ final class StaticResolverFixture implements IdentityResolverInterface
     {
         return IdentityResult::success($this->identity);
     }
+
+    public function invalidate(IdentityInterface $rejectedIdentity): void {}
 }

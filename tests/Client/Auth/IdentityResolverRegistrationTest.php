@@ -11,38 +11,24 @@ use Smithy\Client\Auth\{
     ResolvedIdentityMetadata
 };
 use Smithy\Tests\Client\Auth\Utils\{
-    StaticResolverFixture,
+    CountingResolverFixture,
     TestIdentityFixture
 };
 
 #[CoversClass(IdentityResolverRegistration::class)]
 final class IdentityResolverRegistrationTest extends TestCase
 {
-    public function testRunsRegisteredInvalidator(): void
+    public function testForwardsRejectedIdentityToResolver(): void
     {
-        $invalidated = false;
+        $identity = new TestIdentityFixture();
+        $resolver = new CountingResolverFixture($identity);
         $registration = new IdentityResolverRegistration(
-            new StaticResolverFixture(new TestIdentityFixture()),
-            new ResolvedIdentityMetadata('provider'),
-            invalidator: static function () use (&$invalidated): void {
-                $invalidated = true;
-            }
+            $resolver,
+            new ResolvedIdentityMetadata('provider')
         );
 
-        $registration->invalidate();
+        $registration->invalidate($identity);
 
-        self::assertTrue($invalidated);
-    }
-
-    public function testRejectsInvalidInvalidator(): void
-    {
-        $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('must be callable');
-
-        new IdentityResolverRegistration(
-            new StaticResolverFixture(new TestIdentityFixture()),
-            new ResolvedIdentityMetadata('provider'),
-            invalidator: 'not-callable'
-        );
+        self::assertSame([$identity], $resolver->invalidated);
     }
 }

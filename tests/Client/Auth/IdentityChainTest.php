@@ -399,9 +399,10 @@ final class IdentityChainTest extends TestCase
         $this->assertSame(0, $later->calls);
     }
 
-    public function testInvalidateClearsLastMetadataAndRunsInvalidators(): void
+    public function testMatchingInvalidationRefreshesAndPropagates(): void
     {
-        $invalidated = 0;
+        $identity = new TestIdentityFixture();
+        $resolver = new CountingResolverFixture($identity);
         $chain = new IdentityChain(
             TestIdentityFixture::class,
             providers: [
@@ -409,30 +410,31 @@ final class IdentityChainTest extends TestCase
                     'cache',
                     OrderingConstraint::standard('slot-a'),
                     new CallLogFixture(),
-                    resolver: self::staticResolver(),
-                    invalidator: static function () use (&$invalidated): void {
-                        $invalidated++;
-                    }
+                    resolver: $resolver
                 )
             ],
             slotOrder: ['slot-a']
         );
 
-        $chain->resolveIdentity();
+        $resolved = $chain->resolveIdentity()->unwrap();
         $this->assertSame(
             'cache',
             $chain->getLastResolvedMetadata()?->providerName
         );
 
-        $chain->invalidate();
+        $chain->invalidate($resolved);
 
-        $this->assertNull($chain->getLastResolvedMetadata());
-        $this->assertSame(1, $invalidated);
+        $this->assertSame(
+            'cache',
+            $chain->getLastResolvedMetadata()?->providerName
+        );
+        $this->assertSame([$identity], $resolver->invalidated);
     }
 
     public function testInvalidateForcesChainToResolveAgain(): void
     {
-        $resolver = new CountingResolverFixture(new TestIdentityFixture());
+        $identity = new TestIdentityFixture();
+        $resolver = new CountingResolverFixture($identity);
         $chain = new IdentityChain(
             TestIdentityFixture::class,
             providers: [
@@ -447,7 +449,66 @@ final class IdentityChainTest extends TestCase
         );
 
         $chain->resolveIdentity();
-        $chain->invalidate();
+        $chain->invalidate($identity);
+        $chain->resolveIdentity();
+
+        $this->assertSame(2, $resolver->calls);
+    }
+
+    public function testStaleInvalidationDoesNotClearNewerIdentity(): void
+    {
+        $current = new TestIdentityFixture();
+        $stale = new TestIdentityFixture();
+        $resolver = new CountingResolverFixture($current);
+        $chain = new IdentityChain(
+            TestIdentityFixture::class,
+            providers: [
+                new TestProviderFixture(
+                    'cache',
+                    OrderingConstraint::standard('slot-a'),
+                    new CallLogFixture(),
+                    resolver: $resolver
+                )
+            ],
+            slotOrder: ['slot-a']
+        );
+
+        $chain->resolveIdentity();
+        $chain->invalidate($stale);
+        $chain->resolveIdentity();
+
+        $this->assertSame(1, $resolver->calls);
+        $this->assertSame(
+            'cache',
+            $chain->getLastResolvedMetadata()?->providerName
+        );
+        $this->assertSame([$stale], $resolver->invalidated);
+    }
+
+    public function testCustomMatcherInvalidatesEquivalentIdentity(): void
+    {
+        $current = new TestIdentityFixture();
+        $equivalent = new TestIdentityFixture();
+        $resolver = new CountingResolverFixture($current);
+        $chain = new IdentityChain(
+            TestIdentityFixture::class,
+            providers: [
+                new TestProviderFixture(
+                    'cache',
+                    OrderingConstraint::standard('slot-a'),
+                    new CallLogFixture(),
+                    resolver: $resolver
+                )
+            ],
+            slotOrder: ['slot-a'],
+            identityMatcher: static fn(
+                IdentityInterface $cached,
+                IdentityInterface $rejected
+            ): bool => true
+        );
+
+        $chain->resolveIdentity();
+        $chain->invalidate($equivalent);
         $chain->resolveIdentity();
 
         $this->assertSame(2, $resolver->calls);
