@@ -23,15 +23,17 @@ final class HttpBearerAuthSignerTest extends TestCase
     {
         $request = new Request('GET', new Uri('https://example.test'));
 
-        $signed = HttpBearerAuthSigner::instance()->sign(
+        $result = HttpBearerAuthSigner::instance()->sign(
             $request,
             new BearerToken('mF_9.B5f-4.1JqM')
         );
+        $signed = $result->signedRequest;
 
         self::assertSame(
             'Bearer mF_9.B5f-4.1JqM',
             $signed->getHeaderLine('Authorization')
         );
+        self::assertSame('', $result->signature);
     }
 
     public function testReplacesExistingAuthorizationHeader(): void
@@ -42,10 +44,9 @@ final class HttpBearerAuthSignerTest extends TestCase
             ['Authorization' => 'Bearer old']
         );
 
-        $signed = HttpBearerAuthSigner::instance()->sign(
-            $request,
-            new BearerToken('new')
-        );
+        $signed = HttpBearerAuthSigner::instance()
+            ->sign($request, new BearerToken('new'))
+            ->signedRequest;
 
         self::assertSame(
             'Bearer new',
@@ -73,5 +74,15 @@ final class HttpBearerAuthSignerTest extends TestCase
             new Request('GET', new Uri('https://example.test')),
             AnonymousIdentity::instance()
         );
+    }
+
+    public function testCloseIsIdempotent(): void
+    {
+        $signer = HttpBearerAuthSigner::instance();
+
+        $signer->close();
+        $signer->close();
+
+        self::assertSame($signer, HttpBearerAuthSigner::instance());
     }
 }
