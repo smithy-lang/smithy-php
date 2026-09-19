@@ -19,11 +19,16 @@ final class NullSignerTest extends TestCase
     {
         $request = new Request('GET', 'https://example.test');
         $signer = NullSigner::instance();
+        $result = $signer->sign(
+            $request,
+            AnonymousIdentity::instance()
+        );
 
         self::assertSame($signer, NullSigner::instance());
-        self::assertSame(
-            $request,
-            $signer->sign($request, AnonymousIdentity::instance())
-        );
+        self::assertSame($request, $result->signedRequest);
+        self::assertSame('', $result->signature);
+
+        $signer->close();
+        $signer->close();
     }
 }
