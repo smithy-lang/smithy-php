@@ -21,10 +21,13 @@ final class HttpStructBindingExtensionTest extends TestCase
                 0 => [HttpStructBindingExtension::ROUTE_HEADER, 'x-test']
             ],
             headerMembers: [0 => 'x-test'],
+            headerWireNames: ['x-test' => true],
             bodyMemberIndices: [1],
             bodySchema: $schema,
             requestTimestampKinds: [2 => 1],
-            responseCodeMemberIndex: 3
+            responseCodeMemberIndex: 3,
+            responseBodyMemberIndices: [4],
+            responseBodySchema: $schema
         );
 
         self::assertSame(
@@ -32,9 +35,15 @@ final class HttpStructBindingExtensionTest extends TestCase
             $extension->memberRoutes[0]
         );
         self::assertSame('x-test', $extension->headerMembers[0]);
+        self::assertSame(
+            ['x-test' => true],
+            $extension->headerWireNames
+        );
         self::assertSame([1], $extension->bodyMemberIndices);
         self::assertSame($schema, $extension->bodySchema);
         self::assertSame(1, $extension->requestTimestampKinds[2]);
         self::assertSame(3, $extension->responseCodeMemberIndex);
+        self::assertSame([4], $extension->responseBodyMemberIndices);
+        self::assertSame($schema, $extension->responseBodySchema);
     }
 }
