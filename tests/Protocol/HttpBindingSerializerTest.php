@@ -53,7 +53,7 @@ final class HttpBindingSerializerTest extends TestCase
         self::assertSame(
             [
                 'x-test' => ['x-test', ['cGxhaW4gdGV4dA==']],
-                'x-meta-Trace' => ['x-meta-Trace', ['abc']]
+                'x-meta-trace' => ['x-meta-Trace', ['abc']]
             ],
             $serializer->serializeHeaders()
         );
@@ -92,7 +92,7 @@ final class HttpBindingSerializerTest extends TestCase
         self::assertSame(
             [
                 'x-test' => ['x-test', ['cGxhaW4gdGV4dA==']],
-                'x-meta-Trace' => ['x-meta-Trace', ['abc']]
+                'x-meta-trace' => ['x-meta-Trace', ['abc']]
             ],
             $serializer->serializeHeaders()
         );
@@ -116,6 +116,98 @@ final class HttpBindingSerializerTest extends TestCase
                 [['/things/', null, false], [null, 2, true]],
                 '/things/{path+}'
             )
+        );
+    }
+
+    public function testRejectsInvalidModeledHeaderValue(): void
+    {
+        $schema = new Schema(
+            id: 'smithy.test#HeaderRequest',
+            type: ShapeType::Structure,
+            members: [
+                new Schema(
+                    id: 'smithy.test#HeaderRequest$value',
+                    type: ShapeType::String_,
+                    memberName: 'value',
+                    memberIndex: 0,
+                    traits: [Schema::T_HTTP_HEADER => 'X-Test']
+                ),
+            ]
+        );
+        $bindingInfo = $schema->getExtension(
+            HttpStructBindingExtensionProvider::key()
+        );
+        $serializer = new HttpBindingSerializer(new JsonCodec(), $bindingInfo);
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage(
+            'HTTP header values contain invalid control bytes.'
+        );
+
+        $serializer->serializeString(
+            $schema->getMemberByIndex(0),
+            "value\r\nX-Injected: yes",
+            0
+        );
+    }
+
+    public function testRejectsInvalidListHeaderValue(): void
+    {
+        $schema = HttpBindingFixtureSchemas::classlessEnumLists();
+        $bindingInfo = $schema->getExtension(
+            HttpStructBindingExtensionProvider::key()
+        );
+        $serializer = new HttpBindingSerializer(new JsonCodec(), $bindingInfo);
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage(
+            'HTTP header values contain invalid control bytes.'
+        );
+
+        $serializer->serializeList(
+            $schema->getMemberByIndex(0),
+            ["open\r\nX-Injected: yes"],
+            0
+        );
+    }
+
+    public function testRejectsInvalidPrefixHeaderValue(): void
+    {
+        $schema = HttpBindingFixtureSchemas::request();
+        $bindingInfo = $schema->getExtension(
+            HttpStructBindingExtensionProvider::key()
+        );
+        $serializer = new HttpBindingSerializer(new JsonCodec(), $bindingInfo);
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage(
+            'HTTP header values contain invalid control bytes.'
+        );
+
+        $serializer->serializeMap(
+            $schema->getMemberByIndex(3),
+            ['owner' => "value\r\nX-Injected: yes"],
+            3
+        );
+    }
+
+    public function testRejectsInvalidPrefixHeaderKey(): void
+    {
+        $schema = HttpBindingFixtureSchemas::request();
+        $bindingInfo = $schema->getExtension(
+            HttpStructBindingExtensionProvider::key()
+        );
+        $serializer = new HttpBindingSerializer(new JsonCodec(), $bindingInfo);
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage(
+            'HTTP header names must be valid tokens.'
+        );
+
+        $serializer->serializeMap(
+            $schema->getMemberByIndex(3),
+            ["owner\r\nX-Injected" => 'yes'],
+            3
         );
     }
 
@@ -330,7 +422,7 @@ final class HttpBindingSerializerTest extends TestCase
         self::assertSame(
             [
                 'x-test' => ['x-test', ['explicit']],
-                'X-Other' => ['X-Other', ['other']]
+                'x-other' => ['X-Other', ['other']]
             ],
             $serializer->serializeHeaders()
         );

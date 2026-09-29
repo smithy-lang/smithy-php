@@ -107,6 +107,24 @@ final class HttpMessageValidatorTest extends TestCase
         HttpMessageValidator::validateHeaderName($name);
     }
 
+    public function testAcceptsValidHeaderValueWithoutNormalizingIt(): void
+    {
+        HttpMessageValidator::validateHeaderValue(" \tvalue\t ");
+
+        $this->addToAssertionCount(1);
+    }
+
+    #[DataProvider('invalidFieldValueProvider')]
+    public function testRejectsInvalidSingularHeaderValue(string $value): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage(
+            'HTTP header values contain invalid control bytes.'
+        );
+
+        HttpMessageValidator::validateHeaderValue($value);
+    }
+
     #[DataProvider('headerValueProvider')]
     public function testNormalizesHeaderValues(
         string|array $value,

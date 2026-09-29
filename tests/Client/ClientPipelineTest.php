@@ -436,6 +436,48 @@ final class ClientPipelineTest extends TestCase
         $this->assertSame('new', $request->getHeaderLine('X-Endpoint'));
     }
 
+    /**
+     * @param array<string, string> $headers
+     */
+    #[DataProvider('invalidEndpointHeaderProvider')]
+    public function testRejectsInvalidEndpointHeaders(
+        array $headers,
+        string $message
+    ): void
+    {
+        $http = (new MockHttpClient())->willReturn('body');
+        $pipeline = new ClientPipeline(new ClientConfig(
+            protocol: new FakeProtocol(),
+            httpClient: $http,
+            endpointResolver: new StaticEndpointResolver(
+                new Endpoint(
+                    'https://example.test',
+                    headers: $headers
+                )
+            )
+        ));
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage($message);
+
+        $pipeline->execute(FakeOperation::instance(), new FakeInput());
+    }
+
+    /**
+     * @return iterable<string, array{array<string, string>, string}>
+     */
+    public static function invalidEndpointHeaderProvider(): iterable
+    {
+        yield 'invalid name' => [
+            ['Bad Header' => 'value'],
+            'HTTP header names must be valid tokens.',
+        ];
+        yield 'invalid value' => [
+            ['X-Test' => "value\r\nX-Injected: yes"],
+            'HTTP header values contain invalid control bytes.',
+        ];
+    }
+
     public function testEndpointAuthOverridesModeledAuthWithoutInterceptors(): void
     {
         $this->assertEndpointAuthOverridesModeledAuth([]);

@@ -6,7 +6,9 @@ namespace Smithy\Tests\Protocol;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
+use Smithy\Core\Serde\Schema;
 use Smithy\Core\Serde\TimestampFormat;
+use Smithy\Core\Shape\ShapeType;
 use Smithy\Protocol\HttpStructBindingExtension;
 use Smithy\Protocol\HttpStructBindingExtensionProvider;
 use Smithy\Tests\Protocol\Utils\HttpBindingFixtureSchemas;
@@ -127,5 +129,53 @@ final class HttpStructBindingExtensionProviderTest extends TestCase
             [0, 7, 18, HttpBindingIntEnumFixture::class],
             $extension->responseHeaders['x-priority']
         );
+    }
+
+    public function testRejectsInvalidModeledHeaderName(): void
+    {
+        $schema = new Schema(
+            id: 'smithy.test#InvalidHeaderRequest',
+            type: ShapeType::Structure,
+            members: [
+                new Schema(
+                    id: 'smithy.test#InvalidHeaderRequest$value',
+                    type: ShapeType::String_,
+                    memberName: 'value',
+                    memberIndex: 0,
+                    traits: [Schema::T_HTTP_HEADER => "X-Test\r\n"]
+                ),
+            ]
+        );
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage(
+            'HTTP header names must be valid tokens.'
+        );
+
+        $schema->getExtension(HttpStructBindingExtensionProvider::key());
+    }
+
+    public function testRejectsInvalidModeledPrefixHeaderName(): void
+    {
+        $schema = new Schema(
+            id: 'smithy.test#InvalidPrefixHeaderRequest',
+            type: ShapeType::Structure,
+            members: [
+                new Schema(
+                    id: 'smithy.test#InvalidPrefixHeaderRequest$values',
+                    type: ShapeType::Map,
+                    memberName: 'values',
+                    memberIndex: 0,
+                    traits: [Schema::T_HTTP_PREFIX_HEADERS => 'X Meta-']
+                ),
+            ]
+        );
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage(
+            'HTTP header names must be valid tokens.'
+        );
+
+        $schema->getExtension(HttpStructBindingExtensionProvider::key());
     }
 }
