@@ -2,43 +2,51 @@
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
-[Smithy](https://smithy.io/2.0/index.html) code generators and runtime for clients, servers, and shapes for [PHP](https://www.php.net/).
+[Smithy PHP](https://github.com/smithy-lang/smithy-php) provides code
+generation and runtime libraries for building PHP clients and types from
+[Smithy](https://smithy.io/2.0/index.html) models.
 
 > [!IMPORTANT]
-> All interfaces are subject to change.
-> All modules are still in development and may contain bugs.
-> No guarantee is made about their API stability. Unstable modules are marked with a warning in their
-> `README.md` and with the `@SmithyUnstableApi` annotation..
+> Smithy PHP is in developer preview. APIs may change before the first stable
+> release.
 
----
+This repository contains:
 
-This repository contains two major components:
-1. Smithy code generators for PHP
-2. Core modules and interfaces for building services and clients in PHP
-
-These components facilitate generating clients, servers stubs, and types for a Smithy service.
-The [Codegen](./Codegen) namespace contains the source code for generating clients.
+- a [code generator](src/Codegen/README.md) for clients, types, operation
+  metadata, runtime schemas, and endpoint rules
+- a [client runtime](src/Client/README.md) for endpoint resolution,
+  authentication, retries, plugins, interceptors, and operation execution
+- [protocol](src/Protocol/README.md) and [codec](src/Codec/README.md)
+  implementations for converting modeled values to and from HTTP messages
+- [HTTP message](src/Http/Message/README.md) and
+  [HTTP client](src/Http/Client/README.md) implementations
+- [core schema and shape](src/Core/README.md) types and
+  [fiber-based concurrency](src/Async/README.md) helpers
 
 > [!NOTE]
-> This repository does not contain any generated clients, such as for S3 or other AWS services.
-> These are the tools that facilitate the generation of those clients and non-AWS Smithy clients.
+> This repository contains the generator and runtime. It does not contain
+> generated clients for AWS or other services.
 
 ## Getting Started
 
-If this is your first time using Smithy, follow the [Smithy Quickstart guide](https://smithy.io/2.0/quickstart.html)
-to learn the basics and create a simple Smithy model.
+If you are new to Smithy, follow the
+[Smithy quickstart](https://smithy.io/2.0/quickstart.html) to create and build
+a model.
 
-For a guided introduction to this project, see the (**TODO:** write quickstart guide)
+See the [code generator guide](src/Codegen/README.md) to generate a client from
+a Smithy JSON AST. Each runtime component also has a README with its contracts
+and usage.
 
-## Core modules and Interfaces
+To install dependencies and run the test suite from a source checkout:
 
-**TODO:** write design for package structure
+```shell
+composer install
+composer test
+```
 
 ## Security
 
-If you discover a potential security issue in this project we ask that you notify AWS/Amazon Security via our
-[vulnerability reporting page](http://aws.amazon.com/security/vulnerability-reporting/).
-Please do **not** create a public GitHub issue.
+See the [security policy](SECURITY.md) to report a potential vulnerability.
 
 ## License
 
