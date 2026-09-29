@@ -266,4 +266,74 @@ final class HttpBindingSerializerTest extends TestCase
         );
     }
 
+    public function testTreatsResponseCodeAsRequestBodyMember(): void
+    {
+        $schema = HttpBindingFixtureSchemas::providerRequest();
+        $members = $schema->getMembersByIndex();
+        $bindingInfo = $schema->getExtension(
+            HttpStructBindingExtensionProvider::key()
+        );
+        $serializer = new HttpBindingSerializer(new JsonCodec(), $bindingInfo);
+
+        $serializer->serializeString($members[5], 'body text', 5);
+        $serializer->serializeInteger($members[6], 418, 6);
+
+        self::assertSame(
+            '{"body":"body text","status":418}',
+            $serializer->serializeBody()
+        );
+    }
+
+    public function testExplicitHeaderTakesPrecedenceOverPrefixHeader(): void
+    {
+        $schema = new Schema(
+            id: 'smithy.test#PrefixHeaderRequest',
+            type: ShapeType::Structure,
+            members: [
+                new Schema(
+                    id: 'smithy.test#PrefixHeaderRequest$header',
+                    type: ShapeType::String_,
+                    memberName: 'header',
+                    memberIndex: 0,
+                    traits: [Schema::T_HTTP_HEADER => 'X-Test']
+                ),
+                new Schema(
+                    id: 'smithy.test#PrefixHeaderRequest$headers',
+                    type: ShapeType::Map,
+                    memberName: 'headers',
+                    memberIndex: 1,
+                    mapKey: new Schema(
+                        id: 'smithy.api#String',
+                        type: ShapeType::String_
+                    ),
+                    mapValue: new Schema(
+                        id: 'smithy.api#String',
+                        type: ShapeType::String_
+                    ),
+                    traits: [Schema::T_HTTP_PREFIX_HEADERS => '']
+                )
+            ]
+        );
+        $members = $schema->getMembersByIndex();
+        $bindingInfo = $schema->getExtension(
+            HttpStructBindingExtensionProvider::key()
+        );
+        $serializer = new HttpBindingSerializer(new JsonCodec(), $bindingInfo);
+
+        $serializer->serializeString($members[0], 'explicit', 0);
+        $serializer->serializeMap(
+            $members[1],
+            ['X-Test' => 'prefix', 'X-Other' => 'other'],
+            1
+        );
+
+        self::assertSame(
+            [
+                'x-test' => ['x-test', ['explicit']],
+                'X-Other' => ['X-Other', ['other']]
+            ],
+            $serializer->serializeHeaders()
+        );
+    }
+
 }

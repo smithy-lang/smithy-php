@@ -62,8 +62,13 @@ final class HttpStructBindingExtensionProviderTest extends TestCase
             HttpStructBindingExtension::ROUTE_RESPONSE_CODE,
             $extension->memberRoutes[6]
         );
-        self::assertSame([5], $extension->bodyMemberIndices);
+        self::assertSame([5, 6], $extension->bodyMemberIndices);
+        self::assertSame(
+            [1, 2, 4, 5],
+            $extension->responseBodyMemberIndices
+        );
         self::assertSame('x-test', $extension->headerMembers[0]);
+        self::assertSame(['x-test' => true], $extension->headerWireNames);
         self::assertSame('mode', $extension->queryMembers[1]);
         self::assertSame(['mode' => true], $extension->httpQueryNames);
         self::assertSame(2, $extension->requestTimestampKinds[0]);
@@ -76,6 +81,33 @@ final class HttpStructBindingExtensionProviderTest extends TestCase
         self::assertSame(
             'body',
             $extension->bodySchema?->getMemberByIndex(5)?->memberName
+        );
+        self::assertSame(
+            'status',
+            $extension->bodySchema?->getMemberByIndex(6)?->memberName
+        );
+        self::assertSame(
+            HttpStructBindingExtension::ROUTE_BODY_MEMBER,
+            $extension->writeInfo[6][0]
+        );
+        self::assertSame(
+            'mode',
+            $extension->responseBodySchema?->getMemberByIndex(1)?->memberName
+        );
+        self::assertSame(
+            'id',
+            $extension->responseBodySchema?->getMemberByIndex(2)?->memberName
+        );
+        self::assertSame(
+            'extra',
+            $extension->responseBodySchema?->getMemberByIndex(4)?->memberName
+        );
+        self::assertSame(
+            'body',
+            $extension->responseBodySchema?->getMemberByIndex(5)?->memberName
+        );
+        self::assertNull(
+            $extension->responseBodySchema?->getMemberByIndex(6)
         );
     }
 
