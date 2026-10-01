@@ -365,6 +365,52 @@ final class IdentityChainTest extends TestCase
         $result->unwrap();
     }
 
+    public function testTerminalResolverMissReturnsAuthoritativeFailure(): void
+    {
+        $first = new CountingNotFoundResolverFixture('missing ambient source');
+        $chain = new IdentityChain(
+            TestIdentityFixture::class,
+            providers: [
+                new TestProviderFixture(
+                    'ambient',
+                    OrderingConstraint::standard('slot-a'),
+                    new CallLogFixture(),
+                    resolver: $first
+                ),
+                new TestProviderFixture(
+                    'authoritative',
+                    OrderingConstraint::standard('slot-b'),
+                    new CallLogFixture(),
+                    resolver: new NotFoundResolverFixture(
+                        'configured source unavailable'
+                    ),
+                    terminal: true
+                )
+            ],
+            slotOrder: ['slot-a', 'slot-b']
+        );
+
+        $result = $chain->resolveIdentity();
+
+        $this->assertNull($result->identity);
+        $this->assertSame('configured source unavailable', $result->error);
+        $this->assertSame(NotFoundResolverFixture::class, $result->resolver);
+        $this->assertSame(1, $first->calls);
+
+        try {
+            $result->unwrap();
+            $this->fail('Expected the terminal resolver miss to fail.');
+        } catch (IdentityNotFoundException $error) {
+            $this->assertSame(
+                'Unable to resolve an identity: configured source unavailable '
+                    . '('
+                    . NotFoundResolverFixture::class
+                    . ')',
+                $error->getMessage()
+            );
+        }
+    }
+
     public function testResolveIdentityPropagatesUnexpectedFailure(): void
     {
         $throwing = new CountingThrowingResolverFixture('malformed config');
