@@ -135,4 +135,16 @@ final class PhpTypeTest extends TestCase
         $type = new PhpType(typeHint: 'array', docType: 'list<Human>|null');
         $this->assertSame('list<Human>|null', $type->nullableDocType());
     }
+
+    public function testNullableDocTypeDistinguishesNestedNull(): void
+    {
+        $type = new PhpType(
+            typeHint: 'array',
+            docType: 'list<Human|null>'
+        );
+        $this->assertSame(
+            'list<Human|null>|null',
+            $type->nullableDocType()
+        );
+    }
 }

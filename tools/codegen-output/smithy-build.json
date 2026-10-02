@@ -1,0 +1,25 @@
+{
+    "version": "1.0",
+    "maven": {
+        "dependencies": [
+            "software.amazon.smithy:smithy-protocol-tests:1.73.0"
+        ]
+    },
+    "projections": {
+        "rpcv2-cbor": {
+            "transforms": [
+                {
+                    "name": "includeServices",
+                    "args": {
+                        "services": [
+                            "smithy.protocoltests.rpcv2Cbor#RpcV2Protocol"
+                        ]
+                    }
+                },
+                {
+                    "name": "removeUnusedShapes"
+                }
+            ]
+        }
+    }
+}

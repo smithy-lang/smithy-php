@@ -171,6 +171,107 @@ final class PhpSymbolProviderTest extends TestCase
         );
     }
 
+    public function testSparseCollectionDocTypesAllowNullValues(): void
+    {
+        $model = SmithyModel::fromJson(<<<'JSON'
+{
+    "smithy": "2.0",
+    "shapes": {
+        "smithy.example#SparseList": {
+            "type": "list",
+            "member": {"target": "smithy.api#String"},
+            "traits": {"smithy.api#sparse": {}}
+        },
+        "smithy.example#SparseMap": {
+            "type": "map",
+            "key": {"target": "smithy.api#String"},
+            "value": {"target": "smithy.api#String"},
+            "traits": {"smithy.api#sparse": {}}
+        },
+        "smithy.example#DenseList": {
+            "type": "list",
+            "member": {"target": "smithy.api#String"}
+        },
+        "smithy.example#DenseMap": {
+            "type": "map",
+            "key": {"target": "smithy.api#String"},
+            "value": {"target": "smithy.api#String"}
+        }
+    }
+}
+JSON);
+        $provider = new PhpSymbolProvider(
+            $model,
+            new CodegenSettings(
+                namespace: 'Smithy\\Example',
+                outputDir: '/tmp/out'
+            )
+        );
+
+        self::assertSame(
+            'list<string|null>',
+            $provider->toPhpType('smithy.example#SparseList')->docType
+        );
+        self::assertSame(
+            'list<string|null>|null',
+            $provider->toPhpType(
+                'smithy.example#SparseList'
+            )->nullableDocType()
+        );
+        self::assertSame(
+            'array<string, string|null>',
+            $provider->toPhpType('smithy.example#SparseMap')->docType
+        );
+        self::assertSame(
+            'array<string, string|null>|null',
+            $provider->toPhpType(
+                'smithy.example#SparseMap'
+            )->nullableDocType()
+        );
+        self::assertSame(
+            'list<string>',
+            $provider->toPhpType('smithy.example#DenseList')->docType
+        );
+        self::assertSame(
+            'array<string, string>',
+            $provider->toPhpType('smithy.example#DenseMap')->docType
+        );
+    }
+
+    public function testCollectionDocTypesFullyQualifyNestedClasses(): void
+    {
+        $model = SmithyModel::fromJson(<<<'JSON'
+{
+    "smithy": "2.0",
+    "shapes": {
+        "smithy.example#Child": {"type": "structure"},
+        "smithy.example#Children": {
+            "type": "list",
+            "member": {"target": "smithy.example#Child"}
+        },
+        "smithy.example#ChildrenByName": {
+            "type": "map",
+            "key": {"target": "smithy.api#String"},
+            "value": {"target": "smithy.example#Children"}
+        }
+    }
+}
+JSON);
+        $provider = new PhpSymbolProvider(
+            $model,
+            new CodegenSettings(
+                namespace: 'Smithy\\Example',
+                outputDir: '/tmp/out'
+            )
+        );
+
+        $type = $provider->toPhpType('smithy.example#ChildrenByName');
+        self::assertSame(
+            'array<string, list<\\Smithy\\Example\\Shape\\Child>>',
+            $type->docType
+        );
+    }
+
     /**
      * Build a provider whose model contains one empty structure per
      * given short name, all in the `com.amazonaws.s3` namespace,

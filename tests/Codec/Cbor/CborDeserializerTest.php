@@ -9,6 +9,7 @@ use Smithy\Codec\Cbor\{
     CborCodecSettings,
     CborDeserializer
 };
+use Smithy\Codec\Exception\DeserializationException;
 use Smithy\Core\Serde\{
     Schema,
     TimestampFormat
@@ -325,5 +326,91 @@ final class CborDeserializerTest extends TestCase
         self::assertSame('18446744073709551616', $members[0]->value);
         self::assertInstanceOf(BigDecimal::class, $members[1]);
         self::assertSame('12345e-2', $members[1]->value);
+    }
+
+    public function testDecodesComparableValueWithTypeInformation(): void
+    {
+        $deserializer = new CborDeserializer(
+            new StringRequestStream(\hex2bin(
+                'a16864656661756c7473a16d64656661756c74537472696e67'
+                    . '63666f6f'
+            ))
+        );
+
+        self::assertSame(
+            [
+                'type' => 'map',
+                'value' => [
+                    [
+                        'key' => [
+                            'type' => 'text-string',
+                            'value' => 'defaults'
+                        ],
+                        'value' => [
+                            'type' => 'map',
+                            'value' => [
+                                [
+                                    'key' => [
+                                        'type' => 'text-string',
+                                        'value' => 'defaultString'
+                                    ],
+                                    'value' => [
+                                        'type' => 'text-string',
+                                        'value' => 'foo'
+                                    ]
+                                ]
+                            ]
+                        ]
+                    ]
+                ]
+            ],
+            $deserializer->decodeComparableValue()
+        );
+    }
+
+    public function testComparableValueRejectsExcessivelyNestedTags(): void
+    {
+        $deserializer = new CborDeserializer(
+            new StringRequestStream(
+                \str_repeat("\xC0", 129) . "\xF6"
+            )
+        );
+        $this->expectException(DeserializationException::class);
+
+        $deserializer->decodeComparableValue();
+    }
+
+    public function testComparableEpochTagPreservesInexactLargeInteger(): void
+    {
+        $exact = (new CborDeserializer(
+            new StringRequestStream(\hex2bin(
+                'c11b0020000000000000'
+            ))
+        ))->decodeComparableValue();
+        $inexact = (new CborDeserializer(
+            new StringRequestStream(\hex2bin(
+                'c11b0020000000000001'
+            ))
+        ))->decodeComparableValue();
+
+        self::assertSame('float', $exact['value']['type']);
+        self::assertSame('integer', $inexact['value']['type']);
+        self::assertNotSame($exact, $inexact);
+    }
+
+    public function testComparableEpochTagNormalizesExactIntegerAndFloat(): void
+    {
+        $integer = (new CborDeserializer(
+            new StringRequestStream(\hex2bin(
+                'c11b0020000000000000'
+            ))
+        ))->decodeComparableValue();
+        $float = (new CborDeserializer(
+            new StringRequestStream(\hex2bin(
+                'c1fb4340000000000000'
+            ))
+        ))->decodeComparableValue();
+
+        self::assertSame($integer, $float);
     }
 }
