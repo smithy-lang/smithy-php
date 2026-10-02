@@ -482,6 +482,63 @@ final class SchemasGeneratorTest extends TestCase
         }
     }
 
+    public function testPropagatesConfiguredTargetTraitsFromMixins(): void
+    {
+        $model = SmithyModel::fromJson(\json_encode([
+            'smithy' => '2.0',
+            'shapes' => [
+                'smithy.example#Container' => [
+                    'type' => 'structure',
+                    'members' => [
+                        'item' => [
+                            'target' => 'smithy.example#MixedItem'
+                        ]
+                    ]
+                ],
+                'smithy.example#MixedItem' => [
+                    'type' => 'structure',
+                    'mixins' => [
+                        ['target' => 'smithy.example#MetadataMixin']
+                    ]
+                ],
+                'smithy.example#MetadataMixin' => [
+                    'type' => 'structure',
+                    'traits' => [
+                        'smithy.api#mixin' => [],
+                        'vendor.example#metadata' => 'mixin-value'
+                    ]
+                ]
+            ]
+        ], JSON_THROW_ON_ERROR));
+        $settings = new CodegenSettings(
+            namespace: 'Smithy\\Example',
+            outputDir: '/tmp/out',
+            organization: 'flat',
+            schemaTraitIndices: [
+                'vendor.example#metadata' => 27
+            ]
+        );
+        $generator = new SchemasGenerator(
+            $model,
+            new PhpSymbolProvider($model, $settings),
+            $settings
+        );
+
+        $content = $generator->generate([
+            'smithy.example#Container' => true
+        ])->content;
+
+        $this->assertStringContainsString(
+            "traitsById: ['vendor.example#metadata' => 'mixin-value']",
+            $content
+        );
+        $this->assertStringNotContainsString(
+            "directTraitsById: ['vendor.example#metadata' => "
+                . "'mixin-value']",
+            $content
+        );
+    }
+
     public function testPreservesEndpointContextParamTraitById(): void
     {
         $model = SmithyModel::fromJson(\json_encode([

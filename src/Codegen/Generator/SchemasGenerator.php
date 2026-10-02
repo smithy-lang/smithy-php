@@ -510,7 +510,10 @@ final class SchemasGenerator
         if ($targetShape === null) {
             return;
         }
-        $targetTraits = $targetShape['traits'] ?? [];
+        $targetTraits = $this->buildRootTraits(
+            $targetId,
+            self::PROPAGATE_TRAITS
+        );
         $propagatedTraits = \array_fill_keys(
             self::PROPAGATE_TRAITS,
             true
