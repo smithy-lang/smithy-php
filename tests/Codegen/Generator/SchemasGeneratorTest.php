@@ -503,9 +503,23 @@ final class SchemasGeneratorTest extends TestCase
                 ],
                 'smithy.example#MetadataMixin' => [
                     'type' => 'structure',
+                    'mixins' => [
+                        ['target' => 'smithy.example#BaseMetadataMixin']
+                    ],
                     'traits' => [
-                        'smithy.api#mixin' => [],
-                        'vendor.example#metadata' => 'mixin-value'
+                        'smithy.api#mixin' => []
+                    ]
+                ],
+                'smithy.example#BaseMetadataMixin' => [
+                    'type' => 'structure',
+                    'traits' => [
+                        'smithy.api#mixin' => [
+                            'localTraits' => [
+                                'vendor.example#localMetadata'
+                            ]
+                        ],
+                        'vendor.example#metadata' => 'nested-mixin-value',
+                        'vendor.example#localMetadata' => 'local-only'
                     ]
                 ]
             ]
@@ -515,7 +529,8 @@ final class SchemasGeneratorTest extends TestCase
             outputDir: '/tmp/out',
             organization: 'flat',
             schemaTraitIndices: [
-                'vendor.example#metadata' => 27
+                'vendor.example#metadata' => 27,
+                'vendor.example#localMetadata' => 28
             ]
         );
         $generator = new SchemasGenerator(
@@ -529,14 +544,88 @@ final class SchemasGeneratorTest extends TestCase
         ])->content;
 
         $this->assertStringContainsString(
-            "traitsById: ['vendor.example#metadata' => 'mixin-value']",
+            "'vendor.example#metadata' => 'nested-mixin-value'",
             $content
         );
+        $this->assertStringNotContainsString("'local-only'", $content);
         $this->assertStringNotContainsString(
             "directTraitsById: ['vendor.example#metadata' => "
-                . "'mixin-value']",
+                . "'nested-mixin-value']",
             $content
         );
+    }
+
+    public function testMixinTraitPrecedenceMatchesRuntimeModel(): void
+    {
+        $model = SmithyModel::fromJson(\json_encode([
+            'smithy' => '2.0',
+            'shapes' => [
+                'smithy.example#Container' => [
+                    'type' => 'structure',
+                    'members' => [
+                        'item' => [
+                            'target' => 'smithy.example#MixedItem'
+                        ]
+                    ]
+                ],
+                'smithy.example#MixedItem' => [
+                    'type' => 'structure',
+                    'mixins' => [
+                        ['target' => 'smithy.example#FirstMixin'],
+                        ['target' => 'smithy.example#SecondMixin']
+                    ],
+                    'traits' => [
+                        'vendor.example#localPriority' => 'local-value'
+                    ]
+                ],
+                'smithy.example#FirstMixin' => [
+                    'type' => 'structure',
+                    'traits' => [
+                        'smithy.api#mixin' => [],
+                        'vendor.example#mixinPriority' => 'first-value',
+                        'vendor.example#localPriority' => 'first-local'
+                    ]
+                ],
+                'smithy.example#SecondMixin' => [
+                    'type' => 'structure',
+                    'traits' => [
+                        'smithy.api#mixin' => [],
+                        'vendor.example#mixinPriority' => 'second-value',
+                        'vendor.example#localPriority' => 'second-local'
+                    ]
+                ]
+            ]
+        ], JSON_THROW_ON_ERROR));
+        $settings = new CodegenSettings(
+            namespace: 'Smithy\\Example',
+            outputDir: '/tmp/out',
+            organization: 'flat',
+            schemaTraitIndices: [
+                'vendor.example#mixinPriority' => 27,
+                'vendor.example#localPriority' => 28
+            ]
+        );
+        $generator = new SchemasGenerator(
+            $model,
+            new PhpSymbolProvider($model, $settings),
+            $settings
+        );
+
+        $content = $generator->generate([
+            'smithy.example#Container' => true
+        ])->content;
+
+        $this->assertStringContainsString(
+            "'vendor.example#mixinPriority' => 'second-value'",
+            $content
+        );
+        $this->assertStringContainsString(
+            "'vendor.example#localPriority' => 'local-value'",
+            $content
+        );
+        foreach (['first-value', 'first-local', 'second-local'] as $value) {
+            $this->assertStringNotContainsString($value, $content);
+        }
     }
 
     public function testPreservesEndpointContextParamTraitById(): void

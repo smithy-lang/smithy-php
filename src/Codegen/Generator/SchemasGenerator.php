@@ -648,37 +648,61 @@ final class SchemasGenerator
      * Build the root traits retained by generated schemas.
      *
      * @param list<string> $builtInTraitIds
+     * @param array<string, true> $visited
      * @return array<string, mixed>
      */
     private function buildRootTraits(
         string $shapeId,
-        array $builtInTraitIds
+        array $builtInTraitIds,
+        array $visited = []
     ): array
     {
+        if (isset($visited[$shapeId])) {
+            return [];
+        }
+        $visited[$shapeId] = true;
+
         $shape = $this->model->getShape($shapeId) ?? [];
         $preservedTraits = \array_fill_keys($builtInTraitIds, true)
             + $this->configuredTraitIds();
         $rootTraits = [];
+
+        foreach ($shape['mixins'] ?? [] as $mixin) {
+            $mixinId = \is_array($mixin)
+                ? $mixin['target'] ?? null
+                : null;
+            if (!\is_string($mixinId)) {
+                continue;
+            }
+            $mixinShape = $this->model->getShape($mixinId) ?? [];
+            $mixinTraits = $this->buildRootTraits(
+                $mixinId,
+                $builtInTraitIds,
+                $visited
+            );
+            unset($mixinTraits['smithy.api#mixin']);
+            $mixinTrait = $mixinShape['traits']['smithy.api#mixin'] ?? null;
+            $localTraits = \is_array($mixinTrait)
+                ? $mixinTrait['localTraits'] ?? []
+                : [];
+            if (\is_array($localTraits)) {
+                foreach ($localTraits as $traitId) {
+                    if (\is_string($traitId)) {
+                        unset($mixinTraits[$traitId]);
+                    }
+                }
+            }
+            foreach ($preservedTraits as $traitId => $_) {
+                if (\array_key_exists($traitId, $mixinTraits)) {
+                    $rootTraits[$traitId] = $mixinTraits[$traitId];
+                }
+            }
+        }
+
         $shapeTraits = $shape['traits'] ?? [];
         foreach ($preservedTraits as $traitId => $_) {
             if (\array_key_exists($traitId, $shapeTraits)) {
                 $rootTraits[$traitId] = $shapeTraits[$traitId];
-            }
-        }
-
-        foreach ($shape['mixins'] ?? [] as $mixin) {
-            $mixinId = $mixin['target'] ?? null;
-            if ($mixinId === null) {
-                continue;
-            }
-            $mixinShape = $this->model->getShape($mixinId) ?? [];
-            $mixinTraits = $mixinShape['traits'] ?? [];
-            foreach ($preservedTraits as $traitId => $_) {
-                if (!\array_key_exists($traitId, $rootTraits)
-                    && \array_key_exists($traitId, $mixinTraits)
-                ) {
-                    $rootTraits[$traitId] = $mixinTraits[$traitId];
-                }
             }
         }
 
