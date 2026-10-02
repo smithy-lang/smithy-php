@@ -1,0 +1,152 @@
+{
+    "smithy": "2.0",
+    "shapes": {
+        "smithy.example#EffectiveDefaults": {
+            "type": "structure",
+            "members": {
+                "requiredString": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#required": {}
+                    }
+                },
+                "defaultString": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#default": "hi"
+                    }
+                },
+                "defaultInteger": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#default": 10
+                    }
+                },
+                "defaultFloat": {
+                    "target": "smithy.api#Float",
+                    "traits": {
+                        "smithy.api#default": 1
+                    }
+                },
+                "defaultTimestamp": {
+                    "target": "smithy.api#Timestamp",
+                    "traits": {
+                        "smithy.api#default": 0
+                    }
+                },
+                "defaultBlob": {
+                    "target": "smithy.api#Blob",
+                    "traits": {
+                        "smithy.api#default": "YWJj"
+                    }
+                },
+                "defaultList": {
+                    "target": "smithy.example#StringList",
+                    "traits": {
+                        "smithy.api#default": []
+                    }
+                },
+                "defaultMap": {
+                    "target": "smithy.example#StringMap",
+                    "traits": {
+                        "smithy.api#default": []
+                    }
+                },
+                "defaultEnum": {
+                    "target": "smithy.example#Status",
+                    "traits": {
+                        "smithy.api#default": "ACTIVE"
+                    }
+                },
+                "defaultIntEnum": {
+                    "target": "smithy.example#Priority",
+                    "traits": {
+                        "smithy.api#default": 1
+                    }
+                },
+                "defaultBigInteger": {
+                    "target": "smithy.api#BigInteger",
+                    "traits": {
+                        "smithy.api#default": 123
+                    }
+                },
+                "defaultBigDecimal": {
+                    "target": "smithy.api#BigDecimal",
+                    "traits": {
+                        "smithy.api#default": 1.25
+                    }
+                },
+                "clientOptional": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#clientOptional": {},
+                        "smithy.api#default": 0
+                    }
+                }
+            }
+        },
+        "smithy.example#InputDefaults": {
+            "type": "structure",
+            "members": {
+                "topLevelDefault": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#default": "hi"
+                    }
+                },
+                "requiredMember": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#input": {}
+            }
+        },
+        "smithy.example#StringList": {
+            "type": "list",
+            "member": {
+                "target": "smithy.api#String"
+            }
+        },
+        "smithy.example#StringMap": {
+            "type": "map",
+            "key": {
+                "target": "smithy.api#String"
+            },
+            "value": {
+                "target": "smithy.api#String"
+            }
+        },
+        "smithy.example#Status": {
+            "type": "enum",
+            "members": {
+                "ACTIVE": {
+                    "target": "smithy.api#Unit",
+                    "traits": {
+                        "smithy.api#enumValue": "ACTIVE"
+                    }
+                }
+            }
+        },
+        "smithy.example#Priority": {
+            "type": "intEnum",
+            "members": {
+                "LOW": {
+                    "target": "smithy.api#Unit",
+                    "traits": {
+                        "smithy.api#enumValue": 1
+                    }
+                }
+            }
+        },
+        "smithy.example#PutDefaults": {
+            "type": "operation",
+            "input": {
+                "target": "smithy.example#InputDefaults"
+            }
+        }
+    }
+}

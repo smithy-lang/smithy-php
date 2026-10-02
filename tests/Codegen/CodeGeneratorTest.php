@@ -391,25 +391,25 @@ final class CodeGeneratorTest extends TestCase
             $content
         );
 
-        // Defaulted members: non-nullable, with literal PHP defaults.
+        // Top-level input defaults are ignored in client mode.
         $this->assertStringContainsString(
-            'public readonly int $count = 0,',
+            'public readonly ?int $count = null,',
             $content
         );
         $this->assertStringContainsString(
-            "public readonly string \$label = 'untitled',",
+            'public readonly ?string $label = null,',
             $content
         );
         $this->assertStringContainsString(
-            'public readonly bool $enabled = true,',
+            'public readonly ?bool $enabled = null,',
             $content
         );
         $this->assertStringContainsString(
-            'public readonly float $ratio = 1.5,',
+            'public readonly ?float $ratio = null,',
             $content
         );
         $this->assertStringContainsString(
-            'public readonly array $tags = [],',
+            'public readonly ?array $tags = null,',
             $content
         );
 
@@ -419,9 +419,7 @@ final class CodeGeneratorTest extends TestCase
             $content
         );
 
-        // No per-shape array conversion helpers are emitted. Defaults for
-        // absent input keys come from the constructor parameter defaults,
-        // which the asserts above already pin to the right literal values.
+        // No per-shape array conversion helpers are emitted.
         $this->assertStringNotContainsString("name: \$data['name'],", $content);
         $this->assertStringNotContainsString('public function toArray()', $content);
         $this->assertStringNotContainsString(
@@ -429,16 +427,13 @@ final class CodeGeneratorTest extends TestCase
             $content
         );
 
-        // Scalar enum members: separate property declaration above the
-        // constructor (non-nullable for required/defaulted, nullable for
-        // pure-optional), union-input parameter, and constructor-body
-        // normalization through `fromValue()`.
+        // Input enum defaults are also ignored until explicitly provided.
         $this->assertStringContainsString(
-            'public readonly Status $status;',
+            'public readonly ?Status $status;',
             $content
         );
         $this->assertStringContainsString(
-            'public readonly Priority $priority;',
+            'public readonly ?Priority $priority;',
             $content
         );
         $this->assertStringContainsString(
@@ -447,11 +442,11 @@ final class CodeGeneratorTest extends TestCase
         );
 
         $this->assertStringContainsString(
-            "Status|string \$status = 'ACTIVE',",
+            'Status|string|null $status = null,',
             $content
         );
         $this->assertStringContainsString(
-            'Priority|int $priority = 1,',
+            'Priority|int|null $priority = null,',
             $content
         );
         $this->assertStringContainsString(
@@ -459,16 +454,8 @@ final class CodeGeneratorTest extends TestCase
             $content
         );
 
-        $this->assertStringContainsString(
-            '$this->status = $status instanceof Status '
-                . '? $status : Status::fromValue($status);',
-            $content
-        );
-        $this->assertStringContainsString(
-            '$this->priority = $priority instanceof Priority '
-                . '? $priority : Priority::fromValue($priority);',
-            $content
-        );
+        $this->assertStringContainsString('if ($status !== null) {', $content);
+        $this->assertStringContainsString('if ($priority !== null) {', $content);
         $this->assertStringContainsString('if ($marker !== null) {', $content);
         $this->assertStringContainsString(
             '$this->marker = $marker instanceof Status '
@@ -494,11 +481,9 @@ final class CodeGeneratorTest extends TestCase
             $content
         );
 
-        // Constructor parameter ordering: required, then defaulted, then
-        // optional. PHP forbids non-default parameters after defaults, so
-        // verify the required `name` lands before the first defaulted slot.
+        // All input members are optional and retain model order.
         $namePos = strpos($content, 'public readonly ?string $name');
-        $countPos = strpos($content, 'public readonly int $count');
+        $countPos = strpos($content, 'public readonly ?int $count');
         $descPos = strpos($content, '$description = null');
         $this->assertNotFalse($namePos);
         $this->assertNotFalse($countPos);
