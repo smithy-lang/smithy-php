@@ -511,9 +511,16 @@ final class SchemasGenerator
             return;
         }
         $targetTraits = $targetShape['traits'] ?? [];
-        foreach (self::PROPAGATE_TRAITS as $traitId) {
-            if (!isset($traits[$traitId])
-                && isset($targetTraits[$traitId])
+        $propagatedTraits = \array_fill_keys(
+            self::PROPAGATE_TRAITS,
+            true
+        ) + \array_diff_key(
+            $this->configuredTraitIds(),
+            self::TRAIT_INDEX_MAP
+        );
+        foreach ($propagatedTraits as $traitId => $_) {
+            if (!\array_key_exists($traitId, $traits)
+                && \array_key_exists($traitId, $targetTraits)
             ) {
                 $traits[$traitId] = $targetTraits[$traitId];
             }
@@ -712,6 +719,10 @@ final class SchemasGenerator
             $memberTypeEnum = $this->smithyTypeToEnum($memberType);
             $memberTraits = $targetShape['member']['traits'] ?? [];
             $listMemberTraits = $this->buildMemberTraits($memberTraits);
+            $this->propagateTargetTraits(
+                $memberTarget,
+                $listMemberTraits
+            );
             $listMemberTraitsStr = $this->renderTraitsArray($listMemberTraits);
             $listMemberTraitsByIdStr = $this->renderTraitsById(
                 $listMemberTraits
@@ -756,6 +767,7 @@ final class SchemasGenerator
             $keyTraits = $targetShape['key']['traits'] ?? [];
             $valueTraits = $targetShape['value']['traits'] ?? [];
             $builtKeyTraits = $this->buildMemberTraits($keyTraits);
+            $this->propagateTargetTraits($keyTarget, $builtKeyTraits);
             $keyTraitsStr = $this->renderTraitsArray($builtKeyTraits);
             $keyTraitsByIdStr = $this->renderTraitsById($builtKeyTraits);
             $keyDirectTraitsByIdStr = $this->renderDirectTraitsById(
@@ -763,6 +775,10 @@ final class SchemasGenerator
                 self::DIRECT_MEMBER_TRAITS_BY_ID
             );
             $builtValueTraits = $this->buildMemberTraits($valueTraits);
+            $this->propagateTargetTraits(
+                $valueTarget,
+                $builtValueTraits
+            );
             $valueTraitsStr = $this->renderTraitsArray($builtValueTraits);
             $valueTraitsByIdStr = $this->renderTraitsById(
                 $builtValueTraits
@@ -836,6 +852,7 @@ final class SchemasGenerator
             $memTypeEnum = $this->smithyTypeToEnum($memTargetType);
             $directMemTraits = $memberDef['traits'] ?? [];
             $memTraits = $this->buildMemberTraits($directMemTraits);
+            $this->propagateTargetTraits($memTargetId, $memTraits);
             $memTraitsStr = $this->renderTraitsArray($memTraits);
             $memTraitsByIdStr = $this->renderTraitsById($memTraits);
             $memDirectTraitsByIdStr = $this->renderDirectTraitsById(

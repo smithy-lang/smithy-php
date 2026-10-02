@@ -326,6 +326,144 @@ final class SchemasGeneratorTest extends TestCase
         }
     }
 
+    public function testPropagatesConfiguredTargetTraitsToMembers(): void
+    {
+        $model = SmithyModel::fromJson(\json_encode([
+            'smithy' => '2.0',
+            'shapes' => [
+                'smithy.example#Container' => [
+                    'type' => 'structure',
+                    'members' => [
+                        'inherited' => [
+                            'target' => 'smithy.example#InheritedString'
+                        ],
+                        'overridden' => [
+                            'target' => 'smithy.example#OverrideString',
+                            'traits' => [
+                                'vendor.example#metadata' => 'member-value'
+                            ]
+                        ],
+                        'items' => [
+                            'target' => 'smithy.example#ItemList'
+                        ],
+                        'attributes' => [
+                            'target' => 'smithy.example#AttributeMap'
+                        ]
+                    ]
+                ],
+                'smithy.example#InheritedString' => [
+                    'type' => 'string',
+                    'traits' => [
+                        'vendor.example#metadata' => 'target-value'
+                    ]
+                ],
+                'smithy.example#OverrideString' => [
+                    'type' => 'string',
+                    'traits' => [
+                        'vendor.example#metadata' => 'overridden-target'
+                    ]
+                ],
+                'smithy.example#ItemList' => [
+                    'type' => 'list',
+                    'member' => [
+                        'target' => 'smithy.example#Item'
+                    ]
+                ],
+                'smithy.example#Item' => [
+                    'type' => 'structure',
+                    'traits' => [
+                        'vendor.example#metadata' => 'list-target'
+                    ],
+                    'members' => [
+                        'name' => [
+                            'target' => 'smithy.example#InlineString'
+                        ]
+                    ]
+                ],
+                'smithy.example#InlineString' => [
+                    'type' => 'string',
+                    'traits' => [
+                        'vendor.example#metadata' => 'inline-target'
+                    ]
+                ],
+                'smithy.example#AttributeMap' => [
+                    'type' => 'map',
+                    'key' => [
+                        'target' => 'smithy.example#MapKey'
+                    ],
+                    'value' => [
+                        'target' => 'smithy.example#MapValue'
+                    ]
+                ],
+                'smithy.example#MapKey' => [
+                    'type' => 'string',
+                    'traits' => [
+                        'vendor.example#metadata' => 'map-key-target'
+                    ]
+                ],
+                'smithy.example#MapValue' => [
+                    'type' => 'string',
+                    'traits' => [
+                        'vendor.example#metadata' => 'map-value-target'
+                    ]
+                ]
+            ]
+        ], JSON_THROW_ON_ERROR));
+        $settings = new CodegenSettings(
+            namespace: 'Smithy\\Example',
+            outputDir: '/tmp/out',
+            organization: 'flat',
+            schemaTraitIndices: [
+                'vendor.example#metadata' => 27
+            ]
+        );
+        $generator = new SchemasGenerator(
+            $model,
+            new PhpSymbolProvider($model, $settings),
+            $settings
+        );
+
+        $content = $generator->generate([
+            'smithy.example#Container' => true
+        ])->content;
+
+        foreach ([
+            'target-value',
+            'member-value',
+            'list-target',
+            'inline-target',
+            'map-key-target',
+            'map-value-target'
+        ] as $value) {
+            $this->assertStringContainsString(
+                "traitsById: ['vendor.example#metadata' => '{$value}']",
+                $content
+            );
+        }
+        $this->assertStringContainsString(
+            "directTraitsById: ['vendor.example#metadata' => "
+                . "'member-value']",
+            $content
+        );
+        $this->assertStringNotContainsString(
+            "'overridden-target'",
+            $content
+        );
+        foreach ([
+            'target-value',
+            'list-target',
+            'inline-target',
+            'map-key-target',
+            'map-value-target'
+        ] as $value) {
+            $this->assertStringNotContainsString(
+                "directTraitsById: ['vendor.example#metadata' => "
+                    . "'{$value}']",
+                $content
+            );
+        }
+    }
+
     public function testPreservesEndpointContextParamTraitById(): void
     {
         $model = SmithyModel::fromJson(\json_encode([
