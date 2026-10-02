@@ -124,6 +124,74 @@ final class StructureGeneratorTest extends TestCase
         );
     }
 
+    public function testEffectiveDefaultsUseNullableConstructorSentinels(): void
+    {
+        $model = SmithyModel::fromFile(
+            __DIR__ . '/../../fixtures/effective-defaults-model.json'
+        );
+        $settings = new CodegenSettings(
+            namespace: 'Smithy\\Example',
+            outputDir: '/tmp/out',
+            organization: 'flat'
+        );
+        $generator = new StructureGenerator(
+            $model,
+            new PhpSymbolProvider($model, $settings),
+            $settings
+        );
+
+        $content = $generator->generate(
+            'smithy.example#EffectiveDefaults'
+        )->content;
+
+        $this->assertStringContainsString(
+            'public readonly string $defaultString;',
+            $content
+        );
+        $this->assertStringContainsString(
+            '?string $defaultString = null,',
+            $content
+        );
+        $this->assertStringContainsString(
+            "\$this->defaultString = \$defaultString ?? 'hi';",
+            $content
+        );
+        $this->assertStringContainsString(
+            '$this->defaultFloat = $defaultFloat ?? 1.0;',
+            $content
+        );
+        $this->assertStringContainsString(
+            '$this->defaultTimestamp = $defaultTimestamp ?? 0.0;',
+            $content
+        );
+        $this->assertStringContainsString(
+            '$this->defaultBlob = $defaultBlob ?? "\\x61\\x62\\x63";',
+            $content
+        );
+        $this->assertStringContainsString(
+            "\$this->defaultBigInteger = \$defaultBigInteger "
+                . "?? new BigInteger('123');",
+            $content
+        );
+        $this->assertStringContainsString(
+            "\$this->defaultBigDecimal = \$defaultBigDecimal "
+                . "?? new BigDecimal('1.25');",
+            $content
+        );
+        $this->assertStringContainsString(
+            'Status|string|null $defaultEnum = null,',
+            $content
+        );
+        $this->assertStringContainsString(
+            'Status::fromValue($defaultEnum ?? \'ACTIVE\');',
+            $content
+        );
+        $this->assertStringContainsString(
+            'public readonly ?int $clientOptional = null',
+            $content
+        );
+    }
+
     public function testRequiredMembersRenderAsReadonlyPropertiesInOrder(): void
     {
         // Human has three @required members (name, age, address) plus two
@@ -229,7 +297,7 @@ PHP);
             );
             $count = \strpos(
                 $content,
-                'public readonly int $count = 0,'
+                'public readonly ?int $count = null,'
             );
             $name = \strpos(
                 $content,

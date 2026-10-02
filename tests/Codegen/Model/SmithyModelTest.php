@@ -304,43 +304,82 @@ final class SmithyModelTest extends TestCase
     public function testIsMemberDefaultedRecognizesRenderableDefaults(): void
     {
         $model = SmithyModel::fromFile(
-            __DIR__ . '/../../fixtures/defaults-model.json'
+            __DIR__ . '/../../fixtures/effective-defaults-model.json'
         );
 
-        // Bool/int/float/string all count.
-        $this->assertTrue(
-            $model->isMemberDefaulted('smithy.example#Settings', 'count')
-        );
-        $this->assertTrue(
-            $model->isMemberDefaulted('smithy.example#Settings', 'label')
-        );
-        $this->assertTrue(
-            $model->isMemberDefaulted('smithy.example#Settings', 'enabled')
-        );
-        $this->assertTrue(
-            $model->isMemberDefaulted('smithy.example#Settings', 'ratio')
-        );
-        // Empty-array default counts.
-        $this->assertTrue(
-            $model->isMemberDefaulted('smithy.example#Settings', 'tags')
-        );
-        // Enum + intEnum defaults render as the trait's literal value.
-        $this->assertTrue(
-            $model->isMemberDefaulted('smithy.example#Settings', 'status')
-        );
-        $this->assertTrue(
-            $model->isMemberDefaulted('smithy.example#Settings', 'priority')
-        );
-        // Purely optional members (no @default trait) are not defaulted.
+        foreach ([
+            'defaultString',
+            'defaultInteger',
+            'defaultFloat',
+            'defaultTimestamp',
+            'defaultBlob',
+            'defaultList',
+            'defaultMap',
+            'defaultEnum',
+            'defaultIntEnum',
+            'defaultBigInteger',
+            'defaultBigDecimal'
+        ] as $memberName) {
+            $this->assertTrue(
+                $model->isMemberDefaulted(
+                    'smithy.example#EffectiveDefaults',
+                    $memberName
+                )
+            );
+        }
+
         $this->assertFalse(
-            $model->isMemberDefaulted('smithy.example#Settings', 'description')
+            $model->isMemberDefaulted(
+                'smithy.example#EffectiveDefaults',
+                'clientOptional'
+            )
         );
         $this->assertFalse(
-            $model->isMemberDefaulted('smithy.example#Settings', 'marker')
+            $model->isMemberDefaulted(
+                'smithy.example#EffectiveDefaults',
+                'nope'
+            )
         );
-        // Missing member is not defaulted.
+    }
+
+    public function testClientOptionalMembersIgnoreRequiredAndDefaultTraits(): void
+    {
+        $model = SmithyModel::fromFile(
+            __DIR__ . '/../../fixtures/effective-defaults-model.json'
+        );
+
+        foreach (['topLevelDefault', 'requiredMember'] as $memberName) {
+            $this->assertTrue(
+                $model->isMemberClientOptional(
+                    'smithy.example#InputDefaults',
+                    $memberName
+                )
+            );
+            $this->assertFalse(
+                $model->isMemberRequired(
+                    'smithy.example#InputDefaults',
+                    $memberName
+                )
+            );
+            $this->assertFalse(
+                $model->isMemberDefaulted(
+                    'smithy.example#InputDefaults',
+                    $memberName
+                )
+            );
+        }
+
+        $this->assertTrue(
+            $model->isMemberClientOptional(
+                'smithy.example#EffectiveDefaults',
+                'clientOptional'
+            )
+        );
         $this->assertFalse(
-            $model->isMemberDefaulted('smithy.example#Settings', 'nope')
+            $model->isMemberDefaulted(
+                'smithy.example#EffectiveDefaults',
+                'clientOptional'
+            )
         );
     }
 
@@ -616,40 +655,35 @@ final class SmithyModelTest extends TestCase
     public function testGetMembersOrderedPartitionsRequiredDefaultedOptionalWhenFresh(): void
     {
         $model = SmithyModel::fromFile(
-            __DIR__ . '/../../fixtures/defaults-model.json'
+            __DIR__ . '/../../fixtures/effective-defaults-model.json'
         );
 
-        // Fresh ordering: required first, defaulted next, optional last.
-        // Settings has name required, several defaulted members,
-        // then description/marker optional.
         $ordered = array_keys(
-            $model->getMembersOrdered('smithy.example#Settings')
+            $model->getMembersOrdered('smithy.example#EffectiveDefaults')
         );
 
-        $this->assertSame(
-            'name',
-            $ordered[0],
-            'required member should come first'
-        );
+        $this->assertSame('requiredString', $ordered[0]);
 
-        // The defaulted block follows and contains all seven defaulted members.
-        $defaultedSlice = array_slice($ordered, 1, 7);
+        $defaultedSlice = array_slice($ordered, 1, 11);
         sort($defaultedSlice);
         $this->assertSame(
             [
-                'count',
-                'enabled',
-                'label',
-                'priority',
-                'ratio',
-                'status',
-                'tags'
+                'defaultBigDecimal',
+                'defaultBigInteger',
+                'defaultBlob',
+                'defaultEnum',
+                'defaultFloat',
+                'defaultIntEnum',
+                'defaultInteger',
+                'defaultList',
+                'defaultMap',
+                'defaultString',
+                'defaultTimestamp'
             ],
             $defaultedSlice
         );
 
-        // Optional members trail behind.
-        $this->assertSame(['description', 'marker'], array_slice($ordered, -2));
+        $this->assertSame('clientOptional', $ordered[array_key_last($ordered)]);
     }
 
     public function testGetMembersOrderedHonorsPreservedOrderThenAppendsNew(): void
