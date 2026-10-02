@@ -747,7 +747,8 @@ final class SchemasGenerator
             );
 
             return ", listMember: new Schema(id: '{$memberTarget}', "
-                . "type: {$memberTypeEnum}"
+                . "type: {$memberTypeEnum}, memberName: 'member', "
+                . "memberIndex: 0"
                 . "{$memberMembers}{$memberCollectionParams}"
                 . "{$listMemberTraitsStr}{$listMemberTraitsByIdStr}"
                 . "{$listMemberDirectTraitsByIdStr}"
@@ -803,10 +804,12 @@ final class SchemasGenerator
             );
 
             return ", mapKey: new Schema(id: '{$keyTarget}', "
-                . "type: {$keyTypeEnum}{$keyTraitsStr}"
+                . "type: {$keyTypeEnum}, memberName: 'key', memberIndex: 0"
+                . "{$keyTraitsStr}"
                 . "{$keyTraitsByIdStr}{$keyDirectTraitsByIdStr}), "
                 . "mapValue: new Schema(id: '{$valueTarget}', "
-                . "type: {$valueTypeEnum}"
+                . "type: {$valueTypeEnum}, memberName: 'value', "
+                . "memberIndex: 1"
                 . "{$valueMembers}{$valueCollectionParams}"
                 . "{$valueTraitsStr}{$valueTraitsByIdStr}"
                 . "{$valueDirectTraitsByIdStr}"

@@ -324,6 +324,24 @@ final class SchemasGeneratorTest extends TestCase
                 $content
             );
         }
+        $this->assertStringContainsString(
+            "listMember: new Schema(id: 'smithy.example#Item', "
+                . "type: ShapeType::Structure, memberName: 'member', "
+                . "memberIndex: 0",
+            $content
+        );
+        $this->assertStringContainsString(
+            "mapKey: new Schema(id: 'smithy.api#String', "
+                . "type: ShapeType::String_, memberName: 'key', "
+                . "memberIndex: 0",
+            $content
+        );
+        $this->assertStringContainsString(
+            "mapValue: new Schema(id: 'smithy.api#String', "
+                . "type: ShapeType::String_, memberName: 'value', "
+                . "memberIndex: 1",
+            $content
+        );
     }
 
     public function testPropagatesConfiguredTargetTraitsToMembers(): void
