@@ -264,6 +264,25 @@ final class SchemaTest extends TestCase
         );
     }
 
+    public function testReadsSyntheticErrorsByShapeId(): void
+    {
+        $errors = ['NotFound' => 'example#NotFound'];
+        $schema = new Schema(
+            id: 'example#Operation',
+            type: ShapeType::Operation,
+            traits: [Schema::T_ERRORS => $errors]
+        );
+
+        $this->assertSame(
+            $errors,
+            $schema->getTraitById('smithy.api#errors')
+        );
+        $this->assertSame(
+            ['smithy.api#errors' => $errors],
+            $schema->getTraitsById()
+        );
+    }
+
     public function testDistinguishesDirectAndEffectiveMemberTraits(): void
     {
         $member = new Schema(

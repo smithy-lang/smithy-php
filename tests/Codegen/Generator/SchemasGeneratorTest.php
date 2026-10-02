@@ -138,6 +138,9 @@ final class SchemasGeneratorTest extends TestCase
             'shapes' => [
                 'smithy.example#Thing' => [
                     'type' => 'structure',
+                    'traits' => [
+                        'vendor.example#wireName' => 'root-name'
+                    ],
                     'members' => [
                         'name' => [
                             'target' => 'smithy.api#String',
@@ -169,6 +172,18 @@ final class SchemasGeneratorTest extends TestCase
 
         $this->assertStringContainsString(
             "'wire-name']",
+            $file->content
+        );
+        $this->assertStringContainsString(
+            "traitsById: ['vendor.example#wireName' => 'root-name']",
+            $file->content
+        );
+        $this->assertStringContainsString(
+            "traitsById: ['vendor.example#wireName' => 'wire-name']",
+            $file->content
+        );
+        $this->assertStringContainsString(
+            "directTraitsById: ['vendor.example#wireName' => 'wire-name']",
             $file->content
         );
     }
@@ -215,6 +230,100 @@ final class SchemasGeneratorTest extends TestCase
             "['text' => 'customer\\'s value']",
             $file->content
         );
+        $this->assertStringContainsString(
+            "traitsById: ['vendor.example#metadata' => "
+                . "['text' => 'customer\\'s value']]",
+            $file->content
+        );
+    }
+
+    public function testPreservesConfiguredTraitIdsOnCollectionSchemas(): void
+    {
+        $model = SmithyModel::fromJson(\json_encode([
+            'smithy' => '2.0',
+            'shapes' => [
+                'smithy.example#Container' => [
+                    'type' => 'structure',
+                    'members' => [
+                        'items' => [
+                            'target' => 'smithy.example#ItemList'
+                        ],
+                        'attributes' => [
+                            'target' => 'smithy.example#AttributeMap'
+                        ]
+                    ]
+                ],
+                'smithy.example#ItemList' => [
+                    'type' => 'list',
+                    'member' => [
+                        'target' => 'smithy.example#Item',
+                        'traits' => [
+                            'vendor.example#metadata' => 'list-member'
+                        ]
+                    ]
+                ],
+                'smithy.example#AttributeMap' => [
+                    'type' => 'map',
+                    'key' => [
+                        'target' => 'smithy.api#String',
+                        'traits' => [
+                            'vendor.example#metadata' => 'map-key'
+                        ]
+                    ],
+                    'value' => [
+                        'target' => 'smithy.api#String',
+                        'traits' => [
+                            'vendor.example#metadata' => 'map-value'
+                        ]
+                    ]
+                ],
+                'smithy.example#Item' => [
+                    'type' => 'structure',
+                    'members' => [
+                        'name' => [
+                            'target' => 'smithy.api#String',
+                            'traits' => [
+                                'vendor.example#metadata' => 'inline-member'
+                            ]
+                        ]
+                    ]
+                ]
+            ]
+        ], JSON_THROW_ON_ERROR));
+        $settings = new CodegenSettings(
+            namespace: 'Smithy\\Example',
+            outputDir: '/tmp/out',
+            organization: 'flat',
+            schemaTraitIndices: [
+                'vendor.example#metadata' => 27
+            ]
+        );
+        $generator = new SchemasGenerator(
+            $model,
+            new PhpSymbolProvider($model, $settings),
+            $settings
+        );
+
+        $content = $generator->generate([
+            'smithy.example#Container' => true
+        ])->content;
+
+        foreach ([
+            'list-member',
+            'map-key',
+            'map-value',
+            'inline-member'
+        ] as $value) {
+            $this->assertStringContainsString(
+                "traitsById: ['vendor.example#metadata' => '{$value}']",
+                $content
+            );
+            $this->assertStringContainsString(
+                "directTraitsById: ['vendor.example#metadata' => "
+                    . "'{$value}']",
+                $content
+            );
+        }
     }
 
     public function testPreservesEndpointContextParamTraitById(): void

@@ -304,9 +304,13 @@ final class OperationGeneratorTest extends TestCase
             errorDiscriminators: [
                 'smithy.example#NotFound' => ['NotFoundAlias']
             ],
+            schemaTraitIndices: [
+                'vendor.example#metadata' => 28
+            ],
             operationSchemaTraits: [
                 'smithy.example#GetThing' => [
-                    27 => ['name' => 'value']
+                    27 => ['name' => 'value'],
+                    'vendor.example#metadata' => ['mode' => 'strict']
                 ]
             ]
         );
@@ -324,6 +328,14 @@ final class OperationGeneratorTest extends TestCase
         );
         $this->assertStringContainsString(
             "27 => ['name' => 'value']",
+            $file->content
+        );
+        $this->assertStringContainsString(
+            "28 => ['mode' => 'strict']",
+            $file->content
+        );
+        $this->assertStringContainsString(
+            "'vendor.example#metadata' => ['mode' => 'strict']",
             $file->content
         );
     }

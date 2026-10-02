@@ -492,4 +492,29 @@ final class CodegenSettingsTest extends TestCase
             ]
         );
     }
+
+    public function testFromArrayPreservesOperationTraitIds(): void
+    {
+        $settings = CodegenSettings::fromArray([
+            'namespace' => 'Smithy\\Example',
+            'outputDir' => '/tmp/output',
+            'schemaTraitIndices' => [
+                'vendor.example#metadata' => 27
+            ],
+            'operationSchemaTraits' => [
+                'smithy.example#GetThing' => [
+                    'vendor.example#metadata' => ['name' => 'value']
+                ]
+            ]
+        ]);
+
+        $this->assertSame(
+            [
+                'vendor.example#metadata' => ['name' => 'value']
+            ],
+            $settings->operationSchemaTraits[
+                'smithy.example#GetThing'
+            ]
+        );
+    }
 }
