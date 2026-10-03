@@ -74,6 +74,94 @@ final class XmlSerializerTest extends TestCase
         );
     }
 
+    public function testEncodesXmlEndOfLineCharacters(): void
+    {
+        $cases = [
+            'CiAK' => '&#xA; &#xA;',
+            'YQ0KIGIKIGMN' => 'a&#xD;&#xA; b&#xA; c&#xD;',
+            'YQ3ChSBiwoU=' => 'a&#xD;&#x85; b&#x85;',
+            'YQ3igKggYsKFIGPigKg=' =>
+                'a&#xD;&#x2028; b&#x85; c&#x2028;',
+        ];
+
+        foreach ($cases as $encoded => $escaped) {
+            $value = \base64_decode($encoded, true);
+            self::assertIsString($value);
+
+            $serializer = $this->createSerializer();
+            $serializer->serializeStruct(
+                XmlSampleStructFixture::schema(),
+                new XmlSampleStructFixture(id: $value, name: $value),
+                0
+            );
+            $xml = $serializer->flush();
+
+            self::assertSame(
+                '<SampleStruct xmlns="urn:test" id="' . $escaped . '">'
+                    . '<name>' . $escaped . '</name></SampleStruct>',
+                $xml
+            );
+
+            $parsed = new \SimpleXMLElement($xml);
+            self::assertSame($value, (string) $parsed['id']);
+            self::assertSame($value, (string) $parsed->name);
+        }
+    }
+
+    public function testEscapesXmlMarkupOnEndOfLinePath(): void
+    {
+        $value = "A & <B> \"quoted\" and 'single'\n";
+        $escaped = "A &amp; &lt;B&gt; &quot;quoted&quot; and 'single'"
+            . '&#xA;';
+        $serializer = $this->createSerializer();
+
+        $serializer->serializeStruct(
+            XmlSampleStructFixture::schema(),
+            new XmlSampleStructFixture(id: $value, name: $value),
+            0
+        );
+        $xml = $serializer->flush();
+
+        self::assertSame(
+            '<SampleStruct xmlns="urn:test" id="' . $escaped . '">'
+                . '<name>' . $escaped . '</name></SampleStruct>',
+            $xml
+        );
+
+        $parsed = new \SimpleXMLElement($xml);
+        self::assertSame($value, (string) $parsed['id']);
+        self::assertSame($value, (string) $parsed->name);
+    }
+
+    public function testEncodesXmlEndOfLineCharactersInAggregateValues(): void
+    {
+        $value = "\r\n";
+        $escaped = '&#xD;&#xA;';
+        $serializer = $this->createSerializer();
+
+        $serializer->serializeStruct(
+            XmlSampleStructFixture::schema(),
+            new XmlSampleStructFixture(
+                tags: [$value],
+                flatTags: [$value],
+                flatScores: [$value => $value],
+                child: new XmlNestedStructFixture($value),
+                choice: XmlSampleUnionFixture::unknown('mystery', $value)
+            ),
+            0
+        );
+
+        self::assertSame(
+            '<SampleStruct xmlns="urn:test"><tags><member>' . $escaped
+                . '</member></tags><tag>' . $escaped . '</tag><scoreEntry>'
+                . '<key>' . $escaped . '</key><value>' . $escaped
+                . '</value></scoreEntry><child><value>' . $escaped
+                . '</value></child><choice><mystery>' . $escaped
+                . '</mystery></choice></SampleStruct>',
+            $serializer->flush()
+        );
+    }
+
     public function testSerializeStructHandlesListsMapsNestedStructsAndUnion(): void
     {
         $serializer = $this->createSerializer();
