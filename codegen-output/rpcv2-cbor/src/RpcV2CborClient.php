@@ -46,6 +46,14 @@ use Smithy\ProtocolTests\RpcV2Cbor\Shape\Unit;
  */
 final class RpcV2CborClient extends AbstractClient
 {
+    public function __construct(
+        \Smithy\Client\ClientConfig $config,
+        \Smithy\Client\Plugin\PluginCollection $plugins = new \Smithy\Client\Plugin\PluginCollection()
+    )
+    {
+        parent::__construct($config, $plugins);
+    }
+
     public function emptyInputOutput(
         ?EmptyStructure $input = null,
         ?RequestOverrideConfig $overrides = null
