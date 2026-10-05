@@ -89,4 +89,57 @@ final class TypeRegistryGeneratorTest extends TestCase
 
         $generator->generate('smithy.example#Settings', []);
     }
+
+    public function testExcludesMixinShapes(): void
+    {
+        $model = SmithyModel::fromJson(<<<'JSON'
+{
+    "smithy": "2.0",
+    "shapes": {
+        "smithy.example#ExampleService": {
+            "type": "service",
+            "version": "1.0"
+        },
+        "smithy.example#GeneratedShape": {
+            "type": "structure",
+            "members": {}
+        },
+        "smithy.example#ShapeMixin": {
+            "type": "structure",
+            "members": {},
+            "traits": {
+                "smithy.api#mixin": {}
+            }
+        }
+    }
+}
+JSON);
+        $settings = new CodegenSettings(
+            namespace: 'Smithy\\Example',
+            outputDir: '/tmp/out',
+            organization: 'flat'
+        );
+        $generator = new TypeRegistryGenerator(
+            $model,
+            new PhpSymbolProvider($model, $settings),
+            $settings
+        );
+
+        $file = $generator->generate(
+            'smithy.example#ExampleService',
+            [
+                'smithy.example#GeneratedShape' => true,
+                'smithy.example#ShapeMixin' => true
+            ]
+        );
+
+        self::assertStringContainsString(
+            "'smithy.example#GeneratedShape'",
+            $file->content
+        );
+        self::assertStringNotContainsString(
+            'smithy.example#ShapeMixin',
+            $file->content
+        );
+    }
 }

@@ -346,6 +346,158 @@ PHP);
         );
     }
 
+    public function testFullyQualifiesClassesInCollectionPhpDoc(): void
+    {
+        $model = SmithyModel::fromJson(<<<'JSON'
+{
+    "smithy": "2.0",
+    "shapes": {
+        "smithy.example#ValidationException": {
+            "type": "structure",
+            "members": {
+                "fieldList": {
+                    "target": "smithy.example#ValidationExceptionFieldList"
+                }
+            },
+            "traits": {"smithy.api#error": "client"}
+        },
+        "smithy.example#ValidationExceptionFieldList": {
+            "type": "list",
+            "member": {
+                "target": "smithy.example#ValidationExceptionField"
+            }
+        },
+        "smithy.example#ValidationExceptionField": {
+            "type": "structure"
+        }
+    }
+}
+JSON);
+        $settings = new CodegenSettings(
+            namespace: 'Smithy\\Example',
+            outputDir: '/tmp/out'
+        );
+        $generator = new StructureGenerator(
+            $model,
+            new PhpSymbolProvider($model, $settings),
+            $settings
+        );
+
+        $content = $generator->generate(
+            'smithy.example#ValidationException'
+        )->content;
+
+        $this->assertStringNotContainsString(
+            'use Smithy\\Example\\Shape\\ValidationExceptionField;',
+            $content
+        );
+        $this->assertStringContainsString(
+            '@param list<\\Smithy\\Example\\Shape\\'
+                . 'ValidationExceptionField>|null $fieldList',
+            $content
+        );
+    }
+
+    public function testPhpDocTypeDoesNotCollideWithGeneratedClass(): void
+    {
+        $model = SmithyModel::fromJson(<<<'JSON'
+{
+    "smithy": "2.0",
+    "shapes": {
+        "smithy.example#BigInteger": {
+            "type": "structure",
+            "members": {
+                "values": {"target": "smithy.example#BigIntegerList"}
+            }
+        },
+        "smithy.example#BigIntegerList": {
+            "type": "list",
+            "member": {"target": "smithy.api#BigInteger"}
+        }
+    }
+}
+JSON);
+        $settings = new CodegenSettings(
+            namespace: 'Smithy\\Example',
+            outputDir: '/tmp/out'
+        );
+        $generator = new StructureGenerator(
+            $model,
+            new PhpSymbolProvider($model, $settings),
+            $settings
+        );
+
+        $content = $generator->generate(
+            'smithy.example#BigInteger'
+        )->content;
+
+        $this->assertStringNotContainsString(
+            'use Smithy\\Core\\Shape\\BigInteger;',
+            $content
+        );
+        $this->assertStringContainsString(
+            '@param list<\\Smithy\\Core\\Shape\\BigInteger>|null $values',
+            $content
+        );
+    }
+
+    public function testPhpDocTypeDoesNotCollideWithRuntimeImport(): void
+    {
+        $model = SmithyModel::fromJson(<<<'JSON'
+{
+    "smithy": "2.0",
+    "shapes": {
+        "smithy.example#GetNumbers": {
+            "type": "operation",
+            "input": {"target": "smithy.example#GetNumbersInput"}
+        },
+        "smithy.example#GetNumbersInput": {
+            "type": "structure",
+            "members": {
+                "number": {"target": "smithy.api#BigInteger"},
+                "modeled": {"target": "smithy.example#ModeledNumbers"}
+            }
+        },
+        "smithy.example#ModeledNumbers": {
+            "type": "list",
+            "member": {"target": "smithy.example#BigInteger"}
+        },
+        "smithy.example#BigInteger": {"type": "structure"}
+    }
+}
+JSON);
+        $settings = new CodegenSettings(
+            namespace: 'Smithy\\Example',
+            outputDir: '/tmp/out'
+        );
+        $generator = new StructureGenerator(
+            $model,
+            new PhpSymbolProvider($model, $settings),
+            $settings
+        );
+
+        $content = $generator->generate(
+            'smithy.example#GetNumbersInput'
+        )->content;
+
+        $this->assertSame(
+            1,
+            \substr_count(
+                $content,
+                'use Smithy\\Core\\Shape\\BigInteger;'
+            )
+        );
+        $this->assertStringNotContainsString(
+            'use Smithy\\Example\\Shape\\BigInteger;',
+            $content
+        );
+        $this->assertStringContainsString(
+            '@param list<\\Smithy\\Example\\Shape\\BigInteger>|null '
+                . '$modeled',
+            $content
+        );
+    }
+
     public function testMixinConsumingShapeResolvesMixinMembers(): void
     {
         // QueryEvent applies the Event mixin, which contributes itemId +
