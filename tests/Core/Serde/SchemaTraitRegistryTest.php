@@ -94,5 +94,13 @@ final class SchemaTraitRegistryTest extends TestCase
                 Schema::T_PAGINATED
             )
         );
+        self::assertSame(
+            Schema::T_ERRORS,
+            SchemaTraitRegistry::getDefaultKey('smithy.api#errors')
+        );
+        self::assertSame(
+            'smithy.api#errors',
+            SchemaTraitRegistry::getDefaultId(Schema::T_ERRORS)
+        );
     }
 }

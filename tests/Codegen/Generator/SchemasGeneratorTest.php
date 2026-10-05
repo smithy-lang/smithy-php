@@ -138,6 +138,9 @@ final class SchemasGeneratorTest extends TestCase
             'shapes' => [
                 'smithy.example#Thing' => [
                     'type' => 'structure',
+                    'traits' => [
+                        'vendor.example#wireName' => 'root-name'
+                    ],
                     'members' => [
                         'name' => [
                             'target' => 'smithy.api#String',
@@ -169,6 +172,18 @@ final class SchemasGeneratorTest extends TestCase
 
         $this->assertStringContainsString(
             "'wire-name']",
+            $file->content
+        );
+        $this->assertStringContainsString(
+            "traitsById: ['vendor.example#wireName' => 'root-name']",
+            $file->content
+        );
+        $this->assertStringContainsString(
+            "traitsById: ['vendor.example#wireName' => 'wire-name']",
+            $file->content
+        );
+        $this->assertStringContainsString(
+            "directTraitsById: ['vendor.example#wireName' => 'wire-name']",
             $file->content
         );
     }
@@ -215,6 +230,402 @@ final class SchemasGeneratorTest extends TestCase
             "['text' => 'customer\\'s value']",
             $file->content
         );
+        $this->assertStringContainsString(
+            "traitsById: ['vendor.example#metadata' => "
+                . "['text' => 'customer\\'s value']]",
+            $file->content
+        );
+    }
+
+    public function testPreservesConfiguredTraitIdsOnCollectionSchemas(): void
+    {
+        $model = SmithyModel::fromJson(\json_encode([
+            'smithy' => '2.0',
+            'shapes' => [
+                'smithy.example#Container' => [
+                    'type' => 'structure',
+                    'members' => [
+                        'items' => [
+                            'target' => 'smithy.example#ItemList'
+                        ],
+                        'attributes' => [
+                            'target' => 'smithy.example#AttributeMap'
+                        ]
+                    ]
+                ],
+                'smithy.example#ItemList' => [
+                    'type' => 'list',
+                    'member' => [
+                        'target' => 'smithy.example#Item',
+                        'traits' => [
+                            'vendor.example#metadata' => 'list-member'
+                        ]
+                    ]
+                ],
+                'smithy.example#AttributeMap' => [
+                    'type' => 'map',
+                    'key' => [
+                        'target' => 'smithy.api#String',
+                        'traits' => [
+                            'vendor.example#metadata' => 'map-key'
+                        ]
+                    ],
+                    'value' => [
+                        'target' => 'smithy.api#String',
+                        'traits' => [
+                            'vendor.example#metadata' => 'map-value'
+                        ]
+                    ]
+                ],
+                'smithy.example#Item' => [
+                    'type' => 'structure',
+                    'members' => [
+                        'name' => [
+                            'target' => 'smithy.api#String',
+                            'traits' => [
+                                'vendor.example#metadata' => 'inline-member'
+                            ]
+                        ]
+                    ]
+                ]
+            ]
+        ], JSON_THROW_ON_ERROR));
+        $settings = new CodegenSettings(
+            namespace: 'Smithy\\Example',
+            outputDir: '/tmp/out',
+            organization: 'flat',
+            schemaTraitIndices: [
+                'vendor.example#metadata' => 27
+            ]
+        );
+        $generator = new SchemasGenerator(
+            $model,
+            new PhpSymbolProvider($model, $settings),
+            $settings
+        );
+
+        $content = $generator->generate([
+            'smithy.example#Container' => true
+        ])->content;
+
+        foreach ([
+            'list-member',
+            'map-key',
+            'map-value',
+            'inline-member'
+        ] as $value) {
+            $this->assertStringContainsString(
+                "traitsById: ['vendor.example#metadata' => '{$value}']",
+                $content
+            );
+            $this->assertStringContainsString(
+                "directTraitsById: ['vendor.example#metadata' => "
+                    . "'{$value}']",
+                $content
+            );
+        }
+        $this->assertStringContainsString(
+            "listMember: new Schema(id: 'smithy.example#Item', "
+                . "type: ShapeType::Structure, memberName: 'member', "
+                . "memberIndex: 0",
+            $content
+        );
+        $this->assertStringContainsString(
+            "mapKey: new Schema(id: 'smithy.api#String', "
+                . "type: ShapeType::String_, memberName: 'key', "
+                . "memberIndex: 0",
+            $content
+        );
+        $this->assertStringContainsString(
+            "mapValue: new Schema(id: 'smithy.api#String', "
+                . "type: ShapeType::String_, memberName: 'value', "
+                . "memberIndex: 1",
+            $content
+        );
+    }
+
+    public function testPropagatesConfiguredTargetTraitsToMembers(): void
+    {
+        $model = SmithyModel::fromJson(\json_encode([
+            'smithy' => '2.0',
+            'shapes' => [
+                'smithy.example#Container' => [
+                    'type' => 'structure',
+                    'members' => [
+                        'inherited' => [
+                            'target' => 'smithy.example#InheritedString'
+                        ],
+                        'overridden' => [
+                            'target' => 'smithy.example#OverrideString',
+                            'traits' => [
+                                'vendor.example#metadata' => 'member-value'
+                            ]
+                        ],
+                        'items' => [
+                            'target' => 'smithy.example#ItemList'
+                        ],
+                        'attributes' => [
+                            'target' => 'smithy.example#AttributeMap'
+                        ]
+                    ]
+                ],
+                'smithy.example#InheritedString' => [
+                    'type' => 'string',
+                    'traits' => [
+                        'vendor.example#metadata' => 'target-value'
+                    ]
+                ],
+                'smithy.example#OverrideString' => [
+                    'type' => 'string',
+                    'traits' => [
+                        'vendor.example#metadata' => 'overridden-target'
+                    ]
+                ],
+                'smithy.example#ItemList' => [
+                    'type' => 'list',
+                    'member' => [
+                        'target' => 'smithy.example#Item'
+                    ]
+                ],
+                'smithy.example#Item' => [
+                    'type' => 'structure',
+                    'traits' => [
+                        'vendor.example#metadata' => 'list-target'
+                    ],
+                    'members' => [
+                        'name' => [
+                            'target' => 'smithy.example#InlineString'
+                        ]
+                    ]
+                ],
+                'smithy.example#InlineString' => [
+                    'type' => 'string',
+                    'traits' => [
+                        'vendor.example#metadata' => 'inline-target'
+                    ]
+                ],
+                'smithy.example#AttributeMap' => [
+                    'type' => 'map',
+                    'key' => [
+                        'target' => 'smithy.example#MapKey'
+                    ],
+                    'value' => [
+                        'target' => 'smithy.example#MapValue'
+                    ]
+                ],
+                'smithy.example#MapKey' => [
+                    'type' => 'string',
+                    'traits' => [
+                        'vendor.example#metadata' => 'map-key-target'
+                    ]
+                ],
+                'smithy.example#MapValue' => [
+                    'type' => 'string',
+                    'traits' => [
+                        'vendor.example#metadata' => 'map-value-target'
+                    ]
+                ]
+            ]
+        ], JSON_THROW_ON_ERROR));
+        $settings = new CodegenSettings(
+            namespace: 'Smithy\\Example',
+            outputDir: '/tmp/out',
+            organization: 'flat',
+            schemaTraitIndices: [
+                'vendor.example#metadata' => 27
+            ]
+        );
+        $generator = new SchemasGenerator(
+            $model,
+            new PhpSymbolProvider($model, $settings),
+            $settings
+        );
+
+        $content = $generator->generate([
+            'smithy.example#Container' => true
+        ])->content;
+
+        foreach ([
+            'target-value',
+            'member-value',
+            'list-target',
+            'inline-target',
+            'map-key-target',
+            'map-value-target'
+        ] as $value) {
+            $this->assertStringContainsString(
+                "traitsById: ['vendor.example#metadata' => '{$value}']",
+                $content
+            );
+        }
+        $this->assertStringContainsString(
+            "directTraitsById: ['vendor.example#metadata' => "
+                . "'member-value']",
+            $content
+        );
+        $this->assertStringNotContainsString(
+            "'overridden-target'",
+            $content
+        );
+        foreach ([
+            'target-value',
+            'list-target',
+            'inline-target',
+            'map-key-target',
+            'map-value-target'
+        ] as $value) {
+            $this->assertStringNotContainsString(
+                "directTraitsById: ['vendor.example#metadata' => "
+                    . "'{$value}']",
+                $content
+            );
+        }
+    }
+
+    public function testPropagatesConfiguredTargetTraitsFromMixins(): void
+    {
+        $model = SmithyModel::fromJson(\json_encode([
+            'smithy' => '2.0',
+            'shapes' => [
+                'smithy.example#Container' => [
+                    'type' => 'structure',
+                    'members' => [
+                        'item' => [
+                            'target' => 'smithy.example#MixedItem'
+                        ]
+                    ]
+                ],
+                'smithy.example#MixedItem' => [
+                    'type' => 'structure',
+                    'mixins' => [
+                        ['target' => 'smithy.example#MetadataMixin']
+                    ]
+                ],
+                'smithy.example#MetadataMixin' => [
+                    'type' => 'structure',
+                    'mixins' => [
+                        ['target' => 'smithy.example#BaseMetadataMixin']
+                    ],
+                    'traits' => [
+                        'smithy.api#mixin' => []
+                    ]
+                ],
+                'smithy.example#BaseMetadataMixin' => [
+                    'type' => 'structure',
+                    'traits' => [
+                        'smithy.api#mixin' => [
+                            'localTraits' => [
+                                'vendor.example#localMetadata'
+                            ]
+                        ],
+                        'vendor.example#metadata' => 'nested-mixin-value',
+                        'vendor.example#localMetadata' => 'local-only'
+                    ]
+                ]
+            ]
+        ], JSON_THROW_ON_ERROR));
+        $settings = new CodegenSettings(
+            namespace: 'Smithy\\Example',
+            outputDir: '/tmp/out',
+            organization: 'flat',
+            schemaTraitIndices: [
+                'vendor.example#metadata' => 27,
+                'vendor.example#localMetadata' => 28
+            ]
+        );
+        $generator = new SchemasGenerator(
+            $model,
+            new PhpSymbolProvider($model, $settings),
+            $settings
+        );
+
+        $content = $generator->generate([
+            'smithy.example#Container' => true
+        ])->content;
+
+        $this->assertStringContainsString(
+            "'vendor.example#metadata' => 'nested-mixin-value'",
+            $content
+        );
+        $this->assertStringNotContainsString("'local-only'", $content);
+        $this->assertStringNotContainsString(
+            "directTraitsById: ['vendor.example#metadata' => "
+                . "'nested-mixin-value']",
+            $content
+        );
+    }
+
+    public function testMixinTraitPrecedenceMatchesRuntimeModel(): void
+    {
+        $model = SmithyModel::fromJson(\json_encode([
+            'smithy' => '2.0',
+            'shapes' => [
+                'smithy.example#Container' => [
+                    'type' => 'structure',
+                    'members' => [
+                        'item' => [
+                            'target' => 'smithy.example#MixedItem'
+                        ]
+                    ]
+                ],
+                'smithy.example#MixedItem' => [
+                    'type' => 'structure',
+                    'mixins' => [
+                        ['target' => 'smithy.example#FirstMixin'],
+                        ['target' => 'smithy.example#SecondMixin']
+                    ],
+                    'traits' => [
+                        'vendor.example#localPriority' => 'local-value'
+                    ]
+                ],
+                'smithy.example#FirstMixin' => [
+                    'type' => 'structure',
+                    'traits' => [
+                        'smithy.api#mixin' => [],
+                        'vendor.example#mixinPriority' => 'first-value',
+                        'vendor.example#localPriority' => 'first-local'
+                    ]
+                ],
+                'smithy.example#SecondMixin' => [
+                    'type' => 'structure',
+                    'traits' => [
+                        'smithy.api#mixin' => [],
+                        'vendor.example#mixinPriority' => 'second-value',
+                        'vendor.example#localPriority' => 'second-local'
+                    ]
+                ]
+            ]
+        ], JSON_THROW_ON_ERROR));
+        $settings = new CodegenSettings(
+            namespace: 'Smithy\\Example',
+            outputDir: '/tmp/out',
+            organization: 'flat',
+            schemaTraitIndices: [
+                'vendor.example#mixinPriority' => 27,
+                'vendor.example#localPriority' => 28
+            ]
+        );
+        $generator = new SchemasGenerator(
+            $model,
+            new PhpSymbolProvider($model, $settings),
+            $settings
+        );
+
+        $content = $generator->generate([
+            'smithy.example#Container' => true
+        ])->content;
+
+        $this->assertStringContainsString(
+            "'vendor.example#mixinPriority' => 'second-value'",
+            $content
+        );
+        $this->assertStringContainsString(
+            "'vendor.example#localPriority' => 'local-value'",
+            $content
+        );
+        foreach (['first-value', 'first-local', 'second-local'] as $value) {
+            $this->assertStringNotContainsString($value, $content);
+        }
     }
 
     public function testPreservesEndpointContextParamTraitById(): void
