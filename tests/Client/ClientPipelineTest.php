@@ -1305,7 +1305,78 @@ final class ClientPipelineTest extends TestCase
         yield 'with interceptors' => [true];
     }
 
-    public function testRequestRetryOverrideCapsAttemptsWithoutInterceptors(): void
+    /**
+     * @return iterable<string, array{bool, int|null}>
+     */
+    public static function retryStrategyAttemptLimitCases(): iterable
+    {
+        yield 'without interceptors' => [false, null];
+        yield 'with interceptors' => [true, null];
+        yield 'override cannot raise limit without interceptors' => [false, 4];
+        yield 'override cannot raise limit with interceptors' => [true, 4];
+    }
+
+    #[DataProvider('retryStrategyAttemptLimitCases')]
+    public function testRetryStrategyCapsAttempts(
+        bool $withInterceptors,
+        ?int $overrideRetries
+    ): void
+    {
+        $http = (new MockHttpClient())->fallbackException(
+            new \RuntimeException('temporary')
+        );
+        $strategy = $this->createMock(RetryStrategyInterface::class);
+        $strategy->method('begin')->willReturnCallback(
+            static fn(
+                string $scope,
+                int $requestFlags = 0
+            ): RetryState => new RetryState($scope, $requestFlags)
+        );
+        $strategy->expects(self::exactly(2))
+            ->method('refresh')
+            ->willReturnCallback(
+                static function (
+                    RetryState $state,
+                    \Throwable $error
+                ): float {
+                    ++$state->attempt;
+
+                    return 0.0;
+                }
+            );
+        $strategy->expects(self::never())->method('recordSuccess');
+        $strategy->expects(self::once())->method('maxAttempts')->willReturn(2);
+        [$pipeline, $transport] = $this->buildPipeline(
+            interceptors: $withInterceptors
+                ? [new RecordingInterceptor()]
+                : [],
+            http: $http,
+            retryStrategy: $strategy
+        );
+        $overrides = $overrideRetries === null
+            ? null
+            : RequestOverrideConfig::fromArray([
+                '@retries' => $overrideRetries
+            ]);
+
+        try {
+            $pipeline->execute(
+                FakeOperation::instance(),
+                new FakeInput(),
+                $overrides
+            );
+            $this->fail('Expected the final attempt to fail.');
+        } catch (\RuntimeException $error) {
+            $this->assertSame('temporary', $error->getMessage());
+        }
+
+        $this->assertSame(2, $transport->sendCallCount);
+    }
+
+    #[DataProvider('retryPipelineModes')]
+    public function testRequestRetryOverrideCapsAttempts(
+        bool $withInterceptors
+    ): void
     {
         $http = (new MockHttpClient())
             ->queueException(new \RuntimeException('temporary'))
@@ -1321,6 +1392,9 @@ final class ClientPipelineTest extends TestCase
         $strategy->expects(self::never())->method('recordSuccess');
         $strategy->method('maxAttempts')->willReturn(3);
         [$pipeline, $transport] = $this->buildPipeline(
+            interceptors: $withInterceptors
+                ? [new RecordingInterceptor()]
+                : [],
             http: $http,
             retryStrategy: $strategy
         );
