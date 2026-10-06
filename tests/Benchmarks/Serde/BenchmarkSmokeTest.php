@@ -1,0 +1,193 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Smithy\Tests\Benchmarks\Serde;
+
+use PHPUnit\Framework\TestCase;
+use Smithy\Benchmarks\Serde\Support\BenchmarkCaseRepository;
+use Smithy\Benchmarks\Serde\Support\GeneratedCodeLoader;
+use Smithy\Benchmarks\Serde\Support\FixedResponseHttpClient;
+use Smithy\Benchmarks\Serde\Support\PipelineBenchmarkInterceptor;
+use Smithy\Benchmarks\Serde\Support\PipelineBenchmarkPlugin;
+use Smithy\Client\Auth\{
+    NoAuthScheme,
+    StaticAuthSchemeResolver
+};
+use Smithy\Client\ClientConfig;
+use Smithy\Client\Endpoint\{
+    Endpoint,
+    StaticEndpointResolver
+};
+use Smithy\Client\Plugin\PluginCollection;
+use Smithy\Codegen\CodeGenerator;
+use Smithy\Codegen\CodegenSettings;
+use Smithy\Codegen\Model\SmithyModel;
+use Smithy\Core\Shape\OperationInterface;
+use Smithy\Core\Shape\Utils\ArrayShapeSerializer;
+use Smithy\Http\Message\Response;
+use Smithy\Protocol\RpcV2\RpcV2CborProtocol;
+
+require_once __DIR__ . '/../../../benchmarks/serde/support/BenchmarkCaseRepository.php';
+require_once __DIR__ . '/../../../benchmarks/serde/support/GeneratedCodeLoader.php';
+require_once __DIR__ . '/../../../benchmarks/serde/support/FixedResponseHttpClient.php';
+require_once __DIR__ . '/../../../benchmarks/serde/support/PipelineBenchmarkPlugin.php';
+
+final class BenchmarkSmokeTest extends TestCase
+{
+    private string $outputDirectory;
+
+    public function testGeneratesAndRunsBaselineSerdeCases(): void
+    {
+        $modelPath = __DIR__
+            . '/../../../benchmarks/serde/model/rpcv2-cbor.json';
+        (new CodeGenerator(
+            new CodegenSettings(
+                namespace: 'Smithy\\BenchmarkSmoke',
+                outputDir: $this->outputDirectory,
+                organization: 'categorized',
+                preserveExistingMemberOrder: false,
+                generateClient: true,
+                generateClientConfig: false
+            ),
+            SmithyModel::fromFile($modelPath)
+        ))->generateAndWrite();
+
+        $loader = new GeneratedCodeLoader(
+            'Smithy\\BenchmarkSmoke',
+            $this->outputDirectory
+        );
+        $loader->register();
+        $repository = new BenchmarkCaseRepository($modelPath);
+        $protocol = new RpcV2CborProtocol();
+
+        $requestCase = $repository->requests(
+            'PutItemRequest_Baseline'
+        )[0];
+        $requestOperation = $this->operation($loader, $requestCase);
+        $input = ArrayShapeSerializer::fromArray(
+            $requestOperation->getInputClass(),
+            $requestCase['params']
+        );
+        $request = $protocol->serializeRequest(
+            $requestOperation,
+            $input,
+            'http://localhost/'
+        );
+
+        self::assertNotSame('', (string) $request->getBody());
+        self::assertSame(
+            'rpc-v2-cbor',
+            $request->getHeaderLine('Smithy-Protocol')
+        );
+
+        $responseCase = $repository->responses(
+            'GetItemOutput_Baseline'
+        )[0];
+        $responseOperation = $this->operation($loader, $responseCase);
+        $output = $protocol->deserializeResponse(
+            $responseOperation,
+            new Response(
+                status: $responseCase['code'],
+                headers: $responseCase['headers'],
+                body: \base64_decode($responseCase['body'], true)
+            )
+        );
+
+        self::assertInstanceOf(
+            $responseOperation->getOutputClass(),
+            $output
+        );
+
+        $http = new FixedResponseHttpClient(new Response(
+            status: $responseCase['code'],
+            headers: $responseCase['headers'],
+            body: \base64_decode($responseCase['body'], true)
+        ));
+        $config = new ClientConfig(
+            protocol: $protocol,
+            httpClient: $http,
+            endpointResolver: new StaticEndpointResolver(
+                new Endpoint('http://localhost')
+            ),
+            supportedAuthSchemes: [NoAuthScheme::instance()],
+            authSchemeResolver: StaticAuthSchemeResolver::noAuth()
+        );
+        $clientClass = 'Smithy\\BenchmarkSmoke\\BenchmarkSmokeClient';
+        $client = new $clientClass(
+            $config,
+            new PluginCollection(new PipelineBenchmarkPlugin())
+        );
+        self::assertTrue(
+            $client->getConfig()->interceptorChain->contains(
+                PipelineBenchmarkInterceptor::class
+            )
+        );
+
+        $pipelineRequestCase = $repository->requests(
+            'WideTypesRequest_S'
+        )[0];
+        $pipelineResponseCase = $repository->responses(
+            'WideTypesResponse_S'
+        )[0];
+        $pipelineHttp = new FixedResponseHttpClient(new Response(
+            status: $pipelineResponseCase['code'],
+            headers: $pipelineResponseCase['headers'],
+            body: \base64_decode($pipelineResponseCase['body'], true)
+        ));
+        $pipelineClient = new $clientClass(
+            $config->withHttpClient($pipelineHttp)
+        );
+        $pipelineInput = ArrayShapeSerializer::fromArray(
+            'Smithy\\BenchmarkSmoke\\Input\\WideTypesInput',
+            $pipelineRequestCase['params']
+        );
+        $pipelineOutput = $pipelineClient->wideTypes($pipelineInput);
+        self::assertInstanceOf(
+            'Smithy\\BenchmarkSmoke\\Output\\WideTypesOutput',
+            $pipelineOutput
+        );
+
+        $loader->unregister();
+    }
+
+    protected function setUp(): void
+    {
+        $this->outputDirectory = \sys_get_temp_dir()
+            . '/smithy-php-benchmark-smoke-'
+            . \bin2hex(\random_bytes(8));
+    }
+
+    protected function tearDown(): void
+    {
+        if (!\is_dir($this->outputDirectory)) {
+            return;
+        }
+
+        $iterator = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator(
+                $this->outputDirectory,
+                \FilesystemIterator::SKIP_DOTS
+            ),
+            \RecursiveIteratorIterator::CHILD_FIRST
+        );
+        foreach ($iterator as $entry) {
+            $entry->isDir()
+                ? \rmdir($entry->getPathname())
+                : \unlink($entry->getPathname());
+        }
+        \rmdir($this->outputDirectory);
+    }
+
+    /**
+     * @param array<string, mixed> $case
+     */
+    private function operation(
+        GeneratedCodeLoader $loader,
+        array $case
+    ): OperationInterface {
+        $class = $loader->operationClass($case['operation']);
+
+        return $class::instance();
+    }
+}
