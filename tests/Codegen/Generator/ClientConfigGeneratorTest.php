@@ -31,13 +31,14 @@ final class ClientConfigGeneratorTest extends TestCase
             "<?php\n\ndeclare(strict_types=1);",
             $file->content
         );
-        // Extends the base ClientConfig from Smithy\Client.
+        // Extends the configured base ClientConfig from Smithy\Client.
         $this->assertStringContainsString(
-            'extends ClientConfig',
+            'extends \\Smithy\\Client\\ClientConfig',
             $file->content
         );
         $this->assertMatchesRegularExpression(
-            '/final class \w+ClientConfig extends ClientConfig/',
+            '/final class \w+ClientConfig '
+                . 'extends \\\\Smithy\\\\Client\\\\ClientConfig/',
             $file->content
         );
         $this->assertStringEndsWith('ClientConfig.php', $file->path);
@@ -48,7 +49,7 @@ final class ClientConfigGeneratorTest extends TestCase
         );
     }
 
-    public function testImportsBaseClientConfigClass(): void
+    public function testFullyQualifiesBaseClientConfigClass(): void
     {
         $model = SmithyModel::fromFile(
             __DIR__ . '/../../fixtures/defaults-model.json'
@@ -62,8 +63,39 @@ final class ClientConfigGeneratorTest extends TestCase
 
         $file = $generator->generate('smithy.example#DefaultsService');
 
-        $this->assertStringContainsString(
+        $this->assertStringNotContainsString(
             'use Smithy\\Client\\ClientConfig;',
+            $file->content
+        );
+        $this->assertStringContainsString(
+            'final class ExampleClientConfig '
+                . 'extends \\Smithy\\Client\\ClientConfig {}',
+            $file->content
+        );
+    }
+
+    public function testExtendsConfiguredClientConfigClass(): void
+    {
+        $model = SmithyModel::fromFile(
+            __DIR__ . '/../../fixtures/defaults-model.json'
+        );
+        $settings = new CodegenSettings(
+            namespace: 'Smithy\\Example',
+            outputDir: '/tmp/out',
+            organization: 'flat',
+            clientConfigClass: 'Vendor\\Runtime\\VendorClientConfig'
+        );
+        $generator = new ClientConfigGenerator($model, $settings);
+
+        $file = $generator->generate('smithy.example#DefaultsService');
+
+        $this->assertStringNotContainsString(
+            'use Vendor\\Runtime\\VendorClientConfig;',
+            $file->content
+        );
+        $this->assertStringContainsString(
+            'final class ExampleClientConfig '
+                . 'extends \\Vendor\\Runtime\\VendorClientConfig {}',
             $file->content
         );
     }

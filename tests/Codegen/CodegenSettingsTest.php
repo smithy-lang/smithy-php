@@ -43,6 +43,10 @@ final class CodegenSettingsTest extends TestCase
         $this->assertTrue($settings->preserveExistingMemberOrder);
         $this->assertSame([], $settings->waiterResourceInitialisms);
         $this->assertFalse($settings->assumeAsciiEndpointStrings);
+        $this->assertSame(
+            'Smithy\\Client\\ClientConfig',
+            $settings->clientConfigClass
+        );
     }
 
     #[DataProvider('categoryNamespaceMatrix')]
@@ -379,6 +383,20 @@ final class CodegenSettingsTest extends TestCase
         $this->assertFalse($settings->preserveExistingMemberOrder);
     }
 
+    public function testFromArrayAcceptsClientConfigClassAliases(): void
+    {
+        $settings = CodegenSettings::fromArray([
+            'namespace' => 'Aws\\Sns',
+            'outputDir' => '/build/sns',
+            'client_config_class' => 'Vendor\\Runtime\\VendorClientConfig'
+        ]);
+
+        $this->assertSame(
+            'Vendor\\Runtime\\VendorClientConfig',
+            $settings->clientConfigClass
+        );
+    }
+
     public function testFromArrayDefaultsPreserveOrderToTrueWhenAbsent(): void
     {
         $settings = CodegenSettings::fromArray([
@@ -455,6 +473,49 @@ final class CodegenSettingsTest extends TestCase
             namespace: 'Smithy\\Example',
             outputDir: '/tmp/output',
             organization: 'grouped'
+        );
+    }
+
+    public function testConstructorRejectsInvalidClientConfigClass(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage(
+            'clientConfigClass must be a valid PHP class name'
+        );
+
+        new CodegenSettings(
+            namespace: 'Smithy\\Example',
+            outputDir: '/tmp/output',
+            clientConfigClass: 'not a class'
+        );
+    }
+
+    public function testConstructorRequiresConfigClassForCustomBase(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage(
+            'clientConfigClass must be set when clientBaseClass is customized'
+        );
+
+        new CodegenSettings(
+            namespace: 'Smithy\\Example',
+            outputDir: '/tmp/output',
+            clientBaseClass: 'Vendor\\Runtime\\VendorClient'
+        );
+    }
+
+    public function testCustomBaseCanExplicitlyUseDefaultConfigClass(): void
+    {
+        $settings = new CodegenSettings(
+            namespace: 'Smithy\\Example',
+            outputDir: '/tmp/output',
+            clientBaseClass: 'Vendor\\Runtime\\VendorClient',
+            clientConfigClass: 'Smithy\\Client\\ClientConfig'
+        );
+
+        $this->assertSame(
+            'Smithy\\Client\\ClientConfig',
+            $settings->clientConfigClass
         );
     }
 
