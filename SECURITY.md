@@ -29,6 +29,11 @@ Smithy models and code generation settings can control generated application
 behavior. Use models and configuration from trusted sources and review
 generated code before deployment.
 
+The code generation process must have exclusive control of its output
+directory. Do not modify that directory concurrently. Filesystem containment
+checks cannot prevent a process with write access from replacing a checked
+directory with a symlink immediately before a write.
+
 Plugins, interceptors, protocols, signers, identity resolvers, endpoint
 resolvers, and HTTP clients run with the privileges of the application.
 Install and register these extensions only from trusted sources.
