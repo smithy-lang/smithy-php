@@ -233,4 +233,49 @@ final class UnionGeneratorTest extends TestCase
         );
         $this->assertSame(\count($paths), \count(\array_unique($paths)));
     }
+
+    public function testSensitiveUnionUsesRedactionTrait(): void
+    {
+        $model = SmithyModel::fromJson(<<<'JSON'
+{
+    "smithy": "2.0",
+    "shapes": {
+        "smithy.example#Secret": {
+            "type": "string",
+            "traits": {"smithy.api#sensitive": {}}
+        },
+        "smithy.example#Choice": {
+            "type": "union",
+            "members": {
+                "secret": {"target": "smithy.example#Secret"},
+                "visible": {"target": "smithy.api#String"}
+            }
+        }
+    }
+}
+JSON);
+        $settings = new CodegenSettings(
+            namespace: 'Smithy\\Example',
+            outputDir: '/tmp/out',
+            organization: 'flat'
+        );
+        $generator = new UnionGenerator(
+            $model,
+            new PhpSymbolProvider($model, $settings),
+            $settings
+        );
+
+        $content = $generator->generate(
+            'smithy.example#Choice'
+        )[0]->content;
+
+        $this->assertStringContainsString(
+            'use Smithy\\Core\\Shape\\SensitiveStringableTrait;',
+            $content
+        );
+        $this->assertStringContainsString(
+            'use SensitiveStringableTrait;',
+            $content
+        );
+    }
 }
