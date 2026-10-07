@@ -22,7 +22,7 @@ final class StaticTokenProviderTest extends TestCase
         ))->resolveIdentity()->unwrap();
 
         self::assertInstanceOf(BearerToken::class, $identity);
-        self::assertSame('token', $identity->token);
+        self::assertSame('token', $identity->getToken());
         self::assertSame(123.0, $identity->getExpirationTime());
     }
 
@@ -34,5 +34,55 @@ final class StaticTokenProviderTest extends TestCase
             $token,
             (new StaticTokenProvider($token))->resolveIdentity()->unwrap()
         );
+    }
+
+    public function testNestedTokenDebugOutputIsRedacted(): void
+    {
+        $provider = new StaticTokenProvider('secret-token');
+
+        foreach ([$this->printValue($provider), $this->dumpValue($provider)] as $output) {
+            self::assertStringContainsString('***REDACTED***', $output);
+            self::assertStringNotContainsString('secret-token', $output);
+        }
+    }
+
+    public function testRawTokenIsRedactedFromExceptionTrace(): void
+    {
+        $previous = \ini_set('zend.exception_ignore_args', '0');
+
+        try {
+            try {
+                new StaticTokenProvider('trace-secret', []);
+                self::fail('Expected a TypeError.');
+            } catch (\TypeError $exception) {
+                $trace = $exception->getTrace();
+
+                self::assertInstanceOf(
+                    \SensitiveParameterValue::class,
+                    $trace[0]['args'][0]
+                );
+                self::assertStringNotContainsString(
+                    'trace-secret',
+                    \print_r($trace, true)
+                );
+            }
+        } finally {
+            if ($previous !== false) {
+                \ini_set('zend.exception_ignore_args', $previous);
+            }
+        }
+    }
+
+    private function printValue(mixed $value): string
+    {
+        return \print_r($value, true);
+    }
+
+    private function dumpValue(mixed $value): string
+    {
+        \ob_start();
+        \var_dump($value);
+
+        return (string) \ob_get_clean();
     }
 }
