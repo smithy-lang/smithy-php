@@ -14,7 +14,14 @@ namespace Smithy\Codegen\Model;
  */
 final class SmithyModelValidator
 {
+    /**
+     * Matches a Smithy identifier used for shape and member names.
+     */
     private const IDENTIFIER_PATTERN = '/\A[A-Za-z_][A-Za-z0-9_]*\z/D';
+
+    /**
+     * Matches an absolute Smithy shape ID in `namespace#shape` form.
+     */
     private const SHAPE_ID_PATTERN =
         '/\A[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*'
         . '#[A-Za-z_][A-Za-z0-9_]*\z/D';

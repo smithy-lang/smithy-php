@@ -10,6 +10,29 @@ namespace Smithy\Codegen\Generator;
 final class GeneratedFile
 {
     /**
+     * Matches URI-style schemes that PHP would interpret as stream wrappers.
+     */
+    private const STREAM_WRAPPER_PATH_PATTERN =
+        '/\A[A-Za-z][A-Za-z0-9+.-]*:\/\//D';
+
+    /**
+     * Matches a Windows drive designator at the beginning of a path.
+     */
+    private const WINDOWS_DRIVE_PREFIX_PATTERN = '/\A[A-Za-z]:/D';
+
+    /**
+     * Matches a Windows drive-relative path such as `C:generated`.
+     */
+    private const WINDOWS_DRIVE_RELATIVE_PATH_PATTERN =
+        '/\A[A-Za-z]:(?!\\\\)/D';
+
+    /**
+     * Matches an absolute Windows drive path such as `C:\generated`.
+     */
+    private const WINDOWS_DRIVE_ABSOLUTE_PATH_PATTERN =
+        '/\A[A-Za-z]:\\\\/';
+
+    /**
      * @internal
      */
     public function __construct(
@@ -120,10 +143,7 @@ final class GeneratedFile
             );
         }
 
-        if (\preg_match(
-            '/\A[A-Za-z][A-Za-z0-9+.-]*:\/\//D',
-            $path
-        ) === 1) {
+        if (\preg_match(self::STREAM_WRAPPER_PATH_PATTERN, $path) === 1) {
             throw new \RuntimeException(
                 'Generated output paths must not use stream wrappers.'
             );
@@ -164,7 +184,7 @@ final class GeneratedFile
                 $prefix = DIRECTORY_SEPARATOR . DIRECTORY_SEPARATOR;
                 $path = \substr($path, 2);
             } elseif (\preg_match(
-                '/\A[A-Za-z]:/',
+                self::WINDOWS_DRIVE_PREFIX_PATTERN,
                 $path,
                 $matches
             ) === 1) {
@@ -206,7 +226,10 @@ final class GeneratedFile
     private static function isDriveRelativePath(string $path): bool
     {
         return DIRECTORY_SEPARATOR === '\\'
-            && \preg_match('/\A[A-Za-z]:(?!\\\\)/D', $path) === 1;
+            && \preg_match(
+                self::WINDOWS_DRIVE_RELATIVE_PATH_PATTERN,
+                $path
+            ) === 1;
     }
 
     private static function resolveDriveRelativePath(string $path): string
@@ -282,7 +305,10 @@ final class GeneratedFile
     {
         if (DIRECTORY_SEPARATOR === '\\') {
             return \str_starts_with($path, DIRECTORY_SEPARATOR)
-                || \preg_match('/\A[A-Za-z]:\\\\/', $path) === 1;
+                || \preg_match(
+                    self::WINDOWS_DRIVE_ABSOLUTE_PATH_PATTERN,
+                    $path
+                ) === 1;
         }
 
         return \str_starts_with($path, DIRECTORY_SEPARATOR);
@@ -353,7 +379,10 @@ final class GeneratedFile
         }
 
         if (DIRECTORY_SEPARATOR === '\\'
-            && \preg_match('/\A[A-Za-z]:\\\\/', $path) === 1
+            && \preg_match(
+                self::WINDOWS_DRIVE_ABSOLUTE_PATH_PATTERN,
+                $path
+            ) === 1
         ) {
             return [
                 \substr($path, 0, 3),
