@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Smithy\Tests\Core\Model;
 
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Smithy\Core\Model\SmithyModel;
 
@@ -83,6 +84,117 @@ final class SmithyModelTest extends TestCase
         } finally {
             \restore_error_handler();
         }
+    }
+
+    public function testFromFileLoadsLocalRegularFiles(): void
+    {
+        $directory = \sys_get_temp_dir()
+            . '/smithy-model-' . \bin2hex(\random_bytes(8));
+        $path = $directory . '/model.json';
+        $cwd = \getcwd();
+        self::assertNotFalse($cwd);
+        self::assertTrue(\mkdir($directory));
+        self::assertNotFalse(\file_put_contents(
+            $path,
+            '{"smithy":"2.0","shapes":{}}'
+        ));
+
+        try {
+            self::assertSame(
+                [],
+                SmithyModel::fromFile($path)->getMetadata()
+            );
+
+            self::assertTrue(\chdir($directory));
+            self::assertSame(
+                [],
+                SmithyModel::fromFile('model.json')->getMetadata()
+            );
+        } finally {
+            \chdir($cwd);
+            @\unlink($path);
+            @\rmdir($directory);
+        }
+    }
+
+    #[DataProvider('streamWrapperPaths')]
+    public function testFromFileRejectsStreamWrappers(string $path): void
+    {
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage(
+            'Smithy model path must reference a local file.'
+        );
+
+        SmithyModel::fromFile($path);
+    }
+
+    public function testFromFileRejectsNulBytes(): void
+    {
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage(
+            'Smithy model path must reference a local file.'
+        );
+
+        SmithyModel::fromFile("model\0.json");
+    }
+
+    public function testFromFileRejectsDirectories(): void
+    {
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('Failed to read Smithy model file:');
+
+        SmithyModel::fromFile(__DIR__);
+    }
+
+    public function testFromFileTreatsWindowsDrivePathsAsLocal(): void
+    {
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('Failed to read Smithy model file:');
+
+        SmithyModel::fromFile('Z:\\missing-smithy-model.json');
+    }
+
+    #[DataProvider('windowsUncAndDevicePaths')]
+    public function testFromFileRejectsWindowsUncAndDevicePaths(
+        string $path
+    ): void
+    {
+        if (DIRECTORY_SEPARATOR !== '\\') {
+            self::markTestSkipped('Windows-only path behavior.');
+        }
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage(
+            'Smithy model path must reference a local file.'
+        );
+
+        SmithyModel::fromFile($path);
+    }
+
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function streamWrapperPaths(): array
+    {
+        return [
+            'data' => ['data://text/plain,{}'],
+            'file' => ['file:///tmp/model.json'],
+            'http' => ['http://127.0.0.1/model.json'],
+            'mixed case' => ['PhAr://archive/model.json']
+        ];
+    }
+
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function windowsUncAndDevicePaths(): array
+    {
+        return [
+            'UNC backslashes' => ['\\\\server\\share\\model.json'],
+            'UNC forward slashes' => ['//server/share/model.json'],
+            'device backslashes' => ['\\\\?\\C:\\model.json'],
+            'device forward slashes' => ['//?/C:/model.json']
+        ];
     }
 
     public function testPreservesOriginalModeledShapeId(): void
