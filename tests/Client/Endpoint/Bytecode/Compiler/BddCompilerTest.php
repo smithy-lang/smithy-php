@@ -57,6 +57,190 @@ final class BddCompilerTest extends TestCase
         BddCompiler::decodeNodes(\base64_encode(\pack('N', 1)), 1);
     }
 
+    /**
+     * @return iterable<string, array{int}>
+     */
+    public static function invalidBddNodeCountProvider(): iterable
+    {
+        yield 'negative' => [-1];
+        yield 'overlaps result references' => [Bytecode::RESULT_OFFSET];
+    }
+
+    #[DataProvider('invalidBddNodeCountProvider')]
+    public function testRejectsInvalidBddNodeCount(int $nodeCount): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage(
+            "Invalid BDD node count: {$nodeCount}"
+        );
+
+        BddCompiler::decodeNodes('', $nodeCount);
+    }
+
+    /**
+     * @return iterable<string, array{int, string}>
+     */
+    public static function invalidBddRootProvider(): iterable
+    {
+        yield 'zero' => [0, 'BDD root has invalid reference: 0'];
+        yield 'complemented node' => [
+            -2,
+            'BDD root reference cannot be complemented: -2'
+        ];
+        yield 'missing node' => [
+            2,
+            'BDD root reference 2 points to non-existent node 1'
+        ];
+        yield 'missing result' => [
+            Bytecode::RESULT_OFFSET + 1,
+            'points to non-existent result 1'
+        ];
+    }
+
+    #[DataProvider('invalidBddRootProvider')]
+    public function testRejectsInvalidBddRoot(
+        int $root,
+        string $message
+    ): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage($message);
+
+        (new BddCompiler(StdFunctions::all()))->compile(
+            $this->trait(root: $root)
+        );
+    }
+
+    public function testRejectsInvalidBddConditionIndex(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage(
+            'BDD node 1 has invalid condition index 1 '
+                . '(condition count: 1)'
+        );
+
+        (new BddCompiler(StdFunctions::all()))->compile(
+            $this->traitWithBddNodes([
+                -1,
+                1,
+                -1,
+                1,
+                Bytecode::RESULT_OFFSET,
+                -1
+            ])
+        );
+    }
+
+    /**
+     * @return iterable<string, array{int, string}>
+     */
+    public static function invalidBddReferenceProvider(): iterable
+    {
+        yield 'zero' => [
+            0,
+            'BDD node 1 high has invalid reference: 0'
+        ];
+        yield 'missing node' => [
+            3,
+            'points to non-existent node 2'
+        ];
+        yield 'missing result' => [
+            Bytecode::RESULT_OFFSET + 1,
+            'points to non-existent result 1'
+        ];
+        yield 'negative result' => [
+            -Bytecode::RESULT_OFFSET,
+            'has invalid reference: -100000000'
+        ];
+    }
+
+    #[DataProvider('invalidBddReferenceProvider')]
+    public function testRejectsInvalidBddReference(
+        int $reference,
+        string $message
+    ): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage($message);
+
+        (new BddCompiler(StdFunctions::all()))->compile(
+            $this->traitWithBddNodes([
+                -1,
+                1,
+                -1,
+                0,
+                $reference,
+                -1
+            ])
+        );
+    }
+
+    /**
+     * @return iterable<string, array{list<int>}>
+     */
+    public static function cyclicBddProvider(): iterable
+    {
+        yield 'self cycle' => [[
+            -1,
+            1,
+            -1,
+            0,
+            2,
+            -1
+        ]];
+        yield 'complemented self cycle' => [[
+            -1,
+            1,
+            -1,
+            0,
+            -2,
+            -1
+        ]];
+        yield 'multiple nodes' => [[
+            -1,
+            1,
+            -1,
+            0,
+            3,
+            -1,
+            0,
+            2,
+            -1
+        ]];
+    }
+
+    #[DataProvider('cyclicBddProvider')]
+    public function testRejectsCyclicBdd(array $nodes): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('BDD contains a cycle');
+
+        (new BddCompiler(StdFunctions::all()))->compile(
+            $this->traitWithBddNodes($nodes)
+        );
+    }
+
+    public function testAcceptsAcyclicComplementedBddReference(): void
+    {
+        $nodes = [
+            -1,
+            1,
+            -1,
+            0,
+            -3,
+            Bytecode::RESULT_OFFSET,
+            0,
+            Bytecode::RESULT_OFFSET,
+            -1
+        ];
+
+        $bytecode = (new BddCompiler(StdFunctions::all()))->compile(
+            $this->traitWithBddNodes($nodes)
+        );
+
+        self::assertSame($nodes, $bytecode->bddNodes);
+    }
+
     public function testCompilesImplicitNoMatchResultInSlotZero(): void
     {
         $bytecode = (new BddCompiler(StdFunctions::all()))->compile(
@@ -668,6 +852,27 @@ final class BddCompilerTest extends TestCase
         $this->assertIsInt($offset);
 
         return $code[$offset + 3];
+    }
+
+    /**
+     * @param list<int> $nodes
+     *
+     * @return array<string, mixed>
+     */
+    private function traitWithBddNodes(array $nodes): array
+    {
+        return $this->trait(
+            parameters: ['Value' => ['type' => 'String']],
+            conditions: [
+                [
+                    'fn' => 'isSet',
+                    'argv' => [['ref' => 'Value']]
+                ]
+            ],
+            nodes: $this->encodeNodes($nodes),
+            nodeCount: \intdiv(\count($nodes), 3),
+            root: 2
+        );
     }
 
     /**
