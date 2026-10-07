@@ -55,6 +55,151 @@ final class SmithyModelTest extends TestCase
         $this->assertSame([], $model->getMetadata());
     }
 
+    #[DataProvider('invalidIdentifierModels')]
+    public function testFromJsonRejectsInvalidIdentifiers(array $model): void
+    {
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('Invalid Smithy model');
+
+        SmithyModel::fromJson(\json_encode($model, JSON_THROW_ON_ERROR));
+    }
+
+    /**
+     * @return array<string, array{array<string, mixed>}>
+     */
+    public static function invalidIdentifierModels(): array
+    {
+        return [
+            'traversal shape ID' => [[
+                'smithy' => '2.0',
+                'shapes' => [
+                    'example#../../Outside' => [
+                        'type' => 'structure',
+                        'members' => []
+                    ]
+                ]
+            ]],
+            'Windows traversal shape ID' => [[
+                'smithy' => '2.0',
+                'shapes' => [
+                    'example#..\\..\\Outside' => [
+                        'type' => 'structure',
+                        'members' => []
+                    ]
+                ]
+            ]],
+            'source injection shape ID' => [[
+                'smithy' => '2.0',
+                'shapes' => [
+                    "example#Shape\nfinal class Injected" => [
+                        'type' => 'structure',
+                        'members' => []
+                    ]
+                ]
+            ]],
+            'invalid member name' => [[
+                'smithy' => '2.0',
+                'shapes' => [
+                    'example#Input' => [
+                        'type' => 'structure',
+                        'members' => [
+                            '../value' => ['target' => 'smithy.api#String']
+                        ]
+                    ]
+                ]
+            ]],
+            'invalid target' => [[
+                'smithy' => '2.0',
+                'shapes' => [
+                    'example#Input' => [
+                        'type' => 'structure',
+                        'members' => [
+                            'value' => ['target' => '../String']
+                        ]
+                    ]
+                ]
+            ]],
+            'invalid trait ID' => [[
+                'smithy' => '2.0',
+                'shapes' => [
+                    'example#Input' => [
+                        'type' => 'structure',
+                        'members' => [],
+                        'traits' => [
+                            '../sensitive' => []
+                        ]
+                    ]
+                ]
+            ]],
+            'members on unsupported mixin shape' => [[
+                'smithy' => '2.0',
+                'shapes' => [
+                    'example#InvalidMixin' => [
+                        'type' => 'string',
+                        'members' => [
+                            'bad-name' => [
+                                'target' => 'smithy.api#String'
+                            ]
+                        ]
+                    ],
+                    'example#Input' => [
+                        'type' => 'structure',
+                        'mixins' => [
+                            ['target' => 'example#InvalidMixin']
+                        ],
+                        'members' => []
+                    ]
+                ]
+            ]],
+            'invalid target on enum mixin member' => [[
+                'smithy' => '2.0',
+                'shapes' => [
+                    'example#InvalidMixin' => [
+                        'type' => 'enum',
+                        'members' => [
+                            'VALUE' => [
+                                'target' => "smithy.api#String'; phpinfo(); //"
+                            ]
+                        ]
+                    ],
+                    'example#Input' => [
+                        'type' => 'structure',
+                        'mixins' => [
+                            ['target' => 'example#InvalidMixin']
+                        ],
+                        'members' => []
+                    ]
+                ]
+            ]],
+            'invalid resource property name' => [[
+                'smithy' => '2.0',
+                'shapes' => [
+                    'example#Resource' => [
+                        'type' => 'resource',
+                        'properties' => [
+                            '../name' => [
+                                'target' => 'smithy.api#String'
+                            ]
+                        ]
+                    ]
+                ]
+            ]],
+            'invalid resource property target' => [[
+                'smithy' => '2.0',
+                'shapes' => [
+                    'example#Resource' => [
+                        'type' => 'resource',
+                        'properties' => [
+                            'name' => [
+                                'target' => '../String'
+                            ]
+                        ]
+                    ]
+                ]
+            ]]
+        ];
+    }
+
     public function testMetadataIsExposedFromParsedModel(): void
     {
         $model = SmithyModel::fromJson(json_encode([
