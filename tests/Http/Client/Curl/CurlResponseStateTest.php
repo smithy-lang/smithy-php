@@ -16,7 +16,6 @@ final class CurlResponseStateTest extends TestCase
         $notifications = 0;
         $state = new CurlResponseState(
             null,
-            false,
             onReadTimeoutStarted: static function () use (
                 &$notifications
             ): void
@@ -38,7 +37,7 @@ final class CurlResponseStateTest extends TestCase
 
     public function testIgnoresInformationalResponseHeaders(): void
     {
-        $state = new CurlResponseState(null, false);
+        $state = new CurlResponseState(null);
 
         $this->assertFalse(
             $state->consumeHeader("HTTP/1.1 103 Early Hints\r\n")
@@ -62,41 +61,18 @@ final class CurlResponseStateTest extends TestCase
         );
     }
 
-    public function testIgnoresFollowedRedirectHeaders(): void
+    public function testPreservesRedirectStatusWithLocation(): void
     {
-        $state = new CurlResponseState(null, true);
+        $state = new CurlResponseState(null);
 
-        $state->consumeHeader("HTTP/1.1 300 Multiple Choices\r\n");
+        $state->consumeHeader("HTTP/1.1 302 Found\r\n");
         $state->consumeHeader("Location: /next\r\n");
-        $state->consumeHeader("X-Intermediate: value\r\n");
-        $this->assertFalse($state->consumeHeader("\r\n"));
-        $state->consumeHeader("HTTP/2 204 No Content\r\n");
-        $state->consumeHeader("X-Final: value\r\n");
-        $this->assertTrue($state->consumeHeader("\r\n"));
-        $state->consumeHeader("X-Trailer: complete\r\n");
-        $state->consumeHeader("\r\n");
-        $state->completeTrailers();
-
-        $this->assertSame(204, $state->status);
-        $this->assertSame('2', $state->protocolVersion);
-        $this->assertSame(['X-Final' => ['value']], $state->headers);
-        $this->assertSame(
-            ['X-Trailer' => ['complete']],
-            $state->trailers()->getHeaders()
-        );
-    }
-
-    public function testPreservesUnfollowedRedirectStatusWithLocation(): void
-    {
-        $state = new CurlResponseState(null, true);
-
-        $state->consumeHeader("HTTP/1.1 304 Not Modified\r\n");
-        $state->consumeHeader("Location: /cached\r\n");
         $this->assertTrue($state->consumeHeader("\r\n"));
 
-        $this->assertSame(304, $state->status);
+        $this->assertSame(302, $state->status);
+        $this->assertSame('Found', $state->reason);
         $this->assertSame(
-            ['Location' => ['/cached']],
+            ['Location' => ['/next']],
             $state->headers
         );
     }
@@ -105,7 +81,6 @@ final class CurlResponseStateTest extends TestCase
     {
         $state = new CurlResponseState(
             null,
-            false,
             ignoreProxyConnectResponse: true
         );
 
@@ -122,7 +97,7 @@ final class CurlResponseStateTest extends TestCase
 
     public function testPreservesDirectConnectionEstablishedResponse(): void
     {
-        $state = new CurlResponseState(null, false);
+        $state = new CurlResponseState(null);
 
         $state->consumeHeader(
             "HTTP/1.1 200 Connection established\r\n"
@@ -137,7 +112,7 @@ final class CurlResponseStateTest extends TestCase
 
     public function testCollectsTrailersAfterFinalHeaders(): void
     {
-        $state = new CurlResponseState(null, false);
+        $state = new CurlResponseState(null);
 
         $state->consumeHeader("HTTP/1.1 200 OK\r\n");
         $state->consumeHeader("X-Initial: value\r\n");
@@ -163,7 +138,7 @@ final class CurlResponseStateTest extends TestCase
 
     public function testPreservesFinalReasonPhrase(): void
     {
-        $state = new CurlResponseState(null, false);
+        $state = new CurlResponseState(null);
 
         $state->consumeHeader("HTTP/1.1 599 Custom Failure\r\n");
         $state->consumeHeader("\r\n");
@@ -174,7 +149,7 @@ final class CurlResponseStateTest extends TestCase
 
     public function testCompletesEmptyTrailers(): void
     {
-        $state = new CurlResponseState(null, false);
+        $state = new CurlResponseState(null);
 
         $state->consumeHeader("HTTP/2 204\r\n");
         $state->consumeHeader("\r\n");
@@ -185,7 +160,7 @@ final class CurlResponseStateTest extends TestCase
 
     public function testFailsTrailersWithTransportCause(): void
     {
-        $state = new CurlResponseState(null, false);
+        $state = new CurlResponseState(null);
         $failure = new \RuntimeException('transfer failed');
         $state->failTrailers($failure);
 
@@ -196,7 +171,7 @@ final class CurlResponseStateTest extends TestCase
 
     public function testRemovesDecodedRepresentationHeaders(): void
     {
-        $state = new CurlResponseState(null, false, true);
+        $state = new CurlResponseState(null, true);
 
         $state->consumeHeader("HTTP/1.1 200 OK\r\n");
         $state->consumeHeader("Content-Encoding: gzip\r\n");
@@ -212,7 +187,7 @@ final class CurlResponseStateTest extends TestCase
 
     public function testPreservesRawRepresentationHeaders(): void
     {
-        $state = new CurlResponseState(null, false, false);
+        $state = new CurlResponseState(null, false);
 
         $state->consumeHeader("HTTP/1.1 200 OK\r\n");
         $state->consumeHeader("Content-Encoding: gzip\r\n");
@@ -232,7 +207,6 @@ final class CurlResponseStateTest extends TestCase
     {
         $head = new CurlResponseState(
             null,
-            false,
             true,
             0,
             false
@@ -242,7 +216,7 @@ final class CurlResponseStateTest extends TestCase
         $head->consumeHeader("Content-Length: 10\r\n");
         $head->consumeHeader("\r\n");
 
-        $notModified = new CurlResponseState(null, false, true);
+        $notModified = new CurlResponseState(null, true);
         $notModified->consumeHeader("HTTP/1.1 304 Not Modified\r\n");
         $notModified->consumeHeader("Content-Encoding: gzip\r\n");
         $notModified->consumeHeader("Content-Length: 10\r\n");
@@ -260,7 +234,6 @@ final class CurlResponseStateTest extends TestCase
     {
         $state = new CurlResponseState(
             null,
-            false,
             maxBufferedResponseBytes: 1024
         );
         $state->consumeHeader("HTTP/1.1 200 OK\r\n");
@@ -274,7 +247,6 @@ final class CurlResponseStateTest extends TestCase
     {
         $state = new CurlResponseState(
             null,
-            false,
             maxBufferedResponseBytes: 1024
         );
         $state->consumeHeader("HTTP/1.1 200 OK\r\n");
@@ -286,10 +258,7 @@ final class CurlResponseStateTest extends TestCase
 
     public function testAutomaticDeliveryStreamsUnknownLengthResponse(): void
     {
-        $state = new CurlResponseState(
-            null,
-            false
-        );
+        $state = new CurlResponseState(null);
         $state->consumeHeader("HTTP/1.1 200 OK\r\n");
         $state->consumeHeader("\r\n");
 
@@ -298,10 +267,7 @@ final class CurlResponseStateTest extends TestCase
 
     public function testAutomaticDeliveryStreamsDecodedResponse(): void
     {
-        $state = new CurlResponseState(
-            null,
-            false
-        );
+        $state = new CurlResponseState(null);
         $state->consumeHeader("HTTP/1.1 200 OK\r\n");
         $state->consumeHeader("Content-Encoding: gzip\r\n");
         $state->consumeHeader("Content-Length: 100\r\n");
@@ -312,10 +278,7 @@ final class CurlResponseStateTest extends TestCase
 
     public function testAutomaticDeliveryBuffersBodylessResponse(): void
     {
-        $state = new CurlResponseState(
-            null,
-            false
-        );
+        $state = new CurlResponseState(null);
         $state->consumeHeader("HTTP/1.1 204 No Content\r\n");
         $state->consumeHeader("\r\n");
 
@@ -324,7 +287,7 @@ final class CurlResponseStateTest extends TestCase
 
     public function testBuffersBodyAtConfiguredLimit(): void
     {
-        $state = new CurlResponseState(null, false, true, 4);
+        $state = new CurlResponseState(null, true, 4);
         $state->consumeHeader("HTTP/1.1 200 OK\r\n");
         $state->consumeHeader("\r\n");
 
@@ -336,7 +299,7 @@ final class CurlResponseStateTest extends TestCase
 
     public function testRejectsBodyAboveConfiguredLimit(): void
     {
-        $state = new CurlResponseState(null, false, true, 3);
+        $state = new CurlResponseState(null, true, 3);
         $state->consumeHeader("HTTP/1.1 200 OK\r\n");
         $state->consumeHeader("\r\n");
 

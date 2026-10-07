@@ -651,6 +651,22 @@ final class CurlClientTest extends TestCase
         $this->assertNotSame('', $capture['body']);
     }
 
+    public function testReturnsRedirectResponsesWithoutFollowingThem(): void
+    {
+        $server = LocalServerFixture::start(
+            responseMode: 'redirect-response'
+        );
+
+        try {
+            $response = $this->sendRequest($server, null);
+        } finally {
+            $server->stop();
+        }
+
+        $this->assertSame(302, $response->getStatusCode());
+        $this->assertSame('/next', $response->getHeaderLine('Location'));
+    }
+
     public function testAutomaticHttpVersionUsesHttp11ForPlainHttp(): void
     {
         $server = LocalServerFixture::start();
@@ -1525,60 +1541,6 @@ final class CurlClientTest extends TestCase
             $this->assertStringContainsString(
                 'Async request stream write exceeds expected length of 7 bytes.',
                 $error->getMessage()
-            );
-        } finally {
-            $server->stop();
-        }
-    }
-
-    public function testRejectsRedirectsForCallbackBackedUpload(): void
-    {
-        $server = LocalServerFixture::start();
-        $request = new Request(
-            'POST',
-            $server->endpoint() . '/upload',
-            [],
-            new TestStreamFixture('payload', true, true)
-        );
-
-        try {
-            $this->expectException(RequestException::class);
-            $this->expectExceptionMessage(
-                'CurlClient cannot follow redirects for request bodies '
-                    . 'that cURL cannot rewind.'
-            );
-
-            (new CurlClient())->sendRequest(
-                $request,
-                new HttpRequestOptions(followRedirects: true)
-            );
-        } finally {
-            $server->stop();
-        }
-    }
-
-    public function testRejectsRedirectsForOffsetBackedResourceUpload(): void
-    {
-        $server = LocalServerFixture::start();
-        $body = ResourceRequestStream::temp('prefix-payload');
-        $body->seek(7);
-        $request = new Request(
-            'POST',
-            $server->endpoint() . '/upload',
-            [],
-            $body
-        );
-
-        try {
-            $this->expectException(RequestException::class);
-            $this->expectExceptionMessage(
-                'CurlClient cannot follow redirects for request bodies '
-                    . 'that cURL cannot rewind.'
-            );
-
-            (new CurlClient())->sendRequest(
-                $request,
-                new HttpRequestOptions(followRedirects: true)
             );
         } finally {
             $server->stop();
