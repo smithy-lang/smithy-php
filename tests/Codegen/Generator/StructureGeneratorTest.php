@@ -582,4 +582,52 @@ JSON);
             $file->content
         );
     }
+
+    public function testEmitsSensitiveTraitForTransitiveCollection(): void
+    {
+        $model = SmithyModel::fromJson(<<<'JSON'
+{
+    "smithy": "2.0",
+    "shapes": {
+        "smithy.example#Secret": {
+            "type": "string",
+            "traits": {"smithy.api#sensitive": {}}
+        },
+        "smithy.example#Secrets": {
+            "type": "list",
+            "member": {"target": "smithy.example#Secret"}
+        },
+        "smithy.example#Container": {
+            "type": "structure",
+            "members": {
+                "secrets": {"target": "smithy.example#Secrets"}
+            }
+        }
+    }
+}
+JSON);
+        $settings = new CodegenSettings(
+            namespace: 'Smithy\\Example',
+            outputDir: '/tmp/out',
+            organization: 'flat'
+        );
+        $generator = new StructureGenerator(
+            $model,
+            new PhpSymbolProvider($model, $settings),
+            $settings
+        );
+
+        $content = $generator->generate(
+            'smithy.example#Container'
+        )->content;
+
+        $this->assertStringContainsString(
+            'use Smithy\\Core\\Shape\\SensitiveStringableTrait;',
+            $content
+        );
+        $this->assertStringContainsString(
+            'use SensitiveStringableTrait;',
+            $content
+        );
+    }
 }
