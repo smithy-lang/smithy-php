@@ -551,6 +551,19 @@ if ($mode === 'response-trailers') {
     exit(0);
 }
 
+if ($mode === 'redirect-response') {
+    fwrite(
+        $conn,
+        "HTTP/1.1 302 Found\r\n"
+            . "Location: /next\r\n"
+            . "Content-Length: 0\r\n"
+            . "Connection: close\r\n\r\n"
+    );
+    fclose($conn);
+    fclose($server);
+    exit(0);
+}
+
 if ($mode === 'discard-reuse-response') {
     $responseBody = str_repeat('d', 128 * 1024);
     fwrite(

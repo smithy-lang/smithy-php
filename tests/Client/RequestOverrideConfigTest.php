@@ -92,7 +92,6 @@ final class RequestOverrideConfigTest extends TestCase
         $cancellation = new Cancellation();
         $defaults = new HttpRequestOptions(
             timeout: 9.0,
-            followRedirects: false,
             proxy: 'http://proxy.example',
             decodeContent: true,
             trailers: $trailers,
@@ -107,7 +106,6 @@ final class RequestOverrideConfigTest extends TestCase
         $overrides = RequestOverrideConfig::fromArray([
             RequestOverrideConfig::HTTP => [
                 'timeout' => 2,
-                'allow_redirects' => true,
                 'proxy' => null,
                 'decode_content' => false,
                 'response_buffer_size' => 65536,
@@ -119,7 +117,6 @@ final class RequestOverrideConfigTest extends TestCase
 
         self::assertNotNull($resolved);
         self::assertSame(2.0, $resolved->timeout);
-        self::assertTrue($resolved->followRedirects);
         self::assertSame('http://proxy.example', $resolved->proxy);
         self::assertFalse($resolved->decodeContent);
         self::assertSame($trailers, $resolved->trailers);
@@ -141,7 +138,6 @@ final class RequestOverrideConfigTest extends TestCase
         $cancellation = new Cancellation();
         $defaults = new HttpRequestOptions(
             timeout: 9.0,
-            followRedirects: false,
             proxy: 'http://proxy.example',
             decodeContent: true,
             trailers: $trailers,
@@ -151,8 +147,6 @@ final class RequestOverrideConfigTest extends TestCase
         $overrides = RequestOverrideConfig::fromArray([
             RequestOverrideConfig::HTTP => [
                 'timeout' => null,
-                'allow_redirects' => null,
-                'follow_redirects' => true,
                 'proxy' => null,
                 'decode_content' => null,
                 'trailers' => null,
@@ -167,7 +161,6 @@ final class RequestOverrideConfigTest extends TestCase
 
         self::assertNotNull($resolved);
         self::assertSame(9.0, $resolved->timeout);
-        self::assertTrue($resolved->followRedirects);
         self::assertSame('http://proxy.example', $resolved->proxy);
         self::assertTrue($resolved->decodeContent);
         self::assertSame($trailers, $resolved->trailers);
@@ -218,17 +211,30 @@ final class RequestOverrideConfigTest extends TestCase
         RequestOverrideConfig::fromArray(['@unknown' => true]);
     }
 
-    public function testRejectsConflictingRedirectOptions(): void
+    public function testRejectsAllowRedirectsOverride(): void
     {
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage(
-            'cannot contain both allow_redirects and follow_redirects'
+            "Unknown @http option 'allow_redirects'."
         );
 
         RequestOverrideConfig::fromArray([
             RequestOverrideConfig::HTTP => [
-                'allow_redirects' => true,
-                'follow_redirects' => false
+                'allow_redirects' => true
+            ]
+        ]);
+    }
+
+    public function testRejectsFollowRedirectsOverride(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage(
+            "Unknown @http option 'follow_redirects'."
+        );
+
+        RequestOverrideConfig::fromArray([
+            RequestOverrideConfig::HTTP => [
+                'follow_redirects' => true
             ]
         ]);
     }
