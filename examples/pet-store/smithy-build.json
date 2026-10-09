@@ -1,0 +1,28 @@
+{
+    "version": "1.0",
+    "sources": [
+        "model/main.smithy"
+    ],
+    "maven": {
+        "dependencies": [
+            "software.amazon.smithy:smithy-protocol-traits:1.71.0"
+        ]
+    },
+    "projections": {
+        "pet-store": {
+            "transforms": [
+                {
+                    "name": "includeServices",
+                    "args": {
+                        "services": [
+                            "smithy.example.petstore#PetStore"
+                        ]
+                    }
+                },
+                {
+                    "name": "removeUnusedShapes"
+                }
+            ]
+        }
+    }
+}

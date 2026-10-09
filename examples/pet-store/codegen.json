@@ -1,0 +1,12 @@
+{
+    "namespace": "Smithy\\Examples\\PetStore",
+    "outputDir": "generated",
+    "organization": "categorized",
+    "arrayAccess": {
+        "enabled": true,
+        "categories": [
+            "all"
+        ]
+    },
+    "preserveExistingMemberOrder": false
+}

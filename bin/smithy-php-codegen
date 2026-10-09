@@ -4,12 +4,13 @@
 declare(strict_types=1);
 
 $autoloadPaths = [
+    $GLOBALS['_composer_autoload_path'] ?? null,
     __DIR__ . '/../vendor/autoload.php',
     __DIR__ . '/../../../autoload.php'
 ];
 
 foreach ($autoloadPaths as $autoloadPath) {
-    if (\is_file($autoloadPath)) {
+    if (\is_string($autoloadPath) && \is_file($autoloadPath)) {
         require $autoloadPath;
 
         exit(
