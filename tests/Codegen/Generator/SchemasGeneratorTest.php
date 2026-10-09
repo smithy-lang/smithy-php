@@ -74,6 +74,133 @@ final class SchemasGeneratorTest extends TestCase
         );
     }
 
+    public function testImportsTargetClassesAndUsesShortReferences(): void
+    {
+        $model = SmithyModel::fromJson(\json_encode([
+            'smithy' => '2.0',
+            'shapes' => [
+                'smithy.example#Thing' => [
+                    'type' => 'structure',
+                    'members' => []
+                ]
+            ]
+        ], JSON_THROW_ON_ERROR));
+        $settings = new CodegenSettings(
+            namespace: 'Smithy\\Example',
+            outputDir: '/tmp/out'
+        );
+        $generator = new SchemasGenerator(
+            $model,
+            new PhpSymbolProvider($model, $settings),
+            $settings
+        );
+
+        $content = $generator->generate([
+            'smithy.example#Thing' => true
+        ])->content;
+
+        $this->assertStringContainsString(
+            'use Smithy\\Example\\Shape\\Thing;',
+            $content
+        );
+        $this->assertStringContainsString(
+            'targetClass: Thing::class',
+            $content
+        );
+        $this->assertStringNotContainsString(
+            'targetClass: \\Smithy\\Example\\Shape\\Thing::class',
+            $content
+        );
+    }
+
+    public function testAliasesCollidingTargetClassImports(): void
+    {
+        $model = SmithyModel::fromJson(\json_encode([
+            'smithy' => '2.0',
+            'shapes' => [
+                'smithy.example#Schema' => [
+                    'type' => 'structure',
+                    'members' => []
+                ],
+                'smithy.example#SchemaTarget' => [
+                    'type' => 'structure',
+                    'members' => []
+                ]
+            ]
+        ], JSON_THROW_ON_ERROR));
+        $settings = new CodegenSettings(
+            namespace: 'Smithy\\Example',
+            outputDir: '/tmp/out'
+        );
+        $generator = new SchemasGenerator(
+            $model,
+            new PhpSymbolProvider($model, $settings),
+            $settings
+        );
+
+        $content = $generator->generate([
+            'smithy.example#Schema' => true,
+            'smithy.example#SchemaTarget' => true
+        ])->content;
+
+        $this->assertStringContainsString(
+            'use Smithy\\Example\\Shape\\Schema as SchemaTarget2;',
+            $content
+        );
+        $this->assertStringContainsString(
+            'use Smithy\\Example\\Shape\\SchemaTarget;',
+            $content
+        );
+        $this->assertStringContainsString(
+            'targetClass: SchemaTarget2::class',
+            $content
+        );
+        $this->assertStringContainsString(
+            'targetClass: SchemaTarget::class',
+            $content
+        );
+    }
+
+    public function testRendersSparseTraitIndexesWithoutNullPadding(): void
+    {
+        $model = SmithyModel::fromJson(\json_encode([
+            'smithy' => '2.0',
+            'shapes' => [
+                'smithy.example#Thing' => [
+                    'type' => 'structure',
+                    'members' => [
+                        'name' => [
+                            'target' => 'smithy.api#String',
+                            'traits' => [
+                                'smithy.api#required' => []
+                            ]
+                        ]
+                    ]
+                ]
+            ]
+        ], JSON_THROW_ON_ERROR));
+        $settings = new CodegenSettings(
+            namespace: 'Smithy\\Example',
+            outputDir: '/tmp/out',
+            organization: 'flat'
+        );
+        $generator = new SchemasGenerator(
+            $model,
+            new PhpSymbolProvider($model, $settings),
+            $settings
+        );
+
+        $content = $generator->generate([
+            'smithy.example#Thing' => true
+        ])->content;
+
+        $this->assertStringContainsString(
+            'traits: [14 => true]',
+            $content
+        );
+        $this->assertStringNotContainsString('traits: [null', $content);
+    }
+
     public function testEmitsPerStructureInitMethodForShapesInClosure(): void
     {
         // The `Settings` structure in the closure should get its own init
@@ -171,7 +298,11 @@ final class SchemasGeneratorTest extends TestCase
         ]);
 
         $this->assertStringContainsString(
-            "'wire-name']",
+            "traits: [27 => 'wire-name']",
+            $file->content
+        );
+        $this->assertStringContainsString(
+            "traits: [27 => 'root-name']",
             $file->content
         );
         $this->assertStringContainsString(

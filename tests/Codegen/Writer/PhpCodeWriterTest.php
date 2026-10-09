@@ -163,6 +163,17 @@ final class PhpCodeWriterTest extends TestCase
         );
     }
 
+    public function testAddImportAllowsAliasedSameNamespaceImports(): void
+    {
+        $writer = new PhpCodeWriter('Aws\\Example');
+        $writer->addImport('Aws\\Example\\Schema', 'ModeledSchema');
+
+        $this->assertStringContainsString(
+            'use Aws\\Example\\Schema as ModeledSchema;',
+            $writer->toFileContent()
+        );
+    }
+
     public function testAddImportStripsLeadingBackslash(): void
     {
         $writer = new PhpCodeWriter('Aws\\Example');
