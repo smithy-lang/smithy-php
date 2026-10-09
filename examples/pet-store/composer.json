@@ -1,0 +1,49 @@
+{
+    "name": "smithy/example-pet-store",
+    "description": "End-to-end Smithy PHP PetStore quickstart",
+    "type": "project",
+    "license": "Apache-2.0",
+    "repositories": [
+        {
+            "type": "path",
+            "url": "../..",
+            "options": {
+                "symlink": true,
+                "versions": {
+                    "smithy/smithy-php": "dev-main"
+                }
+            }
+        }
+    ],
+    "require": {
+        "ext-curl": "*",
+        "ext-mbstring": "*",
+        "php": ">=8.2",
+        "smithy/smithy-php": "dev-main"
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "autoload": {
+        "psr-4": {
+            "Smithy\\Examples\\PetStore\\Server\\": "server/src/",
+            "Smithy\\Examples\\PetStore\\Example\\": "src/",
+            "Smithy\\Examples\\PetStore\\": "generated/"
+        }
+    },
+    "scripts": {
+        "model": "@php tools/build-model.php",
+        "model:check": "@php tools/build-model.php --check",
+        "generate": "@php vendor/bin/smithy-php-codegen model/pet-store.json --config=codegen.json",
+        "serve": [
+            "Composer\\Config::disableProcessTimeout",
+            "@php -S 127.0.0.1:8080 server/router.php"
+        ],
+        "demo": "@php scripts/demo.php",
+        "demo:async": "@php scripts/async.php",
+        "reset": "@php scripts/reset.php",
+        "test": [
+            "@generate",
+            "@php tools/smoke-test.php"
+        ]
+    }
+}

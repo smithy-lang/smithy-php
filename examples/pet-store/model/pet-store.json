@@ -1,0 +1,796 @@
+{
+    "smithy": "2.0",
+    "shapes": {
+        "smithy.example.petstore#BirdDetails": {
+            "type": "structure",
+            "members": {
+                "canTalk": {
+                    "target": "smithy.api#Boolean"
+                }
+            }
+        },
+        "smithy.example.petstore#CatDetails": {
+            "type": "structure",
+            "members": {
+                "indoorOnly": {
+                    "target": "smithy.api#Boolean"
+                }
+            }
+        },
+        "smithy.example.petstore#CreatePet": {
+            "type": "operation",
+            "input": {
+                "target": "smithy.example.petstore#CreatePetInput"
+            },
+            "output": {
+                "target": "smithy.example.petstore#CreatePetOutput"
+            },
+            "errors": [
+                {
+                    "target": "smithy.example.petstore#PetConflictError"
+                },
+                {
+                    "target": "smithy.example.petstore#ValidationError"
+                }
+            ],
+            "traits": {
+                "smithy.api#documentation": "Add a pet to the store."
+            }
+        },
+        "smithy.example.petstore#CreatePetInput": {
+            "type": "structure",
+            "members": {
+                "pet": {
+                    "target": "smithy.example.petstore#NewPet",
+                    "traits": {
+                        "smithy.api#notProperty": {},
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#input": {}
+            }
+        },
+        "smithy.example.petstore#CreatePetOutput": {
+            "type": "structure",
+            "members": {
+                "pet": {
+                    "target": "smithy.example.petstore#PetRecord",
+                    "traits": {
+                        "smithy.api#notProperty": {},
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#output": {}
+            }
+        },
+        "smithy.example.petstore#DeletePet": {
+            "type": "operation",
+            "input": {
+                "target": "smithy.example.petstore#DeletePetInput"
+            },
+            "output": {
+                "target": "smithy.api#Unit"
+            },
+            "errors": [
+                {
+                    "target": "smithy.example.petstore#PetNotFoundError"
+                },
+                {
+                    "target": "smithy.example.petstore#ValidationError"
+                }
+            ],
+            "traits": {
+                "smithy.api#documentation": "Remove a pet from the store.",
+                "smithy.api#idempotent": {}
+            }
+        },
+        "smithy.example.petstore#DeletePetInput": {
+            "type": "structure",
+            "members": {
+                "petId": {
+                    "target": "smithy.example.petstore#PetId",
+                    "traits": {
+                        "smithy.api#required": {},
+                        "smithy.api#resourceIdentifier": "petId"
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#input": {}
+            }
+        },
+        "smithy.example.petstore#DogDetails": {
+            "type": "structure",
+            "members": {
+                "breed": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#required": {}
+                    }
+                },
+                "favoriteToy": {
+                    "target": "smithy.api#String"
+                }
+            }
+        },
+        "smithy.example.petstore#GetPet": {
+            "type": "operation",
+            "input": {
+                "target": "smithy.example.petstore#GetPetInput"
+            },
+            "output": {
+                "target": "smithy.example.petstore#GetPetOutput"
+            },
+            "errors": [
+                {
+                    "target": "smithy.example.petstore#PetNotFoundError"
+                },
+                {
+                    "target": "smithy.example.petstore#ValidationError"
+                }
+            ],
+            "traits": {
+                "smithy.api#documentation": "Retrieve a pet by ID.",
+                "smithy.api#readonly": {}
+            }
+        },
+        "smithy.example.petstore#GetPetInput": {
+            "type": "structure",
+            "members": {
+                "petId": {
+                    "target": "smithy.example.petstore#PetId",
+                    "traits": {
+                        "smithy.api#required": {},
+                        "smithy.api#resourceIdentifier": "petId"
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#input": {}
+            }
+        },
+        "smithy.example.petstore#GetPetOutput": {
+            "type": "structure",
+            "members": {
+                "pet": {
+                    "target": "smithy.example.petstore#PetRecord",
+                    "traits": {
+                        "smithy.api#notProperty": {},
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#output": {}
+            }
+        },
+        "smithy.example.petstore#ListPets": {
+            "type": "operation",
+            "input": {
+                "target": "smithy.example.petstore#ListPetsInput"
+            },
+            "output": {
+                "target": "smithy.example.petstore#ListPetsOutput"
+            },
+            "errors": [
+                {
+                    "target": "smithy.example.petstore#ValidationError"
+                }
+            ],
+            "traits": {
+                "smithy.api#documentation": "List pets in stable ID order.",
+                "smithy.api#paginated": {
+                    "inputToken": "nextToken",
+                    "outputToken": "nextToken",
+                    "pageSize": "pageSize",
+                    "items": "pets"
+                },
+                "smithy.api#readonly": {}
+            }
+        },
+        "smithy.example.petstore#ListPetsInput": {
+            "type": "structure",
+            "members": {
+                "nextToken": {
+                    "target": "smithy.api#String"
+                },
+                "pageSize": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#range": {
+                            "min": 1,
+                            "max": 25
+                        }
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#input": {}
+            }
+        },
+        "smithy.example.petstore#ListPetsOutput": {
+            "type": "structure",
+            "members": {
+                "pets": {
+                    "target": "smithy.example.petstore#PetRecords",
+                    "traits": {
+                        "smithy.api#required": {}
+                    }
+                },
+                "nextToken": {
+                    "target": "smithy.api#String"
+                }
+            },
+            "traits": {
+                "smithy.api#output": {}
+            }
+        },
+        "smithy.example.petstore#MedicalPriority": {
+            "type": "intEnum",
+            "members": {
+                "ROUTINE": {
+                    "target": "smithy.api#Unit",
+                    "traits": {
+                        "smithy.api#enumValue": 1
+                    }
+                },
+                "SOON": {
+                    "target": "smithy.api#Unit",
+                    "traits": {
+                        "smithy.api#enumValue": 2
+                    }
+                },
+                "URGENT": {
+                    "target": "smithy.api#Unit",
+                    "traits": {
+                        "smithy.api#enumValue": 3
+                    }
+                }
+            }
+        },
+        "smithy.example.petstore#NewPet": {
+            "type": "structure",
+            "members": {
+                "name": {
+                    "target": "smithy.example.petstore#PetName",
+                    "traits": {
+                        "smithy.api#required": {}
+                    }
+                },
+                "species": {
+                    "target": "smithy.example.petstore#PetSpecies",
+                    "traits": {
+                        "smithy.api#required": {}
+                    }
+                },
+                "ageYears": {
+                    "target": "smithy.api#Integer"
+                },
+                "description": {
+                    "target": "smithy.api#String"
+                },
+                "photo": {
+                    "target": "smithy.api#Blob"
+                },
+                "traits": {
+                    "target": "smithy.example.petstore#PetTraits"
+                },
+                "attributes": {
+                    "target": "smithy.example.petstore#PetAttributes"
+                },
+                "vaccinations": {
+                    "target": "smithy.example.petstore#VaccinationRecords"
+                },
+                "details": {
+                    "target": "smithy.example.petstore#PetDetails"
+                },
+                "metrics": {
+                    "target": "smithy.example.petstore#PetMetrics"
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "Information supplied when adding a pet."
+            }
+        },
+        "smithy.example.petstore#OtherDetails": {
+            "type": "structure",
+            "members": {
+                "notes": {
+                    "target": "smithy.example.petstore#PetTraits"
+                }
+            }
+        },
+        "smithy.example.petstore#Pet": {
+            "type": "resource",
+            "identifiers": {
+                "petId": {
+                    "target": "smithy.example.petstore#PetId"
+                }
+            },
+            "create": {
+                "target": "smithy.example.petstore#CreatePet"
+            },
+            "read": {
+                "target": "smithy.example.petstore#GetPet"
+            },
+            "update": {
+                "target": "smithy.example.petstore#UpdatePet"
+            },
+            "delete": {
+                "target": "smithy.example.petstore#DeletePet"
+            },
+            "list": {
+                "target": "smithy.example.petstore#ListPets"
+            },
+            "traits": {
+                "smithy.api#documentation": "A pet managed by the store."
+            }
+        },
+        "smithy.example.petstore#PetAttributes": {
+            "type": "map",
+            "key": {
+                "target": "smithy.api#String"
+            },
+            "value": {
+                "target": "smithy.api#String"
+            }
+        },
+        "smithy.example.petstore#PetConflictError": {
+            "type": "structure",
+            "members": {
+                "message": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#error": "client"
+            }
+        },
+        "smithy.example.petstore#PetDetails": {
+            "type": "union",
+            "members": {
+                "dog": {
+                    "target": "smithy.example.petstore#DogDetails"
+                },
+                "cat": {
+                    "target": "smithy.example.petstore#CatDetails"
+                },
+                "bird": {
+                    "target": "smithy.example.petstore#BirdDetails"
+                },
+                "other": {
+                    "target": "smithy.example.petstore#OtherDetails"
+                }
+            }
+        },
+        "smithy.example.petstore#PetId": {
+            "type": "string",
+            "traits": {
+                "smithy.api#pattern": "^pet-[0-9]+$"
+            }
+        },
+        "smithy.example.petstore#PetMetrics": {
+            "type": "structure",
+            "members": {
+                "houseTrained": {
+                    "target": "smithy.api#Boolean",
+                    "traits": {
+                        "smithy.api#default": false
+                    }
+                },
+                "temperamentScore": {
+                    "target": "smithy.api#Byte",
+                    "traits": {
+                        "smithy.api#default": 5
+                    }
+                },
+                "kennelNumber": {
+                    "target": "smithy.api#Short"
+                },
+                "eventSequence": {
+                    "target": "smithy.api#Long"
+                },
+                "weightKilograms": {
+                    "target": "smithy.api#Float"
+                },
+                "latitude": {
+                    "target": "smithy.api#Double"
+                },
+                "registrySequence": {
+                    "target": "smithy.api#BigInteger"
+                },
+                "adoptionFee": {
+                    "target": "smithy.api#BigDecimal"
+                },
+                "medicalPriority": {
+                    "target": "smithy.example.petstore#MedicalPriority"
+                },
+                "measurements": {
+                    "target": "smithy.example.petstore#SparseMeasurements"
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "Less-common scalar values kept together to keep the main resource readable."
+            }
+        },
+        "smithy.example.petstore#PetName": {
+            "type": "string",
+            "traits": {
+                "smithy.api#length": {
+                    "min": 1,
+                    "max": 64
+                }
+            }
+        },
+        "smithy.example.petstore#PetNotFoundError": {
+            "type": "structure",
+            "members": {
+                "message": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#required": {}
+                    }
+                },
+                "petId": {
+                    "target": "smithy.example.petstore#PetId",
+                    "traits": {
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#error": "client"
+            }
+        },
+        "smithy.example.petstore#PetRecord": {
+            "type": "structure",
+            "members": {
+                "petId": {
+                    "target": "smithy.example.petstore#PetId",
+                    "traits": {
+                        "smithy.api#required": {}
+                    }
+                },
+                "name": {
+                    "target": "smithy.example.petstore#PetName",
+                    "traits": {
+                        "smithy.api#required": {}
+                    }
+                },
+                "species": {
+                    "target": "smithy.example.petstore#PetSpecies",
+                    "traits": {
+                        "smithy.api#required": {}
+                    }
+                },
+                "status": {
+                    "target": "smithy.example.petstore#PetStatus",
+                    "traits": {
+                        "smithy.api#required": {}
+                    }
+                },
+                "ageYears": {
+                    "target": "smithy.api#Integer"
+                },
+                "description": {
+                    "target": "smithy.api#String"
+                },
+                "photo": {
+                    "target": "smithy.api#Blob"
+                },
+                "traits": {
+                    "target": "smithy.example.petstore#PetTraits"
+                },
+                "attributes": {
+                    "target": "smithy.example.petstore#PetAttributes"
+                },
+                "vaccinations": {
+                    "target": "smithy.example.petstore#VaccinationRecords"
+                },
+                "details": {
+                    "target": "smithy.example.petstore#PetDetails"
+                },
+                "metrics": {
+                    "target": "smithy.example.petstore#PetMetrics"
+                },
+                "createdAt": {
+                    "target": "smithy.api#Timestamp",
+                    "traits": {
+                        "smithy.api#required": {}
+                    }
+                },
+                "updatedAt": {
+                    "target": "smithy.api#Timestamp",
+                    "traits": {
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "The complete stored representation of a pet."
+            }
+        },
+        "smithy.example.petstore#PetRecords": {
+            "type": "list",
+            "member": {
+                "target": "smithy.example.petstore#PetRecord"
+            }
+        },
+        "smithy.example.petstore#PetSpecies": {
+            "type": "enum",
+            "members": {
+                "DOG": {
+                    "target": "smithy.api#Unit",
+                    "traits": {
+                        "smithy.api#enumValue": "dog"
+                    }
+                },
+                "CAT": {
+                    "target": "smithy.api#Unit",
+                    "traits": {
+                        "smithy.api#enumValue": "cat"
+                    }
+                },
+                "BIRD": {
+                    "target": "smithy.api#Unit",
+                    "traits": {
+                        "smithy.api#enumValue": "bird"
+                    }
+                },
+                "OTHER": {
+                    "target": "smithy.api#Unit",
+                    "traits": {
+                        "smithy.api#enumValue": "other"
+                    }
+                }
+            }
+        },
+        "smithy.example.petstore#PetStatus": {
+            "type": "enum",
+            "members": {
+                "AVAILABLE": {
+                    "target": "smithy.api#Unit",
+                    "traits": {
+                        "smithy.api#enumValue": "available"
+                    }
+                },
+                "PENDING": {
+                    "target": "smithy.api#Unit",
+                    "traits": {
+                        "smithy.api#enumValue": "pending"
+                    }
+                },
+                "ADOPTED": {
+                    "target": "smithy.api#Unit",
+                    "traits": {
+                        "smithy.api#enumValue": "adopted"
+                    }
+                }
+            }
+        },
+        "smithy.example.petstore#PetStore": {
+            "type": "service",
+            "version": "2026-10-09",
+            "resources": [
+                {
+                    "target": "smithy.example.petstore#Pet"
+                }
+            ],
+            "traits": {
+                "smithy.api#documentation": "A small service for managing pets available through a local store.",
+                "smithy.api#title": "Pet Store",
+                "smithy.protocols#rpcv2Cbor": {}
+            }
+        },
+        "smithy.example.petstore#PetTraits": {
+            "type": "list",
+            "member": {
+                "target": "smithy.api#String"
+            }
+        },
+        "smithy.example.petstore#PetUpdate": {
+            "type": "structure",
+            "members": {
+                "name": {
+                    "target": "smithy.example.petstore#PetName"
+                },
+                "status": {
+                    "target": "smithy.example.petstore#PetStatus"
+                },
+                "ageYears": {
+                    "target": "smithy.api#Integer"
+                },
+                "description": {
+                    "target": "smithy.api#String"
+                },
+                "photo": {
+                    "target": "smithy.api#Blob"
+                },
+                "traits": {
+                    "target": "smithy.example.petstore#PetTraits"
+                },
+                "attributes": {
+                    "target": "smithy.example.petstore#PetAttributes"
+                },
+                "vaccinations": {
+                    "target": "smithy.example.petstore#VaccinationRecords"
+                },
+                "details": {
+                    "target": "smithy.example.petstore#PetDetails"
+                },
+                "metrics": {
+                    "target": "smithy.example.petstore#PetMetrics"
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "Fields that can be changed after a pet has been added."
+            }
+        },
+        "smithy.example.petstore#SparseMeasurements": {
+            "type": "map",
+            "key": {
+                "target": "smithy.api#String"
+            },
+            "value": {
+                "target": "smithy.api#Double"
+            },
+            "traits": {
+                "smithy.api#sparse": {}
+            }
+        },
+        "smithy.example.petstore#UpdatePet": {
+            "type": "operation",
+            "input": {
+                "target": "smithy.example.petstore#UpdatePetInput"
+            },
+            "output": {
+                "target": "smithy.example.petstore#UpdatePetOutput"
+            },
+            "errors": [
+                {
+                    "target": "smithy.example.petstore#PetNotFoundError"
+                },
+                {
+                    "target": "smithy.example.petstore#ValidationError"
+                }
+            ],
+            "traits": {
+                "smithy.api#documentation": "Change the mutable details of a pet.",
+                "smithy.api#idempotent": {}
+            }
+        },
+        "smithy.example.petstore#UpdatePetInput": {
+            "type": "structure",
+            "members": {
+                "petId": {
+                    "target": "smithy.example.petstore#PetId",
+                    "traits": {
+                        "smithy.api#required": {},
+                        "smithy.api#resourceIdentifier": "petId"
+                    }
+                },
+                "pet": {
+                    "target": "smithy.example.petstore#PetUpdate",
+                    "traits": {
+                        "smithy.api#notProperty": {},
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#input": {}
+            }
+        },
+        "smithy.example.petstore#UpdatePetOutput": {
+            "type": "structure",
+            "members": {
+                "pet": {
+                    "target": "smithy.example.petstore#PetRecord",
+                    "traits": {
+                        "smithy.api#notProperty": {},
+                        "smithy.api#required": {}
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#output": {}
+            }
+        },
+        "smithy.example.petstore#VaccinationRecord": {
+            "type": "structure",
+            "members": {
+                "name": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#required": {}
+                    }
+                },
+                "administeredAt": {
+                    "target": "smithy.api#Timestamp"
+                }
+            }
+        },
+        "smithy.example.petstore#VaccinationRecords": {
+            "type": "list",
+            "member": {
+                "target": "smithy.example.petstore#VaccinationRecord"
+            },
+            "traits": {
+                "smithy.api#sparse": {}
+            }
+        },
+        "smithy.example.petstore#ValidationError": {
+            "type": "structure",
+            "members": {
+                "message": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#required": {}
+                    }
+                },
+                "field": {
+                    "target": "smithy.api#String"
+                }
+            },
+            "traits": {
+                "smithy.api#error": "client"
+            }
+        },
+        "smithy.protocols#StringList": {
+            "type": "list",
+            "member": {
+                "target": "smithy.api#String"
+            },
+            "traits": {
+                "smithy.api#documentation": "A list of String shapes.",
+                "smithy.api#private": {}
+            }
+        },
+        "smithy.protocols#rpcv2Cbor": {
+            "type": "structure",
+            "members": {
+                "http": {
+                    "target": "smithy.protocols#StringList",
+                    "traits": {
+                        "smithy.api#documentation": "Priority ordered list of supported HTTP protocol versions."
+                    }
+                },
+                "eventStreamHttp": {
+                    "target": "smithy.protocols#StringList",
+                    "traits": {
+                        "smithy.api#documentation": "Priority ordered list of supported HTTP protocol versions\nthat are required when using event streams."
+                    }
+                }
+            },
+            "traits": {
+                "smithy.api#documentation": "An RPC-based protocol that serializes CBOR payloads.",
+                "smithy.api#protocolDefinition": {
+                    "traits": [
+                        "smithy.api#cors",
+                        "smithy.api#endpoint",
+                        "smithy.api#hostLabel",
+                        "smithy.api#httpError",
+                        "smithy.api#requestCompression"
+                    ]
+                },
+                "smithy.api#trait": {
+                    "selector": "service"
+                },
+                "smithy.api#traitValidators": {
+                    "rpcv2Cbor.NoDocuments": {
+                        "selector": "service ~> member :test(> document)",
+                        "message": "This protocol does not support document types in most possible scenarios.",
+                        "severity": "DANGER"
+                    }
+                }
+            }
+        }
+    }
+}

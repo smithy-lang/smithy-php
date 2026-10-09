@@ -33,6 +33,10 @@ If you are new to Smithy, follow the
 [Smithy quickstart](https://smithy.io/2.0/quickstart.html) to create and build
 a model.
 
+Follow the [Smithy PHP quickstart](docs/getting-started/quickstart.md) to
+generate a client and use it with the runnable RPCv2 CBOR
+[PetStore example](examples/pet-store/README.md).
+
 See the [code generator guide](src/Codegen/README.md) to generate a client from
 a Smithy JSON AST. Each runtime component also has a README with its contracts
 and usage.
