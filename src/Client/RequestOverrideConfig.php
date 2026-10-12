@@ -8,11 +8,20 @@ use Smithy\Client\Plugin\{
     PluginCollection,
     PluginInterface
 };
+use Smithy\Client\Transport\{
+    TransportInterface,
+    TransportOptionsInterface,
+    TransportRequestInterface
+};
 use Smithy\Http\Client\{
     HttpRequestOptions,
     RequestTrailers
 };
 use Smithy\Http\Client\Cancellation\CancellationInterface;
+use Smithy\Http\Message\{
+    HttpMessageExchange,
+    HttpTransportRequest
+};
 
 /**
  * Configure per-request behavior outside modeled operation input.
@@ -156,6 +165,62 @@ final readonly class RequestOverrideConfig
             $this->authSchemePreference,
             $this->plugins->merge(new PluginCollection(...$plugins))
         );
+    }
+
+    /**
+     * Resolve request options for the configured transport.
+     */
+    public function resolveTransportOptions(
+        TransportInterface $transport
+    ): ?TransportOptionsInterface
+    {
+        if ($this->httpOptions === null
+            && $this->httpOverrides === []
+            && $this->headers === []
+        ) {
+            return null;
+        }
+        if (!HttpMessageExchange::instance()->isCompatibleWith(
+            $transport->getMessageExchange()
+        )) {
+            throw new \InvalidArgumentException(
+                'HTTP request overrides require an HTTP transport.'
+            );
+        }
+
+        if ($this->httpOptions === null && $this->httpOverrides === []) {
+            return null;
+        }
+
+        $defaultOptions = $transport->getDefaultOptions();
+        if (!$defaultOptions instanceof HttpRequestOptions) {
+            throw new \InvalidArgumentException(
+                'HTTP request option overrides require a transport that '
+                    . 'supports ' . HttpRequestOptions::class . '.'
+            );
+        }
+
+        return $this->resolveHttpOptions($defaultOptions);
+    }
+
+    /**
+     * Apply message-level overrides to a serialized request.
+     */
+    public function applyToRequest(
+        TransportRequestInterface $request
+    ): TransportRequestInterface
+    {
+        if ($this->headers === []) {
+            return $request;
+        }
+
+        $transportRequest = HttpTransportRequest::expect($request);
+        $httpRequest = $transportRequest->request;
+        foreach ($this->headers as $name => $values) {
+            $httpRequest = $httpRequest->withHeader($name, $values);
+        }
+
+        return $transportRequest->withRequest($httpRequest);
     }
 
     private static function plugins(mixed $value): PluginCollection

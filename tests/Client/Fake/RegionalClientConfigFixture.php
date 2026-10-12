@@ -13,6 +13,7 @@ use Smithy\Client\Endpoint\EndpointResolverInterface;
 use Smithy\Client\Interceptor\InterceptorChain;
 use Smithy\Client\Plugin\PluginState;
 use Smithy\Client\Retry\RetryStrategyInterface;
+use Smithy\Client\Transport\TransportInterface;
 use Smithy\Core\Shape\ServiceInterface;
 use Smithy\Http\Client\HttpClientInterface;
 use Smithy\Protocol\ProtocolInterface;
@@ -29,7 +30,7 @@ final class RegionalClientConfigFixture extends ClientConfig
      */
     public function __construct(
         ProtocolInterface $protocol,
-        HttpClientInterface $httpClient,
+        ?HttpClientInterface $httpClient,
         EndpointResolverInterface $endpointResolver,
         InterceptorChain $interceptors = new InterceptorChain(),
         array $supportedAuthSchemes = [],
@@ -40,7 +41,8 @@ final class RegionalClientConfigFixture extends ClientConfig
         array $authSchemePreference = [],
         public readonly string $region = '',
         ?ServiceInterface $service = null,
-        ?PluginState $pluginState = null
+        ?PluginState $pluginState = null,
+        ?TransportInterface $transport = null
     )
     {
         parent::__construct(
@@ -55,16 +57,28 @@ final class RegionalClientConfigFixture extends ClientConfig
             $context,
             $authSchemePreference,
             $service,
-            $pluginState
+            $pluginState,
+            $transport
         );
     }
 
     /** @inheritDoc */
     protected function copyWith(array $overrides): static
     {
+        if (\array_key_exists('transport', $overrides)) {
+            $transport = $overrides['transport'];
+            $httpClient = null;
+        } elseif (\array_key_exists('httpClient', $overrides)) {
+            $transport = null;
+            $httpClient = $overrides['httpClient'];
+        } else {
+            $transport = $this->transport;
+            $httpClient = null;
+        }
+
         return new static(
             protocol: $overrides['protocol'] ?? $this->protocol,
-            httpClient: $overrides['httpClient'] ?? $this->httpClient,
+            httpClient: $httpClient,
             endpointResolver: $overrides['endpointResolver']
                 ?? $this->endpointResolver,
             interceptors: $overrides['interceptors']
@@ -82,7 +96,8 @@ final class RegionalClientConfigFixture extends ClientConfig
             region: $overrides['region'] ?? $this->region,
             service: $overrides['service'] ?? $this->service,
             pluginState: $overrides['pluginState']
-                ?? $this->getPluginState()
+                ?? $this->getPluginState(),
+            transport: $transport
         );
     }
 }

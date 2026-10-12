@@ -25,6 +25,7 @@ use Smithy\Core\Shape\ShapeType;
 use Smithy\Http\Message\{
     AsyncRequestStream,
     AsyncRequestStreamInterface,
+    HttpTransportRequest,
     Request,
     ResourceRequestStream
 };
@@ -87,7 +88,10 @@ final class HttpChecksumInterceptorTest extends TestCase
             )
         );
 
-        self::assertInstanceOf(GenericPsrRequest::class, $updated);
+        self::assertInstanceOf(
+            GenericPsrRequest::class,
+            HttpTransportRequest::expect($updated)->request
+        );
         self::assertSame(
             'm7WPJhkuS6APAeLnsTa72A==',
             $updated->getHeaderLine('Content-MD5')

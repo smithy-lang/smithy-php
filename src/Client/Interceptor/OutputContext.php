@@ -11,8 +11,16 @@ use Smithy\Client\Auth\{
     IdentityResolverInterface
 };
 use Smithy\Client\ClientConfig;
+use Smithy\Client\Transport\{
+    TransportRequestInterface,
+    TransportResponseInterface
+};
 use Smithy\Core\Serde\SerializableStructInterface;
 use Smithy\Core\Shape\OperationInterface;
+use Smithy\Http\Message\{
+    HttpTransportRequest,
+    HttpTransportResponse
+};
 
 /**
  * Hook data available after the response has been deserialized (or an
@@ -37,6 +45,10 @@ use Smithy\Core\Shape\OperationInterface;
  */
 final class OutputContext
 {
+    public ?TransportRequestInterface $request;
+
+    public ?TransportResponseInterface $response;
+
     /**
      * Create output hook context.
      */
@@ -44,12 +56,22 @@ final class OutputContext
         public OperationInterface $operation,
         public SerializableStructInterface $input,
         public ClientConfig $config,
-        public ?RequestInterface $request,
-        public ?ResponseInterface $response,
+        TransportRequestInterface|RequestInterface|null $request,
+        TransportResponseInterface|ResponseInterface|null $response,
         public ?SerializableStructInterface $output,
         public ?IdentityInterface $identity = null,
         public ?IdentityResolverInterface $identityResolver = null
-    ) {}
+    )
+    {
+        $this->request = $request instanceof RequestInterface
+            && !$request instanceof TransportRequestInterface
+                ? new HttpTransportRequest($request)
+                : $request;
+        $this->response = $response instanceof ResponseInterface
+            && !$response instanceof TransportResponseInterface
+                ? new HttpTransportResponse($response)
+                : $response;
+    }
 
     /**
      * Replace the mutable output value in this context.
@@ -66,7 +88,9 @@ final class OutputContext
      *
      * @return void
      */
-    public function replaceResponse(?ResponseInterface $response): void
+    public function replaceResponse(
+        ?TransportResponseInterface $response
+    ): void
     {
         $this->response = $response;
     }
@@ -93,7 +117,9 @@ final class OutputContext
     /**
      * Return a new context with `response` replaced.
      */
-    public function withResponse(?ResponseInterface $response): self
+    public function withResponse(
+        ?TransportResponseInterface $response
+    ): self
     {
         return $response === $this->response
             ? $this

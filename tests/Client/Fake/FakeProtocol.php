@@ -5,15 +5,21 @@ declare(strict_types=1);
 namespace Smithy\Tests\Client\Fake;
 
 use Psr\Http\Message\{
-    RequestInterface,
-    ResponseInterface,
     StreamInterface
 };
 use Smithy\Client\Endpoint\Endpoint;
+use Smithy\Client\Transport\{
+    MessageExchangeInterface,
+    TransportRequestInterface,
+    TransportResponseInterface
+};
 use Smithy\Protocol\ProtocolInterface;
 use Smithy\Core\Serde\SerializableStructInterface;
 use Smithy\Core\Shape\OperationInterface;
 use Smithy\Http\Message\{
+    HttpMessageExchange,
+    HttpTransportRequest,
+    HttpTransportResponse,
     Request,
     Uri
 };
@@ -42,52 +48,68 @@ final class FakeProtocol implements ProtocolInterface
         return self::ID;
     }
 
+    public function getMessageExchange(): MessageExchangeInterface
+    {
+        return HttpMessageExchange::instance();
+    }
+
     public function serializeRequest(
         OperationInterface $operation,
-        SerializableStructInterface $input,
-        string $endpoint
-    ): RequestInterface
+        SerializableStructInterface $input
+    ): TransportRequestInterface
     {
         \assert($input instanceof FakeInput);
 
-        return Request::fromNormalized(
-            'POST',
-            new Uri($endpoint),
-            [],
-            $this->requestBody ?? $this->requestPrefix . $input->value
+        return new HttpTransportRequest(
+            Request::fromNormalized(
+                'POST',
+                new Uri('/'),
+                [],
+                $this->requestBody ?? $this->requestPrefix . $input->value
+            )
         );
     }
 
     public function setServiceEndpoint(
-        RequestInterface $request,
+        TransportRequestInterface $request,
         Endpoint $endpoint
-    ): RequestInterface
+    ): TransportRequestInterface
     {
+        $request = HttpTransportRequest::expect($request);
+        $httpRequest = $request->request;
         $endpointUri = new Uri($endpoint->url);
-        $requestUri = $request->getUri();
+        $requestUri = $httpRequest->getUri();
         $endpointPath = $endpointUri->getPath();
         $path = $endpointPath !== '' && $endpointPath !== '/'
             ? \rtrim($endpointPath, '/') . $requestUri->getPath()
             : $requestUri->getPath();
 
-        return $request->withUri(
-            $endpointUri
-                ->withPath($path)
-                ->withQuery($requestUri->getQuery())
-                ->withFragment('')
-                ->withUserInfo('')
-        );
+        return $request
+            ->withRequest(
+                $httpRequest->withUri(
+                    $endpointUri
+                        ->withPath($path)
+                        ->withQuery($requestUri->getQuery())
+                        ->withFragment('')
+                        ->withUserInfo('')
+                )
+            )
+            ->withEndpointHeaders($endpoint);
     }
 
     public function deserializeResponse(
         OperationInterface $operation,
-        ResponseInterface $response
+        TransportResponseInterface $response
     ): SerializableStructInterface
     {
         if ($this->deserializeError !== null) {
             throw $this->deserializeError;
         }
 
-        return new FakeOutput((string) $response->getBody());
+        return new FakeOutput(
+            (string) HttpTransportResponse::expect($response)
+                ->response
+                ->getBody()
+        );
     }
 }

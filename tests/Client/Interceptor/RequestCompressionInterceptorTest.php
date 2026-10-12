@@ -22,6 +22,7 @@ use Smithy\Core\Shape\ShapeType;
 use Smithy\Http\Message\{
     AsyncRequestStream,
     AsyncRequestStreamInterface,
+    HttpTransportRequest,
     Request,
     ResourceRequestStream,
     Stream
@@ -85,7 +86,10 @@ final class RequestCompressionInterceptorTest extends TestCase
                 $request
             ));
 
-        self::assertInstanceOf(GenericPsrRequest::class, $updated);
+        self::assertInstanceOf(
+            GenericPsrRequest::class,
+            HttpTransportRequest::expect($updated)->request
+        );
         self::assertSame(
             'gzip',
             $updated->getHeaderLine('Content-Encoding')
@@ -214,7 +218,10 @@ final class RequestCompressionInterceptorTest extends TestCase
             $request
         ));
 
-        self::assertInstanceOf(GenericPsrRequest::class, $updated);
+        self::assertInstanceOf(
+            GenericPsrRequest::class,
+            HttpTransportRequest::expect($updated)->request
+        );
         self::assertSame(
             'chunked',
             $updated->getHeaderLine('Transfer-Encoding')
@@ -246,7 +253,10 @@ final class RequestCompressionInterceptorTest extends TestCase
             $request
         ));
 
-        self::assertSame($request, $updated);
+        self::assertSame(
+            $request,
+            HttpTransportRequest::expect($updated)->request
+        );
         self::assertFalse($updated->hasHeader('Content-Encoding'));
     }
 
@@ -512,7 +522,10 @@ final class RequestCompressionInterceptorTest extends TestCase
             $request
         ));
 
-        self::assertSame($request, $updated);
+        self::assertSame(
+            $request,
+            HttpTransportRequest::expect($updated)->request
+        );
         self::assertFalse($updated->hasHeader('Content-Encoding'));
     }
 
@@ -533,7 +546,10 @@ final class RequestCompressionInterceptorTest extends TestCase
                 $request
             ));
 
-        self::assertSame($request, $updated);
+        self::assertSame(
+            $request,
+            HttpTransportRequest::expect($updated)->request
+        );
     }
 
     public function testSkipsUnsupportedCompressionEncoding(): void
@@ -555,7 +571,10 @@ final class RequestCompressionInterceptorTest extends TestCase
                 $request
             ));
 
-        self::assertSame($request, $updated);
+        self::assertSame(
+            $request,
+            HttpTransportRequest::expect($updated)->request
+        );
     }
 
     public function testSkipsBodyWithUnknownSize(): void
@@ -577,7 +596,10 @@ final class RequestCompressionInterceptorTest extends TestCase
                 $request
             ));
 
-        self::assertSame($request, $updated);
+        self::assertSame(
+            $request,
+            HttpTransportRequest::expect($updated)->request
+        );
     }
 
     /**

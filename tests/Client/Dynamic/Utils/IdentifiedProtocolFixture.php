@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace Smithy\Tests\Client\Dynamic\Utils;
 
-use Psr\Http\Message\{
-    RequestInterface,
-    ResponseInterface
-};
 use Smithy\Client\Endpoint\Endpoint;
+use Smithy\Client\Transport\{
+    MessageExchangeInterface,
+    TransportRequestInterface,
+    TransportResponseInterface
+};
 use Smithy\Core\Serde\SerializableStructInterface;
 use Smithy\Core\Shape\OperationInterface;
 use Smithy\Protocol\ProtocolInterface;
@@ -27,30 +28,33 @@ final class IdentifiedProtocolFixture implements ProtocolInterface
         return $this->id;
     }
 
+    public function getMessageExchange(): MessageExchangeInterface
+    {
+        return $this->delegate->getMessageExchange();
+    }
+
     public function serializeRequest(
         OperationInterface $operation,
-        SerializableStructInterface $input,
-        string $endpoint
-    ): RequestInterface
+        SerializableStructInterface $input
+    ): TransportRequestInterface
     {
         return $this->delegate->serializeRequest(
             $operation,
-            $input,
-            $endpoint
+            $input
         );
     }
 
     public function setServiceEndpoint(
-        RequestInterface $request,
+        TransportRequestInterface $request,
         Endpoint $endpoint
-    ): RequestInterface
+    ): TransportRequestInterface
     {
         return $this->delegate->setServiceEndpoint($request, $endpoint);
     }
 
     public function deserializeResponse(
         OperationInterface $operation,
-        ResponseInterface $response
+        TransportResponseInterface $response
     ): SerializableStructInterface
     {
         return $this->delegate->deserializeResponse(

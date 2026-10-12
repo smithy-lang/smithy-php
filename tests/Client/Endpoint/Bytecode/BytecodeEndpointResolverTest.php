@@ -26,8 +26,8 @@ use Smithy\Core\Shape\Document\StructDocument;
 use Smithy\Core\Shape\OperationInterface;
 use Smithy\Core\Shape\ShapeType;
 use Smithy\Http\Client\HttpClientInterface;
-use Smithy\Protocol\ProtocolInterface;
 use Smithy\Tests\Client\Endpoint\Bytecode\Fixture\OpcodeHandlerFixture;
+use Smithy\Tests\Client\Fake\FakeProtocol;
 
 #[CoversClass(BytecodeEndpointResolver::class)]
 final class BytecodeEndpointResolverTest extends TestCase
@@ -906,7 +906,7 @@ final class BytecodeEndpointResolverTest extends TestCase
             operation: $operation,
             input: $this->createStub(SerializableStructInterface::class),
             config: new ClientConfig(
-                protocol: $this->createStub(ProtocolInterface::class),
+                protocol: new FakeProtocol(),
                 httpClient: $this->createStub(HttpClientInterface::class),
                 endpointResolver: $this->createStub(
                     EndpointResolverInterface::class
@@ -939,9 +939,7 @@ final class BytecodeEndpointResolverTest extends TestCase
             operation: $operation,
             input: $input,
             config: new ClientConfig(
-                protocol: $this->createStub(
-                    ProtocolInterface::class
-                ),
+                protocol: new FakeProtocol(),
                 httpClient: $this->createStub(
                     HttpClientInterface::class
                 ),

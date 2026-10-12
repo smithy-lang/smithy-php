@@ -50,6 +50,10 @@ use Smithy\Client\Retry\{
     RetryStrategyInterface,
     TokenAcquisitionFailedException
 };
+use Smithy\Client\Transport\{
+    TransportRequestInterface,
+    TransportResponseInterface
+};
 use Smithy\Core\Serde\{
     Schema,
     SerializableStructInterface
@@ -61,6 +65,8 @@ use Smithy\Http\Client\{
     RequestTrailers
 };
 use Smithy\Http\Message\{
+    HttpMessageExchange,
+    HttpTransportRequest,
     Request,
     Response,
     Uri
@@ -336,33 +342,41 @@ final class ClientPipelineTest extends TestCase
     {
         $http = (new MockHttpClient())->willReturn('body');
         $protocol = $this->createMock(ProtocolInterface::class);
+        $protocol->method('getMessageExchange')->willReturn(
+            HttpMessageExchange::instance()
+        );
         $protocol->method('serializeRequest')->willReturnCallback(
             static fn(
                 OperationInterface $operation,
-                SerializableStructInterface $input,
-                string $endpoint
-            ): RequestInterface => new Request(
-                'POST',
-                new Uri($endpoint),
-                [
-                    'X-Existing' => 'keep',
-                    'X-Endpoint' => 'old'
-                ],
-                'input:custom'
+                SerializableStructInterface $input
+            ): TransportRequestInterface => new HttpTransportRequest(
+                new Request(
+                    'POST',
+                    new Uri('/'),
+                    [
+                        'X-Existing' => 'keep',
+                        'X-Endpoint' => 'old'
+                    ],
+                    'input:custom'
+                )
             )
         );
         $protocol->method('deserializeResponse')->willReturnCallback(
             static fn(
                 OperationInterface $operation,
-                \Psr\Http\Message\ResponseInterface $response
+                TransportResponseInterface $response
             ): SerializableStructInterface =>
                 new FakeOutput((string) $response->getBody())
         );
         $protocol->method('setServiceEndpoint')->willReturnCallback(
             static fn(
-                RequestInterface $request,
+                TransportRequestInterface $request,
                 Endpoint $endpoint
-            ): RequestInterface => $request->withUri(new Uri($endpoint->url))
+            ): TransportRequestInterface => HttpTransportRequest::expect(
+                $request
+            )
+                ->withUri(new Uri($endpoint->url))
+                ->withEndpointHeaders($endpoint)
         );
 
         $config = new ClientConfig(
@@ -390,32 +404,40 @@ final class ClientPipelineTest extends TestCase
     {
         $http = (new MockHttpClient())->willReturn('body');
         $protocol = $this->createMock(ProtocolInterface::class);
+        $protocol->method('getMessageExchange')->willReturn(
+            HttpMessageExchange::instance()
+        );
         $protocol->method('serializeRequest')->willReturnCallback(
             static fn(
                 OperationInterface $operation,
-                SerializableStructInterface $input,
-                string $endpoint
-            ): RequestInterface => new GenericPsrRequest(
-                new Request(
-                    'POST',
-                    new Uri($endpoint),
-                    ['X-Existing' => 'keep'],
-                    'input:custom'
+                SerializableStructInterface $input
+            ): TransportRequestInterface => new HttpTransportRequest(
+                new GenericPsrRequest(
+                    new Request(
+                        'POST',
+                        new Uri('/'),
+                        ['X-Existing' => 'keep'],
+                        'input:custom'
+                    )
                 )
             )
         );
         $protocol->method('deserializeResponse')->willReturnCallback(
             static fn(
                 OperationInterface $operation,
-                \Psr\Http\Message\ResponseInterface $response
+                TransportResponseInterface $response
             ): SerializableStructInterface =>
                 new FakeOutput((string) $response->getBody())
         );
         $protocol->method('setServiceEndpoint')->willReturnCallback(
             static fn(
-                RequestInterface $request,
+                TransportRequestInterface $request,
                 Endpoint $endpoint
-            ): RequestInterface => $request->withUri(new Uri($endpoint->url))
+            ): TransportRequestInterface => HttpTransportRequest::expect(
+                $request
+            )
+                ->withUri(new Uri($endpoint->url))
+                ->withEndpointHeaders($endpoint)
         );
 
         $pipeline = new ClientPipeline(new ClientConfig(
@@ -941,7 +963,8 @@ final class ClientPipelineTest extends TestCase
             ->willReturnCallback(
                 static function (
                     EndpointResolverParams $params
-                ) use (&$events, &$endpointCall): Endpoint {
+                ) use (&$events, &$endpointCall): Endpoint
+                {
                     $events[] = 'endpoint';
                     ++$endpointCall;
 
@@ -951,28 +974,33 @@ final class ClientPipelineTest extends TestCase
                 }
             );
         $protocol = $this->createMock(ProtocolInterface::class);
+        $protocol->method('getMessageExchange')->willReturn(
+            HttpMessageExchange::instance()
+        );
         $protocol
             ->expects($this->once())
             ->method('serializeRequest')
             ->with(
                 FakeOperation::instance(),
-                $this->isInstanceOf(FakeInput::class),
-                '/'
+                $this->isInstanceOf(FakeInput::class)
             )
-            ->willReturn(new Request(
-                'POST',
-                new Uri('/operation'),
-                [],
-                'input'
+            ->willReturn(new HttpTransportRequest(
+                new Request(
+                    'POST',
+                    new Uri('/operation'),
+                    [],
+                    'input'
+                )
             ));
         $protocol
             ->expects($this->exactly(2))
             ->method('setServiceEndpoint')
             ->willReturnCallback(
                 static function (
-                    RequestInterface $request,
+                    TransportRequestInterface $request,
                     Endpoint $endpoint
-                ): RequestInterface {
+                ): TransportRequestInterface
+                {
                     $uri = new Uri(
                         \rtrim($endpoint->url, '/')
                             . $request->getUri()->getPath()

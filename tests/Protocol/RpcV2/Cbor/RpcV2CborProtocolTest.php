@@ -14,9 +14,12 @@ use Smithy\Core\Serde\Schema;
 use Smithy\Core\Shape\Document\StructDocument;
 use Smithy\Core\Shape\Exception\DocumentException;
 use Smithy\Core\Shape\ShapeType;
-use Smithy\Http\Message\RequestStreamInterface;
-use Smithy\Http\Message\Request;
-use Smithy\Http\Message\Response;
+use Smithy\Http\Message\{
+    HttpTransportRequest,
+    Request,
+    RequestStreamInterface,
+    Response
+};
 use Smithy\Protocol\Exception\ProtocolException;
 use Smithy\Protocol\HttpErrorDeserializer;
 use Smithy\Protocol\RpcV2\AbstractRpcV2Protocol;
@@ -39,13 +42,20 @@ final class RpcV2CborProtocolTest extends TestCase
             outputSchema: $schema
         );
 
-        $request = (new RpcV2CborProtocol())->serializeRequest(
+        $protocol = new RpcV2CborProtocol();
+        $request = $protocol->serializeRequest(
             $operation,
-            StructDocument::fromMembers($schema, []),
-            'https://example.amazonaws.com:8443/base'
+            StructDocument::fromMembers($schema, [])
+        );
+        $request = $protocol->setServiceEndpoint(
+            $request,
+            new Endpoint('https://example.amazonaws.com:8443/base')
         );
 
-        self::assertInstanceOf(Request::class, $request);
+        self::assertInstanceOf(
+            Request::class,
+            HttpTransportRequest::expect($request)->request
+        );
         self::assertSame(
             '/base/service/ExampleService/operation/GetThing',
             $request->getUri()->getPath()
@@ -75,8 +85,7 @@ final class RpcV2CborProtocolTest extends TestCase
         $protocol = new RpcV2CborProtocol();
         $request = $protocol->serializeRequest(
             $operation,
-            StructDocument::fromMembers($schema, []),
-            '/'
+            StructDocument::fromMembers($schema, [])
         );
 
         self::assertSame(
@@ -110,10 +119,14 @@ final class RpcV2CborProtocolTest extends TestCase
             requestTarget: 'CustomService.CustomOperation'
         );
 
-        $request = (new RpcV2CborProtocol())->serializeRequest(
+        $protocol = new RpcV2CborProtocol();
+        $request = $protocol->serializeRequest(
             $operation,
-            StructDocument::fromMembers($schema, []),
-            'https://example.amazonaws.com/base'
+            StructDocument::fromMembers($schema, [])
+        );
+        $request = $protocol->setServiceEndpoint(
+            $request,
+            new Endpoint('https://example.amazonaws.com/base')
         );
 
         self::assertSame(
@@ -142,8 +155,7 @@ final class RpcV2CborProtocolTest extends TestCase
 
         (new RpcV2CborProtocol())->serializeRequest(
             $operation,
-            StructDocument::fromMembers($schema, []),
-            'https://example.amazonaws.com'
+            StructDocument::fromMembers($schema, [])
         );
     }
 
@@ -169,8 +181,7 @@ final class RpcV2CborProtocolTest extends TestCase
 
         $request = $protocol->serializeRequest(
             $operation,
-            StructDocument::fromMembers($schema, []),
-            'https://example.amazonaws.com/base'
+            StructDocument::fromMembers($schema, [])
         );
         $output = $protocol->deserializeResponse(
             $operation,

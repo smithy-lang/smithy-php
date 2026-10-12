@@ -22,6 +22,7 @@ use Smithy\Client\Retry\{
     NoRetryStrategy,
     RetryStrategyInterface
 };
+use Smithy\Http\Client\HttpClientTransport;
 use Smithy\Tests\Client\Fake\{
     FakeOperation,
     FakeProtocol,
@@ -324,14 +325,17 @@ final class ClientConfigTest extends TestCase
             region: 'test-region'
         );
 
+        $transport = new HttpClientTransport(new MockHttpClient());
         $new = $orig->withAuthSchemePreference(['sigv4'])
             ->withRetryScope('scope')
             ->withInterceptor(new RecordingInterceptor())
-            ->withContext('foo', 'bar');
+            ->withContext('foo', 'bar')
+            ->withTransport($transport);
 
         // Every inherited withXxx() call preserves the subclass field.
         $this->assertSame('test-region', $new->region);
         $this->assertSame(['sigv4'], $new->authSchemePreference);
+        $this->assertSame($transport, $new->transport);
     }
 
 }

@@ -4,13 +4,15 @@ declare(strict_types=1);
 
 namespace Smithy\Tests\Client\Utils;
 
-use Psr\Http\Message\{
-    RequestInterface,
-    ResponseInterface
-};
 use Smithy\Client\Endpoint\Endpoint;
+use Smithy\Client\Transport\{
+    MessageExchangeInterface,
+    TransportRequestInterface,
+    TransportResponseInterface
+};
 use Smithy\Core\Serde\SerializableStructInterface;
 use Smithy\Core\Shape\OperationInterface;
+use Smithy\Http\Message\HttpMessageExchange;
 use Smithy\Protocol\ProtocolInterface;
 
 final class IdempotentTestProtocolFixture implements ProtocolInterface
@@ -20,26 +22,30 @@ final class IdempotentTestProtocolFixture implements ProtocolInterface
         return 'smithy.tests#idempotentTestProtocol';
     }
 
+    public function getMessageExchange(): MessageExchangeInterface
+    {
+        return HttpMessageExchange::instance();
+    }
+
     public function serializeRequest(
         OperationInterface $operation,
-        SerializableStructInterface $input,
-        string $endpoint
-    ): RequestInterface
+        SerializableStructInterface $input
+    ): TransportRequestInterface
     {
         throw new \LogicException('Not used by idempotency tests.');
     }
 
     public function setServiceEndpoint(
-        RequestInterface $request,
+        TransportRequestInterface $request,
         Endpoint $endpoint
-    ): RequestInterface
+    ): TransportRequestInterface
     {
         throw new \LogicException('Not used by idempotency tests.');
     }
 
     public function deserializeResponse(
         OperationInterface $operation,
-        ResponseInterface $response
+        TransportResponseInterface $response
     ): SerializableStructInterface
     {
         throw new \LogicException('Not used by idempotency tests.');

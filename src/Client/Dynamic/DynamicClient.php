@@ -22,6 +22,7 @@ use Smithy\Client\Interceptor\InterceptorChain;
 use Smithy\Client\Pagination\Paginator;
 use Smithy\Client\Plugin\PluginCollection;
 use Smithy\Client\Retry\RetryStrategyInterface;
+use Smithy\Client\Transport\TransportInterface;
 use Smithy\Core\Model\SmithyModel;
 use Smithy\Core\Serde\{
     SchemaConverter,
@@ -102,6 +103,7 @@ class DynamicClient extends AbstractClient
         ?ProtocolInterface $protocol = null,
         array $protocols = [],
         ?HttpClientInterface $httpClient = null,
+        ?TransportInterface $transport = null,
         ?EndpointResolverInterface $endpointResolver = null,
         ?string $endpoint = null,
         array $endpointFunctions = [],
@@ -126,6 +128,7 @@ class DynamicClient extends AbstractClient
             protocol: $protocol,
             protocols: $protocols,
             httpClient: $httpClient,
+            transport: $transport,
             endpointResolver: $endpointResolver,
             endpoint: $endpoint,
             endpointFunctions: $endpointFunctions,
@@ -162,6 +165,7 @@ class DynamicClient extends AbstractClient
         ?string $protocolId,
         ProtocolInterface $protocol,
         ?HttpClientInterface $httpClient,
+        ?TransportInterface $transport,
         EndpointResolverInterface $endpointResolver,
         InterceptorChain $interceptors,
         array $supportedAuthSchemes,
@@ -174,7 +178,9 @@ class DynamicClient extends AbstractClient
     {
         return new ClientConfig(
             protocol: $protocol,
-            httpClient: $httpClient ?? new CurlClient(),
+            httpClient: $transport === null
+                ? $httpClient ?? new CurlClient()
+                : $httpClient,
             endpointResolver: $endpointResolver,
             interceptors: $interceptors,
             supportedAuthSchemes: $supportedAuthSchemes,
@@ -182,7 +188,8 @@ class DynamicClient extends AbstractClient
             authSchemePreference: $authSchemePreference ?? [],
             retryStrategy: $retryStrategy,
             retryScope: $retryScope,
-            context: $context
+            context: $context,
+            transport: $transport
         );
     }
 
