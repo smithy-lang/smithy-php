@@ -140,6 +140,119 @@ final class DocumentFactoryTest extends TestCase
         self::assertSame(5, $this->memberValue($document, 'limit'));
     }
 
+    public function testHonorsClientDefaultSemantics(): void
+    {
+        $converter = $this->defaultSemanticsConverter();
+        $document = (new DocumentFactory())->createStruct(
+            $converter->getSchema('example#Input'),
+            [
+                'nested' => [],
+                'clientOptional' => []
+            ]
+        );
+
+        self::assertNull($this->memberValue($document, 'topLevel'));
+
+        $nested = $this->memberValue($document, 'nested');
+        self::assertInstanceOf(StructDocument::class, $nested);
+        self::assertSame(
+            'abc',
+            $this->memberValue($nested, 'blob')
+        );
+
+        $clientOptional = $this->memberValue(
+            $document,
+            'clientOptional'
+        );
+        self::assertInstanceOf(StructDocument::class, $clientOptional);
+        self::assertNull(
+            $this->memberValue($clientOptional, 'value')
+        );
+    }
+
+    public function testCreatesOutputsFromDecodedMembers(): void
+    {
+        $schema = $this->defaultSemanticsConverter()
+            ->getSchema('example#Output');
+        $factory = new DocumentFactory();
+
+        $defaulted = $factory->createStructFromMembers($schema, []);
+        self::assertSame(
+            'abc',
+            $this->memberValue($defaulted, 'blob')
+        );
+
+        $decoded = $factory->createStructFromMembers(
+            $schema,
+            [
+                'wire-bytes',
+                StructDocument::fromMembers(
+                    $schema->getMember('nested'),
+                    []
+                ),
+                [
+                    StructDocument::fromMembers(
+                        $schema->getMember('nestedList')
+                            ->getListMember(),
+                        []
+                    )
+                ],
+                [
+                    'first' => StructDocument::fromMembers(
+                        $schema->getMember('nestedMap')
+                            ->getMapValue(),
+                        []
+                    )
+                ],
+                UnionDocument::create(
+                    $schema->getMember('nestedUnion'),
+                    'value',
+                    StructDocument::fromMembers(
+                        $schema->getMember('nestedUnion')
+                            ->getMember('value'),
+                        []
+                    )
+                )
+            ]
+        );
+        self::assertSame(
+            'wire-bytes',
+            $this->memberValue($decoded, 'blob')
+        );
+
+        $nested = $this->memberValue($decoded, 'nested');
+        self::assertInstanceOf(StructDocument::class, $nested);
+        self::assertSame('abc', $this->memberValue($nested, 'blob'));
+
+        $nestedList = $this->memberValue($decoded, 'nestedList');
+        self::assertInstanceOf(StructDocument::class, $nestedList[0]);
+        self::assertSame(
+            'abc',
+            $this->memberValue($nestedList[0], 'blob')
+        );
+
+        $nestedMap = $this->memberValue($decoded, 'nestedMap');
+        self::assertInstanceOf(
+            StructDocument::class,
+            $nestedMap['first']
+        );
+        self::assertSame(
+            'abc',
+            $this->memberValue($nestedMap['first'], 'blob')
+        );
+
+        $nestedUnion = $this->memberValue($decoded, 'nestedUnion');
+        self::assertInstanceOf(UnionDocument::class, $nestedUnion);
+        self::assertInstanceOf(
+            StructDocument::class,
+            $nestedUnion->value()
+        );
+        self::assertSame(
+            'abc',
+            $this->memberValue($nestedUnion->value(), 'blob')
+        );
+    }
+
     public function testRejectsNullInputWithRequiredMembers(): void
     {
         $schema = $this->converter()->getSchema('example#Input');
@@ -551,6 +664,91 @@ final class DocumentFactoryTest extends TestCase
                             'target' => 'smithy.api#Unit',
                             'traits' => [
                                 'smithy.api#enumValue' => 'red'
+                            ]
+                        ]
+                    ]
+                ]
+            ]
+        ]));
+    }
+
+    private function defaultSemanticsConverter(): SchemaConverter
+    {
+        return new SchemaConverter(SmithyModel::fromArray([
+            'smithy' => '2.0',
+            'shapes' => [
+                'example#Input' => [
+                    'type' => 'structure',
+                    'members' => [
+                        'topLevel' => [
+                            'target' => 'smithy.api#String',
+                            'traits' => [
+                                'smithy.api#default' => 'default'
+                            ]
+                        ],
+                        'nested' => ['target' => 'example#Defaults'],
+                        'clientOptional' => [
+                            'target' => 'example#ClientOptional'
+                        ]
+                    ],
+                    'traits' => ['smithy.api#input' => []]
+                ],
+                'example#Output' => [
+                    'type' => 'structure',
+                    'members' => [
+                        'blob' => [
+                            'target' => 'smithy.api#Blob',
+                            'traits' => [
+                                'smithy.api#default' => 'YWJj'
+                            ]
+                        ],
+                        'nested' => ['target' => 'example#Defaults'],
+                        'nestedList' => [
+                            'target' => 'example#DefaultsList'
+                        ],
+                        'nestedMap' => [
+                            'target' => 'example#DefaultsMap'
+                        ],
+                        'nestedUnion' => [
+                            'target' => 'example#DefaultsUnion'
+                        ]
+                    ],
+                    'traits' => ['smithy.api#output' => []]
+                ],
+                'example#Defaults' => [
+                    'type' => 'structure',
+                    'members' => [
+                        'blob' => [
+                            'target' => 'smithy.api#Blob',
+                            'traits' => [
+                                'smithy.api#default' => 'YWJj'
+                            ]
+                        ]
+                    ]
+                ],
+                'example#DefaultsList' => [
+                    'type' => 'list',
+                    'member' => ['target' => 'example#Defaults']
+                ],
+                'example#DefaultsMap' => [
+                    'type' => 'map',
+                    'key' => ['target' => 'smithy.api#String'],
+                    'value' => ['target' => 'example#Defaults']
+                ],
+                'example#DefaultsUnion' => [
+                    'type' => 'union',
+                    'members' => [
+                        'value' => ['target' => 'example#Defaults']
+                    ]
+                ],
+                'example#ClientOptional' => [
+                    'type' => 'structure',
+                    'members' => [
+                        'value' => [
+                            'target' => 'smithy.api#Integer',
+                            'traits' => [
+                                'smithy.api#clientOptional' => [],
+                                'smithy.api#default' => 0
                             ]
                         ]
                     ]
