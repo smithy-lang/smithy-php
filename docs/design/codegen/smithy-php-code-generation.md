@@ -276,8 +276,10 @@ index, such as endpoint context parameters, are preserved in
 ### Service metadata, client, and client configuration
 
 `ServiceGenerator` emits a metadata class implementing `ServiceInterface`. It
-contains the service name, shape ID, version, and operation class list. It is
-not the callable client.
+contains the service name, shape ID, version, operation class list, and a
+lazily initialized service schema. Configured schema traits are retained in
+both packed and shape-ID keyed views. The metadata class is not the callable
+client.
 
 `ClientGenerator` emits the typed public client. Each operation method is a
 thin wrapper around the configured base client's `executeOperation()` method

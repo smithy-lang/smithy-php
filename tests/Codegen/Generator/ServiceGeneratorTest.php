@@ -8,6 +8,11 @@ use PHPUnit\Framework\TestCase;
 use Smithy\Codegen\CodegenSettings;
 use Smithy\Codegen\Generator\ServiceGenerator;
 use Smithy\Codegen\Model\SmithyModel;
+use Smithy\Core\Model\SmithyModel as RuntimeSmithyModel;
+use Smithy\Core\Serde\{
+    SchemaConverter,
+    SchemaTraitRegistry
+};
 use Smithy\Core\Shape\ShapeType;
 use Smithy\Tests\Codegen\Generator\Utils\GetThingOperation;
 
@@ -42,6 +47,14 @@ final class ServiceGeneratorTest extends TestCase
             $file->content
         );
         $this->assertStringContainsString(
+            'use Smithy\\Core\\Serde\\Schema;',
+            $file->content
+        );
+        $this->assertStringContainsString(
+            'use Smithy\\Core\\Shape\\ShapeType;',
+            $file->content
+        );
+        $this->assertStringContainsString(
             'use Smithy\\Example\\Operation\\GetThingOperation;',
             $file->content
         );
@@ -67,6 +80,10 @@ final class ServiceGeneratorTest extends TestCase
         );
         $this->assertStringContainsString(
             'GetThingOperation::class',
+            $file->content
+        );
+        $this->assertStringContainsString(
+            'public static function schema(): Schema',
             $file->content
         );
     }
@@ -103,7 +120,12 @@ final class ServiceGeneratorTest extends TestCase
             new CodegenSettings(
                 namespace: $namespace,
                 outputDir: '/tmp/out',
-                organization: 'flat'
+                organization: 'flat',
+                schemaTraitIndices: [
+                    'vendor.example#metadata' => 30,
+                    'vendor.example#marker' => 31,
+                    'vendor.example#nullable' => 32
+                ]
             )
         );
 
@@ -123,6 +145,32 @@ final class ServiceGeneratorTest extends TestCase
             ShapeType::Service->value,
             $service->getSchema()->type
         );
+        $this->assertSame($service->getSchema(), $class::schema());
+        $this->assertSame(
+            ['enabled' => true],
+            $service->getSchema()->getTrait(30)
+        );
+        $this->assertTrue($service->getSchema()->getTrait(31));
+        $this->assertSame(
+            ['enabled' => true],
+            $service->getSchema()->getTraitById(
+                'vendor.example#metadata'
+            )
+        );
+        $this->assertTrue(
+            $service->getSchema()->getTraitById('vendor.example#marker')
+        );
+        $this->assertArrayHasKey(32, $service->getSchema()->getTraits());
+        $this->assertNull($service->getSchema()->getTraits()[32]);
+        $this->assertArrayHasKey(
+            'vendor.example#nullable',
+            $service->getSchema()->getTraitsById()
+        );
+        $this->assertNull(
+            $service->getSchema()->getTraitsById()[
+                'vendor.example#nullable'
+            ]
+        );
         $this->assertSame(
             [GetThingOperation::instance()],
             $service->getOperations()
@@ -132,6 +180,74 @@ final class ServiceGeneratorTest extends TestCase
             $service->getOperation('GetThing')
         );
         $this->assertNull($service->getOperation('Missing'));
+    }
+
+    public function testGeneratedServiceSchemaMatchesRuntimeSchema(): void
+    {
+        $namespace = 'Smithy\\Tests\\Codegen\\Generator\\Parity';
+        $settings = new CodegenSettings(
+            namespace: $namespace,
+            outputDir: '/tmp/out',
+            organization: 'flat',
+            schemaTraitIndices: [
+                'vendor.example#metadata' => 30,
+                'vendor.example#marker' => 31,
+                'vendor.example#nullable' => 32
+            ]
+        );
+        $file = (new ServiceGenerator(
+            $this->model(),
+            $settings
+        ))->generate('smithy.example#ExampleService');
+        $class = $namespace . '\\ParityService';
+        if (!\class_exists($class, false)) {
+            eval($this->evalSource($file->content));
+        }
+        $generated = $class::schema();
+
+        $traitRegistry = new SchemaTraitRegistry();
+        $traitRegistry->register('vendor.example#metadata', 30);
+        $traitRegistry->register(
+            'vendor.example#marker',
+            31,
+            static fn(mixed $value): bool => $value === []
+        );
+        $traitRegistry->register('vendor.example#nullable', 32);
+        $runtime = (new SchemaConverter(
+            RuntimeSmithyModel::fromJson($this->modelJson()),
+            $traitRegistry
+        ))->getSchema('smithy.example#ExampleService');
+
+        $this->assertSame($runtime->id, $generated->id);
+        $this->assertSame($runtime->type, $generated->type);
+        $this->assertSame($runtime->getTrait(30), $generated->getTrait(30));
+        $this->assertSame($runtime->getTrait(31), $generated->getTrait(31));
+        $this->assertSame(
+            $runtime->getTraitById('vendor.example#metadata'),
+            $generated->getTraitById('vendor.example#metadata')
+        );
+        $this->assertSame(
+            $runtime->getTraitById('vendor.example#marker'),
+            $generated->getTraitById('vendor.example#marker')
+        );
+        $this->assertArrayHasKey(32, $runtime->getTraits());
+        $this->assertArrayHasKey(32, $generated->getTraits());
+        $this->assertNull($runtime->getTraits()[32]);
+        $this->assertNull($generated->getTraits()[32]);
+        $this->assertArrayHasKey(
+            'vendor.example#nullable',
+            $runtime->getTraitsById()
+        );
+        $this->assertArrayHasKey(
+            'vendor.example#nullable',
+            $generated->getTraitsById()
+        );
+        $this->assertNull(
+            $runtime->getTraitsById()['vendor.example#nullable']
+        );
+        $this->assertNull(
+            $generated->getTraitsById()['vendor.example#nullable']
+        );
     }
 
     public function testGenerateRaisesForUnknownServiceShapeId(): void
@@ -172,7 +288,12 @@ final class ServiceGeneratorTest extends TestCase
 
     private function model(): SmithyModel
     {
-        return SmithyModel::fromJson(\json_encode([
+        return SmithyModel::fromJson($this->modelJson());
+    }
+
+    private function modelJson(): string
+    {
+        return \json_encode([
             'smithy' => '2.0',
             'shapes' => [
                 'smithy.example#ExampleService' => [
@@ -184,14 +305,19 @@ final class ServiceGeneratorTest extends TestCase
                     'traits' => [
                         'smithy.api#documentation' =>
                             '<p>Example documentation</p>' . "\n"
-                            . 'with     tags.'
+                            . 'with     tags.',
+                        'vendor.example#metadata' => [
+                            'enabled' => true
+                        ],
+                        'vendor.example#marker' => [],
+                        'vendor.example#nullable' => null
                     ]
                 ],
                 'smithy.example#GetThing' => [
                     'type' => 'operation'
                 ]
             ]
-        ], JSON_THROW_ON_ERROR));
+        ], JSON_THROW_ON_ERROR);
     }
 
     private function evalSource(string $source): string
