@@ -21,15 +21,27 @@ class SchemaExtensionTest extends TestCase
         $this->assertNotEquals($key1->id, $key2->id);
     }
 
-    public function testGetExtensionReturnsNullWhenProviderReturnsNull(): void
+    public function testGetExtensionCachesNullResults(): void
     {
-        $provider = new class implements SchemaExtensionProviderInterface {
-            public function provide(Schema $schema): mixed { return null; }
+        $callCount = 0;
+        $provider = new class($callCount) implements
+            SchemaExtensionProviderInterface
+        {
+            public function __construct(private int &$count) {}
+
+            public function provide(Schema $schema): mixed
+            {
+                ++$this->count;
+
+                return null;
+            }
         };
         $key = new SchemaExtensionKey($provider);
-
         $schema = new Schema(id: 'test#Foo', type: ShapeType::Structure);
+
         $this->assertNull($schema->getExtension($key));
+        $this->assertNull($schema->getExtension($key));
+        $this->assertSame(1, $callCount);
     }
 
     public function testGetExtensionComputesOnceAndCaches(): void
