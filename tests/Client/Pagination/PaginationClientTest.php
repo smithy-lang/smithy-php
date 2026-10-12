@@ -7,12 +7,16 @@ namespace Smithy\Tests\Client\Pagination;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\RequestInterface;
 use Smithy\Codec\Cbor\CborCodec;
-use Smithy\Client\RequestOverrideConfig;
+use Smithy\Client\{
+    Dynamic\DynamicClient,
+    RequestOverrideConfig
+};
 use Smithy\Client\Endpoint\Endpoint;
 use Smithy\Client\Endpoint\StaticEndpointResolver;
 use Smithy\Client\Pagination\PageSizePaginatedRequestInterface;
 use Smithy\Client\Pagination\PaginatedRequestInterface;
 use Smithy\Core\Serde\SerializableStructInterface;
+use Smithy\Core\Shape\Document\StructDocument;
 use Smithy\Http\Message\Response;
 use Smithy\Protocol\RpcV2\RpcV2CborProtocol;
 use Smithy\Tests\Client\Pagination\Generated\Pagination\Input\{
@@ -93,6 +97,69 @@ final class PaginationClientTest extends TestCase
         self::assertSame('next', $secondInput->getPaginationToken());
         self::assertSame(2, $firstInput->getPaginationPageSize());
         self::assertSame(2, $secondInput->getPaginationPageSize());
+    }
+
+    public function testDynamicPaginationTraversesFullRequestPipeline(): void
+    {
+        $http = (new MockHttpClient())
+            ->queueResponse(self::response(
+                new ListStringsOutput(['one', 'two'], 'next')
+            ))
+            ->queueResponse(self::response(
+                new ListStringsOutput(['three'])
+            ));
+        $client = DynamicClient::create(
+            model: __DIR__ . '/fixtures/pagination-model.json',
+            httpClient: $http,
+            endpoint: 'https://example.com'
+        );
+
+        $pages = \iterator_to_array(
+            $client
+                ->paginate('ListStrings', [
+                    'pageSize' => 2,
+                    '@http' => [
+                        'headers' => ['x-paginator' => 'dynamic']
+                    ]
+                ])
+                ->withMaxItems(3),
+            false
+        );
+
+        self::assertContainsOnlyInstancesOf(StructDocument::class, $pages);
+        self::assertSame(
+            [['one', 'two'], ['three']],
+            \array_map(
+                static function (StructDocument $page): array {
+                    $member = $page->getSchema()->getMember('items');
+                    self::assertNotNull($member);
+
+                    return $page->getMemberValue($member);
+                },
+                $pages
+            )
+        );
+        self::assertCount(2, $http->sentRequests);
+        foreach ($http->sentRequests as $request) {
+            self::assertSame(
+                'dynamic',
+                $request->getHeaderLine('x-paginator')
+            );
+        }
+
+        $firstInput = self::decodeRequest(
+            $http->sentRequests[0],
+            ListStringsInput::class
+        );
+        $secondInput = self::decodeRequest(
+            $http->sentRequests[1],
+            ListStringsInput::class
+        );
+
+        self::assertNull($firstInput->getPaginationToken());
+        self::assertSame('next', $secondInput->getPaginationToken());
+        self::assertSame(2, $firstInput->getPaginationPageSize());
+        self::assertSame(1, $secondInput->getPaginationPageSize());
     }
 
     public function testMapTokensTraverseFullRequestPipeline(): void
