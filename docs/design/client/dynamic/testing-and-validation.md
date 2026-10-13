@@ -1,6 +1,6 @@
 # Dynamic Client Testing and Validation
 
-**Status:** Evidence recorded September 9, 2026
+**Status:** Evidence recorded October 12, 2026
 
 **Packages:** `smithy-php`, `aws-sdk-php`
 
@@ -22,6 +22,18 @@ The evidence covers:
 The current protocol evidence uses mock HTTP transport. A representative
 generated-versus-dynamic AWS call through complete provider configuration
 remains a preview release check.
+
+## Generic Protocol Parity
+
+The generated and dynamic clients run the same 72 official RPC v2 CBOR client
+cases from `tools/codegen-output/models/rpcv2-cbor.json`. The shared fixture
+harness covers request serialization, successful response deserialization,
+and modeled error deserialization without projection-specific expectations.
+
+Request bodies are compared as type-preserving CBOR trees. This permits
+equivalent map ordering and encoding widths while still detecting changes
+between text and byte strings, arrays and maps, integers and floats, and
+tagged and untagged values.
 
 ## Preview Guardrails
 
@@ -51,7 +63,7 @@ Unmodeled service errors use the protocol's `ApiException` fallback.
 | Requirement | Status | Evidence |
 |---|---|---|
 | Runtime model and schema conversion | Complete | Preview model path |
-| Shared generated and dynamic protocol behavior | Complete for non-streaming operations | Seven supported protocols |
+| Shared generated and dynamic protocol behavior | Complete for non-streaming operations | Shared official RPC v2 CBOR suite and seven supported provider protocols |
 | Generic client resolution and pipeline behavior | Complete for preview scope | Shared client pipeline |
 | AWS protocol, endpoint, retry, and auth configuration | Implementation alignment in progress | AWS dynamic runtime |
 | Generated-versus-dynamic AWS end-to-end call | Planned | Required before preview release |

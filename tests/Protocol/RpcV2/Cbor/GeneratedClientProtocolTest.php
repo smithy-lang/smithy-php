@@ -5,9 +5,7 @@ declare(strict_types=1);
 namespace Smithy\Tests\Protocol\RpcV2\Cbor;
 
 use PHPUnit\Framework\Attributes\DataProvider;
-use PHPUnit\Framework\TestCase;
-use Psr\Http\Message\RequestInterface;
-use Psr\Http\Message\StreamInterface;
+use Smithy\Client\ClientInterface;
 use Smithy\Client\Auth\{
     NoAuthScheme,
     StaticAuthSchemeResolver
@@ -16,232 +14,23 @@ use Smithy\Client\Endpoint\{
     Endpoint,
     StaticEndpointResolver
 };
-use Smithy\Codec\Cbor\CborDeserializer;
 use Smithy\Core\Exception\ApiException;
 use Smithy\Core\Serde\SerializableStructInterface;
-use Smithy\Core\Shape\Document\{
-    AbstractDocument,
-    BooleanDocument,
-    FloatDocument,
-    IntegerDocument,
-    ListDocument,
-    MapDocument,
-    NullDocument,
-    StringDocument
-};
-use Smithy\Core\Shape\{
-    EnumInterface,
-    OperationInterface
-};
+use Smithy\Core\Shape\OperationInterface;
 use Smithy\Core\Shape\Utils\ArrayShapeSerializer;
-use Smithy\Http\Message\{
-    Response,
-    StringRequestStream
-};
 use Smithy\Protocol\RpcV2\RpcV2CborProtocol;
 use Smithy\ProtocolTests\RpcV2Cbor\{
     RpcV2CborClient,
     RpcV2CborClientConfig
 };
-use Smithy\Tests\Protocol\ProtocolTestLoader;
+use Smithy\Tests\Protocol\RpcV2\Cbor\Support\RpcV2CborClientProtocolTestCase;
 use Smithy\Tests\Utils\Http\MockHttpClient;
 
 /**
  * Run the official RPC v2 CBOR client tests against generated code.
  */
-final class GeneratedClientProtocolTest extends TestCase
+final class GeneratedClientProtocolTest extends RpcV2CborClientProtocolTestCase
 {
-    private const MODEL_PATH = __DIR__
-        . '/../../../../tools/codegen-output/models/rpcv2-cbor.json';
-
-    private const SKIPPED_TESTS = [];
-
-    #[DataProvider('requestCases')]
-    public function testRequestSerialization(
-        OperationInterface $operation,
-        array $test
-    ): void
-    {
-        self::skipUnsupportedTest($test);
-
-        $endpoint = isset($test['host'])
-            ? 'https://' . $test['host']
-            : 'https://example.amazonaws.com';
-        $http = new MockHttpClient();
-        $inputClass = $operation->getInputClass();
-        $input = self::createInput(
-            $inputClass,
-            $test['params'] ?? []
-        );
-        $request = self::captureRequest(
-            self::createClient($http, $endpoint),
-            $http,
-            $operation,
-            $input
-        );
-
-        $this->assertRequestMatches($request, $test);
-    }
-
-    /**
-     * @return iterable<string, array{OperationInterface, array}>
-     */
-    public static function requestCases(): iterable
-    {
-        $loader = self::loader();
-        foreach ($loader->getOperationIds() as $operationId) {
-            $operation = self::resolveOperation($operationId);
-            foreach ($loader->getRequestTests($operationId) as $test) {
-                yield $test['id'] => [$operation, $test];
-            }
-        }
-    }
-
-    #[DataProvider('responseCases')]
-    public function testResponseDeserialization(
-        OperationInterface $operation,
-        array $test,
-        array $inputParams
-    ): void
-    {
-        self::skipUnsupportedTest($test);
-
-        $http = new MockHttpClient();
-        $body = self::decodeBody($test['body'] ?? null);
-        $response = self::response(
-            $test['code'],
-            $test['headers'] ?? [],
-            $body
-        );
-        $output = self::executeResponse(
-            self::createClient(
-                $http,
-                'https://example.amazonaws.com'
-            ),
-            $http,
-            $operation,
-            self::createInput(
-                $operation->getInputClass(),
-                $inputParams
-            ),
-            $response
-        );
-        $actual = $this->normalize(
-            ArrayShapeSerializer::toArray($output)
-        );
-        self::assertSame(
-            $operation->getOutputSchema()->id,
-            $output->getSchema()->id
-        );
-
-        self::assertEquals(
-            $test['params'] ?? [],
-            $actual,
-            'Response members mismatch'
-        );
-    }
-
-    /**
-     * @return iterable<string, array{OperationInterface, array, array}>
-     */
-    public static function responseCases(): iterable
-    {
-        $loader = self::loader();
-        foreach ($loader->getOperationIds() as $operationId) {
-            $operation = self::resolveOperation($operationId);
-            $inputParams = self::defaultInputParams(
-                $loader,
-                $operationId
-            );
-            foreach ($loader->getResponseTests($operationId) as $test) {
-                if (($test['code'] ?? 200) >= 300) {
-                    continue;
-                }
-
-                yield $test['id'] => [
-                    $operation,
-                    $test,
-                    $inputParams
-                ];
-            }
-        }
-    }
-
-    #[DataProvider('errorResponseCases')]
-    public function testErrorResponseDeserialization(
-        OperationInterface $operation,
-        array $test,
-        array $inputParams
-    ): void
-    {
-        $http = new MockHttpClient();
-        $response = self::response(
-            $test['code'],
-            $test['headers'] ?? [],
-            self::decodeBody($test['body'] ?? null)
-        );
-
-        try {
-            self::executeResponse(
-                self::createClient(
-                    $http,
-                    'https://example.amazonaws.com'
-                ),
-                $http,
-                $operation,
-                self::createInput(
-                    $operation->getInputClass(),
-                    $inputParams
-                ),
-                $response
-            );
-        } catch (\Throwable $error) {
-            self::assertInstanceOf(ApiException::class, $error);
-            self::assertInstanceOf(
-                SerializableStructInterface::class,
-                $error
-            );
-            self::assertSame(
-                $test['errorShapeId'],
-                $error->getSchema()->id
-            );
-            $actual = $this->normalize(
-                ArrayShapeSerializer::toArray($error)
-            );
-            self::assertEquals(
-                $test['params'] ?? [],
-                $actual,
-                'Error members mismatch'
-            );
-
-            return;
-        }
-
-        self::fail("Expected modeled error {$test['errorShapeId']}.");
-    }
-
-    /**
-     * @return iterable<string, array{OperationInterface, array, array}>
-     */
-    public static function errorResponseCases(): iterable
-    {
-        $loader = self::loader();
-        foreach ($loader->getOperationIds() as $operationId) {
-            $operation = self::resolveOperation($operationId);
-            $inputParams = self::defaultInputParams(
-                $loader,
-                $operationId
-            );
-            foreach ($loader->getErrorResponseTests($operationId) as $test) {
-                yield $test['id'] => [
-                    $operation,
-                    $test,
-                    $inputParams
-                ];
-            }
-        }
-    }
-
     public function testCborBodyComparisonRejectsMissingNestedDefaults(): void
     {
         $expected = \hex2bin(
@@ -300,140 +89,10 @@ final class GeneratedClientProtocolTest extends TestCase
         $this->assertCborBodiesEqual($expected, $actual);
     }
 
-    private function assertRequestMatches(
-        RequestInterface $request,
-        array $test
-    ): void
-    {
-        self::assertSame($test['method'], $request->getMethod());
-        self::assertSame(
-            $test['uri'],
-            $request->getUri()->getPath(),
-            'URI path mismatch'
-        );
-        self::assertSame('', $request->getUri()->getQuery());
-
-        foreach ($test['headers'] ?? [] as $name => $value) {
-            self::assertSame(
-                $value,
-                $request->getHeaderLine((string) $name),
-                "Header '{$name}' value mismatch"
-            );
-        }
-        foreach ($test['forbidHeaders'] ?? [] as $name) {
-            self::assertFalse($request->hasHeader((string) $name));
-        }
-        foreach ($test['requireHeaders'] ?? [] as $name) {
-            self::assertTrue($request->hasHeader((string) $name));
-        }
-
-        if (!\array_key_exists('body', $test)) {
-            return;
-        }
-
-        $expected = self::decodeBody($test['body']) ?? '';
-        $actual = (string) $request->getBody();
-        if ($expected === '' || $actual === '') {
-            self::assertSame($expected, $actual, 'CBOR body mismatch');
-
-            return;
-        }
-
-        $this->assertCborBodiesEqual($expected, $actual);
-    }
-
-    private function assertCborBodiesEqual(
-        string $expected,
-        string $actual
-    ): void
-    {
-        self::assertSame(
-            $this->decodeCbor($expected),
-            $this->decodeCbor($actual),
-            'CBOR body mismatch'
-        );
-    }
-
-    private function decodeCbor(string $body): mixed
-    {
-        $deserializer = new CborDeserializer(
-            new StringRequestStream($body)
-        );
-
-        return $deserializer->decodeComparableValue();
-    }
-
-    private function normalize(mixed $value): mixed
-    {
-        if ($value instanceof StreamInterface) {
-            return (string) $value;
-        }
-        if ($value instanceof \DateTimeInterface) {
-            $timestamp = (float) $value->format('U.u');
-
-            return $timestamp == (int) $timestamp
-                ? (int) $timestamp
-                : $timestamp;
-        }
-        if ($value instanceof AbstractDocument) {
-            return $this->unwrapDocument($value);
-        }
-        if ($value instanceof EnumInterface) {
-            return $value->getValue();
-        }
-        if (\is_float($value)) {
-            return match (true) {
-                \is_nan($value) => 'NaN',
-                \is_infinite($value) && $value > 0 => 'Infinity',
-                \is_infinite($value) => '-Infinity',
-                default => $value
-            };
-        }
-        if ($value instanceof SerializableStructInterface) {
-            $value = ArrayShapeSerializer::toArray($value);
-        } elseif (\is_object($value)
-            && \method_exists($value, 'tag')
-            && \method_exists($value, 'value')
-        ) {
-            return [
-                $value->tag() => $this->normalize($value->value())
-            ];
-        }
-        if (\is_array($value)) {
-            foreach ($value as $key => $member) {
-                $value[$key] = $this->normalize($member);
-            }
-        }
-
-        return $value;
-    }
-
-    private function unwrapDocument(AbstractDocument $document): mixed
-    {
-        return match (true) {
-            $document instanceof MapDocument => \array_map(
-                fn(?AbstractDocument $value): mixed =>
-                    $value === null ? null : $this->unwrapDocument($value),
-                $document->entries
-            ),
-            $document instanceof ListDocument => \array_map(
-                fn(?AbstractDocument $value): mixed =>
-                    $value === null ? null : $this->unwrapDocument($value),
-                $document->items
-            ),
-            $document instanceof StringDocument => $document->value,
-            $document instanceof BooleanDocument => $document->value,
-            $document instanceof IntegerDocument => $document->value,
-            $document instanceof FloatDocument => $document->value,
-            $document instanceof NullDocument => null,
-            default => $document
-        };
-    }
-
-    private static function createClient(
+    protected function createClient(
         MockHttpClient $http,
         string $endpoint
-    ): RpcV2CborClient
+    ): ClientInterface
     {
         return new RpcV2CborClient(
             new RpcV2CborClientConfig(
@@ -448,89 +107,8 @@ final class GeneratedClientProtocolTest extends TestCase
         );
     }
 
-    private static function captureRequest(
-        RpcV2CborClient $client,
-        MockHttpClient $http,
-        OperationInterface $operation,
-        SerializableStructInterface $input
-    ): RequestInterface
-    {
-        $sentinel = new \RuntimeException('Request captured.');
-        $http->reset()->fallbackException($sentinel);
-
-        try {
-            $client->executeOperation($operation, $input);
-        } catch (\RuntimeException $error) {
-            if ($error !== $sentinel) {
-                throw $error;
-            }
-
-            return $http->getLastRequest()
-                ?? throw new \LogicException('No request was captured.');
-        }
-
-        throw new \LogicException('The request reached no HTTP transport.');
-    }
-
-    private static function executeResponse(
-        RpcV2CborClient $client,
-        MockHttpClient $http,
-        OperationInterface $operation,
-        SerializableStructInterface $input,
-        Response $response
-    ): SerializableStructInterface
-    {
-        $http->reset()->queueResponse($response);
-
-        return $client->executeOperation($operation, $input);
-    }
-
-    private static function response(
-        int $status,
-        array $headers,
-        ?string $body
-    ): Response
-    {
-        $response = new Response($status, $headers, $body);
-        if (!$response->hasHeader('Content-Length')
-            && $response->getBody()->getSize() !== null
-        ) {
-            $response = $response->withHeader(
-                'Content-Length',
-                (string) $response->getBody()->getSize()
-            );
-        }
-
-        return $response;
-    }
-
-    /**
-     * @param class-string<SerializableStructInterface> $inputClass
-     */
-    private static function createInput(
-        string $inputClass,
-        array $params
-    ): SerializableStructInterface
-    {
-        try {
-            return ArrayShapeSerializer::fromArray($inputClass, $params);
-        } catch (\ArgumentCountError|\TypeError $error) {
-            if ($params !== []) {
-                throw $error;
-            }
-
-            return new $inputClass();
-        }
-    }
-
-    private static function loader(): ProtocolTestLoader
-    {
-        static $loader;
-
-        return $loader ??= new ProtocolTestLoader(self::MODEL_PATH);
-    }
-
-    private static function resolveOperation(
+    protected function resolveOperation(
+        ClientInterface $client,
         string $operationId
     ): OperationInterface
     {
@@ -551,28 +129,31 @@ final class GeneratedClientProtocolTest extends TestCase
         return $class::instance();
     }
 
-    private static function defaultInputParams(
-        ProtocolTestLoader $loader,
-        string $operationId
-    ): array
+    protected function createInput(
+        OperationInterface $operation,
+        array $params
+    ): SerializableStructInterface
     {
-        $tests = $loader->getRequestTests($operationId);
+        $inputClass = $operation->getInputClass();
 
-        return $tests[0]['params'] ?? [];
-    }
+        try {
+            return ArrayShapeSerializer::fromArray($inputClass, $params);
+        } catch (\ArgumentCountError|\TypeError $error) {
+            if ($params !== []) {
+                throw $error;
+            }
 
-    private static function decodeBody(?string $body): ?string
-    {
-        return $body === null || $body === ''
-            ? $body
-            : \base64_decode($body, true);
-    }
-
-    private static function skipUnsupportedTest(array $test): void
-    {
-        $reason = self::SKIPPED_TESTS[$test['id']] ?? null;
-        if ($reason !== null) {
-            self::markTestSkipped($reason);
+            return new $inputClass();
         }
+    }
+
+    protected function expectModeledError(
+        \Throwable $error
+    ): SerializableStructInterface
+    {
+        self::assertInstanceOf(ApiException::class, $error);
+        self::assertInstanceOf(SerializableStructInterface::class, $error);
+
+        return $error;
     }
 }

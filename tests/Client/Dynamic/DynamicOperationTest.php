@@ -124,6 +124,101 @@ final class DynamicOperationTest extends TestCase
         );
     }
 
+    public function testAppliesNestedDefaultsAfterDeserialization(): void
+    {
+        $model = SmithyModel::fromArray([
+            'smithy' => '2.0',
+            'shapes' => [
+                'example#Service' => [
+                    'type' => 'service',
+                    'operations' => [
+                        ['target' => 'example#Call']
+                    ]
+                ],
+                'example#Call' => [
+                    'type' => 'operation',
+                    'output' => ['target' => 'example#Output']
+                ],
+                'example#Output' => [
+                    'type' => 'structure',
+                    'members' => [
+                        'nested' => ['target' => 'example#Defaults'],
+                        'items' => ['target' => 'example#DefaultsList'],
+                        'values' => ['target' => 'example#DefaultsMap']
+                    ],
+                    'traits' => ['smithy.api#output' => []]
+                ],
+                'example#Defaults' => [
+                    'type' => 'structure',
+                    'members' => [
+                        'value' => [
+                            'target' => 'smithy.api#String',
+                            'traits' => [
+                                'smithy.api#default' => 'default'
+                            ]
+                        ]
+                    ]
+                ],
+                'example#DefaultsList' => [
+                    'type' => 'list',
+                    'member' => ['target' => 'example#Defaults']
+                ],
+                'example#DefaultsMap' => [
+                    'type' => 'map',
+                    'key' => ['target' => 'smithy.api#String'],
+                    'value' => ['target' => 'example#Defaults']
+                ]
+            ]
+        ]);
+        $converter = new SchemaConverter($model);
+        $operation = new DynamicOperation(
+            $model,
+            new TypeRegistry($model, $converter),
+            'example#Service',
+            'example#Call'
+        );
+
+        $output = (new RpcV2CborProtocol())->deserializeResponse(
+            $operation,
+            new Response(
+                headers: ['Smithy-Protocol' => 'rpc-v2-cbor'],
+                body: \hex2bin(
+                    'a3666e6573746564a0656974656d7381a0'
+                        . '6676616c756573a1656669727374a0'
+                )
+            )
+        );
+        self::assertInstanceOf(StructDocument::class, $output);
+
+        $schema = $operation->getOutputSchema();
+        $nested = $output->getMemberValue($schema->getMember('nested'));
+        self::assertInstanceOf(StructDocument::class, $nested);
+        self::assertSame(
+            'default',
+            $nested->getMemberValue(
+                $nested->getSchema()->getMember('value')
+            )
+        );
+
+        $items = $output->getMemberValue($schema->getMember('items'));
+        self::assertInstanceOf(StructDocument::class, $items[0]);
+        self::assertSame(
+            'default',
+            $items[0]->getMemberValue(
+                $items[0]->getSchema()->getMember('value')
+            )
+        );
+
+        $values = $output->getMemberValue($schema->getMember('values'));
+        self::assertInstanceOf(StructDocument::class, $values['first']);
+        self::assertSame(
+            'default',
+            $values['first']->getMemberValue(
+                $values['first']->getSchema()->getMember('value')
+            )
+        );
+    }
+
     public function testResolvesTransformedErrorDiscriminators(): void
     {
         $model = SmithyModel::fromArray([
