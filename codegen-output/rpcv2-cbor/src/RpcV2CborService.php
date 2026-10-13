@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Smithy\ProtocolTests\RpcV2Cbor;
 
+use Smithy\Core\Serde\Schema;
 use Smithy\Core\Shape\GeneratedServiceTrait;
 use Smithy\Core\Shape\ServiceInterface;
+use Smithy\Core\Shape\ShapeType;
 use Smithy\ProtocolTests\RpcV2Cbor\Operation\EmptyInputOutputOperation;
 use Smithy\ProtocolTests\RpcV2Cbor\Operation\Float16Operation;
 use Smithy\ProtocolTests\RpcV2Cbor\Operation\FractionalSecondsOperation;
@@ -25,6 +27,8 @@ final class RpcV2CborService implements ServiceInterface
 {
     use GeneratedServiceTrait;
 
+    private static ?Schema $SCHEMA = null;
+
     public static function name(): string
     {
         return 'RpcV2Cbor';
@@ -38,6 +42,17 @@ final class RpcV2CborService implements ServiceInterface
     public static function version(): string
     {
         return '2020-07-14';
+    }
+
+    /**
+     * Get the service shape schema.
+     */
+    public static function schema(): Schema
+    {
+        return self::$SCHEMA ??= new Schema(
+            id: 'smithy.protocoltests.rpcv2Cbor#RpcV2Protocol',
+            type: ShapeType::Service
+        );
     }
 
     public static function operations(): array
