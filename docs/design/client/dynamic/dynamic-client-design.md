@@ -1,6 +1,6 @@
 # Dynamic Client Design
 
-**Status:** Current as of September 30, 2026
+**Status:** Current as of October 13, 2026
 
 **Packages:** `smithy-php`, `aws-sdk-php`
 
@@ -91,7 +91,7 @@ does not add a second execution pipeline.
 | `DocumentFactory` | Validate caller values and create schema-backed documents for dynamic operations. |
 | `DynamicClientRuntime` | Carry internal provider registrations for protocols, auth, endpoints, traits, and protocol preference. |
 | `DynamicClientFactory` | Resolve runtime registrations and construct the requested dynamic client. |
-| `DynamicClient` | Provide operation lookup, invocation, request overrides, and output validation. |
+| `DynamicClient` | Provide operation lookup, calls, pagination, overrides, and output validation. |
 | `AwsDynamicClient` | Add AWS-owned runtime registrations and client configuration. |
 
 ## Construction
@@ -167,6 +167,31 @@ $output = $client->call(
 Keys beginning with `@` may also appear in an array input. The client removes
 them before input coercion and passes them to `RequestOverrideConfig`.
 Explicit override arguments replace matching input override keys.
+
+## Pagination
+
+`DynamicClient::paginate()` creates a paginator for an operation with
+effective `@paginated` metadata:
+
+```php
+$pages = $client->paginate('ListForecasts', [
+    'city' => 'Raleigh',
+    'pageSize' => 25,
+])->withMaxItems(100);
+
+foreach ($pages as $page) {
+    $forecasts = $page->getMember('forecasts')?->asList() ?? [];
+}
+```
+
+Paginator construction validates the modeled token, page-size, and item
+paths but sends no request. Iteration lazily sends each page through the
+shared client pipeline, updates the schema-backed input with the continuation
+token, and yields each response as a `StructDocument`.
+
+The optional overrides argument to `paginate()` applies request overrides to
+every page. `withMaxItems()` limits the total modeled item count when the
+operation defines both item and page-size paths.
 
 ## Shared Pipeline
 
@@ -248,9 +273,9 @@ a caller-supplied resolver.
 
 SigV4a and adaptive AWS retry mode remain outside the preview.
 
-Generated paginator and waiter convenience methods are absent from the
-dynamic surface. Callers can invoke the underlying modeled operations by
-name.
+Modeled pagination is available through `DynamicClient::paginate()`.
+Generated waiter convenience methods remain absent from the dynamic surface;
+callers can invoke the underlying waiter operations by name.
 
 Provider synchronization and other remaining preview-release checks are
 listed in [Testing and Validation](testing-and-validation.md).
