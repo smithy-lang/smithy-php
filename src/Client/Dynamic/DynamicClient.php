@@ -32,8 +32,11 @@ use Smithy\Core\Shape\Document\{
     DocumentInterface,
     StructDocument
 };
-use Smithy\Http\Client\HttpClientInterface;
-use Smithy\Http\Client\CurlClient;
+use Smithy\Http\Client\{
+    CurlClient,
+    HttpClientInterface,
+    HttpClientTransport
+};
 use Smithy\Protocol\{
     ProtocolInterface,
     RpcV2\RpcV2CborProtocol
@@ -176,11 +179,18 @@ class DynamicClient extends AbstractClient
         array $context
     ): ClientConfig
     {
+        if ($transport !== null && $httpClient !== null) {
+            throw new \InvalidArgumentException(
+                'Provide either an HTTP client or a transport, not both.'
+            );
+        }
+        $transport ??= new HttpClientTransport(
+            $httpClient ?? new CurlClient()
+        );
+
         return new ClientConfig(
             protocol: $protocol,
-            httpClient: $transport === null
-                ? $httpClient ?? new CurlClient()
-                : $httpClient,
+            transport: $transport,
             endpointResolver: $endpointResolver,
             interceptors: $interceptors,
             supportedAuthSchemes: $supportedAuthSchemes,
@@ -188,8 +198,7 @@ class DynamicClient extends AbstractClient
             authSchemePreference: $authSchemePreference ?? [],
             retryStrategy: $retryStrategy,
             retryScope: $retryScope,
-            context: $context,
-            transport: $transport
+            context: $context
         );
     }
 

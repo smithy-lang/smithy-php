@@ -57,12 +57,12 @@ final class RequestCompressionInterceptorTest extends TestCase
 
         self::assertSame(
             'gzip',
-            $updated->getHeaderLine('Content-Encoding')
+            HttpTransportRequest::expect($updated)->request->getHeaderLine('Content-Encoding')
         );
-        self::assertSame($body, \gzdecode((string) $updated->getBody()));
+        self::assertSame($body, \gzdecode((string) HttpTransportRequest::expect($updated)->request->getBody()));
         self::assertSame(
-            (string) \strlen((string) $updated->getBody()),
-            $updated->getHeaderLine('Content-Length')
+            (string) \strlen((string) HttpTransportRequest::expect($updated)->request->getBody()),
+            HttpTransportRequest::expect($updated)->request->getHeaderLine('Content-Length')
         );
     }
 
@@ -92,13 +92,13 @@ final class RequestCompressionInterceptorTest extends TestCase
         );
         self::assertSame(
             'gzip',
-            $updated->getHeaderLine('Content-Encoding')
+            HttpTransportRequest::expect($updated)->request->getHeaderLine('Content-Encoding')
         );
         self::assertSame(
-            (string) \strlen((string) $updated->getBody()),
-            $updated->getHeaderLine('Content-Length')
+            (string) \strlen((string) HttpTransportRequest::expect($updated)->request->getBody()),
+            HttpTransportRequest::expect($updated)->request->getHeaderLine('Content-Length')
         );
-        self::assertSame($body, \gzdecode((string) $updated->getBody()));
+        self::assertSame($body, \gzdecode((string) HttpTransportRequest::expect($updated)->request->getBody()));
     }
 
     public function testCompressesFromLogicalBodyStart(): void
@@ -125,7 +125,7 @@ final class RequestCompressionInterceptorTest extends TestCase
 
         self::assertSame(
             'payload',
-            \gzdecode((string) $updated->getBody())
+            \gzdecode((string) HttpTransportRequest::expect($updated)->request->getBody())
         );
         self::assertSame(6, $body->tell());
     }
@@ -153,11 +153,11 @@ final class RequestCompressionInterceptorTest extends TestCase
 
         self::assertSame(
             'custom, gzip',
-            $updated->getHeaderLine('Content-Encoding')
+            HttpTransportRequest::expect($updated)->request->getHeaderLine('Content-Encoding')
         );
         self::assertSame(
             'payload',
-            \gzdecode((string) $updated->getBody())
+            \gzdecode((string) HttpTransportRequest::expect($updated)->request->getBody())
         );
     }
 
@@ -184,16 +184,16 @@ final class RequestCompressionInterceptorTest extends TestCase
 
         self::assertSame(
             'chunked',
-            $updated->getHeaderLine('Transfer-Encoding')
+            HttpTransportRequest::expect($updated)->request->getHeaderLine('Transfer-Encoding')
         );
-        self::assertFalse($updated->hasHeader('Content-Length'));
+        self::assertFalse(HttpTransportRequest::expect($updated)->request->hasHeader('Content-Length'));
         self::assertSame(
             'gzip',
-            $updated->getHeaderLine('Content-Encoding')
+            HttpTransportRequest::expect($updated)->request->getHeaderLine('Content-Encoding')
         );
         self::assertSame(
             'payload',
-            \gzdecode((string) $updated->getBody())
+            \gzdecode((string) HttpTransportRequest::expect($updated)->request->getBody())
         );
     }
 
@@ -224,16 +224,16 @@ final class RequestCompressionInterceptorTest extends TestCase
         );
         self::assertSame(
             'chunked',
-            $updated->getHeaderLine('Transfer-Encoding')
+            HttpTransportRequest::expect($updated)->request->getHeaderLine('Transfer-Encoding')
         );
-        self::assertFalse($updated->hasHeader('Content-Length'));
+        self::assertFalse(HttpTransportRequest::expect($updated)->request->hasHeader('Content-Length'));
         self::assertSame(
             'gzip',
-            $updated->getHeaderLine('Content-Encoding')
+            HttpTransportRequest::expect($updated)->request->getHeaderLine('Content-Encoding')
         );
         self::assertSame(
             'payload',
-            \gzdecode((string) $updated->getBody())
+            \gzdecode((string) HttpTransportRequest::expect($updated)->request->getBody())
         );
     }
 
@@ -257,7 +257,7 @@ final class RequestCompressionInterceptorTest extends TestCase
             $request,
             HttpTransportRequest::expect($updated)->request
         );
-        self::assertFalse($updated->hasHeader('Content-Encoding'));
+        self::assertFalse(HttpTransportRequest::expect($updated)->request->hasHeader('Content-Encoding'));
     }
 
     public function testCompressesStreamingRequestRegardlessOfThreshold(): void
@@ -286,25 +286,25 @@ final class RequestCompressionInterceptorTest extends TestCase
 
         self::assertInstanceOf(
             ResourceRequestStream::class,
-            $updated->getBody()
+            HttpTransportRequest::expect($updated)->request->getBody()
         );
         self::assertSame(
             'gzip',
-            $updated->getHeaderLine('Content-Encoding')
+            HttpTransportRequest::expect($updated)->request->getHeaderLine('Content-Encoding')
         );
-        $compressed = (string) $updated->getBody();
+        $compressed = (string) HttpTransportRequest::expect($updated)->request->getBody();
         self::assertSame(
             (string) \strlen($compressed),
-            $updated->getHeaderLine('Content-Length')
+            HttpTransportRequest::expect($updated)->request->getHeaderLine('Content-Length')
         );
         self::assertSame($body, \gzdecode($compressed));
         self::assertSame(0, $stream->tell());
-        self::assertTrue($updated->getBody()->isReplayable());
+        self::assertTrue(HttpTransportRequest::expect($updated)->request->getBody()->isReplayable());
 
-        $updated->getBody()->rewindForRetry();
+        HttpTransportRequest::expect($updated)->request->getBody()->rewindForRetry();
         self::assertSame(
             $compressed,
-            (string) $updated->getBody()
+            (string) HttpTransportRequest::expect($updated)->request->getBody()
         );
     }
 
@@ -330,16 +330,16 @@ final class RequestCompressionInterceptorTest extends TestCase
 
         self::assertSame(
             'chunked',
-            $updated->getHeaderLine('Transfer-Encoding')
+            HttpTransportRequest::expect($updated)->request->getHeaderLine('Transfer-Encoding')
         );
-        self::assertFalse($updated->hasHeader('Content-Length'));
+        self::assertFalse(HttpTransportRequest::expect($updated)->request->hasHeader('Content-Length'));
         self::assertSame(
             'gzip',
-            $updated->getHeaderLine('Content-Encoding')
+            HttpTransportRequest::expect($updated)->request->getHeaderLine('Content-Encoding')
         );
         self::assertSame(
             'payload',
-            \gzdecode((string) $updated->getBody())
+            \gzdecode((string) HttpTransportRequest::expect($updated)->request->getBody())
         );
     }
 
@@ -375,19 +375,19 @@ final class RequestCompressionInterceptorTest extends TestCase
 
         self::assertInstanceOf(
             ResourceRequestStream::class,
-            $updated->getBody()
+            HttpTransportRequest::expect($updated)->request->getBody()
         );
         self::assertSame(
             'gzip',
-            $updated->getHeaderLine('Content-Encoding')
+            HttpTransportRequest::expect($updated)->request->getHeaderLine('Content-Encoding')
         );
-        $compressed = (string) $updated->getBody();
+        $compressed = (string) HttpTransportRequest::expect($updated)->request->getBody();
         self::assertSame(
             (string) \strlen($compressed),
-            $updated->getHeaderLine('Content-Length')
+            HttpTransportRequest::expect($updated)->request->getHeaderLine('Content-Length')
         );
         self::assertSame('payload', \gzdecode($compressed));
-        self::assertTrue($updated->getBody()->isReplayable());
+        self::assertTrue(HttpTransportRequest::expect($updated)->request->getBody()->isReplayable());
         self::assertTrue($stream->fullyConsumed());
     }
 
@@ -425,11 +425,11 @@ final class RequestCompressionInterceptorTest extends TestCase
 
         self::assertSame(
             'gzip',
-            $updated->getHeaderLine('Content-Encoding')
+            HttpTransportRequest::expect($updated)->request->getHeaderLine('Content-Encoding')
         );
         self::assertSame(
             'payload',
-            \gzdecode((string) $updated->getBody())
+            \gzdecode((string) HttpTransportRequest::expect($updated)->request->getBody())
         );
     }
 
@@ -526,7 +526,7 @@ final class RequestCompressionInterceptorTest extends TestCase
             $request,
             HttpTransportRequest::expect($updated)->request
         );
-        self::assertFalse($updated->hasHeader('Content-Encoding'));
+        self::assertFalse(HttpTransportRequest::expect($updated)->request->hasHeader('Content-Encoding'));
     }
 
     public function testSkipsOperationWithoutCompressionTrait(): void
@@ -633,7 +633,9 @@ final class RequestCompressionInterceptorTest extends TestCase
     {
         return new ClientConfig(
             protocol: new FakeProtocol(),
-            httpClient: new MockHttpClient(),
+            transport: new \Smithy\Http\Client\HttpClientTransport(
+                new MockHttpClient()
+            ),
             endpointResolver: new StaticEndpointResolver(
                 new Endpoint('https://example.test')
             )

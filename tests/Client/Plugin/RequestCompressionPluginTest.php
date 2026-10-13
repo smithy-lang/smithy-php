@@ -21,7 +21,10 @@ use Smithy\Client\Plugin\RequestCompressionPlugin;
 use Smithy\Core\Serde\Schema;
 use Smithy\Core\Shape\OperationInterface;
 use Smithy\Core\Shape\ShapeType;
-use Smithy\Http\Message\Request;
+use Smithy\Http\Message\{
+    HttpTransportRequest,
+    Request
+};
 use Smithy\Tests\Client\Fake\{
     FakeInput,
     FakeProtocol
@@ -162,14 +165,16 @@ final class RequestCompressionPluginTest extends TestCase
             $body
         );
 
-        return $configured->interceptorChain->modifyBeforeRetryLoop(
+        return HttpTransportRequest::expect(
+            $configured->interceptorChain->modifyBeforeRetryLoop(
             new RequestContext(
                 $this->operation(),
                 new FakeInput(),
                 $configured,
                 $request
             )
-        );
+            )
+        )->request;
     }
 
     /**
@@ -179,7 +184,9 @@ final class RequestCompressionPluginTest extends TestCase
     {
         return new ClientConfig(
             protocol: new FakeProtocol(),
-            httpClient: new MockHttpClient(),
+            transport: new \Smithy\Http\Client\HttpClientTransport(
+                new MockHttpClient()
+            ),
             endpointResolver: new StaticEndpointResolver(
                 new Endpoint('https://example.test')
             ),

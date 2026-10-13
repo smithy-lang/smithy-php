@@ -22,8 +22,6 @@ use Smithy\Client\Retry\NoRetryStrategy;
 use Smithy\Client\Retry\RetryStrategyInterface;
 use Smithy\Client\Transport\TransportInterface;
 use Smithy\Core\Shape\ServiceInterface;
-use Smithy\Http\Client\HttpClientTransport;
-use Smithy\Http\Client\HttpClientInterface;
 use Smithy\Protocol\ProtocolInterface;
 
 /**
@@ -59,21 +57,14 @@ class ClientConfig
 
     public readonly TransportInterface $transport;
 
-    /**
-     * The configured HTTP client when using {@see HttpClientTransport}.
-     *
-     * This compatibility view is null for non-HTTP transports.
-     */
-    public readonly ?HttpClientInterface $httpClient;
-
     /** @var array<string, mixed> */
     public readonly array $context;
 
     /**
      * @param ProtocolInterface $protocol Protocol implementation for the
      *     target service.
-     * @param HttpClientInterface|null $httpClient HTTP client adapted to the
-     *                                      generic transport contract.
+     * @param TransportInterface $transport Transport for serialized protocol
+     *                                     messages.
      * @param EndpointResolverInterface $endpointResolver Resolves the
      *                                  endpoint once per operation execution.
      * @param InterceptorChain $interceptors Interceptors invoked at each
@@ -92,12 +83,10 @@ class ClientConfig
      *                      interceptor state or forward-compatible fields.
      * @param ServiceInterface|null $service Runtime service metadata.
      * @param PluginState|null $pluginState Internal plugin application state.
-     * @param TransportInterface|null $transport Transport for serialized
-     *                                           protocol messages.
      */
     public function __construct(
         public readonly ProtocolInterface $protocol,
-        ?HttpClientInterface $httpClient,
+        TransportInterface $transport,
         public readonly EndpointResolverInterface $endpointResolver,
         InterceptorChain $interceptors = new InterceptorChain(),
         array $supportedAuthSchemes = [],
@@ -107,23 +96,9 @@ class ClientConfig
         array $context = [],
         array $authSchemePreference = [],
         public readonly ?ServiceInterface $service = null,
-        ?PluginState $pluginState = null,
-        ?TransportInterface $transport = null
+        ?PluginState $pluginState = null
     )
     {
-        if ($httpClient !== null && $transport !== null) {
-            throw new \InvalidArgumentException(
-                'Provide either an HTTP client or a transport, not both.'
-            );
-        }
-        if ($transport === null) {
-            if ($httpClient === null) {
-                throw new \InvalidArgumentException(
-                    'A client transport is required.'
-                );
-            }
-            $transport = new HttpClientTransport($httpClient);
-        }
         if (!$protocol->getMessageExchange()->isCompatibleWith(
             $transport->getMessageExchange()
         )) {
@@ -133,9 +108,6 @@ class ClientConfig
         }
 
         $this->transport = $transport;
-        $this->httpClient = $transport instanceof HttpClientTransport
-            ? $transport->httpClient
-            : null;
         $this->interceptorChain = $interceptors;
 
         $schemes = \array_values($supportedAuthSchemes);
@@ -371,14 +343,6 @@ class ClientConfig
     }
 
     /**
-     * Create a config with the HTTP client replaced.
-     */
-    public function withHttpClient(HttpClientInterface $httpClient): static
-    {
-        return $this->copyWith(['httpClient' => $httpClient]);
-    }
-
-    /**
      * Create a config with the transport replaced.
      */
     public function withTransport(TransportInterface $transport): static
@@ -467,16 +431,7 @@ class ClientConfig
     protected function copyWith(array $overrides): static
     {
         $protocol = $overrides['protocol'] ?? $this->protocol;
-        if (\array_key_exists('transport', $overrides)) {
-            $transport = $overrides['transport'];
-            $httpClient = null;
-        } elseif (\array_key_exists('httpClient', $overrides)) {
-            $transport = null;
-            $httpClient = $overrides['httpClient'];
-        } else {
-            $transport = $this->transport;
-            $httpClient = null;
-        }
+        $transport = $overrides['transport'] ?? $this->transport;
         $endpointResolver =
             $overrides['endpointResolver'] ?? $this->endpointResolver;
         $interceptors =
@@ -494,7 +449,7 @@ class ClientConfig
 
         return new static(
             protocol: $protocol,
-            httpClient: $httpClient,
+            transport: $transport,
             endpointResolver: $endpointResolver,
             interceptors: $interceptors,
             supportedAuthSchemes: $supportedAuthSchemes,
@@ -505,8 +460,7 @@ class ClientConfig
             authSchemePreference: $overrides['authSchemePreference']
                 ?? $this->authSchemePreference,
             service: $service,
-            pluginState: $pluginState,
-            transport: $transport
+            pluginState: $pluginState
         );
     }
 

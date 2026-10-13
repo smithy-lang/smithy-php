@@ -442,7 +442,9 @@ final class AbstractClientTest extends TestCase
     {
         return new ClientConfig(
             protocol: new FakeProtocol(),
-            httpClient: $http ?? (new MockHttpClient())->willReturn($response),
+            transport: new \Smithy\Http\Client\HttpClientTransport(
+                $http ?? (new MockHttpClient())->willReturn($response)
+            ),
             endpointResolver: new StaticEndpointResolver(
                 new Endpoint('https://example.test')
             ),

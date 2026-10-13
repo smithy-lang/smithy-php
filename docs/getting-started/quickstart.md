@@ -83,7 +83,7 @@ transport, and a static local endpoint:
 ```php
 $client = new PetStoreClient(new ClientConfig(
     protocol: new RpcV2CborProtocol(),
-    httpClient: new CurlClient(),
+    transport: new HttpClientTransport(new CurlClient()),
     endpointResolver: new StaticEndpointResolver(
         new Endpoint('http://127.0.0.1:8080')
     )

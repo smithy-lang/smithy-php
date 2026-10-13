@@ -109,7 +109,6 @@ final class ClientPipeline
             $interceptor->readBeforeSerialization($inputCtx);
 
             $request = $this->serialize($operation, $input);
-            $request = $overrides?->applyToRequest($request) ?? $request;
 
             $reqCtx = new RequestContext(
                 $operation,
@@ -512,7 +511,6 @@ final class ClientPipeline
     ): SerializableStructInterface
     {
         $request = $this->serialize($operation, $input);
-        $request = $overrides?->applyToRequest($request) ?? $request;
 
         $requestFlags = self::resolveRetryRequestFlags($operation, $config);
         $retryState = $config->retryStrategy->begin(

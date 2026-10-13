@@ -122,7 +122,7 @@ final class WaiterClientTest extends TestCase
     {
         return new WaiterClient(new WaiterClientConfig(
             protocol: new RpcV2CborProtocol(),
-            httpClient: $http,
+            transport: new \Smithy\Http\Client\HttpClientTransport($http),
             endpointResolver: new StaticEndpointResolver(
                 new Endpoint('https://example.com')
             )

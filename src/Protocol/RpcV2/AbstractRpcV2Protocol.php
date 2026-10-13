@@ -134,7 +134,7 @@ abstract class AbstractRpcV2Protocol implements ProtocolInterface
     }
 
     public function setServiceEndpoint(
-        TransportRequestInterface|\Psr\Http\Message\RequestInterface $request,
+        TransportRequestInterface $request,
         Endpoint $endpoint
     ): TransportRequestInterface
     {
@@ -165,7 +165,7 @@ abstract class AbstractRpcV2Protocol implements ProtocolInterface
      */
     public function deserializeResponse(
         OperationInterface $operation,
-        TransportResponseInterface|ResponseInterface $response
+        TransportResponseInterface $response
     ): SerializableStructInterface
     {
         $response = HttpTransportResponse::expect($response)->response;

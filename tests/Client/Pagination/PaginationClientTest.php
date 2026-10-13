@@ -274,7 +274,7 @@ final class PaginationClientTest extends TestCase
     {
         return new PaginationClient(new PaginationClientConfig(
             protocol: new RpcV2CborProtocol(),
-            httpClient: $http,
+            transport: new \Smithy\Http\Client\HttpClientTransport($http),
             endpointResolver: new StaticEndpointResolver(
                 new Endpoint('https://example.com')
             )

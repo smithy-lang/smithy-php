@@ -67,6 +67,7 @@ use Smithy\Http\Client\{
 use Smithy\Http\Message\{
     HttpMessageExchange,
     HttpTransportRequest,
+    HttpTransportResponse,
     Request,
     Response,
     Uri
@@ -129,6 +130,9 @@ final class ClientPipelineTest extends TestCase
             $serializedRequest,
             $http->sentRequests[0]
         );
+        $serializedRequest = HttpTransportRequest::expect(
+            $serializedRequest
+        )->request;
         $this->assertSame('/', (string) $serializedRequest->getUri());
         $this->assertSame(
             'https://example.test/',
@@ -301,8 +305,10 @@ final class ClientPipelineTest extends TestCase
             ->onlyMethods(['modifyBeforeTransmit'])
             ->getMock();
         $swap->method('modifyBeforeTransmit')->willReturnCallback(
-            static fn(RequestContext $ctx): RequestInterface =>
-                $ctx->request->withHeader('x-swapped', '1')
+            static fn(RequestContext $ctx): TransportRequestInterface =>
+                HttpTransportRequest::expect($ctx->request)->withRequest(
+                    $ctx->getHttpRequest()->withHeader('x-swapped', '1')
+                )
         );
 
         [$pipeline, $http] = $this->buildPipeline([$swap]);
@@ -320,7 +326,9 @@ final class ClientPipelineTest extends TestCase
         $http = (new MockHttpClient())->willReturn('body');
         $config = new ClientConfig(
             protocol: new FakeProtocol(),
-            httpClient: $http,
+            transport: new \Smithy\Http\Client\HttpClientTransport(
+                $http
+            ),
             endpointResolver: new StaticEndpointResolver(
                 new Endpoint(
                     'https://example.test',
@@ -366,7 +374,9 @@ final class ClientPipelineTest extends TestCase
                 OperationInterface $operation,
                 TransportResponseInterface $response
             ): SerializableStructInterface =>
-                new FakeOutput((string) $response->getBody())
+                new FakeOutput((string) HttpTransportResponse::expect(
+                    $response
+                )->response->getBody())
         );
         $protocol->method('setServiceEndpoint')->willReturnCallback(
             static fn(
@@ -375,13 +385,19 @@ final class ClientPipelineTest extends TestCase
             ): TransportRequestInterface => HttpTransportRequest::expect(
                 $request
             )
-                ->withUri(new Uri($endpoint->url))
+                ->withRequest(
+                    HttpTransportRequest::expect($request)
+                        ->request
+                        ->withUri(new Uri($endpoint->url))
+                )
                 ->withEndpointHeaders($endpoint)
         );
 
         $config = new ClientConfig(
             protocol: $protocol,
-            httpClient: $http,
+            transport: new \Smithy\Http\Client\HttpClientTransport(
+                $http
+            ),
             endpointResolver: new StaticEndpointResolver(
                 new Endpoint('https://example.test', headers: [
                     'x-endpoint' => 'new',
@@ -427,7 +443,9 @@ final class ClientPipelineTest extends TestCase
                 OperationInterface $operation,
                 TransportResponseInterface $response
             ): SerializableStructInterface =>
-                new FakeOutput((string) $response->getBody())
+                new FakeOutput((string) HttpTransportResponse::expect(
+                    $response
+                )->response->getBody())
         );
         $protocol->method('setServiceEndpoint')->willReturnCallback(
             static fn(
@@ -436,13 +454,19 @@ final class ClientPipelineTest extends TestCase
             ): TransportRequestInterface => HttpTransportRequest::expect(
                 $request
             )
-                ->withUri(new Uri($endpoint->url))
+                ->withRequest(
+                    HttpTransportRequest::expect($request)
+                        ->request
+                        ->withUri(new Uri($endpoint->url))
+                )
                 ->withEndpointHeaders($endpoint)
         );
 
         $pipeline = new ClientPipeline(new ClientConfig(
             protocol: $protocol,
-            httpClient: $http,
+            transport: new \Smithy\Http\Client\HttpClientTransport(
+                $http
+            ),
             endpointResolver: new StaticEndpointResolver(
                 new Endpoint('https://example.test', headers: [
                     'X-Endpoint' => 'new'
@@ -470,7 +494,9 @@ final class ClientPipelineTest extends TestCase
         $http = (new MockHttpClient())->willReturn('body');
         $pipeline = new ClientPipeline(new ClientConfig(
             protocol: new FakeProtocol(),
-            httpClient: $http,
+            transport: new \Smithy\Http\Client\HttpClientTransport(
+                $http
+            ),
             endpointResolver: new StaticEndpointResolver(
                 new Endpoint(
                     'https://example.test',
@@ -517,7 +543,9 @@ final class ClientPipelineTest extends TestCase
         $http = (new MockHttpClient())->willReturn('body');
         $pipeline = new ClientPipeline(new ClientConfig(
             protocol: new FakeProtocol(),
-            httpClient: $http,
+            transport: new \Smithy\Http\Client\HttpClientTransport(
+                $http
+            ),
             endpointResolver: new StaticEndpointResolver(
                 new Endpoint(
                     'https://example.test',
@@ -548,7 +576,9 @@ final class ClientPipelineTest extends TestCase
         $http = (new MockHttpClient())->willReturn('body');
         $pipeline = new ClientPipeline(new ClientConfig(
             protocol: new FakeProtocol(),
-            httpClient: $http,
+            transport: new \Smithy\Http\Client\HttpClientTransport(
+                $http
+            ),
             endpointResolver: new StaticEndpointResolver(
                 new Endpoint('https://example.test')
             ),
@@ -580,7 +610,9 @@ final class ClientPipelineTest extends TestCase
         $http = (new MockHttpClient())->willReturn('body');
         $pipeline = new ClientPipeline(new ClientConfig(
             protocol: new FakeProtocol(),
-            httpClient: $http,
+            transport: new \Smithy\Http\Client\HttpClientTransport(
+                $http
+            ),
             endpointResolver: new StaticEndpointResolver(
                 new Endpoint('https://example.test')
             ),
@@ -605,7 +637,9 @@ final class ClientPipelineTest extends TestCase
         $http = (new MockHttpClient())->willReturn('body');
         $pipeline = new ClientPipeline(new ClientConfig(
             protocol: new FakeProtocol(),
-            httpClient: $http,
+            transport: new \Smithy\Http\Client\HttpClientTransport(
+                $http
+            ),
             endpointResolver: new StaticEndpointResolver(
                 new Endpoint('https://example.test')
             ),
@@ -647,7 +681,9 @@ final class ClientPipelineTest extends TestCase
         $http = (new MockHttpClient())->willReturn('body');
         $pipeline = new ClientPipeline(new ClientConfig(
             protocol: new FakeProtocol(),
-            httpClient: $http,
+            transport: new \Smithy\Http\Client\HttpClientTransport(
+                $http
+            ),
             endpointResolver: new StaticEndpointResolver(
                 new Endpoint(
                     'https://example.test',
@@ -748,7 +784,9 @@ final class ClientPipelineTest extends TestCase
         };
         $pipeline = new ClientPipeline(new ClientConfig(
             protocol: new FakeProtocol(),
-            httpClient: (new MockHttpClient())->willReturn('body'),
+            transport: new \Smithy\Http\Client\HttpClientTransport(
+                (new MockHttpClient())->willReturn('body')
+            ),
             endpointResolver: new StaticEndpointResolver(new Endpoint(
                 'https://example.test',
                 authSchemes: [
@@ -777,7 +815,9 @@ final class ClientPipelineTest extends TestCase
         $http = (new MockHttpClient())->willReturn('body');
         $pipeline = new ClientPipeline(new ClientConfig(
             protocol: new FakeProtocol(),
-            httpClient: $http,
+            transport: new \Smithy\Http\Client\HttpClientTransport(
+                $http
+            ),
             endpointResolver: new StaticEndpointResolver(
                 new Endpoint('https://example.test')
             ),
@@ -907,12 +947,14 @@ final class ClientPipelineTest extends TestCase
             ->method('sign')
             ->willReturnCallback(
                 static function (
-                    RequestInterface $request,
+                    TransportRequestInterface $request,
                     IdentityInterface $identity,
                     array $properties = []
                 ) use (&$events, &$signedUris): SignerResult {
                     $events[] = 'sign';
-                    $signedUris[] = (string) $request->getUri();
+                    $signedUris[] = (string) HttpTransportRequest::expect(
+                        $request
+                    )->request->getUri();
 
                     return new SignerResult($request);
                 }
@@ -1001,12 +1043,18 @@ final class ClientPipelineTest extends TestCase
                     Endpoint $endpoint
                 ): TransportRequestInterface
                 {
+                    $transportRequest = HttpTransportRequest::expect($request);
                     $uri = new Uri(
                         \rtrim($endpoint->url, '/')
-                            . $request->getUri()->getPath()
+                            . $transportRequest
+                                ->request
+                                ->getUri()
+                                ->getPath()
                     );
 
-                    return $request->withUri($uri);
+                    return $transportRequest->withRequest(
+                        $transportRequest->request->withUri($uri)
+                    );
                 }
             );
         $protocol
@@ -1020,7 +1068,9 @@ final class ClientPipelineTest extends TestCase
             : new InterceptorChain();
         $pipeline = new ClientPipeline(new ClientConfig(
             protocol: $protocol,
-            httpClient: $http,
+            transport: new \Smithy\Http\Client\HttpClientTransport(
+                $http
+            ),
             endpointResolver: $endpointResolver,
             interceptors: $interceptors,
             retryStrategy: $this->retryOnceStrategy(),
@@ -1089,7 +1139,7 @@ final class ClientPipelineTest extends TestCase
             ->method('sign')
             ->willReturnCallback(
                 static fn(
-                    RequestInterface $request
+                    TransportRequestInterface $request
                 ): SignerResult => new SignerResult($request)
             );
         $signer
@@ -1111,8 +1161,11 @@ final class ClientPipelineTest extends TestCase
             ->onlyMethods(['modifyBeforeSigning'])
             ->getMock();
         $interceptor->method('modifyBeforeSigning')->willReturnCallback(
-            static fn(RequestContext $ctx): RequestInterface =>
-                $ctx->request->withAddedHeader('x-attempt', 'value')
+            static fn(RequestContext $ctx): TransportRequestInterface =>
+                HttpTransportRequest::expect($ctx->request)->withRequest(
+                    $ctx->getHttpRequest()
+                        ->withAddedHeader('x-attempt', 'value')
+                )
         );
         $http = (new MockHttpClient())
             ->queueException(new \RuntimeException('temporary'))
@@ -1493,7 +1546,9 @@ final class ClientPipelineTest extends TestCase
         $resolver->method('resolve')->willReturn(7);
         $config = new ClientConfig(
             protocol: new FakeProtocol(),
-            httpClient: (new MockHttpClient())->willReturn('server-body'),
+            transport: new \Smithy\Http\Client\HttpClientTransport(
+                (new MockHttpClient())->willReturn('server-body')
+            ),
             endpointResolver: new StaticEndpointResolver(
                 new Endpoint('https://example.test')
             ),
@@ -1531,7 +1586,9 @@ final class ClientPipelineTest extends TestCase
         $resolver->method('resolve')->willReturn(11);
         $config = new ClientConfig(
             protocol: new FakeProtocol(),
-            httpClient: (new MockHttpClient())->willReturn('server-body'),
+            transport: new \Smithy\Http\Client\HttpClientTransport(
+                (new MockHttpClient())->willReturn('server-body')
+            ),
             endpointResolver: new StaticEndpointResolver(
                 new Endpoint('https://example.test')
             ),
@@ -1831,7 +1888,9 @@ final class ClientPipelineTest extends TestCase
         $endpoint = new Endpoint('https://example.test');
         $config = new ClientConfig(
             protocol: $protocol,
-            httpClient: $http,
+            transport: new \Smithy\Http\Client\HttpClientTransport(
+                $http
+            ),
             endpointResolver: new StaticEndpointResolver($endpoint),
             interceptors: new InterceptorChain(...$interceptors),
             retryStrategy: $retryStrategy
@@ -1918,7 +1977,9 @@ final class ClientPipelineTest extends TestCase
         $http = (new MockHttpClient())->willReturn('body');
         $pipeline = new ClientPipeline(new ClientConfig(
             protocol: new FakeProtocol(),
-            httpClient: $http,
+            transport: new \Smithy\Http\Client\HttpClientTransport(
+                $http
+            ),
             endpointResolver: new StaticEndpointResolver(
                 new Endpoint(
                     'https://example.test',
@@ -1982,7 +2043,7 @@ final class ClientPipelineTest extends TestCase
         $signer = $this->createMock(SignerInterface::class);
         $signer->method('sign')->willReturnCallback(
             static function (
-                RequestInterface $request,
+                TransportRequestInterface $request,
                 IdentityInterface $identity,
                 array $properties = []
             ) use ($seen, $schemeId): SignerResult {
@@ -2022,7 +2083,9 @@ final class ClientPipelineTest extends TestCase
 
         return new ClientPipeline(new ClientConfig(
             protocol: new FakeProtocol(),
-            httpClient: (new MockHttpClient())->willReturn('server-body'),
+            transport: new \Smithy\Http\Client\HttpClientTransport(
+                (new MockHttpClient())->willReturn('server-body')
+            ),
             endpointResolver: new StaticEndpointResolver(
                 new Endpoint('https://example.test')
             ),

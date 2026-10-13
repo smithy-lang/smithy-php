@@ -861,7 +861,9 @@ final class DynamicClientTest extends TestCase
         $http = $this->httpClient();
         $config = new ClientConfig(
             protocol: new RpcV2CborProtocol(),
-            httpClient: $http,
+            transport: new \Smithy\Http\Client\HttpClientTransport(
+                $http
+            ),
             endpointResolver: new StaticEndpointResolver(
                 new Endpoint('https://example.com')
             ),

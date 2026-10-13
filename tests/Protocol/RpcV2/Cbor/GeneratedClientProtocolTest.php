@@ -111,7 +111,7 @@ final class GeneratedClientProtocolTest extends RpcV2CborClientProtocolTestCase
         return new RpcV2CborClient(
             new RpcV2CborClientConfig(
                 protocol: new RpcV2CborProtocol(),
-                httpClient: $http,
+                transport: new \Smithy\Http\Client\HttpClientTransport($http),
                 endpointResolver: new StaticEndpointResolver(
                     new Endpoint($endpoint)
                 ),

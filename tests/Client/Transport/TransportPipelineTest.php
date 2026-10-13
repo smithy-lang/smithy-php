@@ -32,11 +32,15 @@ use Smithy\Client\Transport\{
     TransportInterface,
     TransportOptionsInterface,
     TransportRequestInterface,
+    TransportRequestOverrideInterface,
     TransportResponseInterface
 };
 use Smithy\Core\Serde\SerializableStructInterface;
 use Smithy\Core\Shape\OperationInterface;
-use Smithy\Http\Client\HttpRequestOptions;
+use Smithy\Http\Client\{
+    HttpClientTransport,
+    HttpRequestOptions
+};
 use Smithy\Http\Message\HttpMessageExchange;
 use Smithy\Protocol\ProtocolInterface;
 use Smithy\Tests\Client\Fake\{
@@ -56,11 +60,10 @@ final class TransportPipelineTest extends TestCase
         $transport = new TestTransport();
         $config = new ClientConfig(
             protocol: new TestProtocol(),
-            httpClient: null,
+            transport: $transport,
             endpointResolver: new StaticEndpointResolver(
                 new Endpoint('test://service')
-            ),
-            transport: $transport
+            )
         );
 
         $output = (new ClientPipeline($config))->execute(
@@ -70,7 +73,6 @@ final class TransportPipelineTest extends TestCase
 
         self::assertInstanceOf(FakeOutput::class, $output);
         self::assertSame('output:input:hello', $output->value);
-        self::assertNull($config->httpClient);
         self::assertSame($transport, $config->transport);
         self::assertSame('test://service', $transport->request?->endpoint);
         self::assertSame('input:hello', $transport->request?->payload);
@@ -83,13 +85,12 @@ final class TransportPipelineTest extends TestCase
         $retryStrategy = new TestRetryStrategy();
         $config = new ClientConfig(
             protocol: new TestProtocol(),
-            httpClient: null,
+            transport: $transport,
             endpointResolver: new StaticEndpointResolver(
                 new Endpoint('test://service')
             ),
             interceptors: new InterceptorChain($interceptor),
-            retryStrategy: $retryStrategy,
-            transport: $transport
+            retryStrategy: $retryStrategy
         );
 
         $output = (new ClientPipeline($config))->execute(
@@ -109,7 +110,10 @@ final class TransportPipelineTest extends TestCase
             $transport->retryRequest?->payload
         );
         self::assertNull($transport->retryResponse);
-        self::assertSame('first attempt failed', $transport->retryError?->getMessage());
+        self::assertSame(
+            'first attempt failed',
+            $transport->retryError?->getMessage()
+        );
         self::assertSame(1, $retryStrategy->refreshCalls);
         self::assertSame(1, $retryStrategy->successCalls);
         self::assertSame([
@@ -135,7 +139,9 @@ final class TransportPipelineTest extends TestCase
 
         new ClientConfig(
             protocol: new TestProtocol(),
-            httpClient: new MockHttpClient(),
+            transport: new HttpClientTransport(
+                new MockHttpClient()
+            ),
             endpointResolver: new StaticEndpointResolver(
                 new Endpoint('https://example.test')
             )
@@ -188,6 +194,35 @@ final class TransportPipelineTest extends TestCase
 
         $overrides->resolveTransportOptions(new TestHttpTransport());
     }
+
+    public function testAppliesCustomTransportOverrides(): void
+    {
+        $transport = new TestTransport();
+        $config = new ClientConfig(
+            protocol: new TestProtocol(),
+            transport: $transport,
+            endpointResolver: new StaticEndpointResolver(
+                new Endpoint('test://service')
+            )
+        );
+        $overrides = RequestOverrideConfig::fromArray([
+            RequestOverrideConfig::TRANSPORT =>
+                new TestRequestOverride('custom')
+        ]);
+
+        $output = (new ClientPipeline($config))->execute(
+            FakeOperation::instance(),
+            new FakeInput('hello'),
+            $overrides
+        );
+
+        self::assertSame(
+            'output:input:hello:custom',
+            $output->value
+        );
+        self::assertInstanceOf(TestOptions::class, $transport->options);
+        self::assertSame('custom', $transport->options->value);
+    }
 }
 
 final readonly class TestRequest implements TransportRequestInterface
@@ -203,6 +238,40 @@ final readonly class TestResponse implements TransportResponseInterface
     public function __construct(
         public string $payload
     ) {}
+}
+
+final readonly class TestOptions implements TransportOptionsInterface
+{
+    public function __construct(
+        public string $value
+    ) {}
+}
+
+final readonly class TestRequestOverride implements
+    TransportRequestOverrideInterface
+{
+    public function __construct(
+        private string $value
+    ) {}
+
+    public function resolveOptions(
+        TransportInterface $transport
+    ): ?TransportOptionsInterface
+    {
+        return new TestOptions($this->value);
+    }
+
+    public function applyToRequest(
+        TransportRequestInterface $request
+    ): TransportRequestInterface
+    {
+        \assert($request instanceof TestRequest);
+
+        return new TestRequest(
+            $request->payload . ':' . $this->value,
+            $request->endpoint
+        );
+    }
 }
 
 final readonly class TestMessageExchange implements MessageExchangeInterface
@@ -283,6 +352,8 @@ final class TestTransport implements TransportInterface
 
     public ?\Throwable $retryError = null;
 
+    public ?TransportOptionsInterface $options = null;
+
     public function __construct(
         private int $failuresRemaining = 0
     ) {}
@@ -305,6 +376,7 @@ final class TestTransport implements TransportInterface
         \assert($request instanceof TestRequest);
         ++$this->sendCalls;
         $this->request = $request;
+        $this->options = $context->options;
         if ($this->failuresRemaining > 0) {
             --$this->failuresRemaining;
             throw new \RuntimeException('first attempt failed');

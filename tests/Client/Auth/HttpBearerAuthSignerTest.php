@@ -28,7 +28,9 @@ final class HttpBearerAuthSignerTest extends TestCase
             new HttpTransportRequest($request),
             new BearerToken('mF_9.B5f-4.1JqM')
         );
-        $signed = $result->signedRequest;
+        $signed = HttpTransportRequest::expect(
+            $result->signedRequest
+        )->request;
 
         self::assertSame(
             'Bearer mF_9.B5f-4.1JqM',
@@ -51,6 +53,7 @@ final class HttpBearerAuthSignerTest extends TestCase
                 new BearerToken('new')
             )
             ->signedRequest;
+        $signed = HttpTransportRequest::expect($signed)->request;
 
         self::assertSame(
             'Bearer new',

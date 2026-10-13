@@ -345,6 +345,7 @@ failure terminates retry and preserves the current attempt error.
 |---|---|
 | call plugins | Apply configuration changes for this call |
 | `@http` | Complete or partial `HttpRequestOptions`, plus headers |
+| `@transport` | A transport-defined request override |
 | `@retries` | Number of retries after the initial attempt |
 | `@auth` | Ordered auth-scheme preference names |
 
@@ -354,6 +355,10 @@ Partial HTTP options merge with the defaults exposed by
 `HttpClientTransport`. A complete `HttpRequestOptions` replaces those
 defaults. HTTP overrides are rejected when the configured transport is not
 HTTP.
+
+Custom transports can define their own request mutation and option types by
+providing a `TransportRequestOverrideInterface` value through `@transport`.
+The generic pipeline invokes that contract without inspecting its payload.
 
 On the interceptor path, option resolution occurs after
 `readBeforeExecution()` inside the guarded lifecycle, so completion hooks can

@@ -907,7 +907,9 @@ final class BytecodeEndpointResolverTest extends TestCase
             input: $this->createStub(SerializableStructInterface::class),
             config: new ClientConfig(
                 protocol: new FakeProtocol(),
-                httpClient: $this->createStub(HttpClientInterface::class),
+                transport: new \Smithy\Http\Client\HttpClientTransport(
+                    $this->createStub(HttpClientInterface::class)
+                ),
                 endpointResolver: $this->createStub(
                     EndpointResolverInterface::class
                 ),
@@ -940,8 +942,8 @@ final class BytecodeEndpointResolverTest extends TestCase
             input: $input,
             config: new ClientConfig(
                 protocol: new FakeProtocol(),
-                httpClient: $this->createStub(
-                    HttpClientInterface::class
+                transport: new \Smithy\Http\Client\HttpClientTransport(
+                    $this->createStub(HttpClientInterface::class)
                 ),
                 endpointResolver: $resolver,
                 context: [

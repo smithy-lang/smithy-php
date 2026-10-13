@@ -47,7 +47,9 @@ final class ClientConfigTest extends TestCase
     {
         return new ClientConfig(
             protocol: new FakeProtocol(),
-            httpClient: new MockHttpClient(),
+            transport: new HttpClientTransport(
+                new MockHttpClient()
+            ),
             endpointResolver: new StaticEndpointResolver(
                 new Endpoint('https://a.test')
             )
@@ -62,17 +64,17 @@ final class ClientConfigTest extends TestCase
 
         $this->assertNotSame($orig, $new);
         $this->assertSame($newProto, $new->protocol);
-        $this->assertSame($orig->httpClient, $new->httpClient);
+        $this->assertSame($orig->transport, $new->transport);
         $this->assertSame($orig->endpointResolver, $new->endpointResolver);
     }
 
-    public function testWithHttpClientReplacesOnlyHttpClient(): void
+    public function testWithTransportReplacesOnlyTransport(): void
     {
         $orig = $this->baseConfig();
-        $newHttp = new MockHttpClient();
-        $new = $orig->withHttpClient($newHttp);
+        $transport = new HttpClientTransport(new MockHttpClient());
+        $new = $orig->withTransport($transport);
 
-        $this->assertSame($newHttp, $new->httpClient);
+        $this->assertSame($transport, $new->transport);
         $this->assertSame($orig->protocol, $new->protocol);
     }
 
@@ -85,7 +87,7 @@ final class ClientConfigTest extends TestCase
         $new = $orig->withEndpointResolver($newResolver);
 
         $this->assertSame($newResolver, $new->endpointResolver);
-        $this->assertSame($orig->httpClient, $new->httpClient);
+        $this->assertSame($orig->transport, $new->transport);
     }
 
     public function testWithRetryStrategyReplacesOnlyRetryStrategy(): void
@@ -318,7 +320,7 @@ final class ClientConfigTest extends TestCase
     {
         $orig = new RegionalClientConfigFixture(
             protocol: new FakeProtocol(),
-            httpClient: new MockHttpClient(),
+            transport: new HttpClientTransport(new MockHttpClient()),
             endpointResolver: new StaticEndpointResolver(
                 new Endpoint('https://a.test')
             ),
@@ -337,5 +339,4 @@ final class ClientConfigTest extends TestCase
         $this->assertSame(['sigv4'], $new->authSchemePreference);
         $this->assertSame($transport, $new->transport);
     }
-
 }

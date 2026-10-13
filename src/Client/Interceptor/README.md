@@ -73,9 +73,13 @@ final class CorrelationIdInterceptor extends AbstractInterceptor
         RequestContext $ctx
     ): TransportRequestInterface
     {
-        return HttpTransportRequest::expect($ctx->request)->withHeader(
-            'x-correlation-id',
-            bin2hex(random_bytes(16))
+        $request = HttpTransportRequest::expect($ctx->request);
+
+        return $request->withRequest(
+            $request->request->withHeader(
+                'x-correlation-id',
+                bin2hex(random_bytes(16))
+            )
         );
     }
 }

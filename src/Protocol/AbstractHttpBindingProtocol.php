@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Smithy\Protocol;
 
-use Psr\Http\Message\RequestInterface;
-use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\StreamInterface;
 use Smithy\Client\Endpoint\Endpoint;
 use Smithy\Client\Transport\{
@@ -178,7 +176,7 @@ abstract class AbstractHttpBindingProtocol implements ProtocolInterface
     }
 
     public function setServiceEndpoint(
-        TransportRequestInterface|RequestInterface $request,
+        TransportRequestInterface $request,
         Endpoint $endpoint
     ): TransportRequestInterface
     {
@@ -209,7 +207,7 @@ abstract class AbstractHttpBindingProtocol implements ProtocolInterface
      */
     public function deserializeResponse(
         OperationInterface $operation,
-        TransportResponseInterface|ResponseInterface $response
+        TransportResponseInterface $response
     ): SerializableStructInterface
     {
         $response = HttpTransportResponse::expect($response)->response;

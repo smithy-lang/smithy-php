@@ -10,7 +10,10 @@ use Smithy\Client\Endpoint\{
     StaticEndpointResolver
 };
 use Smithy\Examples\PetStore\PetStoreClient;
-use Smithy\Http\Client\CurlClient;
+use Smithy\Http\Client\{
+    CurlClient,
+    HttpClientTransport
+};
 use Smithy\Protocol\RpcV2\RpcV2CborProtocol;
 
 /**
@@ -27,7 +30,9 @@ final class ClientFactory
 
         return new PetStoreClient(new ClientConfig(
             protocol: new RpcV2CborProtocol(),
-            httpClient: new CurlClient(),
+            transport: new HttpClientTransport(
+                new CurlClient()
+            ),
             endpointResolver: new StaticEndpointResolver(
                 new Endpoint($endpoint)
             )
