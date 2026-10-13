@@ -100,7 +100,39 @@ final class GetThingOperation implements OperationInterface
     {
         return self::$SCHEMA ??= new Schema(
             id: 'smithy.waiter#GetThing',
-            type: ShapeType::Operation
+            type: ShapeType::Operation,
+            traits: [
+                Schema::T_WAITABLE => [
+                    'ThingReady' => [
+                        'documentation' => 'Wait until the thing is ready.',
+                        'minDelay' => 1,
+                        'maxDelay' => 2,
+                        'acceptors' => [
+                            [
+                                'state' => 'failure',
+                                'matcher' => [
+                                    'output' => [
+                                        'path' => 'status',
+                                        'expected' => 'failed',
+                                        'comparator' => 'stringEquals'
+                                    ]
+                                ],
+                                'message' => 'failureReason'
+                            ],
+                            [
+                                'state' => 'success',
+                                'matcher' => [
+                                    'output' => [
+                                        'path' => 'status',
+                                        'expected' => 'ready',
+                                        'comparator' => 'stringEquals'
+                                    ]
+                                ]
+                            ]
+                        ]
+                    ]
+                ]
+            ]
         );
     }
 

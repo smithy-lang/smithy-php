@@ -33,6 +33,7 @@ final class SchemaTest extends TestCase
         $this->assertSame(27, Schema::T_EC2_QUERY_NAME);
         $this->assertSame(28, Schema::T_HTTP_CHECKSUM);
         $this->assertSame(29, Schema::T_PAGINATED);
+        $this->assertSame(30, Schema::T_WAITABLE);
     }
 
     public function testStoresIdAndUnwrapsShapeTypeToInt(): void

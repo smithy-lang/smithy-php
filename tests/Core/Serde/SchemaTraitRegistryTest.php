@@ -95,6 +95,18 @@ final class SchemaTraitRegistryTest extends TestCase
             )
         );
         self::assertSame(
+            Schema::T_WAITABLE,
+            SchemaTraitRegistry::getDefaultKey(
+                'smithy.waiters#waitable'
+            )
+        );
+        self::assertSame(
+            'smithy.waiters#waitable',
+            SchemaTraitRegistry::getDefaultId(
+                Schema::T_WAITABLE
+            )
+        );
+        self::assertSame(
             Schema::T_ERRORS,
             SchemaTraitRegistry::getDefaultKey('smithy.api#errors')
         );

@@ -38,7 +38,8 @@ final class SchemaTraitRegistry
         'smithy.api#readonly' => Schema::T_READ_ONLY,
         'smithy.api#idempotent' => Schema::T_IDEMPOTENT,
         'smithy.api#retryable' => Schema::T_RETRYABLE,
-        'smithy.api#paginated' => Schema::T_PAGINATED
+        'smithy.api#paginated' => Schema::T_PAGINATED,
+        'smithy.waiters#waitable' => Schema::T_WAITABLE
     ];
 
     /**
@@ -58,7 +59,9 @@ final class SchemaTraitRegistry
             $this->register(
                 $traitId,
                 $traitKey,
-                self::materializeKnownTrait(...)
+                $traitId === 'smithy.waiters#waitable'
+                    ? static fn(mixed $value): mixed => $value
+                    : self::materializeKnownTrait(...)
             );
         }
     }

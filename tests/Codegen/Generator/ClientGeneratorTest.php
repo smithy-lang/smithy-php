@@ -657,5 +657,19 @@ final class ClientGeneratorTest extends TestCase
             'reports the API as ready.',
             $file->content
         );
+        $this->assertStringContainsString(
+            "GetThingOperation::instance(),\n"
+                . "            'APIReady',\n"
+                . '            $config',
+            $file->content
+        );
+        $this->assertStringNotContainsString(
+            'new Acceptor(',
+            $file->content
+        );
+        $this->assertStringNotContainsString(
+            'use Smithy\\Client\\Waiter\\Matcher;',
+            $file->content
+        );
     }
 }

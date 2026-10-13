@@ -86,12 +86,12 @@ does not add a second execution pipeline.
 | `SmithyModel` | Read and query a Smithy JSON AST. |
 | `SchemaConverter` | Convert modeled shapes and traits into `Schema` objects. |
 | `TypeRegistry` | Resolve and cache schemas by modeled or canonical shape ID. |
-| `DynamicService` | Expose service metadata and lazily create operations. |
+| `DynamicService` | Expose service metadata, lazily create operations, and index modeled waiters. |
 | `DynamicOperation` | Expose operation schemas, canonical service identity, auth, errors, streaming metadata, and value factories. |
 | `DocumentFactory` | Validate caller values and create schema-backed documents for dynamic operations. |
 | `DynamicClientRuntime` | Carry internal provider registrations for protocols, auth, endpoints, traits, and protocol preference. |
 | `DynamicClientFactory` | Resolve runtime registrations and construct the requested dynamic client. |
-| `DynamicClient` | Provide operation lookup, calls, pagination, overrides, and output validation. |
+| `DynamicClient` | Provide operation lookup, calls, pagination, waiters, overrides, and output validation. |
 | `AwsDynamicClient` | Add AWS-owned runtime registrations and client configuration. |
 
 ## Construction
@@ -193,6 +193,32 @@ The optional overrides argument to `paginate()` applies request overrides to
 every page. `withMaxItems()` limits the total modeled item count when the
 operation defines both item and page-size paths.
 
+## Waiters
+
+`DynamicClient::waitUntil()` executes a modeled waiter by its service-wide
+name:
+
+```php
+$result = $client->waitUntil(
+    waiterName: 'ForecastReady',
+    input: ['city' => 'Raleigh'],
+    maxWaitTime: 60.0,
+);
+
+$forecast = $result->output;
+```
+
+The client validates and coerces waiter input through the same
+`DocumentFactory` used by `call()`. It then polls the waiter's operation
+through the shared client pipeline and evaluates the modeled acceptors with
+the same waiter state machine used by generated clients. `WaiterConfig` can
+override modeled delay bounds and apply request overrides to every attempt.
+The result retains the output or modeled error that satisfied the success
+acceptor.
+
+Waiter names are resolved case-insensitively across the service. Unknown
+names and duplicate modeled names fail before polling begins.
+
 ## Shared Pipeline
 
 `DynamicClient` extends `AbstractClient`. Its calls enter
@@ -274,8 +300,9 @@ a caller-supplied resolver.
 SigV4a and adaptive AWS retry mode remain outside the preview.
 
 Modeled pagination is available through `DynamicClient::paginate()`.
-Generated waiter convenience methods remain absent from the dynamic surface;
-callers can invoke the underlying waiter operations by name.
+Modeled waiters are available through `DynamicClient::waitUntil()`.
+Generated paginator and waiter convenience methods remain absent from the
+dynamic surface.
 
 Provider synchronization and other remaining preview-release checks are
 listed in [Testing and Validation](testing-and-validation.md).

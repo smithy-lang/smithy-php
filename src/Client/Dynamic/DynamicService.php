@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace Smithy\Client\Dynamic;
 
+use Smithy\Client\Waiter\{
+    WaiterSchemaExtension,
+    WaiterSchemaExtensionProvider
+};
 use Smithy\Core\Model\SmithyModel;
 use Smithy\Core\Serde\{
     Schema,
@@ -26,6 +30,8 @@ final class DynamicService implements ServiceInterface
     private array $operationIdsByName = [];
     /** @var array<string, DynamicOperation> */
     private array $operationsByName = [];
+    /** @var array<string, DynamicOperation>|null */
+    private ?array $waiterOperationsByName = null;
 
     /**
      * Create runtime metadata for a modeled service.
@@ -136,6 +142,59 @@ final class DynamicService implements ServiceInterface
             $this->protocolId,
             $this->errorDiscriminatorTraits
         );
+    }
+
+    /**
+     * Resolve the operation associated with a modeled waiter name.
+     */
+    public function getWaiterOperation(string $name): ?DynamicOperation
+    {
+        $this->indexWaiters();
+
+        return $this->waiterOperationsByName[\strtolower($name)] ?? null;
+    }
+
+    /**
+     * Build the service-wide waiter-name index on first use.
+     */
+    private function indexWaiters(): void
+    {
+        if ($this->waiterOperationsByName !== null) {
+            return;
+        }
+
+        $waiterOperations = [];
+        $waiterOwners = [];
+        foreach (\array_keys($this->operationIdsByName) as $operationName) {
+            $operation = $this->getOperation($operationName);
+            if (!$operation instanceof DynamicOperation) {
+                continue;
+            }
+
+            $waiters = $operation->getSchema()->getExtension(
+                WaiterSchemaExtensionProvider::key()
+            );
+            if (!$waiters instanceof WaiterSchemaExtension) {
+                continue;
+            }
+
+            foreach ($waiters->getDefinitions() as $waiterName => $_) {
+                $normalizedName = \strtolower($waiterName);
+                $owner = $waiterOwners[$normalizedName] ?? null;
+                if ($owner !== null) {
+                    throw new \LogicException(
+                        "Service {$this->serviceId} has duplicate waiter "
+                            . "name {$waiterName} on {$owner} and "
+                            . "{$operation->getId()}."
+                    );
+                }
+
+                $waiterOwners[$normalizedName] = $operation->getId();
+                $waiterOperations[$normalizedName] = $operation;
+            }
+        }
+
+        $this->waiterOperationsByName = $waiterOperations;
     }
 
     /**

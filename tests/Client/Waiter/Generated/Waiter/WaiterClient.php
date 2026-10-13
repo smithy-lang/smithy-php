@@ -6,9 +6,6 @@ namespace Smithy\Tests\Client\Waiter\Generated\Waiter;
 
 use Smithy\Client\AbstractClient;
 use Smithy\Client\Waiter\{
-    Acceptor,
-    Matcher,
-    PathComparator,
     WaiterConfig,
     WaiterFailureException,
     WaiterResult
@@ -54,27 +51,7 @@ final class WaiterClient extends AbstractClient
     {
         return $this->createWaiter(
             GetThingOperation::instance(),
-            [
-                new Acceptor(
-                    Acceptor::FAILURE,
-                    Matcher::output(
-                        'status',
-                        'failed',
-                        PathComparator::StringEquals
-                    ),
-                    'failureReason'
-                ),
-                new Acceptor(
-                    Acceptor::SUCCESS,
-                    Matcher::output(
-                        'status',
-                        'ready',
-                        PathComparator::StringEquals
-                    )
-                )
-            ],
-            1,
-            2,
+            'ThingReady',
             $config
         )->wait($input, $maxWaitTime);
     }
