@@ -18,12 +18,15 @@ use Smithy\Client\Endpoint\{
 use Smithy\Client\Interceptor\{
     AbstractInterceptor,
     CallContext,
+    HttpChecksumInterceptor,
     IdempotencyTokenInterceptor,
     InputContext,
-    InterceptorChain
+    InterceptorChain,
+    RequestCompressionInterceptor
 };
 use Smithy\Client\Plugin\{
     AbstractPlugin,
+    HttpChecksumPlugin,
     IdempotencyTokenPlugin,
     PluginCollection,
     PluginInterface
@@ -34,10 +37,12 @@ use Smithy\Tests\Client\Fake\{
     FakeOperation,
     FakeOutput,
     FakeProtocol,
+    FakeService,
     TestClientFixture
 };
 use Smithy\Tests\Client\Plugin\Utils\{
     RecordingPluginFixture,
+    RegisteringPluginFixture,
     SecondaryRecordingPluginFixture
 };
 use Smithy\Tests\Utils\Http\MockHttpClient;
@@ -73,6 +78,45 @@ final class AbstractClientTest extends TestCase
         );
     }
 
+    public function testRegistersModeledHttpBehavior(): void
+    {
+        $chain = (new TestClientFixture($this->config()))
+            ->getConfig()
+            ->interceptorChain;
+
+        self::assertTrue(
+            $chain->contains(RequestCompressionInterceptor::class)
+        );
+        self::assertTrue($chain->contains(HttpChecksumInterceptor::class));
+    }
+
+    public function testDerivedConfigCanAcceptRejectedModeledBehavior(): void
+    {
+        $first = new TestClientFixture(
+            $this->config()->withPluginPredicate(
+                static fn(PluginInterface $plugin): bool =>
+                    !$plugin instanceof HttpChecksumPlugin
+            )
+        );
+        self::assertFalse(
+            $first->getConfig()->interceptorChain->contains(
+                HttpChecksumInterceptor::class
+            )
+        );
+
+        $second = new TestClientFixture(
+            $first->getConfig()->withPluginPredicate(
+                static fn(PluginInterface $plugin): bool => true
+            )
+        );
+
+        self::assertTrue(
+            $second->getConfig()->interceptorChain->contains(
+                HttpChecksumInterceptor::class
+            )
+        );
+    }
+
     public function testAppliesPluginsInOrder(): void
     {
         $calls = new \ArrayObject();
@@ -85,6 +129,53 @@ final class AbstractClientTest extends TestCase
         );
 
         self::assertSame(['first', 'second'], $calls->getArrayCopy());
+    }
+
+    public function testAppliesPluginRegisteredDuringConstruction(): void
+    {
+        $calls = new \ArrayObject();
+        $child = new RecordingPluginFixture('child', $calls);
+        $parent = new RegisteringPluginFixture('parent', $calls, $child);
+        $sibling = new SecondaryRecordingPluginFixture('sibling', $calls);
+
+        new TestClientFixture(
+            $this->config(),
+            new PluginCollection($parent, $sibling)
+        );
+
+        self::assertSame(
+            ['parent', 'sibling', 'child'],
+            $calls->getArrayCopy()
+        );
+    }
+
+    public function testDefersPluginsUntilServiceIsAttached(): void
+    {
+        $service = FakeService::instance();
+        $observed = new \ArrayObject();
+        $plugin = new class($observed) extends AbstractPlugin {
+            public function __construct(
+                private readonly \ArrayObject $observed
+            ) {}
+
+            public function configure(
+                ClientConfig $config
+            ): ClientConfig {
+                $this->observed['service'] = $config->service;
+
+                return $config;
+            }
+        };
+        $config = $this->config()->withPlugin($plugin);
+
+        self::assertArrayNotHasKey('service', $observed);
+
+        $client = new TestClientFixture(
+            $config->withService($service)
+        );
+
+        self::assertSame($service, $observed['service']);
+        self::assertSame($service, $client->getConfig()->service);
     }
 
     public function testExecutesOperationsThroughPipeline(): void

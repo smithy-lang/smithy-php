@@ -149,7 +149,7 @@ final class ClientGeneratorTest extends TestCase
         $generator->generate('smithy.example#Settings');
     }
 
-    public function testUsesConfiguredBaseClassAndTraitPlugins(): void
+    public function testUsesConfiguredBaseClassAndServiceMetadata(): void
     {
         $model = SmithyModel::fromJson(\json_encode([
             'smithy' => '2.0',
@@ -186,11 +186,7 @@ final class ClientGeneratorTest extends TestCase
             outputDir: '/tmp/out',
             organization: 'flat',
             clientBaseClass: 'Vendor\\Runtime\\VendorClient',
-            clientConfigClass: 'Vendor\\Runtime\\VendorClientConfig',
-            clientPluginsByOperationTrait: [
-                'vendor.example#plugin' =>
-                    'Vendor\\Runtime\\VendorPlugin'
-            ]
+            clientConfigClass: 'Vendor\\Runtime\\VendorClientConfig'
         );
         $generator = new ClientGenerator(
             $model,
@@ -227,21 +223,19 @@ final class ClientGeneratorTest extends TestCase
             $file->content
         );
         $this->assertStringContainsString(
-            'use Vendor\\Runtime\\VendorPlugin;',
-            $file->content
-        );
-        $this->assertStringContainsString(
             'PluginCollection $plugins = new PluginCollection()',
             $file->content
         );
         $this->assertStringContainsString(
-            'parent::__construct($config, $plugins);',
+            "parent::__construct(\n"
+                . "            \$config->withService("
+                . "ExampleService::instance()),\n"
+                . "            \$plugins\n"
+                . '        );',
             $file->content
         );
-        $this->assertStringContainsString(
-            "\$plugins = \$plugins->merge(new PluginCollection(\n"
-            . "            new VendorPlugin()\n"
-            . '        ));',
+        $this->assertStringNotContainsString(
+            'VendorPlugin',
             $file->content
         );
     }
@@ -278,14 +272,9 @@ final class ClientGeneratorTest extends TestCase
                 ]
             ]
         ], JSON_THROW_ON_ERROR));
-        $pluginSettings = [
-            'vendor.example#plugin' => 'Vendor\\Runtime\\VendorPlugin'
-        ];
-
         $defaultSettings = new CodegenSettings(
             namespace: 'Smithy\\Example',
-            outputDir: '/tmp/out',
-            clientPluginsByOperationTrait: $pluginSettings
+            outputDir: '/tmp/out'
         );
         $defaultFile = (new ClientGenerator(
             $model,
@@ -322,7 +311,6 @@ final class ClientGeneratorTest extends TestCase
         $pluginCollectionSettings = new CodegenSettings(
             namespace: 'Smithy\\Example',
             outputDir: '/tmp/out',
-            clientPluginsByOperationTrait: $pluginSettings,
             clientConfigClass: 'Vendor\\PluginCollection'
         );
         $pluginCollectionFile = (new ClientGenerator(
@@ -424,7 +412,62 @@ final class ClientGeneratorTest extends TestCase
         );
     }
 
-    public function testRegistersCompressionBeforeChecksum(): void
+    public function testAliasesServiceMetadataOnInputCollision(): void
+    {
+        $model = SmithyModel::fromJson(\json_encode([
+            'smithy' => '2.0',
+            'shapes' => [
+                'smithy.example#Example' => [
+                    'type' => 'service',
+                    'version' => '2026-10-14',
+                    'operations' => [
+                        ['target' => 'smithy.example#GetThing']
+                    ]
+                ],
+                'smithy.example#GetThing' => [
+                    'type' => 'operation',
+                    'input' => ['target' => 'smithy.example#ExampleService'],
+                    'output' => [
+                        'target' => 'smithy.example#ExampleServiceMetadata'
+                    ]
+                ],
+                'smithy.example#ExampleService' => [
+                    'type' => 'structure',
+                    'members' => []
+                ],
+                'smithy.example#ExampleServiceMetadata' => [
+                    'type' => 'structure',
+                    'members' => []
+                ]
+            ]
+        ], JSON_THROW_ON_ERROR));
+        $settings = new CodegenSettings(
+            namespace: 'Smithy\\Example',
+            outputDir: '/tmp/out'
+        );
+
+        $file = (new ClientGenerator(
+            $model,
+            new PhpSymbolProvider($model, $settings),
+            $settings
+        ))->generate('smithy.example#Example');
+
+        $this->assertStringContainsString(
+            'use Smithy\\Example\\Input\\ExampleService;',
+            $file->content
+        );
+        $this->assertStringContainsString(
+            'use Smithy\\Example\\ExampleService '
+                . 'as ExampleServiceMetadata2;',
+            $file->content
+        );
+        $this->assertStringContainsString(
+            '$config->withService(ExampleServiceMetadata2::instance())',
+            $file->content
+        );
+    }
+
+    public function testDelegatesModeledBehaviorToRuntimePlugins(): void
     {
         $model = SmithyModel::fromJson(\json_encode([
             'smithy' => '2.0',
@@ -473,18 +516,14 @@ final class ClientGeneratorTest extends TestCase
         $file = $generator->generate(
             'smithy.example#ExampleService'
         );
-        $compression = \strpos(
-            $file->content,
-            'new RequestCompressionPlugin(),'
+        $this->assertStringNotContainsString(
+            'RequestCompressionPlugin',
+            $file->content
         );
-        $checksum = \strpos(
-            $file->content,
-            'new HttpChecksumPlugin()'
+        $this->assertStringNotContainsString(
+            'HttpChecksumPlugin',
+            $file->content
         );
-
-        self::assertNotFalse($compression);
-        self::assertNotFalse($checksum);
-        self::assertLessThan($checksum, $compression);
         $this->assertStringContainsString(
             'use Smithy\\Client\\Plugin\\PluginCollection;',
             $file->content
@@ -503,6 +542,10 @@ final class ClientGeneratorTest extends TestCase
         );
         $this->assertStringNotContainsString(
             'ExampleClientConfig $config',
+            $file->content
+        );
+        $this->assertStringContainsString(
+            '$config->withService(ExampleService::instance())',
             $file->content
         );
     }
@@ -548,7 +591,7 @@ final class ClientGeneratorTest extends TestCase
             $file->content
         );
         $this->assertStringContainsString(
-            'parent::__construct($config, $plugins);',
+            '$config->withService(ExampleService::instance())',
             $file->content
         );
     }
