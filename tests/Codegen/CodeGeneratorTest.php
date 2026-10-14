@@ -664,6 +664,344 @@ final class CodeGeneratorTest extends TestCase
         $this->assertContains('ExampleService.php', $fileNames);
     }
 
+    public function testClientWaiterCollisionsDoNotBlockArtifactGeneration(): void
+    {
+        $model = \json_decode(
+            (string) \file_get_contents(
+                __DIR__ . '/../fixtures/trimmed-client-model.json'
+            ),
+            true,
+            512,
+            JSON_THROW_ON_ERROR
+        );
+        $model['shapes']['smithy.example#ListPets']['traits'][
+            'smithy.waiters#waitable'
+        ] = [
+            'PETEXISTS' => [
+                'minDelay' => 1,
+                'maxDelay' => 2,
+                'acceptors' => [
+                    [
+                        'state' => 'success',
+                        'matcher' => ['success' => true]
+                    ]
+                ]
+            ]
+        ];
+        $settings = new CodegenSettings(
+            namespace: 'Smithy\\PetStore',
+            outputDir: '/tmp/out',
+            organization: 'flat',
+            generateClient: false,
+            generateClientConfig: false
+        );
+
+        $files = (new CodeGenerator(
+            $settings,
+            SmithyModel::fromJson(\json_encode(
+                $model,
+                JSON_THROW_ON_ERROR
+            ))
+        ))->generate();
+        $fileNames = \array_map(
+            static fn(GeneratedFile $file): string => \basename($file->path),
+            $files
+        );
+
+        $this->assertNotContains('PetStoreClient.php', $fileNames);
+        $this->assertContains('GetPetOperation.php', $fileNames);
+        $this->assertContains('ListPetsOperation.php', $fileNames);
+    }
+
+    public function testGeneratesOnlySelectedOperationClosure(): void
+    {
+        $model = SmithyModel::fromFile(
+            __DIR__ . '/../fixtures/trimmed-client-model.json'
+        );
+        $settings = new CodegenSettings(
+            namespace: 'Smithy\\PetStore',
+            outputDir: '/tmp/out',
+            organization: 'flat',
+            operationSet: ['GetPet']
+        );
+
+        $files = (new CodeGenerator($settings, $model))->generate();
+        $fileNames = \array_map(
+            static fn(GeneratedFile $file): string => \basename($file->path),
+            $files
+        );
+
+        $this->assertContains('GetPetOperation.php', $fileNames);
+        $this->assertContains('GetPetInput.php', $fileNames);
+        $this->assertContains('GetPetOutput.php', $fileNames);
+        $this->assertContains('Pet.php', $fileNames);
+        $this->assertContains('PetDetails.php', $fileNames);
+        $this->assertContains('Unit.php', $fileNames);
+        $this->assertContains('CommonErrorException.php', $fileNames);
+        $this->assertContains('ServiceErrorException.php', $fileNames);
+        $this->assertNotContains('ListPetsOperation.php', $fileNames);
+        $this->assertNotContains('ListPetsInput.php', $fileNames);
+        $this->assertNotContains('ListPetsOutput.php', $fileNames);
+        $this->assertNotContains('DeletePetOperation.php', $fileNames);
+        $this->assertNotContains('DeletePetInput.php', $fileNames);
+        $this->assertNotContains('DeleteOnlyErrorException.php', $fileNames);
+        $this->assertNotContains('UnusedShape.php', $fileNames);
+        $client = $this->findFile($files, 'PetStoreClient.php');
+        $operation = $this->findFile($files, 'GetPetOperation.php');
+        $service = $this->findFile($files, 'PetStoreService.php');
+        $registry = $this->findFile($files, 'PetStoreTypeRegistry.php');
+        $schemas = $this->findFile($files, 'Schemas.php');
+        $this->assertNotNull($client);
+        $this->assertNotNull($operation);
+        $this->assertNotNull($service);
+        $this->assertNotNull($registry);
+        $this->assertNotNull($schemas);
+
+        $this->assertStringContainsString(
+            'public function getPet(',
+            $client->content
+        );
+        $this->assertStringContainsString(
+            'public function waitUntilPetExists(',
+            $client->content
+        );
+        $this->assertStringNotContainsString(
+            'public function listPets(',
+            $client->content
+        );
+        $this->assertStringNotContainsString(
+            'public function deletePet(',
+            $client->content
+        );
+        $this->assertStringContainsString(
+            'Schema::T_REQUEST_COMPRESSION',
+            $operation->content
+        );
+        $this->assertStringContainsString(
+            'GetPetOperation::class',
+            $service->content
+        );
+        $this->assertStringNotContainsString(
+            'ListPetsOperation::class',
+            $service->content
+        );
+        $this->assertStringNotContainsString(
+            'smithy.example#DeleteOnlyError',
+            $registry->content
+        );
+        $this->assertStringNotContainsString(
+            'ListPetsOutput',
+            $schemas->content
+        );
+    }
+
+    public function testSelectedPaginationMetadataGeneratesPaginator(): void
+    {
+        $model = SmithyModel::fromFile(
+            __DIR__ . '/../fixtures/trimmed-client-model.json'
+        );
+        $settings = new CodegenSettings(
+            namespace: 'Smithy\\PetStore',
+            outputDir: '/tmp/out',
+            organization: 'flat',
+            operationSet: ['ListPets']
+        );
+
+        $files = (new CodeGenerator($settings, $model))->generate();
+        $fileNames = \array_map(
+            static fn(GeneratedFile $file): string => \basename($file->path),
+            $files
+        );
+        $client = $this->findFile($files, 'PetStoreClient.php');
+        $this->assertNotNull($client);
+        $this->assertNotContains('Unit.php', $fileNames);
+
+        $this->assertStringContainsString(
+            'public function listPetsPaginated(',
+            $client->content
+        );
+        $this->assertStringNotContainsString(
+            'public function waitUntilPetExists(',
+            $client->content
+        );
+    }
+
+    public function testTrimmedRegenerationRemovesExcludedGeneratedFiles(): void
+    {
+        $model = SmithyModel::fromFile(
+            __DIR__ . '/../fixtures/trimmed-client-model.json'
+        );
+        $outputDirectory = \sys_get_temp_dir()
+            . '/smithy-php-trimmed-'
+            . \uniqid();
+
+        try {
+            $fullSettings = new CodegenSettings(
+                namespace: 'Smithy\\PetStore',
+                outputDir: $outputDirectory,
+                organization: 'flat'
+            );
+            (new CodeGenerator($fullSettings, $model))->generateAndWrite();
+
+            $this->assertFileExists(
+                $outputDirectory . '/ListPetsOperation.php'
+            );
+            $this->assertFileExists(
+                $outputDirectory . '/DeleteOnlyErrorException.php'
+            );
+
+            $trimmedSettings = new CodegenSettings(
+                namespace: 'Smithy\\PetStore',
+                outputDir: $outputDirectory,
+                organization: 'flat',
+                operationSet: ['GetPet']
+            );
+            (new CodeGenerator($trimmedSettings, $model))
+                ->generateAndWrite();
+
+            $this->assertFileExists(
+                $outputDirectory . '/GetPetOperation.php'
+            );
+            $this->assertFileDoesNotExist(
+                $outputDirectory . '/ListPetsOperation.php'
+            );
+            $this->assertFileDoesNotExist(
+                $outputDirectory . '/DeleteOnlyErrorException.php'
+            );
+        } finally {
+            $this->removeDir($outputDirectory);
+        }
+    }
+
+    public function testTrimmedWriteDoesNotRenderExcludedOperations(): void
+    {
+        $fixture = __DIR__ . '/../fixtures/trimmed-client-model.json';
+        $model = SmithyModel::fromFile($fixture);
+        $outputDirectory = \sys_get_temp_dir()
+            . '/smithy-php-trimmed-'
+            . \uniqid();
+
+        try {
+            $fullSettings = new CodegenSettings(
+                namespace: 'Smithy\\PetStore',
+                outputDir: $outputDirectory,
+                organization: 'flat'
+            );
+            (new CodeGenerator($fullSettings, $model))->generateAndWrite();
+
+            $modelData = \json_decode(
+                (string) \file_get_contents($fixture),
+                true,
+                flags: JSON_THROW_ON_ERROR
+            );
+            $modelData['shapes']['smithy.example#ListPets']['traits']
+                ['smithy.waiters#waitable'] = [
+                    'invalid-name' => []
+                ];
+            $trimmedModel = SmithyModel::fromJson(
+                \json_encode($modelData, JSON_THROW_ON_ERROR)
+            );
+            $trimmedSettings = new CodegenSettings(
+                namespace: 'Smithy\\PetStore',
+                outputDir: $outputDirectory,
+                organization: 'flat',
+                operationSet: ['GetPet']
+            );
+
+            (new CodeGenerator($trimmedSettings, $trimmedModel))
+                ->generateAndWrite();
+
+            $this->assertFileExists(
+                $outputDirectory . '/GetPetOperation.php'
+            );
+            $this->assertFileDoesNotExist(
+                $outputDirectory . '/ListPetsOperation.php'
+            );
+        } finally {
+            $this->removeDir($outputDirectory);
+        }
+    }
+
+    public function testTrimmedErrorFreeClientGeneratesServiceException(): void
+    {
+        $model = SmithyModel::fromJson(\json_encode([
+            'smithy' => '2.0',
+            'shapes' => [
+                'smithy.example#ExampleService' => [
+                    'type' => 'service',
+                    'version' => '2026-10-14',
+                    'operations' => [
+                        ['target' => 'smithy.example#GetThing']
+                    ]
+                ],
+                'smithy.example#GetThing' => [
+                    'type' => 'operation',
+                    'input' => ['target' => 'smithy.example#GetThingInput'],
+                    'output' => ['target' => 'smithy.example#GetThingOutput']
+                ],
+                'smithy.example#GetThingInput' => [
+                    'type' => 'structure',
+                    'members' => []
+                ],
+                'smithy.example#GetThingOutput' => [
+                    'type' => 'structure',
+                    'members' => []
+                ]
+            ]
+        ], JSON_THROW_ON_ERROR));
+        $settings = new CodegenSettings(
+            namespace: 'Smithy\\Example',
+            outputDir: '/tmp/out',
+            organization: 'flat',
+            serviceExceptionClass: 'Smithy\\Example\\ExampleException',
+            operationSet: ['GetThing']
+        );
+
+        $files = (new CodeGenerator($settings, $model))->generate();
+        $fileNames = \array_map(
+            static fn(GeneratedFile $file): string => \basename($file->path),
+            $files
+        );
+
+        $this->assertContains('ExampleException.php', $fileNames);
+        $exception = $this->findFile($files, 'ExampleException.php');
+        $this->assertNotNull($exception);
+        $this->assertStringContainsString(
+            'class ExampleException extends ApiException',
+            $exception->content
+        );
+    }
+
+    public function testOperationSelectionOrderDoesNotAffectOutput(): void
+    {
+        $model = SmithyModel::fromFile(
+            __DIR__ . '/../fixtures/trimmed-client-model.json'
+        );
+        $first = (new CodeGenerator(
+            new CodegenSettings(
+                namespace: 'Smithy\\PetStore',
+                outputDir: '/tmp/first',
+                organization: 'flat',
+                operationSet: ['ListPets', 'GetPet']
+            ),
+            $model
+        ))->generate();
+        $second = (new CodeGenerator(
+            new CodegenSettings(
+                namespace: 'Smithy\\PetStore',
+                outputDir: '/tmp/second',
+                organization: 'flat',
+                operationSet: ['GetPet', 'ListPets']
+            ),
+            $model
+        ))->generate();
+
+        $this->assertSame(
+            $this->contentsByFileName($first),
+            $this->contentsByFileName($second)
+        );
+    }
+
     public function testOmittedOperationOutputGeneratesUnit(): void
     {
         $model = SmithyModel::fromFile(
@@ -826,6 +1164,22 @@ JSON);
             \proc_close($process),
             $stdout . $stderr
         );
+    }
+
+    /**
+     * @param GeneratedFile[] $files
+     *
+     * @return array<string, string>
+     */
+    private function contentsByFileName(array $files): array
+    {
+        $contents = [];
+        foreach ($files as $file) {
+            $contents[\basename($file->path)] = $file->content;
+        }
+        \ksort($contents, SORT_STRING);
+
+        return $contents;
     }
 
     private function removeDir(string $dir): void

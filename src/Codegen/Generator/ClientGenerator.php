@@ -7,6 +7,7 @@ namespace Smithy\Codegen\Generator;
 use Smithy\Codegen\CodegenSettings;
 use Smithy\Codegen\Model\SmithyModel;
 use Smithy\Codegen\PhpSymbolProvider;
+use Smithy\Codegen\ServiceProjection;
 use Smithy\Codegen\Writer\PhpCodeWriter;
 
 /**
@@ -124,8 +125,10 @@ final class ClientGenerator
      *
      * @param string $serviceShapeId Fully-qualified service shape ID.
      */
-    public function generate(string $serviceShapeId): GeneratedFile
-    {
+    public function generate(
+        string $serviceShapeId,
+        ?ServiceProjection $projection = null
+    ): GeneratedFile {
         $shape = $this->model->getShape($serviceShapeId);
         if ($shape === null) {
             throw new \InvalidArgumentException(
@@ -136,6 +139,9 @@ final class ClientGenerator
             throw new \InvalidArgumentException(
                 "Shape {$serviceShapeId} is not a service"
             );
+        }
+        if ($projection !== null) {
+            $projection->requireService($serviceShapeId);
         }
 
         $baseClass = $this->settings->clientBaseClass;
@@ -152,10 +158,14 @@ final class ClientGenerator
         // Sort operations alphabetically by public method name for
         // stable diffs across regenerations and alignment with
         // smithy-java.
-        $waitersByOperation =
-            $this->model->getValidatedServiceWaiters($serviceShapeId);
-        $operations = $this->collectOperations(
+        $operationIds = $projection?->operationIds
+            ?? $this->model->getServiceOperationIds($serviceShapeId);
+        $waitersByOperation = $this->model->getValidatedServiceWaiters(
             $serviceShapeId,
+            $operationIds
+        );
+        $operations = $this->collectOperations(
+            $operationIds,
             $waitersByOperation
         );
         \usort(
@@ -574,12 +584,12 @@ final class ClientGenerator
     }
 
     /**
-     * Walk the service's operation closure and resolve each to the tuple
+     * Walk the projected operations and resolve each to the tuple
      * the method emitter needs: method name, operation class, input
      * class, output class, and whether the input has any codegen-
      * emitted members.
      *
-     * @param string $serviceShapeId Fully-qualified service shape ID.
+     * @param list<string> $operationIds
      * @return list<array{
      *     methodName: string,
      *     operationShort: string,
@@ -598,14 +608,12 @@ final class ClientGenerator
      *        $waitersByOperation
      */
     private function collectOperations(
-        string $serviceShapeId,
+        array $operationIds,
         array $waitersByOperation
     ): array
     {
         $ops = [];
-        foreach ($this->model->getServiceOperationIds($serviceShapeId)
-            as $opShapeId
-        ) {
+        foreach ($operationIds as $opShapeId) {
             $opShape = $this->model->getShape($opShapeId);
             if ($opShape === null || ($opShape['type'] ?? '') !== 'operation') {
                 continue;
