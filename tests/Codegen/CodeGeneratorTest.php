@@ -536,6 +536,64 @@ final class CodeGeneratorTest extends TestCase
         }
     }
 
+    public function testAtomicRegenerationPreservesMemberOrder(): void
+    {
+        $outputDirectory = \sys_get_temp_dir()
+            . '/smithy-php-test-'
+            . \bin2hex(\random_bytes(8));
+        $settings = new CodegenSettings(
+            namespace: 'Smithy\\Example',
+            outputDir: $outputDirectory,
+            organization: 'flat'
+        );
+        $modelPath = __DIR__ . '/../fixtures/defaults-model.json';
+
+        try {
+            (new CodeGenerator(
+                $settings,
+                SmithyModel::fromFile($modelPath)
+            ))->generateAndWrite();
+            $settingsPath = $outputDirectory
+                . DIRECTORY_SEPARATOR
+                . 'Settings.php';
+            $originalSettings = \file_get_contents($settingsPath);
+            $this->assertIsString($originalSettings);
+            \file_put_contents(
+                $outputDirectory . DIRECTORY_SEPARATOR . 'Stale.php',
+                'stale'
+            );
+
+            $model = \json_decode(
+                (string) \file_get_contents($modelPath),
+                true,
+                512,
+                JSON_THROW_ON_ERROR
+            );
+            $members = $model['shapes']['smithy.example#Settings']['members'];
+            $model['shapes']['smithy.example#Settings']['members'] =
+                \array_reverse($members, true);
+
+            (new CodeGenerator(
+                $settings,
+                SmithyModel::fromJson(
+                    \json_encode($model, JSON_THROW_ON_ERROR)
+                )
+            ))->generateAndWrite();
+
+            $this->assertSame(
+                $originalSettings,
+                \file_get_contents($settingsPath)
+            );
+            $this->assertFileDoesNotExist(
+                $outputDirectory
+                    . DIRECTORY_SEPARATOR
+                    . 'Stale.php'
+            );
+        } finally {
+            $this->removeDir($outputDirectory);
+        }
+    }
+
     public function testExternalDriversCanOwnClientArtifactGeneration(): void
     {
         $model = SmithyModel::fromFile(
