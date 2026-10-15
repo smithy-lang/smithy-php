@@ -109,6 +109,7 @@ final class ClientPipeline
             $interceptor->readBeforeSerialization($inputCtx);
 
             $request = $this->serialize($operation, $input);
+            $request = $overrides?->applyToRequest($request) ?? $request;
 
             $reqCtx = new RequestContext(
                 $operation,

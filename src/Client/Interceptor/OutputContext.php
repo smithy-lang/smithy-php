@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Smithy\Client\Interceptor;
 
-use Psr\Http\Message\RequestInterface;
-use Psr\Http\Message\ResponseInterface;
 use Smithy\Client\Auth\{
     IdentityInterface,
     IdentityResolverInterface
@@ -17,10 +15,6 @@ use Smithy\Client\Transport\{
 };
 use Smithy\Core\Serde\SerializableStructInterface;
 use Smithy\Core\Shape\OperationInterface;
-use Smithy\Http\Message\{
-    HttpTransportRequest,
-    HttpTransportResponse
-};
 
 /**
  * Hook data available after the response has been deserialized (or an
@@ -45,10 +39,6 @@ use Smithy\Http\Message\{
  */
 final class OutputContext
 {
-    public ?TransportRequestInterface $request;
-
-    public ?TransportResponseInterface $response;
-
     /**
      * Create output hook context.
      */
@@ -56,22 +46,12 @@ final class OutputContext
         public OperationInterface $operation,
         public SerializableStructInterface $input,
         public ClientConfig $config,
-        TransportRequestInterface|RequestInterface|null $request,
-        TransportResponseInterface|ResponseInterface|null $response,
+        public ?TransportRequestInterface $request,
+        public ?TransportResponseInterface $response,
         public ?SerializableStructInterface $output,
         public ?IdentityInterface $identity = null,
         public ?IdentityResolverInterface $identityResolver = null
-    )
-    {
-        $this->request = $request instanceof RequestInterface
-            && !$request instanceof TransportRequestInterface
-                ? new HttpTransportRequest($request)
-                : $request;
-        $this->response = $response instanceof ResponseInterface
-            && !$response instanceof TransportResponseInterface
-                ? new HttpTransportResponse($response)
-                : $response;
-    }
+    ) {}
 
     /**
      * Replace the mutable output value in this context.

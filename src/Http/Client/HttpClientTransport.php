@@ -134,9 +134,13 @@ final readonly class HttpClientTransport implements TransportInterface
                 && !$httpError->requestBodyFullyConsumed;
         }
 
-        return $body instanceof RequestStreamInterface
-            && !$body->started()
-            && !$body->fullyConsumed();
+        try {
+            return $body instanceof RequestStreamInterface
+                && !$body->started()
+                && !$body->fullyConsumed();
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     private static function findHttpException(

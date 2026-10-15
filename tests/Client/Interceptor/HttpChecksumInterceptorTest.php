@@ -6,6 +6,7 @@ namespace Smithy\Tests\Client\Interceptor;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
+use Psr\Http\Message\RequestInterface;
 use Smithy\Async\RevoltEventLoop;
 use Smithy\Client\ClientConfig;
 use Smithy\Client\Endpoint\{
@@ -53,7 +54,7 @@ final class HttpChecksumInterceptorTest extends TestCase
             '{"foo":"bar"}'
         );
 
-        $updated = $interceptor->modifyBeforeSigning(new RequestContext(
+        $updated = $interceptor->modifyBeforeSigning(self::requestContext(
             $this->operation([
                 Schema::T_HTTP_CHECKSUM_REQUIRED => true
             ]),
@@ -78,7 +79,7 @@ final class HttpChecksumInterceptorTest extends TestCase
         ));
 
         $updated = (new HttpChecksumInterceptor())->modifyBeforeSigning(
-            new RequestContext(
+            self::requestContext(
                 $this->operation([
                     Schema::T_HTTP_CHECKSUM_REQUIRED => true
                 ]),
@@ -109,7 +110,7 @@ final class HttpChecksumInterceptorTest extends TestCase
         );
 
         $updated = (new HttpChecksumInterceptor())->modifyBeforeSigning(
-            new RequestContext(
+            self::requestContext(
                 $this->operation([
                     Schema::T_HTTP_CHECKSUM_REQUIRED => true
                 ]),
@@ -138,7 +139,7 @@ final class HttpChecksumInterceptorTest extends TestCase
             '{"foo":"bar"}'
         );
 
-        $updated = $interceptor->modifyBeforeSigning(new RequestContext(
+        $updated = $interceptor->modifyBeforeSigning(self::requestContext(
             $this->operation([
                 Schema::T_HTTP_CHECKSUM_REQUIRED => true
             ]),
@@ -160,7 +161,7 @@ final class HttpChecksumInterceptorTest extends TestCase
             '{"foo":"bar"}'
         );
 
-        $updated = $interceptor->modifyBeforeSigning(new RequestContext(
+        $updated = $interceptor->modifyBeforeSigning(self::requestContext(
             $this->operation(),
             new FakeInput(),
             $this->config(),
@@ -176,7 +177,7 @@ final class HttpChecksumInterceptorTest extends TestCase
         $interceptor = new HttpChecksumInterceptor();
         $request = new Request('POST', 'https://example.test', [], $stream);
 
-        $updated = $interceptor->modifyBeforeSigning(new RequestContext(
+        $updated = $interceptor->modifyBeforeSigning(self::requestContext(
             $this->operation(
                 [Schema::T_HTTP_CHECKSUM_REQUIRED => true],
                 true
@@ -207,7 +208,7 @@ final class HttpChecksumInterceptorTest extends TestCase
         );
 
         $updated = (new HttpChecksumInterceptor())
-            ->modifyBeforeRetryLoop(new RequestContext(
+            ->modifyBeforeRetryLoop(self::requestContext(
                 $this->operation([
                     Schema::T_HTTP_CHECKSUM_REQUIRED => true
                 ]),
@@ -236,7 +237,7 @@ final class HttpChecksumInterceptorTest extends TestCase
             [],
             $stream
         );
-        $ctx = new RequestContext(
+        $ctx = self::requestContext(
             $this->operation(
                 [
                     Schema::T_REQUEST_COMPRESSION => ['gzip'],
@@ -294,7 +295,7 @@ final class HttpChecksumInterceptorTest extends TestCase
         $results = $eventLoop->run([
             fn(): TransportRequestInterface =>
                 (new HttpChecksumInterceptor())->modifyBeforeSigning(
-                    new RequestContext(
+                    self::requestContext(
                         $this->operation(
                             [Schema::T_HTTP_CHECKSUM_REQUIRED => true],
                             true
@@ -339,7 +340,7 @@ final class HttpChecksumInterceptorTest extends TestCase
         );
 
         $updated = (new HttpChecksumInterceptor())->modifyBeforeSigning(
-            new RequestContext(
+            self::requestContext(
                 $this->operation(
                     [Schema::T_HTTP_CHECKSUM_REQUIRED => true],
                     true
@@ -381,7 +382,7 @@ final class HttpChecksumInterceptorTest extends TestCase
 
         try {
             (new HttpChecksumInterceptor())->modifyBeforeSigning(
-                new RequestContext(
+                self::requestContext(
                     $this->operation([
                         Schema::T_HTTP_CHECKSUM_REQUIRED => true
                     ]),
@@ -436,6 +437,20 @@ final class HttpChecksumInterceptorTest extends TestCase
             endpointResolver: new StaticEndpointResolver(
                 new Endpoint('https://example.test')
             )
+        );
+    }
+
+    private static function requestContext(
+        OperationInterface $operation,
+        FakeInput $input,
+        ClientConfig $config,
+        RequestInterface $request
+    ): RequestContext {
+        return new RequestContext(
+            $operation,
+            $input,
+            $config,
+            new HttpTransportRequest($request)
         );
     }
 }

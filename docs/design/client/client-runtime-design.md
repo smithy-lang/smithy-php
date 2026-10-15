@@ -219,6 +219,7 @@ interceptCall wrappers
         resolve endpoint
         reconcile endpoint auth and identity
         bind endpoint and endpoint headers
+        reapply request override headers
         modifyBeforeSigning
         readBeforeSigning
         sign

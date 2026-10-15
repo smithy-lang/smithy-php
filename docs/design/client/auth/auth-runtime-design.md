@@ -14,7 +14,7 @@ runtime schemes the client can use.
 For each attempt, the pipeline selects a supported modeled scheme and resolves
 its identity before endpoint resolution. It then resolves the endpoint,
 reconciles any authoritative endpoint auth options, resolves another identity
-when the scheme changes, and signs the endpoint-bound PSR-7 request. Core
+when the scheme changes, and signs the endpoint-bound transport request. Core
 Smithy runtime owns the contracts and neutral schemes. Service packages and
 vendor packages own concrete identities, credential sources, and signers.
 
@@ -25,7 +25,7 @@ vendor packages own concrete identities, credential sources, and signers.
 3. Let endpoint rules override modeled auth when the ruleset requires it.
 4. Support customer preference without changing generated operation code.
 5. Reuse long-lived identity chains across requests.
-6. Keep signing as an immutable PSR-7 request transformation.
+6. Keep signing independent of the underlying transport message type.
 
 ## Architecture
 
@@ -68,7 +68,7 @@ dynamic operation metadata expose effective auth schemes through
 | `AuthSchemeOption` | Carry one candidate ID plus independent identity and signer property overrides. |
 | `AuthSchemeResolverInterface` | Select modeled auth, then reconcile endpoint auth for an attempt. |
 | `ResolvedAuthScheme` | Carry the selected implementation and effective identity and signer properties. |
-| `SignerInterface` | Sign one PSR-7 request and release attempt-scoped signing resources. |
+| `SignerInterface` | Sign one transport request and release attempt-scoped signing resources. |
 | `SignerResult` | Carry the signed request and reusable signature metadata. |
 | `IdentityInterface` | Carry signer-specific identity material. |
 | `IdentityResolverInterface` | Resolve an identity from scheme properties. |
@@ -238,17 +238,17 @@ marked for refresh.
 
 ## Signing
 
-A `SignerInterface` transforms one PSR-7 request:
+A `SignerInterface` transforms one transport request:
 
 ```text
-RequestInterface + IdentityInterface + properties -> SignerResult
+TransportRequestInterface + IdentityInterface + properties -> SignerResult
 ```
 
 `SignerResult` contains the signed request and an optional reusable signature.
 Schemes that do not produce reusable signature metadata return an empty
-signature. The signer must not mutate the original request. This preserves
-PSR-7 semantics and lets interceptors compare request instances during the
-pipeline.
+signature. HTTP signers unwrap `HttpTransportRequest`, apply immutable PSR-7
+request transformations, and return an envelope containing the replacement
+request.
 
 The pipeline closes the signer after each signing attempt, including when
 signing fails. A cleanup failure is surfaced when signing succeeded. When both

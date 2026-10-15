@@ -90,6 +90,7 @@ Read hooks return `void` and observe the current context:
 ```php
 use Smithy\Client\Interceptor\AbstractInterceptor;
 use Smithy\Client\Interceptor\ResponseContext;
+use Smithy\Http\Message\HttpTransportResponse;
 
 final class StatusLogger extends AbstractInterceptor
 {
@@ -98,7 +99,9 @@ final class StatusLogger extends AbstractInterceptor
         error_log(sprintf(
             '%s returned HTTP %d',
             $ctx->operation->getName(),
-            $ctx->getHttpResponse()->getStatusCode()
+            HttpTransportResponse::expect($ctx->response)
+                ->response
+                ->getStatusCode()
         ));
     }
 }

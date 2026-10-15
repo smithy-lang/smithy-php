@@ -6,6 +6,7 @@ namespace Smithy\Tests\Client\Interceptor;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
+use Psr\Http\Message\RequestInterface;
 use Smithy\Async\RevoltEventLoop;
 use Smithy\Client\ClientConfig;
 use Smithy\Client\Endpoint\{
@@ -46,7 +47,7 @@ final class RequestCompressionInterceptorTest extends TestCase
         $interceptor = new RequestCompressionInterceptor();
         $request = new Request('POST', 'https://example.test', [], $body);
 
-        $updated = $interceptor->modifyBeforeRetryLoop(new RequestContext(
+        $updated = $interceptor->modifyBeforeRetryLoop(self::requestContext(
             $this->operation([
                 Schema::T_REQUEST_COMPRESSION => ['gzip']
             ]),
@@ -77,7 +78,7 @@ final class RequestCompressionInterceptorTest extends TestCase
         ));
 
         $updated = (new RequestCompressionInterceptor())
-            ->modifyBeforeRetryLoop(new RequestContext(
+            ->modifyBeforeRetryLoop(self::requestContext(
                 $this->operation([
                     Schema::T_REQUEST_COMPRESSION => ['gzip']
                 ]),
@@ -114,7 +115,7 @@ final class RequestCompressionInterceptorTest extends TestCase
 
         $updated = (new RequestCompressionInterceptor(
             minCompressionSizeBytes: 0
-        ))->modifyBeforeRetryLoop(new RequestContext(
+        ))->modifyBeforeRetryLoop(self::requestContext(
             $this->operation([
                 Schema::T_REQUEST_COMPRESSION => ['gzip']
             ]),
@@ -142,7 +143,7 @@ final class RequestCompressionInterceptorTest extends TestCase
             'payload'
         );
 
-        $updated = $interceptor->modifyBeforeRetryLoop(new RequestContext(
+        $updated = $interceptor->modifyBeforeRetryLoop(self::requestContext(
             $this->operation([
                 Schema::T_REQUEST_COMPRESSION => ['gzip']
             ]),
@@ -173,7 +174,7 @@ final class RequestCompressionInterceptorTest extends TestCase
             'payload'
         );
 
-        $updated = $interceptor->modifyBeforeRetryLoop(new RequestContext(
+        $updated = $interceptor->modifyBeforeRetryLoop(self::requestContext(
             $this->operation([
                 Schema::T_REQUEST_COMPRESSION => ['gzip']
             ]),
@@ -209,7 +210,7 @@ final class RequestCompressionInterceptorTest extends TestCase
             'payload'
         ));
 
-        $updated = $interceptor->modifyBeforeRetryLoop(new RequestContext(
+        $updated = $interceptor->modifyBeforeRetryLoop(self::requestContext(
             $this->operation([
                 Schema::T_REQUEST_COMPRESSION => ['gzip']
             ]),
@@ -244,7 +245,7 @@ final class RequestCompressionInterceptorTest extends TestCase
         );
         $request = new Request('POST', 'https://example.test', [], 'short');
 
-        $updated = $interceptor->modifyBeforeRetryLoop(new RequestContext(
+        $updated = $interceptor->modifyBeforeRetryLoop(self::requestContext(
             $this->operation([
                 Schema::T_REQUEST_COMPRESSION => ['gzip']
             ]),
@@ -274,7 +275,7 @@ final class RequestCompressionInterceptorTest extends TestCase
             $stream
         );
 
-        $updated = $interceptor->modifyBeforeRetryLoop(new RequestContext(
+        $updated = $interceptor->modifyBeforeRetryLoop(self::requestContext(
             $this->operation(
                 [Schema::T_REQUEST_COMPRESSION => ['gzip']],
                 true
@@ -318,7 +319,7 @@ final class RequestCompressionInterceptorTest extends TestCase
         );
 
         $updated = (new RequestCompressionInterceptor())
-            ->modifyBeforeRetryLoop(new RequestContext(
+            ->modifyBeforeRetryLoop(self::requestContext(
                 $this->operation(
                     [Schema::T_REQUEST_COMPRESSION => ['gzip']],
                     true
@@ -356,7 +357,7 @@ final class RequestCompressionInterceptorTest extends TestCase
 
         $results = $eventLoop->run([
             fn() => (new RequestCompressionInterceptor())
-                ->modifyBeforeRetryLoop(new RequestContext(
+                ->modifyBeforeRetryLoop(self::requestContext(
                     $this->operation(
                         [Schema::T_REQUEST_COMPRESSION => ['gzip']],
                         true
@@ -407,7 +408,7 @@ final class RequestCompressionInterceptorTest extends TestCase
 
         $results = $eventLoop->run([
             fn() => (new RequestCompressionInterceptor())
-                ->modifyBeforeRetryLoop(new RequestContext(
+                ->modifyBeforeRetryLoop(self::requestContext(
                     $this->operation(
                         [Schema::T_REQUEST_COMPRESSION => ['gzip']],
                         true
@@ -451,7 +452,7 @@ final class RequestCompressionInterceptorTest extends TestCase
 
         try {
             (new RequestCompressionInterceptor())->modifyBeforeRetryLoop(
-                new RequestContext(
+                self::requestContext(
                     $this->operation(
                         [Schema::T_REQUEST_COMPRESSION => ['gzip']],
                         true
@@ -486,7 +487,7 @@ final class RequestCompressionInterceptorTest extends TestCase
 
         try {
             (new RequestCompressionInterceptor())->modifyBeforeRetryLoop(
-                new RequestContext(
+                self::requestContext(
                     $this->operation(
                         [Schema::T_REQUEST_COMPRESSION => ['gzip']],
                         true
@@ -513,7 +514,7 @@ final class RequestCompressionInterceptorTest extends TestCase
         );
         $request = new Request('POST', 'https://example.test', [], 'payload');
 
-        $updated = $interceptor->modifyBeforeRetryLoop(new RequestContext(
+        $updated = $interceptor->modifyBeforeRetryLoop(self::requestContext(
             $this->operation([
                 Schema::T_REQUEST_COMPRESSION => ['gzip']
             ]),
@@ -539,7 +540,7 @@ final class RequestCompressionInterceptorTest extends TestCase
         );
 
         $updated = (new RequestCompressionInterceptor())
-            ->modifyBeforeRetryLoop(new RequestContext(
+            ->modifyBeforeRetryLoop(self::requestContext(
                 $this->operation(),
                 new FakeInput(),
                 $this->config(),
@@ -562,7 +563,7 @@ final class RequestCompressionInterceptorTest extends TestCase
         );
 
         $updated = (new RequestCompressionInterceptor())
-            ->modifyBeforeRetryLoop(new RequestContext(
+            ->modifyBeforeRetryLoop(self::requestContext(
                 $this->operation([
                     Schema::T_REQUEST_COMPRESSION => ['br']
                 ]),
@@ -587,7 +588,7 @@ final class RequestCompressionInterceptorTest extends TestCase
         );
 
         $updated = (new RequestCompressionInterceptor())
-            ->modifyBeforeRetryLoop(new RequestContext(
+            ->modifyBeforeRetryLoop(self::requestContext(
                 $this->operation([
                     Schema::T_REQUEST_COMPRESSION => ['gzip']
                 ]),
@@ -639,6 +640,20 @@ final class RequestCompressionInterceptorTest extends TestCase
             endpointResolver: new StaticEndpointResolver(
                 new Endpoint('https://example.test')
             )
+        );
+    }
+
+    private static function requestContext(
+        OperationInterface $operation,
+        FakeInput $input,
+        ClientConfig $config,
+        RequestInterface $request
+    ): RequestContext {
+        return new RequestContext(
+            $operation,
+            $input,
+            $config,
+            new HttpTransportRequest($request)
         );
     }
 }

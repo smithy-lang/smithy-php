@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Smithy\Client\Interceptor;
 
-use Psr\Http\Message\RequestInterface;
-use Psr\Http\Message\ResponseInterface;
 use Smithy\Client\ClientConfig;
 use Smithy\Client\Transport\{
     TransportRequestInterface,
@@ -13,10 +11,6 @@ use Smithy\Client\Transport\{
 };
 use Smithy\Core\Serde\SerializableStructInterface;
 use Smithy\Core\Shape\OperationInterface;
-use Smithy\Http\Message\{
-    HttpTransportRequest,
-    HttpTransportResponse
-};
 
 /**
  * Hook data available after the response has arrived but before it has
@@ -27,10 +21,6 @@ use Smithy\Http\Message\{
  */
 final class ResponseContext
 {
-    public TransportRequestInterface $request;
-
-    public TransportResponseInterface $response;
-
     /**
      * Create response hook context.
      */
@@ -38,17 +28,9 @@ final class ResponseContext
         public OperationInterface $operation,
         public SerializableStructInterface $input,
         public ClientConfig $config,
-        TransportRequestInterface|RequestInterface $request,
-        TransportResponseInterface|ResponseInterface $response
-    )
-    {
-        $this->request = $request instanceof TransportRequestInterface
-            ? $request
-            : new HttpTransportRequest($request);
-        $this->response = $response instanceof TransportResponseInterface
-            ? $response
-            : new HttpTransportResponse($response);
-    }
+        public TransportRequestInterface $request,
+        public TransportResponseInterface $response
+    ) {}
 
     /**
      * Replace the mutable response value in this context.
@@ -74,30 +56,5 @@ final class ResponseContext
                 $this->request,
                 $response
             );
-    }
-
-    /**
-     * Return the PSR-7 request for an HTTP message exchange.
-     */
-    public function getHttpRequest(): RequestInterface
-    {
-        return HttpTransportRequest::expect($this->request)->request;
-    }
-
-    /**
-     * Return the PSR-7 response for an HTTP message exchange.
-     */
-    public function getHttpResponse(): ResponseInterface
-    {
-        return HttpTransportResponse::expect($this->response)->response;
-    }
-
-    /**
-     * Replace the PSR-7 response in an HTTP message exchange.
-     */
-    public function replaceHttpResponse(ResponseInterface $response): void
-    {
-        $this->response = HttpTransportResponse::expect($this->response)
-            ->withResponse($response);
     }
 }

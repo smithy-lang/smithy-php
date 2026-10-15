@@ -69,6 +69,7 @@ use Smithy\Http\Message\{
     HttpTransportRequest,
     HttpTransportResponse,
     Request,
+    RequestStreamInterface,
     Response,
     Uri
 };
@@ -167,6 +168,60 @@ final class ClientPipelineTest extends TestCase
             $http->sentRequests[0]->getHeader('x-test-request')
         );
         $this->assertSame(2.5, $http->sentOptions[0]->timeout);
+    }
+
+    public function testRequestOverridesAreVisibleBeforeAttempt(): void
+    {
+        $seen = [];
+        $observer = $this->getMockBuilder(AbstractInterceptor::class)
+            ->onlyMethods([
+                'readAfterSerialization',
+                'modifyBeforeRetryLoop',
+                'readBeforeAttempt'
+            ])
+            ->getMock();
+        $observer->method('readAfterSerialization')->willReturnCallback(
+            static function (RequestContext $ctx) use (&$seen): void {
+                $seen['readAfterSerialization'] = HttpTransportRequest::expect(
+                    $ctx->request
+                )->request->getHeaderLine('x-test-request');
+            }
+        );
+        $observer->method('modifyBeforeRetryLoop')->willReturnCallback(
+            static function (
+                RequestContext $ctx
+            ) use (&$seen): TransportRequestInterface {
+                $seen['modifyBeforeRetryLoop'] = HttpTransportRequest::expect(
+                    $ctx->request
+                )->request->getHeaderLine('x-test-request');
+
+                return $ctx->request;
+            }
+        );
+        $observer->method('readBeforeAttempt')->willReturnCallback(
+            static function (RequestContext $ctx) use (&$seen): void {
+                $seen['readBeforeAttempt'] = HttpTransportRequest::expect(
+                    $ctx->request
+                )->request->getHeaderLine('x-test-request');
+            }
+        );
+        [$pipeline] = $this->buildPipeline([$observer]);
+
+        $pipeline->execute(
+            FakeOperation::instance(),
+            new FakeInput('hello'),
+            RequestOverrideConfig::fromArray([
+                '@http' => [
+                    'headers' => ['x-test-request' => 'override']
+                ]
+            ])
+        );
+
+        $this->assertSame([
+            'readAfterSerialization' => 'override',
+            'modifyBeforeRetryLoop' => 'override',
+            'readBeforeAttempt' => 'override'
+        ], $seen);
     }
 
     public function testPartialHttpOverridesUseTransportDefaults(): void
@@ -305,10 +360,15 @@ final class ClientPipelineTest extends TestCase
             ->onlyMethods(['modifyBeforeTransmit'])
             ->getMock();
         $swap->method('modifyBeforeTransmit')->willReturnCallback(
-            static fn(RequestContext $ctx): TransportRequestInterface =>
-                HttpTransportRequest::expect($ctx->request)->withRequest(
-                    $ctx->getHttpRequest()->withHeader('x-swapped', '1')
-                )
+            static function (
+                RequestContext $ctx
+            ): TransportRequestInterface {
+                $request = HttpTransportRequest::expect($ctx->request);
+
+                return $request->withRequest(
+                    $request->request->withHeader('x-swapped', '1')
+                );
+            }
         );
 
         [$pipeline, $http] = $this->buildPipeline([$swap]);
@@ -1161,11 +1221,18 @@ final class ClientPipelineTest extends TestCase
             ->onlyMethods(['modifyBeforeSigning'])
             ->getMock();
         $interceptor->method('modifyBeforeSigning')->willReturnCallback(
-            static fn(RequestContext $ctx): TransportRequestInterface =>
-                HttpTransportRequest::expect($ctx->request)->withRequest(
-                    $ctx->getHttpRequest()
-                        ->withAddedHeader('x-attempt', 'value')
-                )
+            static function (
+                RequestContext $ctx
+            ): TransportRequestInterface {
+                $request = HttpTransportRequest::expect($ctx->request);
+
+                return $request->withRequest(
+                    $request->request->withAddedHeader(
+                        'x-attempt',
+                        'value'
+                    )
+                );
+            }
         );
         $http = (new MockHttpClient())
             ->queueException(new \RuntimeException('temporary'))
@@ -1242,6 +1309,53 @@ final class ClientPipelineTest extends TestCase
             'Mhw89IbtUJFk7eweGYH+yA==',
             'Mhw89IbtUJFk7eweGYH+yA=='
         ], $checksums);
+    }
+
+    public function testChecksumHonorsContentMd5RequestOverride(): void
+    {
+        $serializedBody = null;
+        $observer = $this->getMockBuilder(AbstractInterceptor::class)
+            ->onlyMethods(['readAfterSerialization'])
+            ->getMock();
+        $observer->method('readAfterSerialization')->willReturnCallback(
+            static function (RequestContext $ctx) use (
+                &$serializedBody
+            ): void {
+                $serializedBody = HttpTransportRequest::expect(
+                    $ctx->request
+                )->request->getBody();
+            }
+        );
+        $body = new TestStreamFixture(
+            'payload',
+            sizeKnown: true,
+            seekable: false
+        );
+        [$pipeline, $http] = $this->buildPipeline(
+            interceptors: [$observer, new HttpChecksumInterceptor()],
+            protocol: new FakeProtocol(requestBody: $body)
+        );
+
+        $pipeline->execute(
+            $this->operationWithTraits([
+                Schema::T_HTTP_CHECKSUM_REQUIRED => true
+            ]),
+            new FakeInput(),
+            RequestOverrideConfig::fromArray([
+                '@http' => [
+                    'headers' => ['Content-MD5' => 'preset']
+                ]
+            ])
+        );
+
+        $this->assertSame(
+            $serializedBody,
+            $http->sentRequests[0]->getBody()
+        );
+        $this->assertSame(
+            'preset',
+            $http->sentRequests[0]->getHeaderLine('Content-MD5')
+        );
     }
 
     #[DataProvider('retryPipelineModes')]
@@ -1337,6 +1451,50 @@ final class ClientPipelineTest extends TestCase
         }
 
         $this->assertSame(1, $http->sendCallCount);
+    }
+
+    #[DataProvider('throwingRequestStreamStateMethods')]
+    public function testRetryStateInspectionPreservesAttemptError(
+        string $throwingMethod
+    ): void
+    {
+        $attemptError = new \RuntimeException('attempt failed');
+        $inspectionError = new \RuntimeException('inspection failed');
+        $body = $this->createMock(RequestStreamInterface::class);
+        $body->method('getSize')->willReturn(7);
+        $body->method('isReplayable')->willReturn(false);
+        $body->method('isSeekable')->willReturn(false);
+        if ($throwingMethod === 'started') {
+            $body->method('started')->willThrowException($inspectionError);
+            $body->expects(self::never())->method('fullyConsumed');
+        } else {
+            $body->method('started')->willReturn(false);
+            $body->method('fullyConsumed')->willThrowException(
+                $inspectionError
+            );
+        }
+        $http = (new MockHttpClient())->queueException($attemptError);
+        [$pipeline] = $this->buildPipeline(
+            http: $http,
+            protocol: new FakeProtocol(requestBody: $body),
+            retryStrategy: $this->retryOnceStrategy()
+        );
+
+        try {
+            $pipeline->execute(FakeOperation::instance(), new FakeInput());
+            $this->fail('Expected the attempt to fail.');
+        } catch (\RuntimeException $error) {
+            $this->assertSame($attemptError, $error);
+        }
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function throwingRequestStreamStateMethods(): iterable
+    {
+        yield 'started' => ['started'];
+        yield 'fully consumed' => ['fullyConsumed'];
     }
 
     #[DataProvider('retryPipelineModes')]

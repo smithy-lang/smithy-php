@@ -795,34 +795,40 @@ final class InterceptorChainTest extends TestCase
     }
 
     private function requestContext(
-        TransportRequestInterface|RequestInterface|null $request = null
+        ?TransportRequestInterface $request = null
     ): RequestContext
     {
         return new RequestContext(
             FakeOperation::instance(),
             new FakeInput(),
             $this->config(),
-            $request ?? $this->createStub(RequestInterface::class)
+            $request ?? new HttpTransportRequest(
+                $this->createStub(RequestInterface::class)
+            )
         );
     }
 
     private function responseContext(
-        TransportRequestInterface|RequestInterface|null $request = null,
-        TransportResponseInterface|ResponseInterface|null $response = null
+        ?TransportRequestInterface $request = null,
+        ?TransportResponseInterface $response = null
     ): ResponseContext
     {
         return new ResponseContext(
             FakeOperation::instance(),
             new FakeInput(),
             $this->config(),
-            $request ?? $this->createStub(RequestInterface::class),
-            $response ?? $this->createStub(ResponseInterface::class)
+            $request ?? new HttpTransportRequest(
+                $this->createStub(RequestInterface::class)
+            ),
+            $response ?? new HttpTransportResponse(
+                $this->createStub(ResponseInterface::class)
+            )
         );
     }
 
     private function outputContext(
-        TransportRequestInterface|RequestInterface|null $request = null,
-        TransportResponseInterface|ResponseInterface|null $response = null,
+        ?TransportRequestInterface $request = null,
+        ?TransportResponseInterface $response = null,
         ?FakeOutput $output = null
     ): OutputContext
     {

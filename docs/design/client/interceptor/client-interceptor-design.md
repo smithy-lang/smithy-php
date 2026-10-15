@@ -64,8 +64,8 @@ each invocation creates a complete execution with its own retry loop.
 
 Read hooks receive the current context. Modify hooks pass each returned value
 into the next interceptor by deriving a context with that replacement. This
-keeps contexts explicit while preserving immutable PSR-7 request and response
-semantics.
+keeps contexts explicit while allowing each transport to define its own
+request and response envelopes.
 
 Call wrappers are filtered when the chain is constructed. The first
 registered wrapper is outermost. Ordinary interceptors do not enter the

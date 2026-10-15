@@ -7,9 +7,10 @@
 ## Scope
 
 The retry package defines strategy contracts and per-invocation state. The
-client pipeline owns attempt execution, request restoration, stream replay,
-and interceptor completion. Provider packages own service-specific
-classification, quotas, backoff, and adaptive behavior.
+client pipeline owns attempt execution, request-baseline restoration,
+invoking transport replay preparation, and interceptor completion. Each
+transport owns the replay preparation of its message state. Provider packages
+own service-specific classification, quotas, backoff, and adaptive behavior.
 
 ## Ownership
 
@@ -21,12 +22,12 @@ classification, quotas, backoff, and adaptive behavior.
 | Track strategy state | `RetryState` |
 | Enforce request attempt cap | `ClientPipeline` |
 | Restore request baseline | `ClientPipeline` |
-| Rewind body and trailers | `ClientPipeline` |
+| Prepare request state for replay | `TransportInterface` implementation |
 | Delay cooperatively | `Async::delay()` |
 | Record successful capacity recovery | Strategy |
 
-This split keeps retry policy outside the generic pipeline while retaining one
-implementation of lifecycle and replay safety.
+This split keeps retry policy outside the generic pipeline while allowing each
+transport to enforce replay safety for its own message types.
 
 ## Strategy Contract
 
@@ -115,7 +116,9 @@ compression use that boundary.
 
 ## Replay Safety
 
-Before retrying:
+Before retrying, `ClientPipeline` calls
+`TransportInterface::prepareRequestForRetry()`. For HTTP,
+`HttpClientTransport` applies these rules:
 
 - `RequestStreamInterface` bodies must report replayability and rewind with
   `rewindForRetry()`

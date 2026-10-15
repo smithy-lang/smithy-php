@@ -21,6 +21,10 @@ interface TransportRequestOverrideInterface
 
     /**
      * Apply message-level overrides to a serialized request.
+     *
+     * The pipeline applies overrides before interceptor processing and
+     * reapplies them after endpoint binding. Implementations must therefore
+     * be safe to apply more than once to the same logical request.
      */
     public function applyToRequest(
         TransportRequestInterface $request

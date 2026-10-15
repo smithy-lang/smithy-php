@@ -4,12 +4,10 @@ declare(strict_types=1);
 
 namespace Smithy\Client\Interceptor;
 
-use Psr\Http\Message\RequestInterface;
 use Smithy\Client\ClientConfig;
 use Smithy\Client\Transport\TransportRequestInterface;
 use Smithy\Core\Serde\SerializableStructInterface;
 use Smithy\Core\Shape\OperationInterface;
-use Smithy\Http\Message\HttpTransportRequest;
 
 /**
  * Hook data available after the input has been serialized to a request,
@@ -21,8 +19,6 @@ use Smithy\Http\Message\HttpTransportRequest;
  */
 final class RequestContext
 {
-    public TransportRequestInterface $request;
-
     /**
      * Create request hook context.
      */
@@ -30,13 +26,8 @@ final class RequestContext
         public OperationInterface $operation,
         public SerializableStructInterface $input,
         public ClientConfig $config,
-        TransportRequestInterface|RequestInterface $request
-    )
-    {
-        $this->request = $request instanceof TransportRequestInterface
-            ? $request
-            : new HttpTransportRequest($request);
-    }
+        public TransportRequestInterface $request
+    ) {}
 
     /**
      * Replace the mutable request value in this context.
@@ -61,22 +52,5 @@ final class RequestContext
                 $this->config,
                 $request
             );
-    }
-
-    /**
-     * Return the PSR-7 request for an HTTP message exchange.
-     */
-    public function getHttpRequest(): RequestInterface
-    {
-        return HttpTransportRequest::expect($this->request)->request;
-    }
-
-    /**
-     * Replace the PSR-7 request in an HTTP message exchange.
-     */
-    public function replaceHttpRequest(RequestInterface $request): void
-    {
-        $this->request = HttpTransportRequest::expect($this->request)
-            ->withRequest($request);
     }
 }

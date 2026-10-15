@@ -33,10 +33,12 @@ matrices, production S3 validation, and profiling.
 
 ## Design Goals
 
-The transport boundary accepts PSR-7 requests and streams. It returns a
-Smithy response that adds body disposal and trailer access to the PSR-7
-response contract. Incrementally produced requests and streamed responses
-use bounded queues, so neither path requires whole-body buffering.
+The generic client transport boundary accepts `HttpTransportRequest` envelopes
+and returns `HttpTransportResponse` envelopes. `HttpClientTransport` unwraps
+requests for the PSR-7 HTTP client boundary and wraps its responses. The
+Smithy HTTP response adds body disposal and trailer access to the PSR-7
+response contract. Incrementally produced requests and streamed responses use
+bounded queues, so neither path requires whole-body buffering.
 
 The client records whether a request body started, finished, and can be
 rewound. Retry policy above the HTTP layer uses that state to decide whether
@@ -51,6 +53,10 @@ runtime.
 
 ```text
 Generated or dynamic client
+        |
+        | HttpTransportRequest
+        v
+HttpClientTransport
         |
         | PSR-7 RequestInterface
         v
@@ -86,6 +92,9 @@ Smithy ResponseInterface
         |       +--> StreamingResponseStream (live)
         +--> ResponseTrailers
         +--> discardBody()
+        |
+        v
+HttpTransportResponse
 ```
 
 `CurlConnection` owns a libcurl easy handle. Libcurl owns the physical TCP

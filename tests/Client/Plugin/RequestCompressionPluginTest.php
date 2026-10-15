@@ -167,12 +167,12 @@ final class RequestCompressionPluginTest extends TestCase
 
         return HttpTransportRequest::expect(
             $configured->interceptorChain->modifyBeforeRetryLoop(
-            new RequestContext(
-                $this->operation(),
-                new FakeInput(),
-                $configured,
-                $request
-            )
+                self::requestContext(
+                    $this->operation(),
+                    new FakeInput(),
+                    $configured,
+                    $request
+                )
             )
         )->request;
     }
@@ -205,5 +205,19 @@ final class RequestCompressionPluginTest extends TestCase
         $operation->method('getInputStreamMember')->willReturn(null);
 
         return $operation;
+    }
+
+    private static function requestContext(
+        OperationInterface $operation,
+        FakeInput $input,
+        ClientConfig $config,
+        RequestInterface $request
+    ): RequestContext {
+        return new RequestContext(
+            $operation,
+            $input,
+            $config,
+            new HttpTransportRequest($request)
+        );
     }
 }
