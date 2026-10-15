@@ -20,7 +20,11 @@ use Smithy\Client\Plugin\{
     ResolvedPlugins
 };
 use Smithy\Tests\Client\Fake\FakeProtocol;
-use Smithy\Tests\Client\Plugin\Utils\RecordingPluginFixture;
+use Smithy\Tests\Client\Plugin\Utils\{
+    RecordingPluginFixture,
+    RegisteringPluginFixture,
+    SecondaryRecordingPluginFixture
+};
 use Smithy\Tests\Utils\Http\MockHttpClient;
 
 #[CoversClass(PluginResolver::class)]
@@ -179,6 +183,21 @@ final class PluginResolverTest extends TestCase
         self::assertSame(['plugin'], $calls->getArrayCopy());
     }
 
+    public function testCallScopedPluginAppliesRegisteredPlugin(): void
+    {
+        $calls = new \ArrayObject();
+        $child = new RecordingPluginFixture('child', $calls);
+        $parent = new RegisteringPluginFixture('parent', $calls, $child);
+        $sibling = new SecondaryRecordingPluginFixture('sibling', $calls);
+
+        (new PluginCollection($parent, $sibling))->apply($this->config());
+
+        self::assertSame(
+            ['parent', 'sibling', 'child'],
+            $calls->getArrayCopy()
+        );
+    }
+
     public function testRejectedPluginCanApplyWhenPredicateChanges(): void
     {
         $calls = new \ArrayObject();
@@ -191,11 +210,37 @@ final class PluginResolverTest extends TestCase
         $configured = (new PluginCollection($plugin))->apply($config);
         self::assertSame([], $calls->getArrayCopy());
 
-        $configured->withPluginPredicate(
-            static fn(PluginInterface $candidate): bool => true
-        );
+        $configured
+            ->withPluginPredicate(
+                static fn(PluginInterface $candidate): bool => true
+            )
+            ->resolvePlugins();
 
         self::assertSame(['plugin'], $calls->getArrayCopy());
+    }
+
+    public function testRejectedChildCanApplyWhenPredicateChanges(): void
+    {
+        $calls = new \ArrayObject();
+        $child = new class('child', $calls)
+            extends RecordingPluginFixture {};
+        $parent = new class('parent', $calls, children: [$child])
+            extends RecordingPluginFixture {};
+        $config = $this->config()->withPluginPredicate(
+            static fn(PluginInterface $candidate): bool =>
+                $candidate !== $child
+        );
+
+        $configured = (new PluginCollection($parent))->apply($config);
+        self::assertSame(['parent'], $calls->getArrayCopy());
+
+        $configured
+            ->withPluginPredicate(
+                static fn(PluginInterface $candidate): bool => true
+            )
+            ->resolvePlugins();
+
+        self::assertSame(['parent', 'child'], $calls->getArrayCopy());
     }
 
     public function testChildCyclesTerminateThroughClassDeduplication(): void

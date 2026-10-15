@@ -13,6 +13,7 @@ use Smithy\Client\Endpoint\EndpointResolverInterface;
 use Smithy\Client\Interceptor\InterceptorChain;
 use Smithy\Client\Plugin\PluginState;
 use Smithy\Client\Retry\RetryStrategyInterface;
+use Smithy\Core\Shape\ServiceInterface;
 use Smithy\Http\Client\HttpClientInterface;
 use Smithy\Protocol\ProtocolInterface;
 
@@ -38,6 +39,7 @@ final class RegionalClientConfigFixture extends ClientConfig
         array $context = [],
         array $authSchemePreference = [],
         public readonly string $region = '',
+        ?ServiceInterface $service = null,
         ?PluginState $pluginState = null
     )
     {
@@ -52,6 +54,7 @@ final class RegionalClientConfigFixture extends ClientConfig
             $retryScope,
             $context,
             $authSchemePreference,
+            $service,
             $pluginState
         );
     }
@@ -77,6 +80,7 @@ final class RegionalClientConfigFixture extends ClientConfig
             authSchemePreference: $overrides['authSchemePreference']
                 ?? $this->authSchemePreference,
             region: $overrides['region'] ?? $this->region,
+            service: $overrides['service'] ?? $this->service,
             pluginState: $overrides['pluginState']
                 ?? $this->getPluginState()
         );

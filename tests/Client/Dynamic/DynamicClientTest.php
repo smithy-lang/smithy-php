@@ -75,6 +75,10 @@ final class DynamicClientTest extends TestCase
             $client->getConfig()->protocol->getId()
         );
         self::assertSame(
+            'example#Sprockets',
+            $client->getConfig()->service?->getId()
+        );
+        self::assertSame(
             '/service/Sprockets/operation/Echo',
             $http->getLastRequest()?->getUri()->getPath()
         );

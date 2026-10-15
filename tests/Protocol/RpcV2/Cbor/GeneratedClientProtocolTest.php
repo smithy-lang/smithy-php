@@ -21,7 +21,8 @@ use Smithy\Core\Shape\Utils\ArrayShapeSerializer;
 use Smithy\Protocol\RpcV2\RpcV2CborProtocol;
 use Smithy\ProtocolTests\RpcV2Cbor\{
     RpcV2CborClient,
-    RpcV2CborClientConfig
+    RpcV2CborClientConfig,
+    RpcV2CborService
 };
 use Smithy\Tests\Protocol\RpcV2\Cbor\Support\RpcV2CborClientProtocolTestCase;
 use Smithy\Tests\Utils\Http\MockHttpClient;
@@ -31,6 +32,19 @@ use Smithy\Tests\Utils\Http\MockHttpClient;
  */
 final class GeneratedClientProtocolTest extends RpcV2CborClientProtocolTestCase
 {
+    public function testAttachesGeneratedServiceMetadata(): void
+    {
+        $client = $this->createClient(
+            new MockHttpClient(),
+            'https://example.com'
+        );
+
+        self::assertSame(
+            RpcV2CborService::instance(),
+            $client->getConfig()->service
+        );
+    }
+
     public function testCborBodyComparisonRejectsMissingNestedDefaults(): void
     {
         $expected = \hex2bin(

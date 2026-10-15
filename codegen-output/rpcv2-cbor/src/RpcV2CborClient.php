@@ -53,7 +53,10 @@ final class RpcV2CborClient extends AbstractClient
         PluginCollection $plugins = new PluginCollection()
     )
     {
-        parent::__construct($config, $plugins);
+        parent::__construct(
+            $config->withService(RpcV2CborService::instance()),
+            $plugins
+        );
     }
 
     public function emptyInputOutput(

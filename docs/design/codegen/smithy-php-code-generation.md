@@ -289,14 +289,12 @@ The client generator also emits:
 
 - paginator factory methods for validated `@paginated` operations
 - waiter methods for normalized `smithy.waiters#waitable` definitions
-- default client plugins selected by operation traits
 
-Plugin selection is configured through
-`CodegenSettings::$clientPluginsByOperationTrait`. The default mapping installs
-request compression and HTTP checksum plugins only when at least one service
-operation requires them. The configured mapping order determines the order of
-the generated default plugins, while collection merging preserves
-caller-provided instances.
+Generated clients associate the runtime `ClientConfig` with the generated
+service metadata before the shared base client resolves plugins. Modeled
+request compression and HTTP checksum behavior is registered by the runtime;
+its interceptors inspect the current operation schema when a request executes.
+Dynamic clients use the same plugin path.
 
 `ClientConfigGenerator` emits a service-specific subclass of the runtime
 `ClientConfig`. `CodegenSettings::$clientBaseClass`, `generateClient`, and
@@ -368,8 +366,6 @@ model in several ways:
 - `operationSchemaTraits` supplies preprocessed operation trait values by
   integer index
 - `shapeConstants` and `operationConstants` add SDK-owned generated constants
-- `clientPluginsByOperationTrait` maps modeled operation traits to runtime
-  plugins
 
 Traits whose null value is semantically distinct from absence cannot be tested
 with `isset()` alone. The model and schema APIs use presence-aware checks where
