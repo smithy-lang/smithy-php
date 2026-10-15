@@ -25,7 +25,9 @@ final readonly class WaiterSchemaExtension
     {
         $definitionsByNormalizedName = [];
         foreach ($definitions as $name => $definition) {
-            $definitionsByNormalizedName[\strtolower($name)] = $definition;
+            $definitionsByNormalizedName[
+                WaiterDefinitionNormalizer::normalizeName($name)
+            ] = $definition;
         }
 
         $this->definitionsByNormalizedName = $definitionsByNormalizedName;
@@ -37,7 +39,7 @@ final readonly class WaiterSchemaExtension
     public function get(string $name): ?WaiterDefinition
     {
         return $this->definitionsByNormalizedName[
-            \strtolower($name)
+            WaiterDefinitionNormalizer::normalizeName($name)
         ] ?? null;
     }
 

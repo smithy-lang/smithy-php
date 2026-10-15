@@ -168,6 +168,9 @@ Keys beginning with `@` may also appear in an array input. The client removes
 them before input coercion and passes them to `RequestOverrideConfig`.
 Explicit override arguments replace matching input override keys.
 
+Waiter inputs follow the same precedence rule: request overrides supplied by
+`WaiterConfig` replace matching `@` keys embedded in the input.
+
 ## Pagination
 
 `DynamicClient::paginate()` creates a paginator for an operation with

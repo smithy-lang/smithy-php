@@ -312,14 +312,16 @@ class DynamicClient extends AbstractClient
 
         $this->assertPreviewSupported($operation);
         [$input, $requestOverrides] = self::prepareInput($input, []);
-        if ($requestOverrides !== null) {
-            if ($config?->requestOverrides !== null) {
-                throw new \InvalidArgumentException(
-                    'Waiter request overrides must be provided either in '
-                        . 'the input or WaiterConfig, not both.'
-                );
-            }
-
+        if ($requestOverrides !== null
+            && $config?->requestOverrides !== null
+        ) {
+            $requestOverrides = $config->requestOverrides->withFallback(
+                $requestOverrides
+            );
+        } else {
+            $requestOverrides ??= $config?->requestOverrides;
+        }
+        if ($requestOverrides !== $config?->requestOverrides) {
             $config = new WaiterConfig(
                 minDelay: $config?->minDelay,
                 maxDelay: $config?->maxDelay,

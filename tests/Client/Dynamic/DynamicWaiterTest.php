@@ -10,7 +10,11 @@ use Smithy\Client\Dynamic\{
     DynamicClient,
     DynamicService
 };
-use Smithy\Client\Waiter\WaiterFailureException;
+use Smithy\Client\RequestOverrideConfig;
+use Smithy\Client\Waiter\{
+    WaiterConfig,
+    WaiterFailureException
+};
 use Smithy\Codec\Cbor\CborCodec;
 use Smithy\Core\Model\SmithyModel;
 use Smithy\Core\Serde\SerializableStructInterface;
@@ -112,6 +116,38 @@ final class DynamicWaiterTest extends TestCase
 
         self::assertSame(
             'value',
+            $http->sentRequests[0]->getHeaderLine('x-waiter')
+        );
+    }
+
+    public function testConfigOverridesReplaceMatchingInlineOverrides(): void
+    {
+        $http = (new MockHttpClient())
+            ->queueResponse(self::response(
+                new GetThingOutput(status: 'ready')
+            ));
+        $client = self::createClient($http);
+
+        $client->waitUntil(
+            'ThingReady',
+            [
+                'thingId' => 'thing-1',
+                '@http' => [
+                    'headers' => ['x-waiter' => 'inline']
+                ]
+            ],
+            5.0,
+            new WaiterConfig(
+                requestOverrides: RequestOverrideConfig::fromArray([
+                    '@http' => [
+                        'headers' => ['x-waiter' => 'config']
+                    ]
+                ])
+            )
+        );
+
+        self::assertSame(
+            'config',
             $http->sentRequests[0]->getHeaderLine('x-waiter')
         );
     }

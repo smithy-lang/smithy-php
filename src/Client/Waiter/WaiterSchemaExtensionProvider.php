@@ -20,14 +20,27 @@ final class WaiterSchemaExtensionProvider implements
 {
     public const TRAIT = Schema::T_WAITABLE;
 
-    private static ?SchemaExtensionKey $key = null;
+    private static ?SchemaExtensionKey $withOutputKey = null;
+    private static ?SchemaExtensionKey $withoutOutputKey = null;
+
+    private function __construct(
+        private readonly bool $hasOutput
+    ) {}
 
     /**
-     * Get the singleton waiter extension key.
+     * Get the waiter extension key for an operation's output shape.
      */
-    public static function key(): SchemaExtensionKey
+    public static function key(bool $hasOutput = true): SchemaExtensionKey
     {
-        return self::$key ??= new SchemaExtensionKey(new self());
+        if ($hasOutput) {
+            return self::$withOutputKey ??= new SchemaExtensionKey(
+                new self(true)
+            );
+        }
+
+        return self::$withoutOutputKey ??= new SchemaExtensionKey(
+            new self(false)
+        );
     }
 
     /**
@@ -35,13 +48,15 @@ final class WaiterSchemaExtensionProvider implements
      */
     public function provide(Schema $schema): ?WaiterSchemaExtension
     {
-        if (!$schema->hasTrait(self::TRAIT)) {
+        $trait = $schema->getTrait(self::TRAIT);
+        if (!\is_array($trait) || $trait === []) {
             return null;
         }
 
         $normalized = WaiterDefinitionNormalizer::normalize(
             $schema->id,
-            $schema->getTrait(self::TRAIT)
+            $trait,
+            $this->hasOutput
         );
         $definitions = [];
         foreach ($normalized as $name => $definition) {

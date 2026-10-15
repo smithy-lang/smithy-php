@@ -4,10 +4,7 @@ declare(strict_types=1);
 
 namespace Smithy\Client\Dynamic;
 
-use Smithy\Client\Waiter\{
-    WaiterSchemaExtension,
-    WaiterSchemaExtensionProvider
-};
+use Smithy\Client\Waiter\WaiterDefinitionNormalizer;
 use Smithy\Core\Model\SmithyModel;
 use Smithy\Core\Serde\{
     Schema,
@@ -30,8 +27,8 @@ final class DynamicService implements ServiceInterface
     private array $operationIdsByName = [];
     /** @var array<string, DynamicOperation> */
     private array $operationsByName = [];
-    /** @var array<string, DynamicOperation>|null */
-    private ?array $waiterOperationsByName = null;
+    /** @var array<string, string>|null */
+    private ?array $waiterOperationNamesByName = null;
 
     /**
      * Create runtime metadata for a modeled service.
@@ -151,7 +148,13 @@ final class DynamicService implements ServiceInterface
     {
         $this->indexWaiters();
 
-        return $this->waiterOperationsByName[\strtolower($name)] ?? null;
+        $operationName = $this->waiterOperationNamesByName[
+            WaiterDefinitionNormalizer::normalizeName($name)
+        ] ?? null;
+
+        return $operationName === null
+            ? null
+            : $this->getOperation($operationName);
     }
 
     /**
@@ -159,42 +162,45 @@ final class DynamicService implements ServiceInterface
      */
     private function indexWaiters(): void
     {
-        if ($this->waiterOperationsByName !== null) {
+        if ($this->waiterOperationNamesByName !== null) {
             return;
         }
 
-        $waiterOperations = [];
-        $waiterOwners = [];
-        foreach (\array_keys($this->operationIdsByName) as $operationName) {
-            $operation = $this->getOperation($operationName);
-            if (!$operation instanceof DynamicOperation) {
+        $waitersByOperation = [];
+        $operationNamesById = [];
+        foreach ($this->operationIdsByName
+            as $operationName => $operationId
+        ) {
+            $operation = $this->model->expectShape($operationId);
+            $traits = $operation['traits'] ?? [];
+            if (!\is_array($traits)
+                || !isset($traits['smithy.waiters#waitable'])
+            ) {
                 continue;
             }
 
-            $waiters = $operation->getSchema()->getExtension(
-                WaiterSchemaExtensionProvider::key()
+            $waiters = WaiterDefinitionNormalizer::normalize(
+                $this->model->getOriginalShapeId($operationId),
+                $traits['smithy.waiters#waitable'],
+                $this->model->getOperationOutputId($operationId)
+                    !== 'smithy.api#Unit'
             );
-            if (!$waiters instanceof WaiterSchemaExtension) {
-                continue;
-            }
-
-            foreach ($waiters->getDefinitions() as $waiterName => $_) {
-                $normalizedName = \strtolower($waiterName);
-                $owner = $waiterOwners[$normalizedName] ?? null;
-                if ($owner !== null) {
-                    throw new \LogicException(
-                        "Service {$this->serviceId} has duplicate waiter "
-                            . "name {$waiterName} on {$owner} and "
-                            . "{$operation->getId()}."
-                    );
-                }
-
-                $waiterOwners[$normalizedName] = $operation->getId();
-                $waiterOperations[$normalizedName] = $operation;
+            if ($waiters !== []) {
+                $waitersByOperation[$operationId] = $waiters;
+                $operationNamesById[$operationId] = $operationName;
             }
         }
 
-        $this->waiterOperationsByName = $waiterOperations;
+        $waiterOperationNames = [];
+        foreach (WaiterDefinitionNormalizer::indexServiceWaiters(
+            $this->serviceId,
+            $waitersByOperation
+        ) as $normalizedName => $operationId) {
+            $waiterOperationNames[$normalizedName] =
+                $operationNamesById[$operationId];
+        }
+
+        $this->waiterOperationNamesByName = $waiterOperationNames;
     }
 
     /**

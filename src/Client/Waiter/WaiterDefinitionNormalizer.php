@@ -30,6 +30,47 @@ final class WaiterDefinitionNormalizer
     private function __construct() {}
 
     /**
+     * Return the case-insensitive lookup key for a modeled waiter name.
+     */
+    public static function normalizeName(string $name): string
+    {
+        return \strtolower($name);
+    }
+
+    /**
+     * Index waiter names and enforce service-wide uniqueness.
+     *
+     * @param array<string, array<string, array<string, mixed>>>
+     *        $waitersByOperation Operation shape ID to waiter definitions.
+     *
+     * @return array<string, string> Normalized waiter name to operation ID.
+     */
+    public static function indexServiceWaiters(
+        string $serviceShapeId,
+        array $waitersByOperation
+    ): array
+    {
+        $owners = [];
+        foreach ($waitersByOperation as $operationShapeId => $waiters) {
+            foreach (\array_keys($waiters) as $waiterName) {
+                $normalizedName = self::normalizeName($waiterName);
+                $owner = $owners[$normalizedName] ?? null;
+                if ($owner !== null) {
+                    throw new \LogicException(
+                        "Service {$serviceShapeId} has duplicate waiter "
+                            . "name {$waiterName} on {$owner} and "
+                            . "{$operationShapeId}."
+                    );
+                }
+
+                $owners[$normalizedName] = $operationShapeId;
+            }
+        }
+
+        return $owners;
+    }
+
+    /**
      * Normalize the value of a `smithy.waiters#waitable` trait.
      *
      * @return array<string, array<string, mixed>>
@@ -64,7 +105,7 @@ final class WaiterDefinitionNormalizer
                 );
             }
 
-            $normalizedName = \strtolower($waiterName);
+            $normalizedName = self::normalizeName($waiterName);
             if (isset($waiterNames[$normalizedName])) {
                 self::invalid(
                     $operationShapeId,

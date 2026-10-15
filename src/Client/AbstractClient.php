@@ -149,8 +149,10 @@ abstract class AbstractClient implements ClientInterface
         ?WaiterConfig $config = null
     ): Waiter
     {
+        $hasOutput = $operation->getOutputSchema()->id
+            !== 'smithy.api#Unit';
         $waiters = $operation->getSchema()->getExtension(
-            WaiterSchemaExtensionProvider::key()
+            WaiterSchemaExtensionProvider::key($hasOutput)
         );
         if (!$waiters instanceof WaiterSchemaExtension) {
             throw new \LogicException(

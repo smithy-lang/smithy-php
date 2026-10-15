@@ -59,9 +59,7 @@ final class SchemaTraitRegistry
             $this->register(
                 $traitId,
                 $traitKey,
-                $traitId === 'smithy.waiters#waitable'
-                    ? static fn(mixed $value): mixed => $value
-                    : self::materializeKnownTrait(...)
+                self::materializeKnownTrait(...)
             );
         }
     }

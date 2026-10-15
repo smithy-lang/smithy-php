@@ -99,6 +99,48 @@ final class DynamicServiceTest extends TestCase
         new DynamicService($model, new SchemaConverter($model));
     }
 
+    public function testWaiterLookupDoesNotBuildUnrelatedOperations(): void
+    {
+        $model = SmithyModel::fromArray([
+            'smithy' => '2.0',
+            'shapes' => [
+                'example#Sprockets' => [
+                    'type' => 'service',
+                    'operations' => [
+                        ['target' => 'example#Broken'],
+                        ['target' => 'example#Waitable']
+                    ]
+                ],
+                'example#Broken' => [
+                    'type' => 'operation',
+                    'input' => ['target' => 'example#Missing']
+                ],
+                'example#Waitable' => [
+                    'type' => 'operation',
+                    'traits' => [
+                        'smithy.waiters#waitable' => [
+                            'Ready' => [
+                                'acceptors' => [[
+                                    'state' => 'success',
+                                    'matcher' => ['success' => true]
+                                ]]
+                            ]
+                        ]
+                    ]
+                ]
+            ]
+        ]);
+        $service = new DynamicService(
+            $model,
+            new SchemaConverter($model)
+        );
+
+        $operation = $service->getWaiterOperation('Ready');
+
+        self::assertInstanceOf(DynamicOperation::class, $operation);
+        self::assertSame('Waitable', $operation->getName());
+    }
+
     private function model(): SmithyModel
     {
         return SmithyModel::fromArray([

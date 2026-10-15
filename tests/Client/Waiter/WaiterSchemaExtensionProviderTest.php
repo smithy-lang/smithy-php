@@ -110,6 +110,54 @@ final class WaiterSchemaExtensionProviderTest extends TestCase
         ));
     }
 
+    public function testReturnsNullForMarkerOrEmptyWaitableTrait(): void
+    {
+        foreach ([true, []] as $trait) {
+            $schema = new Schema(
+                id: 'example#GetThing',
+                type: ShapeType::Operation,
+                traits: [Schema::T_WAITABLE => $trait]
+            );
+
+            self::assertNull($schema->getExtension(
+                WaiterSchemaExtensionProvider::key()
+            ));
+        }
+    }
+
+    public function testRejectsOutputMatcherWithoutOperationOutput(): void
+    {
+        $schema = new Schema(
+            id: 'example#GetThing',
+            type: ShapeType::Operation,
+            traits: [
+                Schema::T_WAITABLE => [
+                    'ThingReady' => [
+                        'acceptors' => [[
+                            'state' => 'success',
+                            'matcher' => [
+                                'output' => [
+                                    'path' => 'status',
+                                    'expected' => 'ready',
+                                    'comparator' => 'stringEquals'
+                                ]
+                            ]
+                        ]]
+                    ]
+                ]
+            ]
+        );
+
+        $this->expectException(\LogicException::class);
+        $this->expectExceptionMessage(
+            'output matchers require an operation output'
+        );
+
+        $schema->getExtension(
+            WaiterSchemaExtensionProvider::key(false)
+        );
+    }
+
     public function testRejectsInvalidRuntimeMetadata(): void
     {
         $schema = new Schema(
