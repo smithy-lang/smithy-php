@@ -53,16 +53,19 @@ final class ClientGeneratorTest extends TestCase
             'namespace Smithy\\Example;',
             $file->content
         );
-        $this->assertStringNotContainsString(
+        $this->assertStringContainsString(
+            'use Smithy\\Client\\ClientConfig;',
+            $file->content
+        );
+        $this->assertStringContainsString(
             'use Smithy\\Client\\Plugin\\PluginCollection;',
             $file->content
         );
         $this->assertStringContainsString(
             "public function __construct(\n"
-                . "        \\Smithy\\Client\\ClientConfig \$config,\n"
-                . "        \\Smithy\\Client\\Plugin\\PluginCollection "
-                . "\$plugins = new "
-                . "\\Smithy\\Client\\Plugin\\PluginCollection()\n"
+                . "        ClientConfig \$config,\n"
+                . "        PluginCollection \$plugins = new "
+                . "PluginCollection()\n"
                 . '    )',
             $file->content
         );
@@ -203,16 +206,19 @@ final class ClientGeneratorTest extends TestCase
             'use Vendor\\Runtime\\VendorClient;',
             $file->content
         );
-        $this->assertStringNotContainsString(
+        $this->assertStringContainsString(
             'use Vendor\\Runtime\\VendorClientConfig;',
             $file->content
         );
         $this->assertStringContainsString(
+            'use Smithy\\Client\\Plugin\\PluginCollection;',
+            $file->content
+        );
+        $this->assertStringContainsString(
             "public function __construct(\n"
-                . "        \\Vendor\\Runtime\\VendorClientConfig \$config,\n"
-                . "        \\Smithy\\Client\\Plugin\\PluginCollection "
-                . "\$plugins = new "
-                . "\\Smithy\\Client\\Plugin\\PluginCollection()\n"
+                . "        VendorClientConfig \$config,\n"
+                . "        PluginCollection \$plugins = new "
+                . "PluginCollection()\n"
                 . '    )',
             $file->content
         );
@@ -224,13 +230,8 @@ final class ClientGeneratorTest extends TestCase
             'use Vendor\\Runtime\\VendorPlugin;',
             $file->content
         );
-        $this->assertStringNotContainsString(
-            'use Smithy\\Client\\Plugin\\PluginCollection;',
-            $file->content
-        );
         $this->assertStringContainsString(
-            '\\Smithy\\Client\\Plugin\\PluginCollection $plugins = new '
-                . '\\Smithy\\Client\\Plugin\\PluginCollection()',
+            'PluginCollection $plugins = new PluginCollection()',
             $file->content
         );
         $this->assertStringContainsString(
@@ -238,15 +239,14 @@ final class ClientGeneratorTest extends TestCase
             $file->content
         );
         $this->assertStringContainsString(
-            "\$plugins = \$plugins->merge(new "
-                . "\\Smithy\\Client\\Plugin\\PluginCollection(\n"
+            "\$plugins = \$plugins->merge(new PluginCollection(\n"
             . "            new VendorPlugin()\n"
             . '        ));',
             $file->content
         );
     }
 
-    public function testFullyQualifiedConfigTypesAvoidImportCollisions(): void
+    public function testAliasesConstructorTypesToAvoidImportCollisions(): void
     {
         $model = SmithyModel::fromJson(\json_encode([
             'smithy' => '2.0',
@@ -301,20 +301,21 @@ final class ClientGeneratorTest extends TestCase
             'use Smithy\\Example\\Output\\PluginCollection;',
             $defaultFile->content
         );
-        $this->assertStringNotContainsString(
-            'use Smithy\\Client\\ClientConfig;',
-            $defaultFile->content
-        );
-        $this->assertStringNotContainsString(
-            'use Smithy\\Client\\Plugin\\PluginCollection;',
+        $this->assertStringContainsString(
+            'use Smithy\\Client\\ClientConfig as ConfiguredClientConfig;',
             $defaultFile->content
         );
         $this->assertStringContainsString(
-            '\\Smithy\\Client\\ClientConfig $config,',
+            'use Smithy\\Client\\Plugin\\PluginCollection as '
+                . 'RuntimePluginCollection;',
             $defaultFile->content
         );
         $this->assertStringContainsString(
-            '\\Smithy\\Client\\Plugin\\PluginCollection $plugins',
+            'ConfiguredClientConfig $config,',
+            $defaultFile->content
+        );
+        $this->assertStringContainsString(
+            'RuntimePluginCollection $plugins',
             $defaultFile->content
         );
 
@@ -330,21 +331,96 @@ final class ClientGeneratorTest extends TestCase
             $pluginCollectionSettings
         ))->generate('smithy.example#ExampleService');
 
+        $this->assertStringContainsString(
+            'use Vendor\\PluginCollection as ConfiguredClientConfig;',
+            $pluginCollectionFile->content
+        );
+        $this->assertStringContainsString(
+            'use Smithy\\Client\\Plugin\\PluginCollection as '
+                . 'RuntimePluginCollection;',
+            $pluginCollectionFile->content
+        );
+        $this->assertStringContainsString(
+            'ConfiguredClientConfig $config,',
+            $pluginCollectionFile->content
+        );
+        $this->assertStringContainsString(
+            'RuntimePluginCollection $plugins',
+            $pluginCollectionFile->content
+        );
+
+        $flatSettings = new CodegenSettings(
+            namespace: 'Smithy\\Example',
+            outputDir: '/tmp/out',
+            organization: 'flat'
+        );
+        $flatFile = (new ClientGenerator(
+            $model,
+            new PhpSymbolProvider($model, $flatSettings),
+            $flatSettings
+        ))->generate('smithy.example#ExampleService');
+
+        $this->assertStringContainsString(
+            'use Smithy\\Client\\ClientConfig as ConfiguredClientConfig;',
+            $flatFile->content
+        );
+        $this->assertStringContainsString(
+            'use Smithy\\Client\\Plugin\\PluginCollection as '
+                . 'RuntimePluginCollection;',
+            $flatFile->content
+        );
+        $this->assertStringContainsString(
+            'function getThing(?ClientConfig $input',
+            $flatFile->content
+        );
+        $this->assertStringContainsString(
+            '): PluginCollection',
+            $flatFile->content
+        );
+        $this->assertStringContainsString(
+            'ConfiguredClientConfig $config,',
+            $flatFile->content
+        );
+        $this->assertStringContainsString(
+            'RuntimePluginCollection $plugins',
+            $flatFile->content
+        );
+    }
+
+    public function testPreservesSameNamespaceConfiguredType(): void
+    {
+        $model = SmithyModel::fromFile(
+            __DIR__ . '/../../fixtures/defaults-model.json'
+        );
+        $settings = new CodegenSettings(
+            namespace: 'Vendor',
+            outputDir: '/tmp/out',
+            organization: 'flat',
+            clientConfigClass: 'Vendor\\PluginCollection'
+        );
+
+        $file = (new ClientGenerator(
+            $model,
+            new PhpSymbolProvider($model, $settings),
+            $settings
+        ))->generate('smithy.example#DefaultsService');
+
         $this->assertStringNotContainsString(
             'use Vendor\\PluginCollection;',
-            $pluginCollectionFile->content
-        );
-        $this->assertStringNotContainsString(
-            'use Smithy\\Client\\Plugin\\PluginCollection;',
-            $pluginCollectionFile->content
+            $file->content
         );
         $this->assertStringContainsString(
-            '\\Vendor\\PluginCollection $config,',
-            $pluginCollectionFile->content
+            'use Smithy\\Client\\Plugin\\PluginCollection as '
+                . 'RuntimePluginCollection;',
+            $file->content
         );
         $this->assertStringContainsString(
-            '\\Smithy\\Client\\Plugin\\PluginCollection $plugins',
-            $pluginCollectionFile->content
+            'PluginCollection $config,',
+            $file->content
+        );
+        $this->assertStringContainsString(
+            'RuntimePluginCollection $plugins',
+            $file->content
         );
     }
 
@@ -409,21 +485,20 @@ final class ClientGeneratorTest extends TestCase
         self::assertNotFalse($compression);
         self::assertNotFalse($checksum);
         self::assertLessThan($checksum, $compression);
-        $this->assertStringNotContainsString(
+        $this->assertStringContainsString(
             'use Smithy\\Client\\Plugin\\PluginCollection;',
             $file->content
         );
-        $this->assertStringNotContainsString(
+        $this->assertStringContainsString(
             'use Smithy\\Client\\ClientConfig;',
             $file->content
         );
         $this->assertStringContainsString(
-            '\\Smithy\\Client\\ClientConfig $config,',
+            'ClientConfig $config,',
             $file->content
         );
         $this->assertStringContainsString(
-            '\\Smithy\\Client\\Plugin\\PluginCollection $plugins = new '
-                . '\\Smithy\\Client\\Plugin\\PluginCollection()',
+            'PluginCollection $plugins = new PluginCollection()',
             $file->content
         );
         $this->assertStringNotContainsString(
@@ -456,17 +531,20 @@ final class ClientGeneratorTest extends TestCase
             'final class ExampleClient extends VendorClient',
             $file->content
         );
-        $this->assertStringNotContainsString(
+        $this->assertStringContainsString(
+            'use Vendor\\Runtime\\VendorClientConfig;',
+            $file->content
+        );
+        $this->assertStringContainsString(
             'use Smithy\\Client\\Plugin\\PluginCollection;',
             $file->content
         );
         $this->assertStringContainsString(
-            '\\Vendor\\Runtime\\VendorClientConfig $config,',
+            'VendorClientConfig $config,',
             $file->content
         );
         $this->assertStringContainsString(
-            '\\Smithy\\Client\\Plugin\\PluginCollection $plugins = new '
-                . '\\Smithy\\Client\\Plugin\\PluginCollection()',
+            'PluginCollection $plugins = new PluginCollection()',
             $file->content
         );
         $this->assertStringContainsString(

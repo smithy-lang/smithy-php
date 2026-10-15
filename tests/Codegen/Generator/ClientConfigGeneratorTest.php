@@ -33,12 +33,12 @@ final class ClientConfigGeneratorTest extends TestCase
         );
         // Extends the configured base ClientConfig from Smithy\Client.
         $this->assertStringContainsString(
-            'extends \\Smithy\\Client\\ClientConfig',
+            'use Smithy\\Client\\ClientConfig;',
             $file->content
         );
         $this->assertMatchesRegularExpression(
             '/final class \w+ClientConfig '
-                . 'extends \\\\Smithy\\\\Client\\\\ClientConfig/',
+                . 'extends ClientConfig/',
             $file->content
         );
         $this->assertStringEndsWith('ClientConfig.php', $file->path);
@@ -49,7 +49,7 @@ final class ClientConfigGeneratorTest extends TestCase
         );
     }
 
-    public function testFullyQualifiesBaseClientConfigClass(): void
+    public function testImportsBaseClientConfigClass(): void
     {
         $model = SmithyModel::fromFile(
             __DIR__ . '/../../fixtures/defaults-model.json'
@@ -63,13 +63,13 @@ final class ClientConfigGeneratorTest extends TestCase
 
         $file = $generator->generate('smithy.example#DefaultsService');
 
-        $this->assertStringNotContainsString(
+        $this->assertStringContainsString(
             'use Smithy\\Client\\ClientConfig;',
             $file->content
         );
         $this->assertStringContainsString(
             'final class ExampleClientConfig '
-                . 'extends \\Smithy\\Client\\ClientConfig {}',
+                . 'extends ClientConfig {}',
             $file->content
         );
     }
@@ -89,13 +89,13 @@ final class ClientConfigGeneratorTest extends TestCase
 
         $file = $generator->generate('smithy.example#DefaultsService');
 
-        $this->assertStringNotContainsString(
+        $this->assertStringContainsString(
             'use Vendor\\Runtime\\VendorClientConfig;',
             $file->content
         );
         $this->assertStringContainsString(
             'final class ExampleClientConfig '
-                . 'extends \\Vendor\\Runtime\\VendorClientConfig {}',
+                . 'extends VendorClientConfig {}',
             $file->content
         );
     }

@@ -211,6 +211,100 @@ final class PhpCodeWriterTest extends TestCase
         $this->assertStringNotContainsString(' as Foo', $output);
     }
 
+    public function testAddImportReferenceAliasesOccupiedShortNames(): void
+    {
+        $writer = new PhpCodeWriter('Aws\\Example');
+        $writer->addImport('Aws\\Modeled\\ClientConfig');
+
+        $reference = $writer->addImportReference(
+            'Aws\\Runtime\\ClientConfig',
+            'RuntimeClientConfig'
+        );
+
+        $this->assertSame('RuntimeClientConfig', $reference);
+        $this->assertStringContainsString(
+            'use Aws\\Runtime\\ClientConfig as RuntimeClientConfig;',
+            $writer->toFileContent()
+        );
+    }
+
+    public function testAddImportReferenceAliasesSameNamespaceNames(): void
+    {
+        $writer = new PhpCodeWriter('Aws\\Example');
+        $writer->addImport('Aws\\Example\\ClientConfig');
+
+        $reference = $writer->addImportReference(
+            'Aws\\Runtime\\ClientConfig',
+            'RuntimeClientConfig'
+        );
+
+        $this->assertSame('RuntimeClientConfig', $reference);
+        $this->assertStringContainsString(
+            'use Aws\\Runtime\\ClientConfig as RuntimeClientConfig;',
+            $writer->toFileContent()
+        );
+        $this->assertStringNotContainsString(
+            'use Aws\\Example\\ClientConfig;',
+            $writer->toFileContent()
+        );
+    }
+
+    public function testAddImportReferenceReusesSameNamespaceClass(): void
+    {
+        $writer = new PhpCodeWriter('Aws\\Example');
+        $writer->addImport('Aws\\Example\\ClientConfig');
+
+        $reference = $writer->addImportReference(
+            'Aws\\Example\\ClientConfig',
+            'ConfiguredClientConfig'
+        );
+
+        $this->assertSame('ClientConfig', $reference);
+        $this->assertStringNotContainsString(
+            'use Aws\\Example\\ClientConfig;',
+            $writer->toFileContent()
+        );
+    }
+
+    public function testSameNamespaceImportReferenceReservesItsShortName(): void
+    {
+        $writer = new PhpCodeWriter('Vendor');
+
+        $configReference = $writer->addImportReference(
+            'Vendor\\PluginCollection',
+            'ConfiguredClientConfig'
+        );
+        $pluginReference = $writer->addImportReference(
+            'Smithy\\Client\\Plugin\\PluginCollection',
+            'RuntimePluginCollection'
+        );
+
+        $this->assertSame('PluginCollection', $configReference);
+        $this->assertSame('RuntimePluginCollection', $pluginReference);
+        $this->assertStringContainsString(
+            'use Smithy\\Client\\Plugin\\PluginCollection as '
+                . 'RuntimePluginCollection;',
+            $writer->toFileContent()
+        );
+    }
+
+    public function testAddImportReferenceHonorsReservedNames(): void
+    {
+        $writer = new PhpCodeWriter('Aws\\Example');
+
+        $reference = $writer->addImportReference(
+            'Aws\\Runtime\\ExampleClient',
+            'RuntimeExampleClient',
+            ['ExampleClient']
+        );
+
+        $this->assertSame('RuntimeExampleClient', $reference);
+        $this->assertStringContainsString(
+            'use Aws\\Runtime\\ExampleClient as RuntimeExampleClient;',
+            $writer->toFileContent()
+        );
+    }
+
     public function testWriteDocBlockWrapsBoundaryWithSlashStarSlashLines(): void
     {
         $writer = new PhpCodeWriter();
