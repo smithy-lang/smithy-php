@@ -6,6 +6,7 @@ namespace Smithy\Tests\Client\Pagination\Generated\Pagination;
 
 use Smithy\Client\AbstractClient;
 use Smithy\Client\Pagination\Paginator;
+use Smithy\Client\Plugin\PluginCollection;
 use Smithy\Tests\Client\Pagination\Generated\Pagination\Input\{
     ListMapsInput,
     ListStringsInput,
@@ -31,6 +32,17 @@ use Smithy\Tests\Client\Pagination\Generated\Pagination\Output\{
  */
 final class PaginationClient extends AbstractClient
 {
+    public function __construct(
+        PaginationClientConfig $config,
+        PluginCollection $plugins = new PluginCollection()
+    )
+    {
+        parent::__construct(
+            $config->withService(PaginationService::instance()),
+            $plugins
+        );
+    }
+
     public function listMaps(ListMapsInput $input): ListMapsOutput
     {
         /** @var ListMapsOutput */

@@ -82,7 +82,7 @@ final class InterceptorChainTest extends TestCase
             ));
 
         self::assertTrue($result->context['first']);
-        self::assertSame($alternate, $result->protocol);
+        self::assertSame($alternate, $result->getProtocol());
     }
 
     public function testCallWrappersNestAndSkipNonWrappingInterceptors(): void

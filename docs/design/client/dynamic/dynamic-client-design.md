@@ -45,7 +45,7 @@ SmithyModel
     +-> DynamicClientFactory
     |       |
     |       +-> service selection
-    |       +-> protocol selection
+    |       +-> protocol registrations
     |       +-> endpoint resolver
     |       +-> ClientConfig
     |
@@ -113,12 +113,13 @@ The resolver performs these steps:
 1. Load the model when the caller supplied a file path.
 2. Select the explicit service or the model's only service.
 3. Merge class registrations, caller registrations, and explicit arguments.
-4. Select a modeled protocol implementation.
+4. Pass protocol registrations and explicit selection to `ClientConfig`.
 5. Resolve a caller-supplied endpoint resolver, modeled endpoint BDD, or
    static endpoint.
 6. Build the client configuration.
 7. Construct the dynamic service and its schema registry.
-8. Apply client plugins and create one shared pipeline.
+8. Resolve the modeled protocol, apply client plugins, and create one shared
+   pipeline.
 
 See [Resolution and Pipeline](resolution-and-pipeline.md) for precedence and
 failure behavior.

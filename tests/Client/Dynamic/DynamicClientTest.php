@@ -80,11 +80,11 @@ final class DynamicClientTest extends TestCase
         );
         self::assertInstanceOf(
             RpcV2CborProtocol::class,
-            $client->getConfig()->protocol
+            $client->getConfig()->getProtocol()
         );
         self::assertSame(
             RpcV2CborProtocol::ID,
-            $client->getConfig()->protocol->getId()
+            $client->getConfig()->getProtocol()->getId()
         );
         self::assertSame(
             'example#Sprockets',
@@ -740,11 +740,11 @@ final class DynamicClientTest extends TestCase
         );
         self::assertInstanceOf(
             RpcV2CborProtocol::class,
-            $client->getConfig()->protocol
+            $client->getConfig()->getProtocol()
         );
         self::assertSame(
             RpcV2CborProtocol::ID,
-            $client->getConfig()->protocol->getId()
+            $client->getConfig()->getProtocol()->getId()
         );
     }
 
@@ -762,7 +762,7 @@ final class DynamicClientTest extends TestCase
             endpoint: 'https://example.com'
         );
 
-        self::assertSame($protocol, $client->getConfig()->protocol);
+        self::assertSame($protocol, $client->getConfig()->getProtocol());
         self::assertSame(
             'example#Sprockets',
             $client->getOperation('Echo')?->getServiceId()
@@ -779,11 +779,11 @@ final class DynamicClientTest extends TestCase
 
         self::assertInstanceOf(
             IdentifiedProtocolFixture::class,
-            $client->getConfig()->protocol
+            $client->getConfig()->getProtocol()
         );
         self::assertSame(
             'example.protocols#custom',
-            $client->getConfig()->protocol->getId()
+            $client->getConfig()->getProtocol()->getId()
         );
     }
 
@@ -826,7 +826,7 @@ final class DynamicClientTest extends TestCase
 
         self::assertInstanceOf(
             IdentifiedProtocolFixture::class,
-            $client->getConfig()->protocol
+            $client->getConfig()->getProtocol()
         );
         self::assertContains(
             'example.auth#custom',

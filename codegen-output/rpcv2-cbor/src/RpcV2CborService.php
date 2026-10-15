@@ -51,7 +51,11 @@ final class RpcV2CborService implements ServiceInterface
     {
         return self::$SCHEMA ??= new Schema(
             id: 'smithy.protocoltests.rpcv2Cbor#RpcV2Protocol',
-            type: ShapeType::Service
+            type: ShapeType::Service,
+            traitsById: [
+                'smithy.api#title' => 'RpcV2 Protocol Service',
+                'smithy.protocols#rpcv2Cbor' => true
+            ]
         );
     }
 

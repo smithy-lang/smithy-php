@@ -91,6 +91,10 @@ final class ServiceGeneratorTest extends TestCase
             'public static function schema(): Schema',
             $file->content
         );
+        $this->assertStringContainsString(
+            "'smithy.protocols#rpcv2Cbor' => true",
+            $file->content
+        );
     }
 
     public function testGeneratesServiceWithNoOperations(): void
@@ -171,6 +175,11 @@ final class ServiceGeneratorTest extends TestCase
         );
         $this->assertTrue(
             $service->getSchema()->getTraitById('vendor.example#marker')
+        );
+        $this->assertTrue(
+            $service->getSchema()->getTraitById(
+                'smithy.protocols#rpcv2Cbor'
+            )
         );
         $this->assertArrayHasKey(32, $service->getSchema()->getTraits());
         $this->assertNull($service->getSchema()->getTraits()[32]);
@@ -332,6 +341,7 @@ final class ServiceGeneratorTest extends TestCase
                         'smithy.api#documentation' =>
                             '<p>Example documentation</p>' . "\n"
                             . 'with     tags.',
+                        'smithy.protocols#rpcv2Cbor' => [],
                         'vendor.example#metadata' => [
                             'enabled' => true
                         ],

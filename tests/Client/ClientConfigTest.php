@@ -18,14 +18,22 @@ use Smithy\Client\Endpoint\{
     StaticEndpointResolver
 };
 use Smithy\Client\Interceptor\IdempotencyTokenInterceptor;
+use Smithy\Client\Protocol\ProtocolResolver;
 use Smithy\Client\Retry\{
     NoRetryStrategy,
     RetryStrategyInterface
 };
+use Smithy\Core\Serde\Schema;
+use Smithy\Core\Shape\{
+    ServiceInterface,
+    ShapeType
+};
 use Smithy\Http\Client\HttpClientTransport;
+use Smithy\Tests\Client\Dynamic\Utils\IdentifiedProtocolFixture;
 use Smithy\Tests\Client\Fake\{
     FakeOperation,
     FakeProtocol,
+    FakeService,
     RecordingInterceptor,
     RegionalClientConfigFixture,
     TestAuthSchemeFixture
@@ -63,9 +71,127 @@ final class ClientConfigTest extends TestCase
         $new = $orig->withProtocol($newProto);
 
         $this->assertNotSame($orig, $new);
-        $this->assertSame($newProto, $new->protocol);
+        $this->assertSame($newProto, $new->getProtocol());
         $this->assertSame($orig->transport, $new->transport);
         $this->assertSame($orig->endpointResolver, $new->endpointResolver);
+    }
+
+    public function testUnresolvedProtocolCannotBeRead(): void
+    {
+        $config = new ClientConfig(
+            transport: new HttpClientTransport(new MockHttpClient()),
+            endpointResolver: new StaticEndpointResolver(
+                new Endpoint('https://a.test')
+            ),
+            protocolResolver: new ProtocolResolver([
+                FakeProtocol::ID => $protocol = new FakeProtocol()
+            ])
+        );
+
+        $this->expectException(\LogicException::class);
+        $config->getProtocol();
+    }
+
+    public function testProtocolResolvesAfterServiceAttachment(): void
+    {
+        $config = new ClientConfig(
+            transport: new HttpClientTransport(new MockHttpClient()),
+            endpointResolver: new StaticEndpointResolver(
+                new Endpoint('https://a.test')
+            ),
+            protocolResolver: new ProtocolResolver([
+                FakeProtocol::ID => $protocol = new FakeProtocol()
+            ])
+        );
+        $resolved = $config
+            ->withService(FakeService::instance())
+            ->resolveProtocol();
+
+        self::assertSame($protocol, $resolved->getProtocol());
+        self::assertNull($resolved->protocolId);
+    }
+
+    public function testReplacingResolverPreservesExplicitProtocol(): void
+    {
+        $protocol = new FakeProtocol();
+        $config = new ClientConfig(
+            transport: new HttpClientTransport(new MockHttpClient()),
+            endpointResolver: new StaticEndpointResolver(
+                new Endpoint('https://a.test')
+            ),
+            protocol: $protocol,
+            service: FakeService::instance()
+        );
+
+        $updated = $config->withProtocolResolver(new ProtocolResolver());
+
+        self::assertSame($protocol, $updated->getProtocol());
+    }
+
+    public function testReplacingResolverInvalidatesResolvedProtocol(): void
+    {
+        $first = new FakeProtocol();
+        $second = new FakeProtocol();
+        $config = new ClientConfig(
+            transport: new HttpClientTransport(new MockHttpClient()),
+            endpointResolver: new StaticEndpointResolver(
+                new Endpoint('https://a.test')
+            ),
+            protocolResolver: new ProtocolResolver([
+                FakeProtocol::ID => $first
+            ]),
+            service: FakeService::instance()
+        );
+        $resolved = $config->resolveProtocol();
+
+        $updated = $resolved->withProtocolResolver(new ProtocolResolver([
+            FakeProtocol::ID => $second
+        ]));
+
+        self::assertSame($second, $updated->getProtocol());
+    }
+
+    public function testChangingServiceInvalidatesResolvedProtocol(): void
+    {
+        $first = new IdentifiedProtocolFixture('example#first');
+        $second = new IdentifiedProtocolFixture('example#second');
+        $config = new ClientConfig(
+            transport: new HttpClientTransport(new MockHttpClient()),
+            endpointResolver: new StaticEndpointResolver(
+                new Endpoint('https://a.test')
+            ),
+            protocolResolver: new ProtocolResolver([
+                $first->getId() => $first,
+                $second->getId() => $second
+            ]),
+            service: $this->serviceWithProtocol($first->getId())
+        );
+        $resolved = $config->resolveProtocol();
+
+        $updated = $resolved
+            ->withService($this->serviceWithProtocol($second->getId()))
+            ->resolveProtocol();
+
+        self::assertSame($second, $updated->getProtocol());
+    }
+
+    public function testListsRegisteredAndApplicableProtocols(): void
+    {
+        $protocol = new FakeProtocol();
+        $config = $this->baseConfig()
+            ->withProtocolResolver(new ProtocolResolver([
+                FakeProtocol::ID => $protocol
+            ]))
+            ->withService(FakeService::instance());
+
+        self::assertSame(
+            [FakeProtocol::ID => $protocol],
+            $config->getRegisteredProtocols()
+        );
+        self::assertSame(
+            [FakeProtocol::ID => $protocol],
+            $config->getApplicableProtocols()
+        );
     }
 
     public function testWithTransportReplacesOnlyTransport(): void
@@ -75,7 +201,7 @@ final class ClientConfigTest extends TestCase
         $new = $orig->withTransport($transport);
 
         $this->assertSame($transport, $new->transport);
-        $this->assertSame($orig->protocol, $new->protocol);
+        $this->assertSame($orig->getProtocol(), $new->getProtocol());
     }
 
     public function testWithEndpointResolverReplacesOnlyEndpointResolver(): void
@@ -339,4 +465,67 @@ final class ClientConfigTest extends TestCase
         $this->assertSame(['sigv4'], $new->authSchemePreference);
         $this->assertSame($transport, $new->transport);
     }
+
+    public function testSubclassFieldsSurviveWithProtocolId(): void
+    {
+        $protocol = new FakeProtocol();
+        $orig = new RegionalClientConfigFixture(
+            protocol: $protocol,
+            transport: new HttpClientTransport(new MockHttpClient()),
+            endpointResolver: new StaticEndpointResolver(
+                new Endpoint('https://a.test')
+            ),
+            protocolResolver: new ProtocolResolver([
+                FakeProtocol::ID => $protocol
+            ]),
+            region: 'test-region'
+        );
+
+        $new = $orig
+            ->withProtocolId(FakeProtocol::ID)
+            ->withService(FakeService::instance())
+            ->resolveProtocol();
+
+        self::assertInstanceOf(RegionalClientConfigFixture::class, $new);
+        self::assertSame('test-region', $new->region);
+        self::assertSame($protocol, $new->getProtocol());
+    }
+
+    public function testSubclassFieldsSurviveWithProtocolResolver(): void
+    {
+        $protocol = new FakeProtocol();
+        $orig = new RegionalClientConfigFixture(
+            protocol: null,
+            transport: new HttpClientTransport(new MockHttpClient()),
+            endpointResolver: new StaticEndpointResolver(
+                new Endpoint('https://a.test')
+            ),
+            region: 'test-region'
+        );
+
+        $new = $orig
+            ->withProtocolResolver(new ProtocolResolver([
+                FakeProtocol::ID => $protocol
+            ]))
+            ->withService(FakeService::instance())
+            ->resolveProtocol();
+
+        self::assertInstanceOf(RegionalClientConfigFixture::class, $new);
+        self::assertSame('test-region', $new->region);
+        self::assertSame($protocol, $new->getProtocol());
+    }
+
+    private function serviceWithProtocol(string $protocolId): ServiceInterface
+    {
+        $service = $this->createStub(ServiceInterface::class);
+        $service->method('getId')->willReturn('example#Service');
+        $service->method('getSchema')->willReturn(new Schema(
+            id: 'example#Service',
+            type: ShapeType::Service,
+            traitsById: [$protocolId => true]
+        ));
+
+        return $service;
+    }
+
 }
