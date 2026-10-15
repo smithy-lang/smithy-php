@@ -446,8 +446,28 @@ deduplicated and sorted before rendering. Generators sort public surfaces where
 order is not modeled, such as generated client methods, while preserving Smithy
 declaration order for metadata where order is meaningful.
 
-`GeneratedFile` contains a target path and complete source string. It creates
-missing directories and writes the file when requested.
+`GeneratedFile` contains a target path and complete source string. Individual
+files retain containment checks for callers that write them directly.
+
+`CodeGenerator::generateAndWrite()` treats `outputDir` as a managed,
+generated-only directory. Generation first completes in memory, then
+`GeneratedOutputPublisher` writes every file to a unique sibling staging
+directory. Publication moves the prior output to a backup, moves the staged
+tree into place, and removes the backup. If publication fails, the prior tree
+is restored. Replacing the complete tree removes stale artifacts without a
+persistent generated-file manifest. To avoid adopting an arbitrary directory,
+a nonempty existing output must contain a `Schemas.php` with the generated
+registry signature. Symlink roots and roots containing the current working
+directory are rejected before staging.
+Staging begins with owner-only access, then receives the existing output
+directory's permissions immediately before publication. If backup cleanup
+fails after publication commits, the new output remains installed and the
+error identifies the remaining backup.
+
+Prior member ordering is inspected from the current `Schemas.php` when
+`CodeGenerator` is constructed, before staging or publication can modify the
+output directory. As with direct generated-file writes, callers must prevent
+concurrent mutation of the configured output tree.
 
 The writer intentionally emits plain source rather than a round-trippable PHP
 AST. Generated diffs therefore remain close to the generator decisions that
