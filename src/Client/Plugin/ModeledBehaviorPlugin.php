@@ -4,10 +4,8 @@ declare(strict_types=1);
 
 namespace Smithy\Client\Plugin;
 
-use Smithy\Client\ClientConfig;
-
 /**
- * Register runtime behavior selected by operation schema traits.
+ * Contribute runtime plugins whose behavior is selected by operation traits.
  */
 final class ModeledBehaviorPlugin extends AbstractPlugin
 {
@@ -21,12 +19,6 @@ final class ModeledBehaviorPlugin extends AbstractPlugin
     public static function instance(): self
     {
         return self::$instance ??= new self();
-    }
-
-    /** @inheritDoc */
-    public function configure(ClientConfig $config): ClientConfig
-    {
-        return $config;
     }
 
     /** @inheritDoc */
