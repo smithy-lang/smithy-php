@@ -42,13 +42,41 @@ final class PhpSymbolProviderTest extends TestCase
         );
     }
 
-    public function testAllHardReservedNamesAreRewritten(): void
+    public function testAllReservedClassNamesAreRewritten(): void
     {
         $names = [
-            'Object', 'Resource', 'Mixed', 'Iterable', 'Null',
-            'True', 'False', 'Numeric', 'Void', 'Never',
-            'Self', 'Parent', 'Static', 'Int', 'Float', 'Bool',
-            'String', 'Enum', 'Readonly', 'List', 'Match'
+            '__halt_compiler',
+            'abstract', 'and', 'array', 'as',
+            'break',
+            'callable', 'case', 'catch', 'class', 'clone', 'const',
+            'continue',
+            'declare', 'default', 'die', 'do',
+            'echo', 'else', 'elseif', 'empty',
+            'enddeclare', 'endfor', 'endforeach', 'endif',
+            'endswitch', 'endwhile', 'eval', 'exit', 'extends',
+            'final', 'finally', 'fn', 'for', 'foreach', 'function',
+            'global', 'goto',
+            'if', 'implements', 'include', 'include_once',
+            'instanceof', 'insteadof', 'interface', 'isset',
+            'list',
+            'match',
+            'namespace', 'new',
+            'or',
+            'print', 'private', 'protected', 'public',
+            'readonly', 'require', 'require_once', 'return',
+            'static', 'switch',
+            'throw', 'trait', 'try',
+            'unset', 'use',
+            'var',
+            'while',
+            'xor',
+            'yield',
+            '__class__', '__dir__', '__file__', '__function__', '__line__',
+            '__method__', '__namespace__', '__property__', '__trait__',
+            'parent', 'self',
+            'int', 'float', 'bool', 'string', 'true', 'false', 'null',
+            'void', 'iterable', 'object', 'mixed', 'never',
+            'enum', 'resource', 'numeric'
         ];
         $provider = $this->buildProvider($names);
         foreach ($names as $name) {
@@ -58,6 +86,16 @@ final class PhpSymbolProviderTest extends TestCase
                 "Reserved name '{$name}' should be prefixed"
             );
         }
+    }
+
+    public function testReservedNameMatchingIsCaseInsensitive(): void
+    {
+        $provider = $this->buildProvider(['cLaSs']);
+
+        self::assertSame(
+            'S3cLaSs',
+            $provider->toShortClassName('com.amazonaws.s3#cLaSs')
+        );
     }
 
     public function testErrorShapeGetsExceptionSuffix(): void
@@ -168,6 +206,20 @@ final class PhpSymbolProviderTest extends TestCase
         self::assertSame(
             'SubS3Object',
             $provider->toShortClassName('com.amazonaws.s3.sub#Object')
+        );
+    }
+
+    public function testReservedRewriteParticipatesInCollisionResolution(): void
+    {
+        $provider = $this->buildProvider(['Class', 'S3Class']);
+
+        self::assertSame(
+            'S3Class',
+            $provider->toShortClassName('com.amazonaws.s3#Class')
+        );
+        self::assertSame(
+            'S3S3Class',
+            $provider->toShortClassName('com.amazonaws.s3#S3Class')
         );
     }
 
