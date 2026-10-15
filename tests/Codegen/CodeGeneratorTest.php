@@ -53,6 +53,44 @@ final class CodeGeneratorTest extends TestCase
         $this->assertNotContains('Event.php', $fileNames);
     }
 
+    public function testGeneratesValidPhpForReservedShapeNames(): void
+    {
+        $model = SmithyModel::fromJson(\json_encode([
+            'smithy' => '2.0',
+            'shapes' => [
+                'smithy.example#Class' => ['type' => 'structure'],
+                'smithy.example#Function' => ['type' => 'structure'],
+                'smithy.example#Array' => ['type' => 'structure'],
+                'smithy.example#Default' => ['type' => 'structure'],
+                'smithy.example#Namespace' => ['type' => 'structure']
+            ]
+        ], JSON_THROW_ON_ERROR));
+        $settings = new CodegenSettings(
+            namespace: 'Smithy\\Example',
+            outputDir: '/tmp/out',
+            organization: 'flat'
+        );
+
+        $files = (new CodeGenerator($settings, $model))->generate();
+        $fileNames = \array_map(
+            static fn(GeneratedFile $file): string => \basename($file->path),
+            $files
+        );
+
+        foreach ([
+            'ExampleClass.php',
+            'ExampleFunction.php',
+            'ExampleArray.php',
+            'ExampleDefault.php',
+            'ExampleNamespace.php'
+        ] as $fileName) {
+            $this->assertContains($fileName, $fileNames);
+            $file = $this->findFile($files, $fileName);
+            $this->assertNotNull($file);
+            $this->assertValidPhp($file->content);
+        }
+    }
+
     public function testStructureHasCorrectContent(): void
     {
         $generator = new CodeGenerator($this->settings, $this->model);
@@ -619,6 +657,33 @@ final class CodeGeneratorTest extends TestCase
             }
         }
         return null;
+    }
+
+    private function assertValidPhp(string $source): void
+    {
+        $process = \proc_open(
+            [PHP_BINARY, '-l'],
+            [
+                0 => ['pipe', 'r'],
+                1 => ['pipe', 'w'],
+                2 => ['pipe', 'w']
+            ],
+            $pipes
+        );
+        $this->assertIsResource($process);
+
+        \fwrite($pipes[0], $source);
+        \fclose($pipes[0]);
+        $stdout = \stream_get_contents($pipes[1]);
+        $stderr = \stream_get_contents($pipes[2]);
+        \fclose($pipes[1]);
+        \fclose($pipes[2]);
+
+        $this->assertSame(
+            0,
+            \proc_close($process),
+            $stdout . $stderr
+        );
     }
 
     private function removeDir(string $dir): void
