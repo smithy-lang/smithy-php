@@ -12,8 +12,7 @@ use Smithy\Core\Serde\ShapeSerializerInterface;
 use Smithy\Core\Shape\FromMembersTrait;
 use Smithy\Core\Shape\ShapeType;
 
-final class CommonErrorException extends \Smithy\CodegenOutput\TrimmedPetStore\Exception\TrimmedPetStoreException implements
-    SerializableStructInterface
+final class CommonErrorException extends TrimmedPetStoreException implements SerializableStructInterface
 {
     use FromMembersTrait;
 

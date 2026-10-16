@@ -11,6 +11,23 @@ use Smithy\Codegen\ShapeCategory;
 
 final class SmithyModelTest extends TestCase
 {
+    public function testRoundTripsDecodedModel(): void
+    {
+        $data = [
+            'smithy' => '2.0',
+            'metadata' => ['example' => true],
+            'shapes' => [
+                'smithy.example#Value' => [
+                    'type' => 'string'
+                ]
+            ]
+        ];
+
+        $this->assertSame(
+            $data,
+            SmithyModel::fromArray($data)->toArray()
+        );
+    }
 
     public function testFromFileLoadsExistingFixture(): void
     {

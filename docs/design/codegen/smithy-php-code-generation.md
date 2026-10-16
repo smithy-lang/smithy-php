@@ -64,18 +64,19 @@ the generated value, constructor, and forward-compatibility contracts.
 
 ## Architecture
 
-The implementation is divided into five cooperating areas:
+The implementation is divided into six cooperating areas:
 
 | Area | Primary types | Responsibility |
 |---|---|---|
 | Driver | `CodeGenerator`, `CodegenSettings` | Validate configuration, assemble generators, order artifacts, and write files |
 | Model | `SmithyModel`, `WaiterTraitNormalizer` | Query the JSON AST, resolve mixin members and service closures, and normalize codegen-specific metadata |
-| Symbols | `PhpSymbolProvider`, `PhpType`, `ShapeCategory` | Map Smithy IDs and members to PHP classes, properties, namespaces, and type hints |
+| Symbols | `PhpSymbolProviderInterface`, `PhpSymbolProvider`, `PhpType`, `ShapeCategory` | Map Smithy IDs and members to PHP classes, properties, namespaces, and type hints |
 | Generators | `StructureGenerator`, `EnumGenerator`, `UnionGenerator`, `OperationGenerator`, `ServiceGenerator`, `ClientGenerator`, and related generators | Emit one artifact family from model and settings |
+| Integrations | `CodegenIntegrationInterface`, `CodegenContext` | Preprocess models, customize settings and symbols, and contribute SDK-specific artifacts |
 | Output | `PhpCodeWriter`, `GeneratedFile` | Render PHP source, normalize imports, and write target files |
 
 Generators do not consume each other's generated source. Shared decisions flow
-through `SmithyModel`, `PhpSymbolProvider`, `CodegenSettings`, and, for
+through `SmithyModel`, `PhpSymbolProviderInterface`, `CodegenSettings`, and, for
 regeneration, `PriorCodegenEvaluator`.
 
 ### Generation flow
@@ -83,17 +84,21 @@ regeneration, `PriorCodegenEvaluator`.
 `CodeGenerator::generate()` performs the following work:
 
 1. `CodegenSettings` validates configuration when it is constructed.
-2. `CodeGenerator` inspects a prior `Schemas.php`, when member-order
+2. Integrations are ordered, preprocess the model, customize settings, and
+   decorate the shared symbol provider.
+3. `CodeGenerator` inspects a prior `Schemas.php`, when member-order
    preservation is enabled, and constructs the shared generators.
-3. `generate()` validates that the model contains at most one non-prelude
+4. `generate()` validates that the model contains at most one non-prelude
    service and builds the service closure.
-4. Emit reachable structures, enums, and union hierarchies.
-5. Emit service metadata, the type registry, endpoint artifacts, the typed
+5. Emit reachable structures, enums, and union hierarchies.
+6. Emit service metadata, the type registry, endpoint artifacts, the typed
    client, and client configuration.
-6. Emit reachable operation metadata classes.
-7. Emit `Unit` when an operation omits input/output or references
+7. Emit reachable operation metadata classes.
+8. Emit `Unit` when an operation omits input/output or references
    `smithy.api#Unit`.
-8. Emit the centralized `Schemas` registry.
+9. Emit the centralized `Schemas` registry.
+10. Integrations contribute additional files, then all target paths are
+    checked for collisions.
 
 Models without a service are supported for standalone-shape generation and
 tests. In that case every declared non-prelude shape seeds the closure.
@@ -101,10 +106,37 @@ tests. In that case every declared non-prelude shape seeds the closure.
 `generateAndWrite()` writes each `GeneratedFile` after generation succeeds and
 returns the number of files written.
 
+### Integration extension points
+
+`CodegenIntegrationInterface` provides ordered build-time extension phases:
+
+- `preprocessModel()` returns the model consumed by later integrations and
+  built-in generators
+- `customizeSettings()` returns validated generator settings
+- `decorateSymbolProvider()` wraps type, class-name, and property-name
+  resolution used by every symbol-aware generator. Generated classes remain
+  in the namespaces selected by codegen settings so their output paths retain
+  a deterministic mapping.
+- `generateAdditionalFiles()` receives the final model, settings, symbol
+  provider, and built-in files through `CodegenContext`
+
+Integrations declare a unique name, priority, and optional `runBefore()` or
+`runAfter()` dependencies. Dependency edges take precedence over priority.
+Duplicate names, dependency cycles, invalid generated values, and file-path
+collisions fail generation.
+
+Programmatic callers pass integration instances to `CodeGenerator`. The CLI
+loads only integration classes explicitly named in trusted JSON configuration;
+it does not scan Composer packages or execute automatically discovered plugins.
+Configured classes must be Composer-autoloadable and have a public
+zero-argument constructor.
+
 ## Model layer
 
-`SmithyModel::fromFile()` and `SmithyModel::fromJson()` load the JSON AST. The
-model retains the original shape maps and provides codegen-oriented queries.
+`SmithyModel::fromFile()`, `SmithyModel::fromJson()`, and
+`SmithyModel::fromArray()` load the JSON AST. `toArray()` gives integrations a
+validated round-trip path for model preprocessing. The model retains the
+original shape maps and provides codegen-oriented queries.
 
 Important model responsibilities include:
 
@@ -143,7 +175,9 @@ in generated structures and unions.
 
 ## Symbols and file organization
 
-`PhpSymbolProvider` is the single source of truth for generated PHP names.
+`PhpSymbolProviderInterface` is the single source of truth for generated PHP
+names. `PhpSymbolProvider` provides the default implementation, and
+integrations can decorate it before generators are constructed.
 
 - The local part of a shape ID is the initial class name.
 - Error structures receive the `Exception` suffix.
@@ -509,10 +543,6 @@ design invariants.
 
 - **Generated-source diagnostics.** Mapping generated PHP lines back to Smithy
   source locations would make generator and model failures easier to diagnose.
-
-- **Trait registration.** Settings support explicit custom trait indexes and
-  operation traits, but there is no discovery mechanism for independently
-  distributed integrations.
 
 - **Generated registry extension.** Generated type registries are immutable
   codegen-time maps. Supporting externally registered generated classes would
