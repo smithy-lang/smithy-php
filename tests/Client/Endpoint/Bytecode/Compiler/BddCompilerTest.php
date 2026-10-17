@@ -15,7 +15,10 @@ use Smithy\Client\Endpoint\Bytecode\{
     RulesEvaluationException,
     StdFunctions
 };
-use Smithy\Tests\Client\Endpoint\Bytecode\Fixture\VariadicFunctionFixture;
+use Smithy\Tests\Client\Endpoint\Bytecode\Fixture\{
+    EndpointResolutionTraceFixture,
+    VariadicFunctionFixture
+};
 
 #[CoversClass(BddCompiler::class)]
 final class BddCompilerTest extends TestCase
@@ -264,6 +267,26 @@ final class BddCompilerTest extends TestCase
         );
 
         (new Evaluator($bytecode))->evaluate([]);
+    }
+
+    public function testTracesImplicitNoMatchResultInSlotZero(): void
+    {
+        $bytecode = (new BddCompiler(StdFunctions::all()))->compile(
+            $this->trait(root: Bytecode::RESULT_OFFSET)
+        );
+        $trace = new EndpointResolutionTraceFixture();
+
+        try {
+            (new Evaluator($bytecode))->evaluateTraced([], $trace);
+            self::fail('Expected endpoint evaluation to fail.');
+        } catch (RulesEvaluationException $exception) {
+            self::assertSame(
+                'No endpoint matched the supplied parameters',
+                $exception->getMessage()
+            );
+        }
+
+        self::assertSame([[-1, null]], $trace->results);
     }
 
     public function testCompilesParametersAndFastConditions(): void

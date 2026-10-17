@@ -17,7 +17,10 @@ use Smithy\Client\Endpoint\Bytecode\{
     StdFunctions
 };
 use Smithy\Client\Endpoint\Endpoint;
-use Smithy\Tests\Client\Endpoint\Bytecode\Fixture\OpcodeHandlerFixture;
+use Smithy\Tests\Client\Endpoint\Bytecode\Fixture\{
+    EndpointResolutionTraceFixture,
+    OpcodeHandlerFixture
+};
 
 #[CoversClass(Evaluator::class)]
 final class EvaluatorTest extends TestCase
@@ -794,6 +797,14 @@ final class EvaluatorTest extends TestCase
             ],
             $endpoint->authSchemes[0]->properties
         );
+        self::assertSame($properties, $endpoint->properties);
+        self::assertTrue($endpoint->hasProperty('authSchemes'));
+        self::assertSame(
+            $properties['authSchemes'],
+            $endpoint->getProperty('authSchemes')
+        );
+        self::assertFalse($endpoint->hasProperty('missing'));
+        self::assertNull($endpoint->getProperty('missing'));
     }
 
     #[DataProvider('conditionProvider')]
@@ -860,6 +871,93 @@ final class EvaluatorTest extends TestCase
         $endpoint = (new Evaluator($bytecode))->evaluate([]);
 
         self::assertSame('https://low', $endpoint->url);
+    }
+
+    public function testTracesBddDecisionPathAndEffectiveParameters(): void
+    {
+        $bytecode = $this->conditionalBytecode(
+            Opcodes::COND_STRING_EQ_REG_CONST,
+            0,
+            ['default']
+        );
+        $trace = new EndpointResolutionTraceFixture();
+
+        $endpoint = (new Evaluator($bytecode))->evaluateTraced(
+            ['Value' => null],
+            $trace
+        );
+
+        self::assertSame(['Value' => 'default'], $trace->parameters);
+        self::assertSame([[2, 0, true, true]], $trace->nodes);
+        self::assertSame([[1, $endpoint]], $trace->results);
+        self::assertSame('https://high', $endpoint->url);
+    }
+
+    public function testTracesComplementedBddBranch(): void
+    {
+        $bytecode = $this->conditionalBytecode(
+            Opcodes::COND_FULL,
+            0,
+            [true, 'https://high', 'https://low'],
+            [
+                Opcodes::LOAD_CONST,
+                0,
+                Opcodes::RETURN_VALUE
+            ],
+            -2
+        );
+        $trace = new EndpointResolutionTraceFixture();
+
+        $endpoint = (new Evaluator($bytecode))->evaluateTraced([], $trace);
+
+        self::assertSame([[-2, 0, true, false]], $trace->nodes);
+        self::assertSame([[2, $endpoint]], $trace->results);
+        self::assertSame('https://low', $endpoint->url);
+    }
+
+    public function testTracesNoMatchResult(): void
+    {
+        $trace = new EndpointResolutionTraceFixture();
+
+        try {
+            (new Evaluator($this->bytecode([], bddRoot: 1)))
+                ->evaluateTraced([], $trace);
+            self::fail('Expected endpoint evaluation to fail.');
+        } catch (RulesEvaluationException $exception) {
+            self::assertSame(
+                'No endpoint matched the supplied parameters',
+                $exception->getMessage()
+            );
+        }
+
+        self::assertSame([[-1, null]], $trace->results);
+    }
+
+    public function testTracesMatchedRulesError(): void
+    {
+        $bytecode = $this->bytecode(
+            [
+                Opcodes::LOAD_CONST,
+                0,
+                Opcodes::RETURN_VALUE,
+                Opcodes::LOAD_CONST,
+                1,
+                Opcodes::RETURN_ERROR
+            ],
+            constants: [null, 'rules failed'],
+            bddRoot: Bytecode::RESULT_OFFSET + 1,
+            resultOffsets: [0, 3]
+        );
+        $trace = new EndpointResolutionTraceFixture();
+
+        try {
+            (new Evaluator($bytecode))->evaluateTraced([], $trace);
+            self::fail('Expected endpoint evaluation to fail.');
+        } catch (RulesEvaluationException $exception) {
+            self::assertSame('rules failed', $exception->getMessage());
+        }
+
+        self::assertSame([[1, null]], $trace->results);
     }
 
     public function testUsesDefaultsAndIgnoresUnknownParameters(): void
