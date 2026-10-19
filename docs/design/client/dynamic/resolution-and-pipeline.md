@@ -201,11 +201,12 @@ Operation lookup retries the name with an uppercase first character. This
 supports PHP method calls such as `$client->getItem()` for modeled
 `GetItem`.
 
-`__call()` accepts zero or one argument. The argument can be positional or
-named `input` or `args`. PHP does not invoke `__call()` when an operation name
-matches an existing public client method, case-insensitively. The explicit
-`call('OperationName', ...)` form is therefore the canonical invocation API
-and remains available for every modeled operation.
+For modeled operation methods, `__call()` accepts the same positional or named
+`input` and `overrides` arguments as `call()`. PHP does not invoke `__call()`
+when an operation name matches an existing public client method,
+case-insensitively. The explicit `call('OperationName', ...)` form is therefore
+the canonical invocation API and remains available for every modeled
+operation.
 
 ## Pipeline Reuse
 

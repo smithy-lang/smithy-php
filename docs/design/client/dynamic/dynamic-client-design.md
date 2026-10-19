@@ -187,6 +187,15 @@ foreach ($pages as $page) {
 }
 ```
 
+Dynamic clients also recognize the generated-client method convention:
+
+```php
+$pages = $client->listForecastsPaginated([
+    'city' => 'Raleigh',
+    'pageSize' => 25,
+]);
+```
+
 Paginator construction validates the modeled token, page-size, and item
 paths but sends no request. Iteration lazily sends each page through the
 shared client pipeline, updates the schema-backed input with the continuation
@@ -211,6 +220,15 @@ $result = $client->waitUntil(
 $forecast = $result->output;
 ```
 
+The equivalent generated-client method convention is also available:
+
+```php
+$result = $client->waitUntilForecastReady(
+    ['city' => 'Raleigh'],
+    60.0,
+);
+```
+
 The client validates and coerces waiter input through the same
 `DocumentFactory` used by `call()`. It then polls the waiter's operation
 through the shared client pipeline and evaluates the modeled acceptors with
@@ -221,6 +239,12 @@ acceptor.
 
 Waiter names are resolved case-insensitively across the service. Unknown
 names and duplicate modeled names fail before polling begins.
+
+`DynamicClient::__call()` recognizes `<operation>Paginated()` and
+`waitUntil<Waiter>()` only when the complete method name is not itself a
+modeled operation. This preserves access to operations whose modeled names
+happen to use either convention. Names matching both convenience conventions
+are ambiguous and require the explicit `paginate()` or `waitUntil()` API.
 
 ## Shared Pipeline
 
@@ -302,10 +326,10 @@ a caller-supplied resolver.
 
 SigV4a and adaptive AWS retry mode remain outside the preview.
 
-Modeled pagination is available through `DynamicClient::paginate()`.
-Modeled waiters are available through `DynamicClient::waitUntil()`.
-Generated paginator and waiter convenience methods remain absent from the
-dynamic surface.
+Modeled pagination and waiters are available through the explicit
+`DynamicClient::paginate()` and `DynamicClient::waitUntil()` APIs, as well as
+the generated-client-style `<operation>Paginated()` and
+`waitUntil<Waiter>()` convenience methods.
 
 Provider synchronization and other remaining preview-release checks are
 listed in [Testing and Validation](testing-and-validation.md).
