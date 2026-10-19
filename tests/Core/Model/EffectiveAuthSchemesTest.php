@@ -9,6 +9,25 @@ use Smithy\Core\Model\EffectiveAuthSchemes;
 
 final class EffectiveAuthSchemesTest extends TestCase
 {
+    public function testFindsPreludeAuthSchemesWithoutPreludeShapes(): void
+    {
+        foreach ([
+            'smithy.api#httpApiKeyAuth',
+            'smithy.api#httpBasicAuth',
+            'smithy.api#httpBearerAuth',
+            'smithy.api#httpDigestAuth'
+        ] as $schemeId) {
+            $this->assertSame(
+                [$schemeId],
+                EffectiveAuthSchemes::resolve(
+                    [],
+                    [$schemeId => []],
+                    []
+                )
+            );
+        }
+    }
+
     public function testTreatsNullMetadataAsAbsent(): void
     {
         $this->assertSame(
