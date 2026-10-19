@@ -9,6 +9,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Smithy\Codec\Json\JsonCodec;
 use Smithy\Client\Endpoint\Endpoint;
+use Smithy\Http\Message\HttpTransportRequest;
 use Smithy\Protocol\AbstractHttpBindingProtocol;
 use Smithy\Protocol\HttpErrorDeserializer;
 use Smithy\Protocol\HttpOperationBindingExtension;
@@ -108,9 +109,9 @@ final class HttpOperationBindingExtensionProviderTest extends TestCase
 
         $request = $protocol->serializeRequest(
             HttpBindingOperationFixture::instance(),
-            $input,
-            'https://example.com'
+            $input
         );
+        $request = HttpTransportRequest::expect($request)->request;
 
         self::assertSame(
             'mode=true&fixed=true',
@@ -142,11 +143,11 @@ final class HttpOperationBindingExtensionProviderTest extends TestCase
             mode: true,
             id: 'thing'
         );
-        $request = $protocol->serializeRequest(
+        $transportRequest = $protocol->serializeRequest(
             HttpBindingOperationFixture::instance(),
-            $input,
-            '/'
+            $input
         );
+        $request = HttpTransportRequest::expect($transportRequest)->request;
 
         self::assertSame(
             '/things/thing?mode=true&fixed=true',
@@ -154,10 +155,11 @@ final class HttpOperationBindingExtensionProviderTest extends TestCase
         );
         self::assertSame('', $request->getHeaderLine('Host'));
 
-        $request = $protocol->setServiceEndpoint(
-            $request,
+        $transportRequest = $protocol->setServiceEndpoint(
+            $transportRequest,
             new Endpoint('https://example.com/base')
         );
+        $request = HttpTransportRequest::expect($transportRequest)->request;
 
         self::assertSame(
             'https://example.com/base/things/thing?mode=true&fixed=true',

@@ -12,6 +12,7 @@ use Smithy\Client\Auth\{
     HttpBearerAuthSigner
 };
 use Smithy\Http\Message\{
+    HttpTransportRequest,
     Request,
     Uri
 };
@@ -24,10 +25,12 @@ final class HttpBearerAuthSignerTest extends TestCase
         $request = new Request('GET', new Uri('https://example.test'));
 
         $result = HttpBearerAuthSigner::instance()->sign(
-            $request,
+            new HttpTransportRequest($request),
             new BearerToken('mF_9.B5f-4.1JqM')
         );
-        $signed = $result->signedRequest;
+        $signed = HttpTransportRequest::expect(
+            $result->signedRequest
+        )->request;
 
         self::assertSame(
             'Bearer mF_9.B5f-4.1JqM',
@@ -45,8 +48,12 @@ final class HttpBearerAuthSignerTest extends TestCase
         );
 
         $signed = HttpBearerAuthSigner::instance()
-            ->sign($request, new BearerToken('new'))
+            ->sign(
+                new HttpTransportRequest($request),
+                new BearerToken('new')
+            )
             ->signedRequest;
+        $signed = HttpTransportRequest::expect($signed)->request;
 
         self::assertSame(
             'Bearer new',
@@ -60,7 +67,9 @@ final class HttpBearerAuthSignerTest extends TestCase
         $this->expectExceptionMessage('HTTPS');
 
         HttpBearerAuthSigner::instance()->sign(
-            new Request('GET', new Uri('http://example.test')),
+            new HttpTransportRequest(
+                new Request('GET', new Uri('http://example.test'))
+            ),
             new BearerToken('token')
         );
     }
@@ -71,7 +80,9 @@ final class HttpBearerAuthSignerTest extends TestCase
         $this->expectExceptionMessage(BearerToken::class);
 
         HttpBearerAuthSigner::instance()->sign(
-            new Request('GET', new Uri('https://example.test')),
+            new HttpTransportRequest(
+                new Request('GET', new Uri('https://example.test'))
+            ),
             AnonymousIdentity::instance()
         );
     }

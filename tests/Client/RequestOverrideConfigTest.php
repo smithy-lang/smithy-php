@@ -12,6 +12,7 @@ use Smithy\Client\Plugin\{
     PluginInterface
 };
 use Smithy\Http\Client\{
+    HttpRequestOverride,
     HttpRequestOptions,
     RequestTrailers
 };
@@ -19,20 +20,17 @@ use Smithy\Http\Client\Cancellation\Cancellation;
 use Smithy\Tests\Client\Plugin\Utils\RecordingPluginFixture;
 
 #[CoversClass(RequestOverrideConfig::class)]
+#[CoversClass(HttpRequestOverride::class)]
 final class RequestOverrideConfigTest extends TestCase
 {
     public function testCreatesEmptyOverrides(): void
     {
         $overrides = RequestOverrideConfig::fromArray([]);
 
-        self::assertSame([], $overrides->headers);
-        self::assertNull($overrides->httpOptions);
+        self::assertNull($overrides->transportOverrides);
         self::assertNull($overrides->maxAttempts);
         self::assertNull($overrides->authSchemePreference);
         self::assertTrue($overrides->plugins->isEmpty());
-        self::assertNull(
-            $overrides->resolveHttpOptions(new HttpRequestOptions())
-        );
     }
 
     public function testAcceptsCallScopedPlugins(): void
@@ -78,11 +76,12 @@ final class RequestOverrideConfigTest extends TestCase
         $overrides = RequestOverrideConfig::fromArray([
             RequestOverrideConfig::HTTP => $options
         ]);
+        $httpOverrides = $this->httpOverrides($overrides);
 
-        self::assertSame($options, $overrides->httpOptions);
+        self::assertSame($options, $httpOverrides->options);
         self::assertSame(
             $options,
-            $overrides->resolveHttpOptions(new HttpRequestOptions())
+            $httpOverrides->resolveHttpOptions(new HttpRequestOptions())
         );
     }
 
@@ -113,7 +112,8 @@ final class RequestOverrideConfigTest extends TestCase
             ]
         ]);
 
-        $resolved = $overrides->resolveHttpOptions($defaults);
+        $resolved = $this->httpOverrides($overrides)
+            ->resolveHttpOptions($defaults);
 
         self::assertNotNull($resolved);
         self::assertSame(2.0, $resolved->timeout);
@@ -157,7 +157,8 @@ final class RequestOverrideConfigTest extends TestCase
             RequestOverrideConfig::AUTH => null
         ]);
 
-        $resolved = $overrides->resolveHttpOptions($defaults);
+        $resolved = $this->httpOverrides($overrides)
+            ->resolveHttpOptions($defaults);
 
         self::assertNotNull($resolved);
         self::assertSame(9.0, $resolved->timeout);
@@ -192,7 +193,7 @@ final class RequestOverrideConfigTest extends TestCase
                 'x-one' => 'one',
                 'x-many' => ['two', 'three']
             ],
-            $overrides->headers
+            $this->httpOverrides($overrides)->headers
         );
         self::assertSame(3, $overrides->maxAttempts);
         self::assertSame(
@@ -209,6 +210,42 @@ final class RequestOverrideConfigTest extends TestCase
         );
 
         RequestOverrideConfig::fromArray(['@unknown' => true]);
+    }
+
+    public function testRejectsHttpAndTransportOverridesTogether(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage(
+            '@http and @transport cannot both be provided.'
+        );
+
+        RequestOverrideConfig::fromArray([
+            RequestOverrideConfig::HTTP => [],
+            RequestOverrideConfig::TRANSPORT =>
+                HttpRequestOverride::fromValue([])
+        ]);
+    }
+
+    public function testIgnoresNullTransportOverrides(): void
+    {
+        $overrides = RequestOverrideConfig::fromArray([
+            RequestOverrideConfig::HTTP => null,
+            RequestOverrideConfig::TRANSPORT => null
+        ]);
+
+        self::assertNull($overrides->transportOverrides);
+    }
+
+    public function testRejectsInvalidTransportOverride(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage(
+            '@transport must implement '
+        );
+
+        RequestOverrideConfig::fromArray([
+            RequestOverrideConfig::TRANSPORT => new \stdClass()
+        ]);
     }
 
     public function testRejectsAllowRedirectsOverride(): void
@@ -247,7 +284,8 @@ final class RequestOverrideConfigTest extends TestCase
         $overrides = RequestOverrideConfig::fromArray([
             RequestOverrideConfig::HTTP => ['timeout' => '2']
         ]);
-        $overrides->resolveHttpOptions(new HttpRequestOptions());
+        $this->httpOverrides($overrides)
+            ->resolveHttpOptions(new HttpRequestOptions());
     }
 
     public function testRejectsInvalidHeaders(): void
@@ -312,5 +350,17 @@ final class RequestOverrideConfigTest extends TestCase
         RequestOverrideConfig::fromArray([
             RequestOverrideConfig::AUTH => ['preferred' => 'sigv4']
         ]);
+    }
+
+    private function httpOverrides(
+        RequestOverrideConfig $overrides
+    ): HttpRequestOverride
+    {
+        self::assertInstanceOf(
+            HttpRequestOverride::class,
+            $overrides->transportOverrides
+        );
+
+        return $overrides->transportOverrides;
     }
 }

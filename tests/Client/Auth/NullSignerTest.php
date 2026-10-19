@@ -10,7 +10,10 @@ use Smithy\Client\Auth\{
     AnonymousIdentity,
     NullSigner
 };
-use Smithy\Http\Message\Request;
+use Smithy\Http\Message\{
+    HttpTransportRequest,
+    Request
+};
 
 #[CoversClass(NullSigner::class)]
 final class NullSignerTest extends TestCase
@@ -20,12 +23,15 @@ final class NullSignerTest extends TestCase
         $request = new Request('GET', 'https://example.test');
         $signer = NullSigner::instance();
         $result = $signer->sign(
-            $request,
+            new HttpTransportRequest($request),
             AnonymousIdentity::instance()
         );
 
         self::assertSame($signer, NullSigner::instance());
-        self::assertSame($request, $result->signedRequest);
+        self::assertSame(
+            $request,
+            HttpTransportRequest::expect($result->signedRequest)->request
+        );
         self::assertSame('', $result->signature);
 
         $signer->close();

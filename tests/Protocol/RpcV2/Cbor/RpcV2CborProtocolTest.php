@@ -14,9 +14,13 @@ use Smithy\Core\Serde\Schema;
 use Smithy\Core\Shape\Document\StructDocument;
 use Smithy\Core\Shape\Exception\DocumentException;
 use Smithy\Core\Shape\ShapeType;
-use Smithy\Http\Message\RequestStreamInterface;
-use Smithy\Http\Message\Request;
-use Smithy\Http\Message\Response;
+use Smithy\Http\Message\{
+    HttpTransportRequest,
+    HttpTransportResponse,
+    Request,
+    RequestStreamInterface,
+    Response
+};
 use Smithy\Protocol\Exception\ProtocolException;
 use Smithy\Protocol\HttpErrorDeserializer;
 use Smithy\Protocol\RpcV2\AbstractRpcV2Protocol;
@@ -39,11 +43,16 @@ final class RpcV2CborProtocolTest extends TestCase
             outputSchema: $schema
         );
 
-        $request = (new RpcV2CborProtocol())->serializeRequest(
+        $protocol = new RpcV2CborProtocol();
+        $request = $protocol->serializeRequest(
             $operation,
-            StructDocument::fromMembers($schema, []),
-            'https://example.amazonaws.com:8443/base'
+            StructDocument::fromMembers($schema, [])
         );
+        $request = $protocol->setServiceEndpoint(
+            $request,
+            new Endpoint('https://example.amazonaws.com:8443/base')
+        );
+        $request = HttpTransportRequest::expect($request)->request;
 
         self::assertInstanceOf(Request::class, $request);
         self::assertSame(
@@ -73,11 +82,11 @@ final class RpcV2CborProtocolTest extends TestCase
             outputSchema: $schema
         );
         $protocol = new RpcV2CborProtocol();
-        $request = $protocol->serializeRequest(
+        $transportRequest = $protocol->serializeRequest(
             $operation,
-            StructDocument::fromMembers($schema, []),
-            '/'
+            StructDocument::fromMembers($schema, [])
         );
+        $request = HttpTransportRequest::expect($transportRequest)->request;
 
         self::assertSame(
             '/service/ExampleService/operation/GetThing',
@@ -85,10 +94,11 @@ final class RpcV2CborProtocolTest extends TestCase
         );
         self::assertSame('', $request->getHeaderLine('Host'));
 
-        $request = $protocol->setServiceEndpoint(
-            $request,
+        $transportRequest = $protocol->setServiceEndpoint(
+            $transportRequest,
             new Endpoint('https://example.amazonaws.com:8443/base')
         );
+        $request = HttpTransportRequest::expect($transportRequest)->request;
 
         self::assertSame(
             'https://example.amazonaws.com:8443/base/service/'
@@ -110,11 +120,16 @@ final class RpcV2CborProtocolTest extends TestCase
             requestTarget: 'CustomService.CustomOperation'
         );
 
-        $request = (new RpcV2CborProtocol())->serializeRequest(
+        $protocol = new RpcV2CborProtocol();
+        $request = $protocol->serializeRequest(
             $operation,
-            StructDocument::fromMembers($schema, []),
-            'https://example.amazonaws.com/base'
+            StructDocument::fromMembers($schema, [])
         );
+        $request = $protocol->setServiceEndpoint(
+            $request,
+            new Endpoint('https://example.amazonaws.com/base')
+        );
+        $request = HttpTransportRequest::expect($request)->request;
 
         self::assertSame(
             '/base/service/CustomService/operation/CustomOperation',
@@ -142,8 +157,7 @@ final class RpcV2CborProtocolTest extends TestCase
 
         (new RpcV2CborProtocol())->serializeRequest(
             $operation,
-            StructDocument::fromMembers($schema, []),
-            'https://example.amazonaws.com'
+            StructDocument::fromMembers($schema, [])
         );
     }
 
@@ -169,16 +183,16 @@ final class RpcV2CborProtocolTest extends TestCase
 
         $request = $protocol->serializeRequest(
             $operation,
-            StructDocument::fromMembers($schema, []),
-            'https://example.amazonaws.com/base'
+            StructDocument::fromMembers($schema, [])
         );
         $output = $protocol->deserializeResponse(
             $operation,
-            new Response(
+            new HttpTransportResponse(new Response(
                 status: 200,
                 headers: ['Smithy-Protocol' => 'rpc-v2-cbor']
-            )
+            ))
         );
+        $request = HttpTransportRequest::expect($request)->request;
 
         self::assertFalse($request->hasHeader('Content-Type'));
         self::assertSame('', (string) $request->getBody());
@@ -197,14 +211,14 @@ final class RpcV2CborProtocolTest extends TestCase
 
         $output = (new RpcV2CborProtocol())->deserializeResponse(
             $operation,
-            new Response(
+            new HttpTransportResponse(new Response(
                 status: 200,
                 headers: [
                     'Smithy-Protocol' => 'rpc-v2-cbor',
                     'Content-Length' => (string) \strlen($body)
                 ],
                 body: $body
-            )
+            ))
         );
 
         self::assertSame(
@@ -229,14 +243,14 @@ final class RpcV2CborProtocolTest extends TestCase
                 inputSchema: self::unitSchema(),
                 outputSchema: self::messageSchema('smithy.example#Output')
             ),
-            new Response(
+            new HttpTransportResponse(new Response(
                 status: 200,
                 headers: [
                     'Smithy-Protocol' => 'rpc-v2-cbor',
                     'Content-Length' => '0'
                 ],
                 body: $body
-            )
+            ))
         );
     }
 
@@ -250,11 +264,11 @@ final class RpcV2CborProtocolTest extends TestCase
                 inputSchema: self::unitSchema(),
                 outputSchema: $outputSchema
             ),
-            new Response(
+            new HttpTransportResponse(new Response(
                 status: 200,
                 headers: ['Smithy-Protocol' => 'rpc-v2-cbor'],
                 body: new GenericStreamFixture($body, false)
-            )
+            ))
         );
 
         self::assertSame(
@@ -276,10 +290,10 @@ final class RpcV2CborProtocolTest extends TestCase
 
         (new RpcV2CborProtocol())->deserializeResponse(
             $operation,
-            new Response(
+            new HttpTransportResponse(new Response(
                 status: 200,
                 headers: ['Smithy-Protocol' => 'wrong-protocol']
-            )
+            ))
         );
     }
 
@@ -302,11 +316,11 @@ final class RpcV2CborProtocolTest extends TestCase
         try {
             (new RpcV2CborProtocol())->deserializeResponse(
                 $operation,
-                new Response(
+                new HttpTransportResponse(new Response(
                     status: 400,
                     headers: ['Smithy-Protocol' => 'rpc-v2-cbor'],
                     body: new GenericStreamFixture($body, false)
-                )
+                ))
             );
         } catch (DocumentException $exception) {
             self::assertSame($errorSchema, $exception->getSchema());
@@ -332,14 +346,14 @@ final class RpcV2CborProtocolTest extends TestCase
                 inputSchema: self::unitSchema(),
                 outputSchema: self::unitSchema()
             ),
-            new Response(
+            new HttpTransportResponse(new Response(
                 status: 400,
                 headers: [
                     'Smithy-Protocol' => 'rpc-v2-cbor',
                     'Content-Length' => '0'
                 ],
                 body: $body
-            )
+            ))
         );
     }
 
@@ -359,11 +373,11 @@ final class RpcV2CborProtocolTest extends TestCase
                 inputSchema: self::unitSchema(),
                 outputSchema: self::unitSchema()
             ),
-            new Response(
+            new HttpTransportResponse(new Response(
                 status: 400,
                 headers: ['Smithy-Protocol' => 'wrong-protocol'],
                 body: $body
-            )
+            ))
         );
     }
 

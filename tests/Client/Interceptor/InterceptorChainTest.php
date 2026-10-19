@@ -26,7 +26,15 @@ use Smithy\Client\Interceptor\{
     RequestContext,
     ResponseContext
 };
+use Smithy\Client\Transport\{
+    TransportRequestInterface,
+    TransportResponseInterface
+};
 use Smithy\Core\Serde\SerializableStructInterface;
+use Smithy\Http\Message\{
+    HttpTransportRequest,
+    HttpTransportResponse
+};
 use Smithy\Tests\Client\Fake\{
     FakeInput,
     FakeOperation,
@@ -297,9 +305,15 @@ final class InterceptorChainTest extends TestCase
             }
         );
 
-        $requestZero = $this->createStub(RequestInterface::class);
-        $requestOne = $this->createStub(RequestInterface::class);
-        $requestTwo = $this->createStub(RequestInterface::class);
+        $requestZero = new HttpTransportRequest(
+            $this->createStub(RequestInterface::class)
+        );
+        $requestOne = new HttpTransportRequest(
+            $this->createStub(RequestInterface::class)
+        );
+        $requestTwo = new HttpTransportRequest(
+            $this->createStub(RequestInterface::class)
+        );
         $this->configureRequestStage(
             $first,
             $second,
@@ -322,9 +336,15 @@ final class InterceptorChainTest extends TestCase
             $requestTwo
         );
 
-        $responseZero = $this->createStub(ResponseInterface::class);
-        $responseOne = $this->createStub(ResponseInterface::class);
-        $responseTwo = $this->createStub(ResponseInterface::class);
+        $responseZero = new HttpTransportResponse(
+            $this->createStub(ResponseInterface::class)
+        );
+        $responseOne = new HttpTransportResponse(
+            $this->createStub(ResponseInterface::class)
+        );
+        $responseTwo = new HttpTransportResponse(
+            $this->createStub(ResponseInterface::class)
+        );
         $first->method('modifyBeforeDeserialization')
             ->willReturn($responseOne);
         $second->method('modifyBeforeDeserialization')->willReturnCallback(
@@ -681,8 +701,8 @@ final class InterceptorChainTest extends TestCase
         InterceptorInterface $first,
         InterceptorInterface $second,
         string $method,
-        RequestInterface $firstRequest,
-        RequestInterface $secondRequest
+        TransportRequestInterface $firstRequest,
+        TransportRequestInterface $secondRequest
     ): void
     {
         $first->method($method)->willReturn($firstRequest);
@@ -775,34 +795,40 @@ final class InterceptorChainTest extends TestCase
     }
 
     private function requestContext(
-        ?RequestInterface $request = null
+        ?TransportRequestInterface $request = null
     ): RequestContext
     {
         return new RequestContext(
             FakeOperation::instance(),
             new FakeInput(),
             $this->config(),
-            $request ?? $this->createStub(RequestInterface::class)
+            $request ?? new HttpTransportRequest(
+                $this->createStub(RequestInterface::class)
+            )
         );
     }
 
     private function responseContext(
-        ?RequestInterface $request = null,
-        ?ResponseInterface $response = null
+        ?TransportRequestInterface $request = null,
+        ?TransportResponseInterface $response = null
     ): ResponseContext
     {
         return new ResponseContext(
             FakeOperation::instance(),
             new FakeInput(),
             $this->config(),
-            $request ?? $this->createStub(RequestInterface::class),
-            $response ?? $this->createStub(ResponseInterface::class)
+            $request ?? new HttpTransportRequest(
+                $this->createStub(RequestInterface::class)
+            ),
+            $response ?? new HttpTransportResponse(
+                $this->createStub(ResponseInterface::class)
+            )
         );
     }
 
     private function outputContext(
-        ?RequestInterface $request = null,
-        ?ResponseInterface $response = null,
+        ?TransportRequestInterface $request = null,
+        ?TransportResponseInterface $response = null,
         ?FakeOutput $output = null
     ): OutputContext
     {
@@ -820,7 +846,9 @@ final class InterceptorChainTest extends TestCase
     {
         return new ClientConfig(
             protocol: new FakeProtocol(),
-            httpClient: new MockHttpClient(),
+            transport: new \Smithy\Http\Client\HttpClientTransport(
+                new MockHttpClient()
+            ),
             endpointResolver: new StaticEndpointResolver(
                 new Endpoint('https://example.test')
             )

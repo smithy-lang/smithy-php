@@ -13,7 +13,11 @@ use Smithy\Core\Serde\{
     TypeRegistry
 };
 use Smithy\Core\Shape\Document\StructDocument;
-use Smithy\Http\Message\Response;
+use Smithy\Http\Message\{
+    HttpTransportRequest,
+    HttpTransportResponse,
+    Response
+};
 use Smithy\Protocol\RpcV2\RpcV2CborProtocol;
 
 #[CoversClass(DynamicOperation::class)]
@@ -99,21 +103,21 @@ final class DynamicOperationTest extends TestCase
         $protocol = new RpcV2CborProtocol();
         $request = $protocol->serializeRequest(
             $operation,
-            $operation->createInputFromValue(['message' => 'hello']),
-            'https://example.com'
+            $operation->createInputFromValue(['message' => 'hello'])
         );
+        $httpRequest = HttpTransportRequest::expect($request)->request;
 
         self::assertSame(
             '/service/Service/operation/Call',
-            $request->getUri()->getPath()
+            $httpRequest->getUri()->getPath()
         );
 
         $output = $protocol->deserializeResponse(
             $operation,
-            new Response(
+            new HttpTransportResponse(new Response(
                 headers: ['Smithy-Protocol' => 'rpc-v2-cbor'],
-                body: (string) $request->getBody()
-            )
+                body: (string) $httpRequest->getBody()
+            ))
         );
         self::assertInstanceOf(StructDocument::class, $output);
         self::assertSame(
@@ -180,13 +184,13 @@ final class DynamicOperationTest extends TestCase
 
         $output = (new RpcV2CborProtocol())->deserializeResponse(
             $operation,
-            new Response(
+            new HttpTransportResponse(new Response(
                 headers: ['Smithy-Protocol' => 'rpc-v2-cbor'],
                 body: \hex2bin(
                     'a3666e6573746564a0656974656d7381a0'
                         . '6676616c756573a1656669727374a0'
                 )
-            )
+            ))
         );
         self::assertInstanceOf(StructDocument::class, $output);
 
@@ -316,9 +320,9 @@ final class DynamicOperationTest extends TestCase
 
         $request = (new RpcV2CborProtocol())->serializeRequest(
             $operation,
-            $operation->createInputFromValue(null),
-            'https://example.com'
+            $operation->createInputFromValue(null)
         );
+        $request = HttpTransportRequest::expect($request)->request;
         self::assertSame(
             '/service/CanonicalService/operation/CanonicalOperation',
             $request->getUri()->getPath()

@@ -1,13 +1,14 @@
 # Protocol Design
 
-**Status:** Current as of September 30, 2026
+**Status:** Current as of October 12, 2026
 
 **Packages:** `smithy-php`, `aws-sdk-php`
 
 ## Summary
 
-Protocols convert an operation and input shape into an HTTP request, then
-convert an HTTP response into an output shape or service exception.
+Protocols convert an operation and input shape into a transport request, then
+convert a transport response into an output shape or service exception.
+HTTP protocols retain PSR-7 messages inside HTTP-specific transport envelopes.
 
 All protocol implementations satisfy `ProtocolInterface`:
 
@@ -16,26 +17,29 @@ interface ProtocolInterface
 {
     public function getId(): string;
 
+    public function getMessageExchange(): MessageExchangeInterface;
+
     public function serializeRequest(
         OperationInterface $operation,
-        SerializableStructInterface $input,
-        string $endpoint
-    ): RequestInterface;
+        SerializableStructInterface $input
+    ): TransportRequestInterface;
 
     public function setServiceEndpoint(
-        RequestInterface $request,
+        TransportRequestInterface $request,
         Endpoint $endpoint
-    ): RequestInterface;
+    ): TransportRequestInterface;
 
     public function deserializeResponse(
         OperationInterface $operation,
-        ResponseInterface $response
+        TransportResponseInterface $response
     ): SerializableStructInterface;
 }
 ```
 
 Operations provide their input, output, error, and operation schemas. Protocols
-use codecs for body encoding.
+use codecs for body encoding. A protocol's `MessageExchangeInterface`
+declares the concrete request and response envelope types it shares with a
+compatible transport.
 
 ## Ownership
 
@@ -46,7 +50,8 @@ use codecs for body encoding.
 | Smithy HTTP member traits | HTTP binding layer |
 | Endpoint selection | Client pipeline |
 | Signing and retries | Client pipeline |
-| Network transfer | HTTP client |
+| Generic message transfer and retry preparation | Transport |
+| HTTP network transfer | HTTP client through `HttpClientTransport` |
 
 `smithy-php` provides generic HTTP binding components and RPC v2 CBOR.
 `aws-sdk-php` provides AWS protocol variants and AWS error envelopes.
@@ -63,15 +68,13 @@ response flow.
 3. Create `HttpBindingSerializer`.
 4. Serialize request-direction labels, queries, headers, payload, and body
    members.
-5. Join the supplied serialization base path with the modeled operation path.
-6. Set `Host` when the supplied base is absolute, plus content type and
-   content length.
-7. Return an immutable PSR-7 request.
+5. Join the modeled operation path to the relative request root.
+6. Set content type and content length.
+7. Return an `HttpTransportRequest` containing an immutable PSR-7 request.
 
-The client pipeline normally supplies `/` during serialization. That creates
-an operation-relative request once per execution. Each attempt later calls
-`setServiceEndpoint()` to bind the resolved endpoint URL while preserving the
-operation path and query.
+Serialization creates an operation-relative request once per execution. Each
+attempt later calls `setServiceEndpoint()` to bind the resolved endpoint URL
+and endpoint headers while preserving the operation path and query.
 
 HTTP binding serialization supports:
 

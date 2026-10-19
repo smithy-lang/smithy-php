@@ -429,20 +429,22 @@ attempt-scoped endpoint binding:
 
 ```text
 before-serialization interceptors
-    -> serialize operation-relative request against "/"
+    -> serialize operation-relative transport request
+    -> apply request override headers
     -> modify-before-retry-loop interceptors
     -> enter retry loop
         -> select modeled auth and resolve identity
         -> resolve endpoint
         -> reconcile endpoint auth
-        -> bind endpoint URL to the relative request
-        -> apply endpoint headers
+        -> bind endpoint URL and headers to the relative request
         -> reapply request override headers
         -> sign and transmit
 ```
 
-Endpoint headers are present before signing. Request override headers are
-applied after endpoint headers.
+Request override headers are visible to post-serialization interceptors and
+become part of the retry baseline. They are reapplied after endpoint binding
+on every attempt so explicit call values take precedence over endpoint
+headers.
 
 Endpoint auth schemes reconcile the modeled selection during every attempt.
 When present, the endpoint list is authoritative: the auth resolver reorders

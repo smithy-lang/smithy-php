@@ -7,7 +7,10 @@ namespace Smithy\Tests\Client\Auth;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Smithy\Client\Auth\SignerResult;
-use Smithy\Http\Message\Request;
+use Smithy\Http\Message\{
+    HttpTransportRequest,
+    Request
+};
 
 #[CoversClass(SignerResult::class)]
 final class SignerResultTest extends TestCase
@@ -15,16 +18,24 @@ final class SignerResultTest extends TestCase
     public function testStoresSignedRequestAndSignature(): void
     {
         $request = new Request('GET', 'https://example.test');
-        $result = new SignerResult($request, 'signature');
+        $result = new SignerResult(
+            new HttpTransportRequest($request),
+            'signature'
+        );
 
-        self::assertSame($request, $result->signedRequest);
+        self::assertSame(
+            $request,
+            HttpTransportRequest::expect($result->signedRequest)->request
+        );
         self::assertSame('signature', $result->signature);
     }
 
     public function testDefaultsToEmptySignature(): void
     {
         $result = new SignerResult(
-            new Request('GET', 'https://example.test')
+            new HttpTransportRequest(
+                new Request('GET', 'https://example.test')
+            )
         );
 
         self::assertSame('', $result->signature);

@@ -19,12 +19,14 @@ use Smithy\Client\Interceptor\{
     RequestCompressionInterceptor,
     RequestContext
 };
+use Smithy\Client\Transport\TransportRequestInterface;
 use Smithy\Core\Serde\Schema;
 use Smithy\Core\Shape\OperationInterface;
 use Smithy\Core\Shape\ShapeType;
 use Smithy\Http\Message\{
     AsyncRequestStream,
     AsyncRequestStreamInterface,
+    HttpTransportRequest,
     Request,
     ResourceRequestStream
 };
@@ -52,7 +54,7 @@ final class HttpChecksumInterceptorTest extends TestCase
             '{"foo":"bar"}'
         );
 
-        $updated = $interceptor->modifyBeforeSigning(new RequestContext(
+        $updated = $interceptor->modifyBeforeSigning(self::requestContext(
             $this->operation([
                 Schema::T_HTTP_CHECKSUM_REQUIRED => true
             ]),
@@ -63,7 +65,7 @@ final class HttpChecksumInterceptorTest extends TestCase
 
         self::assertSame(
             'm7WPJhkuS6APAeLnsTa72A==',
-            $updated->getHeaderLine('Content-MD5')
+            HttpTransportRequest::expect($updated)->request->getHeaderLine('Content-MD5')
         );
     }
 
@@ -77,7 +79,7 @@ final class HttpChecksumInterceptorTest extends TestCase
         ));
 
         $updated = (new HttpChecksumInterceptor())->modifyBeforeSigning(
-            new RequestContext(
+            self::requestContext(
                 $this->operation([
                     Schema::T_HTTP_CHECKSUM_REQUIRED => true
                 ]),
@@ -87,10 +89,13 @@ final class HttpChecksumInterceptorTest extends TestCase
             )
         );
 
-        self::assertInstanceOf(GenericPsrRequest::class, $updated);
+        self::assertInstanceOf(
+            GenericPsrRequest::class,
+            HttpTransportRequest::expect($updated)->request
+        );
         self::assertSame(
             'm7WPJhkuS6APAeLnsTa72A==',
-            $updated->getHeaderLine('Content-MD5')
+            HttpTransportRequest::expect($updated)->request->getHeaderLine('Content-MD5')
         );
     }
 
@@ -105,7 +110,7 @@ final class HttpChecksumInterceptorTest extends TestCase
         );
 
         $updated = (new HttpChecksumInterceptor())->modifyBeforeSigning(
-            new RequestContext(
+            self::requestContext(
                 $this->operation([
                     Schema::T_HTTP_CHECKSUM_REQUIRED => true
                 ]),
@@ -117,9 +122,9 @@ final class HttpChecksumInterceptorTest extends TestCase
 
         self::assertSame(
             'Mhw89IbtUJFk7eweGYH+yA==',
-            $updated->getHeaderLine('Content-MD5')
+            HttpTransportRequest::expect($updated)->request->getHeaderLine('Content-MD5')
         );
-        self::assertSame($body, $updated->getBody());
+        self::assertSame($body, HttpTransportRequest::expect($updated)->request->getBody());
         self::assertSame(0, $body->tell());
         self::assertSame('payload', $body->getContents());
     }
@@ -134,7 +139,7 @@ final class HttpChecksumInterceptorTest extends TestCase
             '{"foo":"bar"}'
         );
 
-        $updated = $interceptor->modifyBeforeSigning(new RequestContext(
+        $updated = $interceptor->modifyBeforeSigning(self::requestContext(
             $this->operation([
                 Schema::T_HTTP_CHECKSUM_REQUIRED => true
             ]),
@@ -143,7 +148,7 @@ final class HttpChecksumInterceptorTest extends TestCase
             $request
         ));
 
-        self::assertSame('preset', $updated->getHeaderLine('Content-MD5'));
+        self::assertSame('preset', HttpTransportRequest::expect($updated)->request->getHeaderLine('Content-MD5'));
     }
 
     public function testSkipsForOperationWithoutTrait(): void
@@ -156,14 +161,14 @@ final class HttpChecksumInterceptorTest extends TestCase
             '{"foo":"bar"}'
         );
 
-        $updated = $interceptor->modifyBeforeSigning(new RequestContext(
+        $updated = $interceptor->modifyBeforeSigning(self::requestContext(
             $this->operation(),
             new FakeInput(),
             $this->config(),
             $request
         ));
 
-        self::assertFalse($updated->hasHeader('Content-MD5'));
+        self::assertFalse(HttpTransportRequest::expect($updated)->request->hasHeader('Content-MD5'));
     }
 
     public function testHashesSeekableStreamingRequest(): void
@@ -172,7 +177,7 @@ final class HttpChecksumInterceptorTest extends TestCase
         $interceptor = new HttpChecksumInterceptor();
         $request = new Request('POST', 'https://example.test', [], $stream);
 
-        $updated = $interceptor->modifyBeforeSigning(new RequestContext(
+        $updated = $interceptor->modifyBeforeSigning(self::requestContext(
             $this->operation(
                 [Schema::T_HTTP_CHECKSUM_REQUIRED => true],
                 true
@@ -184,7 +189,7 @@ final class HttpChecksumInterceptorTest extends TestCase
 
         self::assertSame(
             'Mhw89IbtUJFk7eweGYH+yA==',
-            $updated->getHeaderLine('Content-MD5')
+            HttpTransportRequest::expect($updated)->request->getHeaderLine('Content-MD5')
         );
         self::assertSame(0, $stream->tell());
     }
@@ -203,7 +208,7 @@ final class HttpChecksumInterceptorTest extends TestCase
         );
 
         $updated = (new HttpChecksumInterceptor())
-            ->modifyBeforeRetryLoop(new RequestContext(
+            ->modifyBeforeRetryLoop(self::requestContext(
                 $this->operation([
                     Schema::T_HTTP_CHECKSUM_REQUIRED => true
                 ]),
@@ -214,11 +219,11 @@ final class HttpChecksumInterceptorTest extends TestCase
 
         self::assertInstanceOf(
             ResourceRequestStream::class,
-            $updated->getBody()
+            HttpTransportRequest::expect($updated)->request->getBody()
         );
-        self::assertSame('payload', (string) $updated->getBody());
-        self::assertTrue($updated->getBody()->isReplayable());
-        self::assertFalse($updated->hasHeader('Content-MD5'));
+        self::assertSame('payload', (string) HttpTransportRequest::expect($updated)->request->getBody());
+        self::assertTrue(HttpTransportRequest::expect($updated)->request->getBody()->isReplayable());
+        self::assertFalse(HttpTransportRequest::expect($updated)->request->hasHeader('Content-MD5'));
         self::assertTrue($stream->eof());
     }
 
@@ -232,7 +237,7 @@ final class HttpChecksumInterceptorTest extends TestCase
             [],
             $stream
         );
-        $ctx = new RequestContext(
+        $ctx = self::requestContext(
             $this->operation(
                 [
                     Schema::T_REQUEST_COMPRESSION => ['gzip'],
@@ -250,24 +255,25 @@ final class HttpChecksumInterceptorTest extends TestCase
         );
 
         $results = $eventLoop->run([
-            fn(): RequestInterface => $chain->modifyBeforeRetryLoop($ctx),
+            fn(): TransportRequestInterface =>
+                $chain->modifyBeforeRetryLoop($ctx),
             static function () use ($stream): void {
                 $stream->write('payload');
                 $stream->end();
             }
         ]);
         $prepared = $results[0];
-        $compressedBody = $prepared->getBody();
+        $compressedBody = HttpTransportRequest::expect($prepared)->request->getBody();
         $updated = $chain->modifyBeforeSigning(
             $ctx->withRequest($prepared)
         );
         $compressed = (string) $compressedBody;
 
-        self::assertSame($compressedBody, $updated->getBody());
+        self::assertSame($compressedBody, HttpTransportRequest::expect($updated)->request->getBody());
         self::assertSame('payload', \gzdecode($compressed));
         self::assertSame(
             \base64_encode(\md5($compressed, true)),
-            $updated->getHeaderLine('Content-MD5')
+            HttpTransportRequest::expect($updated)->request->getHeaderLine('Content-MD5')
         );
         self::assertTrue($stream->fullyConsumed());
     }
@@ -287,9 +293,9 @@ final class HttpChecksumInterceptorTest extends TestCase
         );
 
         $results = $eventLoop->run([
-            fn(): RequestInterface =>
+            fn(): TransportRequestInterface =>
                 (new HttpChecksumInterceptor())->modifyBeforeSigning(
-                    new RequestContext(
+                    self::requestContext(
                         $this->operation(
                             [Schema::T_HTTP_CHECKSUM_REQUIRED => true],
                             true
@@ -309,14 +315,14 @@ final class HttpChecksumInterceptorTest extends TestCase
 
         self::assertSame(
             'Mhw89IbtUJFk7eweGYH+yA==',
-            $updated->getHeaderLine('Content-MD5')
+            HttpTransportRequest::expect($updated)->request->getHeaderLine('Content-MD5')
         );
         self::assertInstanceOf(
             ResourceRequestStream::class,
-            $updated->getBody()
+            HttpTransportRequest::expect($updated)->request->getBody()
         );
-        self::assertSame('payload', (string) $updated->getBody());
-        self::assertTrue($updated->getBody()->isReplayable());
+        self::assertSame('payload', (string) HttpTransportRequest::expect($updated)->request->getBody());
+        self::assertTrue(HttpTransportRequest::expect($updated)->request->getBody()->isReplayable());
         self::assertTrue($stream->fullyConsumed());
     }
 
@@ -334,7 +340,7 @@ final class HttpChecksumInterceptorTest extends TestCase
         );
 
         $updated = (new HttpChecksumInterceptor())->modifyBeforeSigning(
-            new RequestContext(
+            self::requestContext(
                 $this->operation(
                     [Schema::T_HTTP_CHECKSUM_REQUIRED => true],
                     true
@@ -347,14 +353,14 @@ final class HttpChecksumInterceptorTest extends TestCase
 
         self::assertSame(
             'Mhw89IbtUJFk7eweGYH+yA==',
-            $updated->getHeaderLine('Content-MD5')
+            HttpTransportRequest::expect($updated)->request->getHeaderLine('Content-MD5')
         );
         self::assertInstanceOf(
             ResourceRequestStream::class,
-            $updated->getBody()
+            HttpTransportRequest::expect($updated)->request->getBody()
         );
-        self::assertSame('payload', (string) $updated->getBody());
-        self::assertTrue($updated->getBody()->isReplayable());
+        self::assertSame('payload', (string) HttpTransportRequest::expect($updated)->request->getBody());
+        self::assertTrue(HttpTransportRequest::expect($updated)->request->getBody()->isReplayable());
         self::assertTrue($stream->eof());
     }
 
@@ -376,7 +382,7 @@ final class HttpChecksumInterceptorTest extends TestCase
 
         try {
             (new HttpChecksumInterceptor())->modifyBeforeSigning(
-                new RequestContext(
+                self::requestContext(
                     $this->operation([
                         Schema::T_HTTP_CHECKSUM_REQUIRED => true
                     ]),
@@ -425,10 +431,26 @@ final class HttpChecksumInterceptorTest extends TestCase
     {
         return new ClientConfig(
             protocol: new FakeProtocol(),
-            httpClient: new MockHttpClient(),
+            transport: new \Smithy\Http\Client\HttpClientTransport(
+                new MockHttpClient()
+            ),
             endpointResolver: new StaticEndpointResolver(
                 new Endpoint('https://example.test')
             )
+        );
+    }
+
+    private static function requestContext(
+        OperationInterface $operation,
+        FakeInput $input,
+        ClientConfig $config,
+        RequestInterface $request
+    ): RequestContext {
+        return new RequestContext(
+            $operation,
+            $input,
+            $config,
+            new HttpTransportRequest($request)
         );
     }
 }

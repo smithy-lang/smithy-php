@@ -13,8 +13,8 @@ use Smithy\Client\Endpoint\EndpointResolverInterface;
 use Smithy\Client\Interceptor\InterceptorChain;
 use Smithy\Client\Plugin\PluginState;
 use Smithy\Client\Retry\RetryStrategyInterface;
+use Smithy\Client\Transport\TransportInterface;
 use Smithy\Core\Shape\ServiceInterface;
-use Smithy\Http\Client\HttpClientInterface;
 use Smithy\Protocol\ProtocolInterface;
 
 /**
@@ -29,7 +29,7 @@ final class RegionalClientConfigFixture extends ClientConfig
      */
     public function __construct(
         ProtocolInterface $protocol,
-        HttpClientInterface $httpClient,
+        TransportInterface $transport,
         EndpointResolverInterface $endpointResolver,
         InterceptorChain $interceptors = new InterceptorChain(),
         array $supportedAuthSchemes = [],
@@ -45,7 +45,7 @@ final class RegionalClientConfigFixture extends ClientConfig
     {
         parent::__construct(
             $protocol,
-            $httpClient,
+            $transport,
             $endpointResolver,
             $interceptors,
             $supportedAuthSchemes,
@@ -64,7 +64,7 @@ final class RegionalClientConfigFixture extends ClientConfig
     {
         return new static(
             protocol: $overrides['protocol'] ?? $this->protocol,
-            httpClient: $overrides['httpClient'] ?? $this->httpClient,
+            transport: $overrides['transport'] ?? $this->transport,
             endpointResolver: $overrides['endpointResolver']
                 ?? $this->endpointResolver,
             interceptors: $overrides['interceptors']

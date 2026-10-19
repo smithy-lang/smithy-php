@@ -1,6 +1,6 @@
 # Client Runtime Design
 
-**Status:** Current as of September 30, 2026
+**Status:** Current as of October 12, 2026
 
 **Package:** `smithy/smithy-php` (`Smithy\Client\`)
 
@@ -31,8 +31,8 @@ paths enter the same pipeline through `OperationInterface` and
 - protocol serialization and endpoint binding
 - authentication and identity resolution
 - interceptor dispatch
-- retry sequencing and replay checks
-- HTTP transmission
+- retry sequencing
+- transport invocation and retry preparation
 - protocol deserialization
 - attempt and execution completion
 
@@ -63,6 +63,8 @@ paths enter the same pipeline through `OperationInterface` and
 | `AttemptResult` | Carry the final `OutputContext` and nullable error for one attempt |
 | `InterceptorChain` | Execute ordered call and lifecycle hooks |
 | `RetryStrategyInterface` | Own retry classification, quotas, delay, and strategy state |
+| `TransportInterface` | Send protocol messages and prepare transport state for retry |
+| `MessageExchangeInterface` | Declare the request and response envelope types shared by a protocol and transport |
 
 `PreparedAttempt` and `AttemptResult` are internal value objects. They replace
 positional arrays at the boundaries where multiple attempt values travel
@@ -127,7 +129,8 @@ plugins and wrappers again.
 `ClientConfig` contains:
 
 - protocol
-- HTTP client and transport defaults
+- transport
+- nullable HTTP-client compatibility view when using `HttpClientTransport`
 - endpoint resolver
 - interceptor chain
 - supported auth schemes and auth resolver
@@ -149,7 +152,7 @@ become explicit properties instead of anonymous context entries.
 |---|---|
 | Construction | Apply construction plugins and create the reusable pipeline |
 | Call | Apply call plugins, modify configuration, and run wrappers |
-| Execution | Resolve HTTP options, serialize the relative request, establish the retry baseline, and initialize retry state |
+| Execution | Resolve transport options, serialize the relative request, establish the retry baseline, and initialize retry state |
 | Attempt | Resolve modeled auth and identity, resolve the endpoint, reconcile endpoint auth, bind the endpoint, sign, transmit, and deserialize |
 | Completion | Run attempt completion for each started attempt and execution completion once |
 | Stream lifetime | Track consumption and restore request bodies and trailers before retry |
@@ -160,11 +163,10 @@ fresh endpoint and identity state.
 
 ## Serialization and endpoint binding
 
-The protocol first serializes an operation-relative request against the
-unresolved endpoint value `/`:
+The protocol first serializes an operation-relative transport request:
 
 ```php
-$protocol->serializeRequest($operation, $input, '/');
+$protocol->serializeRequest($operation, $input);
 ```
 
 This request contains the modeled path, query, headers, and body but does not
@@ -178,9 +180,8 @@ Each attempt then:
 3. Reconciles the modeled auth scheme with endpoint-provided auth options.
 4. Resolves another identity if the endpoint selects another scheme.
 5. Calls `ProtocolInterface::setServiceEndpoint()` to bind the service
-   endpoint to the relative request.
-6. Applies endpoint headers.
-7. Reapplies request override headers so explicit call values win.
+   endpoint and endpoint headers to the relative request.
+6. Reapplies request override headers so explicit call values win.
 
 The final precedence is:
 
@@ -201,7 +202,7 @@ When execution interceptors are present, the lifecycle is:
 modifyBeforeCall
 interceptCall wrappers
     readBeforeExecution
-    resolve effective HTTP options
+    resolve effective transport options
     modifyBeforeSerialization
     readBeforeSerialization
     serialize relative request
@@ -217,7 +218,8 @@ interceptCall wrappers
         resolve modeled auth and identity
         resolve endpoint
         reconcile endpoint auth and identity
-        bind endpoint and apply headers
+        bind endpoint and endpoint headers
+        reapply request override headers
         modifyBeforeSigning
         readBeforeSigning
         sign
@@ -294,7 +296,7 @@ The pipeline owns:
 - attempt sequencing
 - request-level maximum attempts
 - the retry request baseline
-- body and trailer replay safety
+- invoking transport retry preparation
 - success recording
 
 Before the first attempt, the pipeline resolves optional request flags and
@@ -305,7 +307,7 @@ After a failed attempt:
 1. Completion interceptors produce the final attempt error.
 2. The request-level maximum-attempt limit is checked.
 3. `refresh()` decides whether retry is allowed and returns the delay.
-4. The transmitted request body and trailers are prepared for replay.
+4. The transport prepares the transmitted request state for replay.
 5. The delay runs through `Async::delay()`.
 6. The next attempt starts from the original retry baseline.
 
@@ -325,7 +327,7 @@ and transmission-stage mutations remain attempt-local.
 
 ### Replay safety
 
-Before another attempt:
+For HTTP, `HttpClientTransport` prepares another attempt by:
 
 - replayable `RequestStreamInterface` bodies use `rewindForRetry()`
 - other seekable PSR-7 bodies use `rewind()`
@@ -333,8 +335,8 @@ Before another attempt:
 - non-replayable bodies may retry only when no response was received and
   transport/body state proves that upload never started or consumed data
 
-Any failure to restore body or trailer state terminates retry and preserves
-the current attempt error.
+Other transports implement their own equivalent preparation. Any preparation
+failure terminates retry and preserves the current attempt error.
 
 ## Request overrides
 
@@ -344,16 +346,20 @@ the current attempt error.
 |---|---|
 | call plugins | Apply configuration changes for this call |
 | `@http` | Complete or partial `HttpRequestOptions`, plus headers |
+| `@transport` | A transport-defined request override |
 | `@retries` | Number of retries after the initial attempt |
 | `@auth` | Ordered auth-scheme preference names |
 
 Explicit null configuration values are ignored.
 
-Partial HTTP options merge with
-`HttpClientInterface::getDefaultRequestOptions()`. A complete
-`HttpRequestOptions` replaces those defaults. Effective options are retained
-for trailer replay checks even when the HTTP client receives `null` and uses
-its own defaults.
+Partial HTTP options merge with the defaults exposed by
+`HttpClientTransport`. A complete `HttpRequestOptions` replaces those
+defaults. HTTP overrides are rejected when the configured transport is not
+HTTP.
+
+Custom transports can define their own request mutation and option types by
+providing a `TransportRequestOverrideInterface` value through `@transport`.
+The generic pipeline invokes that contract without inspecting its payload.
 
 On the interceptor path, option resolution occurs after
 `readBeforeExecution()` inside the guarded lifecycle, so completion hooks can
@@ -384,7 +390,7 @@ An empty interceptor chain uses a direct path without allocating lifecycle
 contexts or dispatching hooks. It preserves the same functional boundaries:
 
 ```text
-resolve HTTP options
+resolve transport options
     -> serialize relative request
     -> begin retry state
     -> per-attempt auth, endpoint, signing, transport, and deserialization
@@ -392,7 +398,7 @@ resolve HTTP options
 ```
 
 The fast path uses the same request overrides, retry baseline, endpoint
-binding, auth resolver, replay checks, protocol, and HTTP client.
+binding, auth resolver, transport retry preparation, protocol, and transport.
 
 ## Pagination and waiters
 
@@ -409,14 +415,14 @@ See [Pagination Design](pagination/pagination-runtime-design.md) and
 
 | Failure | Attempt completion | Execution completion |
 |---|:---:|:---:|
-| HTTP option resolution | No | Yes |
+| Transport option resolution | No | Yes |
 | Input modification | No | Yes |
 | Serialization | No | Yes |
 | Retry initialization | No | Yes |
 | Attempt-start hook | Yes | Yes |
 | Modeled auth or identity resolution | Yes | Yes |
 | Endpoint resolution or endpoint auth | Yes | Yes |
-| Endpoint binding or header application | Yes | Yes |
+| Endpoint binding or endpoint-header application | Yes | Yes |
 | Signing or signer cleanup | Yes | Yes |
 | Transport | Yes | Yes |
 | Deserialization | Yes | Yes |

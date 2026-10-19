@@ -34,7 +34,9 @@ final class HttpChecksumPluginTest extends TestCase
     {
         return new ClientConfig(
             protocol: new FakeProtocol(),
-            httpClient: new MockHttpClient(),
+            transport: new \Smithy\Http\Client\HttpClientTransport(
+                new MockHttpClient()
+            ),
             endpointResolver: new StaticEndpointResolver(
                 new Endpoint('https://example.test')
             )

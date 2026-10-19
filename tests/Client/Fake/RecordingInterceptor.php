@@ -4,16 +4,16 @@ declare(strict_types=1);
 
 namespace Smithy\Tests\Client\Fake;
 
-use Psr\Http\Message\{
-    RequestInterface,
-    ResponseInterface
-};
 use Smithy\Client\Interceptor\{
     AbstractInterceptor,
     InputContext,
     OutputContext,
     RequestContext,
     ResponseContext
+};
+use Smithy\Client\Transport\{
+    TransportRequestInterface,
+    TransportResponseInterface
 };
 use Smithy\Core\Serde\SerializableStructInterface;
 
@@ -70,7 +70,7 @@ final class RecordingInterceptor extends AbstractInterceptor
 
     public function modifyBeforeRetryLoop(
         RequestContext $ctx
-    ): RequestInterface
+    ): TransportRequestInterface
     {
         $this->record('modifyBeforeRetryLoop');
 
@@ -84,7 +84,7 @@ final class RecordingInterceptor extends AbstractInterceptor
 
     public function modifyBeforeSigning(
         RequestContext $ctx
-    ): RequestInterface
+    ): TransportRequestInterface
     {
         $this->record('modifyBeforeSigning');
 
@@ -103,7 +103,7 @@ final class RecordingInterceptor extends AbstractInterceptor
 
     public function modifyBeforeTransmit(
         RequestContext $ctx
-    ): RequestInterface
+    ): TransportRequestInterface
     {
         $this->record('modifyBeforeTransmit');
 
@@ -122,7 +122,7 @@ final class RecordingInterceptor extends AbstractInterceptor
 
     public function modifyBeforeDeserialization(
         ResponseContext $ctx
-    ): ResponseInterface
+    ): TransportResponseInterface
     {
         $this->record('modifyBeforeDeserialization');
 
