@@ -45,8 +45,10 @@ Waiter -> operation pipeline -> protocol -> HTTP client
     +-> WaiterResult or WaiterFailureException
 ```
 
-Waiter definitions are embedded in generated client methods. Runtime code
-does not parse Smithy traits or service-specific waiter documents.
+Generated clients embed normalized waiter definitions in their operation
+schemas. Dynamic clients materialize the same definitions lazily from the
+native `smithy.waiters#waitable` trait through a schema extension. Neither
+client path reads service-specific waiter documents at runtime.
 
 ## Model Source
 
@@ -123,18 +125,7 @@ public function waitUntilBucketExists(
 {
     return $this->createWaiter(
         HeadBucketOperation::instance(),
-        [
-            new Acceptor(
-                Acceptor::SUCCESS,
-                Matcher::success(true)
-            ),
-            new Acceptor(
-                Acceptor::RETRY,
-                Matcher::errorType('NotFound')
-            )
-        ],
-        5,
-        120,
+        'BucketExists',
         $config
     )->wait($input, $maxWaitTime);
 }

@@ -21,12 +21,17 @@ final class SchemaTraitRegistryTest extends TestCase
         $registry = new SchemaTraitRegistry();
         $traits = $registry->materialize([
             'smithy.api#required' => [],
+            'smithy.waiters#waitable' => [],
             'example#first' => ['value' => 1],
             'example#second' => 'two'
         ]);
 
         self::assertTrue($traits['dense'][Schema::T_REQUIRED]);
         self::assertTrue($traits['byId']['smithy.api#required']);
+        self::assertTrue($traits['dense'][Schema::T_WAITABLE]);
+        self::assertTrue(
+            $traits['byId']['smithy.waiters#waitable']
+        );
 
         $first = $traits['byId']['example#first'];
         self::assertInstanceOf(DynamicTraitValue::class, $first);
@@ -92,6 +97,18 @@ final class SchemaTraitRegistryTest extends TestCase
             'smithy.api#paginated',
             SchemaTraitRegistry::getDefaultId(
                 Schema::T_PAGINATED
+            )
+        );
+        self::assertSame(
+            Schema::T_WAITABLE,
+            SchemaTraitRegistry::getDefaultKey(
+                'smithy.waiters#waitable'
+            )
+        );
+        self::assertSame(
+            'smithy.waiters#waitable',
+            SchemaTraitRegistry::getDefaultId(
+                Schema::T_WAITABLE
             )
         );
         self::assertSame(

@@ -215,6 +215,38 @@ final class OperationGeneratorTest extends TestCase
         );
     }
 
+    public function testEmitsDedicatedWaitableTraitKey(): void
+    {
+        $model = SmithyModel::fromFile(
+            __DIR__ . '/../../Client/Waiter/fixtures/waiter-model.json'
+        );
+        $settings = new CodegenSettings(
+            namespace: 'Smithy\\Example',
+            outputDir: '/tmp/out',
+            organization: 'flat'
+        );
+        $generator = new OperationGenerator(
+            $model,
+            new PhpSymbolProvider($model, $settings),
+            $settings
+        );
+
+        $file = $generator->generate('smithy.waiter#GetThing');
+
+        $this->assertStringContainsString(
+            'Schema::T_WAITABLE => [',
+            $file->content
+        );
+        $this->assertStringContainsString(
+            "'ThingReady' => [",
+            $file->content
+        );
+        $this->assertStringNotContainsString(
+            'WaiterSchemaExtensionProvider',
+            $file->content
+        );
+    }
+
     public function testPreservesEndpointOperationTraitsById(): void
     {
         $model = SmithyModel::fromJson(\json_encode([

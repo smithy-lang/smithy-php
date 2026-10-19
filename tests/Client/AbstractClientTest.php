@@ -31,7 +31,14 @@ use Smithy\Client\Plugin\{
     PluginCollection,
     PluginInterface
 };
-use Smithy\Core\Serde\SerializableStructInterface;
+use Smithy\Core\Serde\{
+    Schema,
+    SerializableStructInterface
+};
+use Smithy\Core\Shape\{
+    OperationInterface,
+    ShapeType
+};
 use Smithy\Tests\Client\Fake\{
     FakeInput,
     FakeOperation,
@@ -40,6 +47,7 @@ use Smithy\Tests\Client\Fake\{
     FakeService,
     TestClientFixture
 };
+use Smithy\Tests\Client\Waiter\Generated\Waiter\Operation\GetThingOperation;
 use Smithy\Tests\Client\Plugin\Utils\{
     RecordingPluginFixture,
     RegisteringPluginFixture,
@@ -432,6 +440,74 @@ final class AbstractClientTest extends TestCase
 
         self::assertSame('wrapped', $output->value);
         self::assertSame(0, $wrapper->modifyCalls);
+    }
+
+    public function testCreateWaiterRejectsOperationWithoutWaiters(): void
+    {
+        $client = new TestClientFixture($this->config());
+
+        $this->expectException(\LogicException::class);
+        $this->expectExceptionMessage(
+            'Operation smithy.tests#Fake has no modeled waiters.'
+        );
+
+        $client->createWaiterForTest(
+            FakeOperation::instance(),
+            'Missing'
+        );
+    }
+
+    public function testCreateWaiterRejectsUnknownWaiterName(): void
+    {
+        $client = new TestClientFixture($this->config());
+
+        $this->expectException(\LogicException::class);
+        $this->expectExceptionMessage(
+            'does not define waiter Missing'
+        );
+
+        $client->createWaiterForTest(
+            GetThingOperation::instance(),
+            'Missing'
+        );
+    }
+
+    public function testCreateWaiterRejectsOutputMatcherWithoutOutput(): void
+    {
+        $operation = $this->createMock(OperationInterface::class);
+        $operation->method('getId')->willReturn('example#NoOutput');
+        $operation->method('getSchema')->willReturn(new Schema(
+            id: 'example#NoOutput',
+            type: ShapeType::Operation,
+            traits: [
+                Schema::T_WAITABLE => [
+                    'Ready' => [
+                        'acceptors' => [[
+                            'state' => 'success',
+                            'matcher' => [
+                                'output' => [
+                                    'path' => 'status',
+                                    'expected' => 'ready',
+                                    'comparator' => 'stringEquals'
+                                ]
+                            ]
+                        ]]
+                    ]
+                ]
+            ]
+        ));
+        $operation->method('getOutputSchema')->willReturn(new Schema(
+            id: 'smithy.api#Unit',
+            type: ShapeType::Structure
+        ));
+        $client = new TestClientFixture($this->config());
+
+        $this->expectException(\LogicException::class);
+        $this->expectExceptionMessage(
+            'output matchers require an operation output'
+        );
+
+        $client->createWaiterForTest($operation, 'Ready');
     }
 
     private function config(
