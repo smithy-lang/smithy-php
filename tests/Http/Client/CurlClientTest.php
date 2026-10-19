@@ -73,11 +73,26 @@ final class CurlClientTest extends TestCase
         $client = new CurlClient();
         $client->close();
         $client->close();
+        $request = new Request(
+            'GET',
+            'https://example.com',
+            ['Authorization' => 'Bearer secret']
+        );
 
-        $this->expectException(NetworkExceptionInterface::class);
-        $this->expectExceptionMessage('HTTP client is closed.');
+        try {
+            $client->sendRequest($request);
+            self::fail('Expected closed client request to fail.');
+        } catch (NetworkExceptionInterface $error) {
+            self::assertSame('HTTP client is closed.', $error->getMessage());
+            self::assertFalse(
+                $error->getRequest()->hasHeader('Authorization')
+            );
+        }
 
-        $client->sendRequest(new Request('GET', 'https://example.com'));
+        self::assertSame(
+            'Bearer secret',
+            $request->getHeaderLine('Authorization')
+        );
     }
 
     #[DataProvider('progressBodyProvider')]

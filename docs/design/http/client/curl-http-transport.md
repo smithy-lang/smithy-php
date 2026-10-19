@@ -399,10 +399,11 @@ After streamed response delivery, the same failure is stored on the body and
 trailers. A body reader receives queued bytes first and then the failure.
 
 Every transfer failure marks the connection unhealthy. Release closes an
-unhealthy handle instead of pooling it. `HttpException` retains the original
-PSR-7 request and, when available, the stream, cancellation, or libcurl
-cause. It also records whether the request body started, was fully consumed,
-and can be sought.
+unhealthy handle instead of pooling it. `HttpException` retains a sanitized
+copy of the PSR-7 request, without authorization or proxy-authorization
+headers, and, when available, the stream, cancellation, or libcurl cause. It
+also records whether the request body started, was fully consumed, and can be
+sought.
 
 Failures classified by `CurlClient` as transport failures are exposed through
 `HttpException` or a subclass and preserve the underlying cause. Invalid
