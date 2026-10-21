@@ -10,7 +10,9 @@ use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\RequestInterface;
 use Smithy\Client\{
     ClientConfig,
-    Dynamic\DynamicClient
+    Dynamic\DynamicClient,
+    Dynamic\DynamicService,
+    RequestOverrideConfig
 };
 use Smithy\Client\Endpoint\{
     Endpoint,
@@ -21,12 +23,19 @@ use Smithy\Client\Interceptor\{
     AbstractInterceptor,
     InterceptorChain
 };
+use Smithy\Client\Pagination\Paginator;
 use Smithy\Client\Plugin\{
     PluginCollection,
     RequestCompressionPlugin
 };
+use Smithy\Client\Waiter\{
+    WaiterConfig,
+    WaiterFailureException
+};
+use Smithy\Codec\Cbor\CborCodec;
 use Smithy\Core\Exception\ApiException;
 use Smithy\Core\Model\SmithyModel;
+use Smithy\Core\Serde\SerializableStructInterface;
 use Smithy\Core\Shape\Document\{
     AbstractDocument,
     BlobValue,
@@ -43,9 +52,12 @@ use Smithy\Tests\Client\Dynamic\Utils\{
     InputRecordingInterceptorFixture,
     TestDynamicClient
 };
+use Smithy\Tests\Client\Pagination\Generated\Pagination\Output\ListStringsOutput;
+use Smithy\Tests\Client\Waiter\Generated\Waiter\Output\GetThingOutput;
 use Smithy\Tests\Utils\Http\MockHttpClient;
 
 #[CoversClass(DynamicClient::class)]
+#[CoversClass(DynamicService::class)]
 final class DynamicClientTest extends TestCase
 {
     private const MIN_COMPRESSION_SIZE =
@@ -205,6 +217,391 @@ final class DynamicClientTest extends TestCase
         );
         self::assertSame(2.5, $http->getSentOptions()[0]->timeout);
         self::assertSame(1.5, $http->getSentOptions()[0]->readTimeout);
+    }
+
+    public function testModeledOperationsTakePrecedenceOverConvenienceNames(): void
+    {
+        $http = $this->httpClient();
+        $client = DynamicClient::create(
+            model: $this->conventionCollisionModel(),
+            httpClient: $http,
+            endpoint: 'https://example.com'
+        );
+
+        $waitOutput = $client->waitUntilThingReady([
+            'message' => 'wait operation'
+        ]);
+        $pageOutput = $client->listThingsPaginated([
+            'message' => 'page operation'
+        ]);
+
+        self::assertInstanceOf(StructDocument::class, $waitOutput);
+        self::assertInstanceOf(StructDocument::class, $pageOutput);
+        self::assertSame(
+            'wait operation',
+            $this->memberValue($waitOutput, 'message')
+        );
+        self::assertSame(
+            'page operation',
+            $this->memberValue($pageOutput, 'message')
+        );
+        self::assertSame(
+            [
+                '/service/Collisions/operation/WaitUntilThingReady',
+                '/service/Collisions/operation/ListThingsPaginated'
+            ],
+            \array_map(
+                static fn(RequestInterface $request): string =>
+                    $request->getUri()->getPath(),
+                $http->sentRequests
+            )
+        );
+    }
+
+    public function testRejectsAmbiguousConvenienceMethodNames(): void
+    {
+        [$client, $http] = $this->client();
+
+        try {
+            $client->waitUntilEchoPaginated();
+            self::fail('Expected ambiguous dynamic method to fail.');
+        } catch (\BadMethodCallException $error) {
+            self::assertSame(
+                "Dynamic method 'waitUntilEchoPaginated' is ambiguous. "
+                    . 'Use paginate() or waitUntil() explicitly.',
+                $error->getMessage()
+            );
+        }
+
+        self::assertSame(0, $http->sendCallCount);
+    }
+
+    public function testPaginatedMethodRejectsNonPaginatedOperation(): void
+    {
+        [$client, $http] = $this->client();
+
+        try {
+            $client->echoPaginated(['message' => 'hello']);
+            self::fail('Expected non-paginated operation to fail.');
+        } catch (\LogicException $error) {
+            self::assertSame(
+                'Operation example#Echo is not paginated.',
+                $error->getMessage()
+            );
+        }
+
+        self::assertSame(0, $http->sendCallCount);
+    }
+
+    public function testRejectsUnknownDynamicMethod(): void
+    {
+        [$client, $http] = $this->client();
+
+        try {
+            $client->missing();
+            self::fail('Expected unknown dynamic method to fail.');
+        } catch (\BadMethodCallException $error) {
+            self::assertSame(
+                'Unknown dynamic method: missing.',
+                $error->getMessage()
+            );
+        }
+
+        self::assertSame(0, $http->sendCallCount);
+    }
+
+    public function testDynamicPaginationUsesGeneratedStyleMethod(): void
+    {
+        $http = (new MockHttpClient())
+            ->queueResponse(self::response(
+                new ListStringsOutput(['one'])
+            ));
+        $client = DynamicClient::create(
+            model: __DIR__ . '/../Pagination/fixtures/pagination-model.json',
+            httpClient: $http,
+            endpoint: 'https://example.com'
+        );
+
+        $pages = \iterator_to_array(
+            $client->listStringsPaginated(input: [
+                'pageSize' => 2,
+                '@http' => [
+                    'headers' => ['x-paginator' => 'dynamic-method']
+                ]
+            ]),
+            false
+        );
+
+        self::assertContainsOnlyInstancesOf(StructDocument::class, $pages);
+        self::assertCount(1, $pages);
+        self::assertSame(
+            'dynamic-method',
+            $http->sentRequests[0]->getHeaderLine('x-paginator')
+        );
+    }
+
+    public function testDynamicGeneratedStylePaginationAllowsOmittedInput(): void
+    {
+        $client = DynamicClient::create(
+            model: __DIR__ . '/../Pagination/fixtures/pagination-model.json',
+            httpClient: new MockHttpClient(),
+            endpoint: 'https://example.com'
+        );
+
+        self::assertInstanceOf(
+            Paginator::class,
+            $client->listStringsPaginated()
+        );
+    }
+
+    public function testDynamicGeneratedStylePaginationAcceptsOverrides(): void
+    {
+        $http = (new MockHttpClient())
+            ->queueResponse(self::response(
+                new ListStringsOutput(['one'])
+            ));
+        $client = DynamicClient::create(
+            model: __DIR__ . '/../Pagination/fixtures/pagination-model.json',
+            httpClient: $http,
+            endpoint: 'https://example.com'
+        );
+
+        \iterator_to_array(
+            $client->listStringsPaginated(
+                ['pageSize' => 2],
+                ['@http' => [
+                    'headers' => ['x-paginator' => 'dynamic-overrides']
+                ]]
+            ),
+            false
+        );
+
+        self::assertSame(
+            'dynamic-overrides',
+            $http->sentRequests[0]->getHeaderLine('x-paginator')
+        );
+    }
+
+    public function testWaitsUsingModeledRuntimeDefinitions(): void
+    {
+        $http = (new MockHttpClient())
+            ->queueResponse(self::response(
+                new GetThingOutput(status: 'ready')
+            ));
+        $client = self::waiterClient($http);
+
+        $result = $client->waitUntil(
+            'ThingReady',
+            ['thingId' => 'thing-1'],
+            5.0
+        );
+
+        self::assertInstanceOf(StructDocument::class, $result->output);
+        self::assertSame(
+            'ready',
+            $result->output->getMemberValue(
+                $result->output->getSchema()->getMember('status')
+            )
+        );
+        self::assertNull($result->error);
+        self::assertCount(1, $http->sentRequests);
+    }
+
+    public function testWaitsUsingGeneratedStyleMethod(): void
+    {
+        $http = (new MockHttpClient())
+            ->queueResponse(self::response(
+                new GetThingOutput(status: 'ready')
+            ));
+        $client = self::waiterClient($http);
+
+        $result = $client->waitUntilThingReady(
+            ['thingId' => 'thing-1'],
+            5.0
+        );
+
+        self::assertInstanceOf(StructDocument::class, $result->output);
+        self::assertCount(1, $http->sentRequests);
+    }
+
+    public function testGeneratedStyleWaiterAcceptsNamedArguments(): void
+    {
+        $http = (new MockHttpClient())
+            ->queueResponse(self::response(
+                new GetThingOutput(status: 'ready')
+            ));
+        $client = self::waiterClient($http);
+
+        $result = $client->waitUntilThingReady(
+            maxWaitTime: 5.0,
+            input: ['thingId' => 'thing-1'],
+            config: new WaiterConfig()
+        );
+
+        self::assertInstanceOf(StructDocument::class, $result->output);
+        self::assertCount(1, $http->sentRequests);
+    }
+
+    public function testGeneratedStyleWaiterUsesNativeRequiredArguments(): void
+    {
+        $client = self::waiterClient(new MockHttpClient());
+
+        $this->expectException(\ArgumentCountError::class);
+
+        $client->waitUntilThingReady(['thingId' => 'thing-1']);
+    }
+
+    public function testGeneratedStyleWaiterUsesNativeDuplicateValidation(): void
+    {
+        $client = self::waiterClient(new MockHttpClient());
+
+        $this->expectException(\Error::class);
+
+        $client->__call('waitUntilThingReady', [
+            ['thingId' => 'thing-1'],
+            'input' => ['thingId' => 'thing-2'],
+            'maxWaitTime' => 5.0
+        ]);
+    }
+
+    public function testUsesModeledWaiterFailureMessage(): void
+    {
+        $http = (new MockHttpClient())
+            ->queueResponse(self::response(new GetThingOutput(
+                status: 'failed',
+                failureReason: 'Capacity is exhausted.'
+            )));
+        $client = self::waiterClient($http);
+
+        try {
+            $client->waitUntil(
+                'ThingReady',
+                ['thingId' => 'thing-1'],
+                5.0
+            );
+            self::fail('Expected the dynamic waiter to fail.');
+        } catch (WaiterFailureException $error) {
+            self::assertStringContainsString(
+                'Capacity is exhausted.',
+                $error->getMessage()
+            );
+            self::assertSame(1, $error->attempts);
+        }
+    }
+
+    public function testResolvesWaiterNamesCaseInsensitively(): void
+    {
+        $http = (new MockHttpClient())
+            ->queueResponse(self::response(
+                new GetThingOutput(status: 'ready')
+            ));
+        $client = self::waiterClient($http);
+
+        $result = $client->waitUntil(
+            'tHiNgReAdY',
+            ['thingId' => 'thing-1'],
+            5.0
+        );
+
+        self::assertInstanceOf(StructDocument::class, $result->output);
+        self::assertCount(1, $http->sentRequests);
+    }
+
+    public function testAppliesInlineWaiterRequestOverrides(): void
+    {
+        $http = (new MockHttpClient())
+            ->queueResponse(self::response(
+                new GetThingOutput(status: 'ready')
+            ));
+        $client = self::waiterClient($http);
+
+        $client->waitUntil(
+            'ThingReady',
+            [
+                'thingId' => 'thing-1',
+                '@http' => [
+                    'headers' => ['x-waiter' => 'value']
+                ]
+            ],
+            5.0
+        );
+
+        self::assertSame(
+            'value',
+            $http->sentRequests[0]->getHeaderLine('x-waiter')
+        );
+    }
+
+    public function testConfigOverridesReplaceMatchingInlineOverrides(): void
+    {
+        $http = (new MockHttpClient())
+            ->queueResponse(self::response(
+                new GetThingOutput(status: 'ready')
+            ));
+        $client = self::waiterClient($http);
+
+        $client->waitUntil(
+            'ThingReady',
+            [
+                'thingId' => 'thing-1',
+                '@http' => [
+                    'headers' => ['x-waiter' => 'inline']
+                ]
+            ],
+            5.0,
+            new WaiterConfig(
+                requestOverrides: RequestOverrideConfig::fromArray([
+                    '@http' => [
+                        'headers' => ['x-waiter' => 'config']
+                    ]
+                ])
+            )
+        );
+
+        self::assertSame(
+            'config',
+            $http->sentRequests[0]->getHeaderLine('x-waiter')
+        );
+    }
+
+    public function testRejectsUnknownWaiter(): void
+    {
+        $client = self::waiterClient(new MockHttpClient());
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage(
+            'Unknown dynamic waiter: Missing.'
+        );
+
+        $client->waitUntil('Missing', ['thingId' => 'thing-1'], 5.0);
+    }
+
+    public function testGeneratedStyleMethodRejectsUnknownWaiter(): void
+    {
+        $client = self::waiterClient(new MockHttpClient());
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage(
+            'Unknown dynamic waiter: Missing.'
+        );
+
+        $client->waitUntilMissing(['thingId' => 'thing-1'], 5.0);
+    }
+
+    public function testRejectsDuplicateServiceWaiterNames(): void
+    {
+        $client = DynamicClient::create(
+            model: self::duplicateWaiterModel(),
+            httpClient: new MockHttpClient(),
+            endpoint: 'https://example.com'
+        );
+
+        $this->expectException(\LogicException::class);
+        $this->expectExceptionMessage(
+            'duplicate waiter name THINGREADY'
+        );
+
+        $client->waitUntil('ThingReady', null, 5.0);
     }
 
     public function testRejectsUnknownRequestOverridesBeforeTransmission(): void
@@ -1089,6 +1486,117 @@ final class DynamicClientTest extends TestCase
                     'traits' => [
                         'smithy.api#error' => 'server'
                     ]
+                ]
+            ]
+        ]);
+    }
+
+    private static function waiterClient(
+        MockHttpClient $http
+    ): DynamicClient
+    {
+        return DynamicClient::create(
+            model: SmithyModel::fromFile(
+                __DIR__ . '/../Waiter/fixtures/waiter-model.json'
+            ),
+            httpClient: $http,
+            endpoint: 'https://example.com'
+        );
+    }
+
+    private static function duplicateWaiterModel(): SmithyModel
+    {
+        $waiter = static fn(string $name): array => [
+            'type' => 'operation',
+            'traits' => [
+                'smithy.waiters#waitable' => [
+                    $name => [
+                        'acceptors' => [
+                            [
+                                'state' => 'success',
+                                'matcher' => ['success' => true]
+                            ]
+                        ]
+                    ]
+                ]
+            ]
+        ];
+
+        return SmithyModel::fromArray([
+            'smithy' => '2.0',
+            'shapes' => [
+                'example#Waiters' => [
+                    'type' => 'service',
+                    'version' => '2026-10-13',
+                    'operations' => [
+                        ['target' => 'example#First'],
+                        ['target' => 'example#Second']
+                    ],
+                    'traits' => [
+                        'smithy.protocols#rpcv2Cbor' => []
+                    ]
+                ],
+                'example#First' => $waiter('ThingReady'),
+                'example#Second' => $waiter('THINGREADY')
+            ]
+        ]);
+    }
+
+    private static function response(
+        SerializableStructInterface $output
+    ): Response
+    {
+        $serializer = (new CborCodec())->createSerializer();
+        $output->serialize($serializer, 0);
+
+        return new Response(
+            headers: [
+                'Content-Type' => 'application/cbor',
+                'Smithy-Protocol' => 'rpc-v2-cbor'
+            ],
+            body: $serializer->flush()
+        );
+    }
+
+    private function conventionCollisionModel(): SmithyModel
+    {
+        return SmithyModel::fromArray([
+            'smithy' => '2.0',
+            'shapes' => [
+                'example#Collisions' => [
+                    'type' => 'service',
+                    'version' => '2026-10-19',
+                    'operations' => [
+                        ['target' => 'example#WaitUntilThingReady'],
+                        ['target' => 'example#ListThingsPaginated']
+                    ],
+                    'traits' => [
+                        'smithy.protocols#rpcv2Cbor' => []
+                    ]
+                ],
+                'example#WaitUntilThingReady' => [
+                    'type' => 'operation',
+                    'input' => ['target' => 'example#CollisionInput'],
+                    'output' => ['target' => 'example#CollisionOutput']
+                ],
+                'example#ListThingsPaginated' => [
+                    'type' => 'operation',
+                    'input' => ['target' => 'example#CollisionInput'],
+                    'output' => ['target' => 'example#CollisionOutput']
+                ],
+                'example#CollisionInput' => [
+                    'type' => 'structure',
+                    'members' => [
+                        'message' => ['target' => 'smithy.api#String']
+                    ],
+                    'traits' => ['smithy.api#input' => []]
+                ],
+                'example#CollisionOutput' => [
+                    'type' => 'structure',
+                    'members' => [
+                        'message' => ['target' => 'smithy.api#String']
+                    ],
+                    'traits' => ['smithy.api#output' => []]
                 ]
             ]
         ]);
