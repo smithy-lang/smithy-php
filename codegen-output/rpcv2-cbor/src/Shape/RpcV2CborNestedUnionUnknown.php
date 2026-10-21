@@ -4,13 +4,14 @@ declare(strict_types=1);
 
 namespace Smithy\ProtocolTests\RpcV2Cbor\Shape;
 
+use JsonSerializable;
 use Smithy\Core\Shape\SensitiveStringableTrait;
 
 /**
  * Unknown variant for forward-compatibility.
  */
 /** @internal */
-final readonly class RpcV2CborNestedUnionUnknown extends RpcV2CborNestedUnion
+final readonly class RpcV2CborNestedUnionUnknown extends RpcV2CborNestedUnion implements JsonSerializable
 {
     use SensitiveStringableTrait;
 

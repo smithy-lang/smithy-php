@@ -6,10 +6,13 @@ namespace Smithy\Tests\Codegen\Generator;
 
 use PHPUnit\Framework\TestCase;
 use Smithy\Codegen\CodegenSettings;
+use Smithy\Codegen\Generator\GeneratedFile;
+use Smithy\Codegen\Generator\SchemasGenerator;
 use Smithy\Codegen\Generator\StructureGenerator;
 use Smithy\Codegen\Model\SmithyModel;
 use Smithy\Codegen\PhpSymbolProvider;
 use Smithy\Codegen\PriorCodegenEvaluator;
+use Smithy\Core\Serde\Schema;
 
 final class StructureGeneratorTest extends TestCase
 {
@@ -597,7 +600,7 @@ JSON);
             "type": "list",
             "member": {"target": "smithy.example#Secret"}
         },
-        "smithy.example#Container": {
+        "smithy.example#JsonSerializable": {
             "type": "structure",
             "members": {
                 "secrets": {"target": "smithy.example#Secrets"}
@@ -618,9 +621,13 @@ JSON);
         );
 
         $content = $generator->generate(
-            'smithy.example#Container'
+            'smithy.example#JsonSerializable'
         )->content;
 
+        $this->assertStringContainsString(
+            'use JsonSerializable as PhpJsonSerializable;',
+            $content
+        );
         $this->assertStringContainsString(
             'use Smithy\\Core\\Shape\\SensitiveStringableTrait;',
             $content
@@ -629,5 +636,263 @@ JSON);
             'use SensitiveStringableTrait;',
             $content
         );
+        $this->assertStringContainsString(
+            'PhpJsonSerializable',
+            $content
+        );
+    }
+
+    public function testGeneratedSensitiveStructureRedactsSerialization(): void
+    {
+        $model = SmithyModel::fromJson(<<<'JSON'
+{
+    "smithy": "2.0",
+    "shapes": {
+        "example#SensitiveContainer": {
+            "type": "structure",
+            "traits": {"smithy.api#sensitive": {}},
+            "members": {
+                "value": {"target": "smithy.api#String"}
+            }
+        }
+    }
+}
+JSON);
+        $outputDir = \sys_get_temp_dir()
+            . '/smithy-sensitive-structure-'
+            . \bin2hex(\random_bytes(4));
+        $namespace = 'Smithy\\Tests\\Generated\\SensitiveStructure'
+            . \bin2hex(\random_bytes(4));
+        $settings = new CodegenSettings(
+            namespace: $namespace,
+            outputDir: $outputDir,
+            organization: 'flat'
+        );
+        $symbols = new PhpSymbolProvider($model, $settings);
+        $schemaFile = (new SchemasGenerator(
+            $model,
+            $symbols,
+            $settings
+        ))->generate(['example#SensitiveContainer' => true]);
+        $structureFile = (new StructureGenerator(
+            $model,
+            $symbols,
+            $settings
+        ))->generate('example#SensitiveContainer');
+        $files = [$schemaFile, $structureFile];
+
+        try {
+            foreach ($files as $file) {
+                $file->writeToDisk();
+            }
+            require $schemaFile->path;
+            require $structureFile->path;
+
+            $class = $namespace . '\\SensitiveContainer';
+            $value = new $class('structure-secret');
+
+            $this->assertTrue(
+                $value->getSchema()->hasTrait(Schema::T_SENSITIVE)
+            );
+            $this->assertInstanceOf(\JsonSerializable::class, $value);
+
+            $output = \print_r($value, true)
+                . $this->dumpValue($value)
+                . (string) $value
+                . \json_encode($value, JSON_THROW_ON_ERROR)
+                . \serialize($value);
+            $this->assertStringContainsString('***REDACTED***', $output);
+            $this->assertStringNotContainsString(
+                'structure-secret',
+                $output
+            );
+        } finally {
+            foreach ($files as $file) {
+                @\unlink($file->path);
+            }
+            @\rmdir($outputDir);
+        }
+    }
+
+    public function testSensitiveStructureReservesModeledJsonSerializableType(): void
+    {
+        $model = SmithyModel::fromJson(<<<'JSON'
+{
+    "smithy": "2.0",
+    "shapes": {
+        "example#Operation": {
+            "type": "operation",
+            "input": {"target": "example#SensitiveContainer"}
+        },
+        "example#SensitiveContainer": {
+            "type": "structure",
+            "traits": {"smithy.api#sensitive": {}},
+            "members": {
+                "value": {"target": "example#JsonSerializable"}
+            }
+        },
+        "example#JsonSerializable": {
+            "type": "structure",
+            "members": {}
+        }
+    }
+}
+JSON);
+
+        foreach (['flat', 'categorized'] as $organization) {
+            $outputDir = \sys_get_temp_dir()
+                . '/smithy-sensitive-structure-import-'
+                . \bin2hex(\random_bytes(4));
+            $namespace = 'Smithy\\Tests\\Generated\\SensitiveStructureImport'
+                . \bin2hex(\random_bytes(4));
+            $settings = new CodegenSettings(
+                namespace: $namespace,
+                outputDir: $outputDir,
+                organization: $organization
+            );
+            $symbols = new PhpSymbolProvider($model, $settings);
+            $schemaFile = (new SchemasGenerator(
+                $model,
+                $symbols,
+                $settings
+            ))->generate([
+                'example#SensitiveContainer' => true,
+                'example#JsonSerializable' => true
+            ]);
+            $memberFile = (new StructureGenerator(
+                $model,
+                $symbols,
+                $settings
+            ))->generate('example#JsonSerializable');
+            $containerFile = (new StructureGenerator(
+                $model,
+                $symbols,
+                $settings
+            ))->generate('example#SensitiveContainer');
+            $files = [$schemaFile, $memberFile, $containerFile];
+
+            try {
+                foreach ($files as $file) {
+                    $file->writeToDisk();
+                }
+                require $schemaFile->path;
+                require $memberFile->path;
+                require $containerFile->path;
+
+                $memberClass = $symbols->toClassName(
+                    'example#JsonSerializable'
+                );
+                $containerClass = $symbols->toClassName(
+                    'example#SensitiveContainer'
+                );
+                $member = new $memberClass();
+                $value = new $containerClass($member);
+
+                $this->assertSame($member, $value->value);
+                $this->assertInstanceOf(\JsonSerializable::class, $value);
+            } finally {
+                foreach ($files as $file) {
+                    @\unlink($file->path);
+                }
+                $directories = \array_unique(\array_map(
+                    static fn(GeneratedFile $file): string =>
+                        \dirname($file->path),
+                    $files
+                ));
+                \usort(
+                    $directories,
+                    static fn(string $left, string $right): int =>
+                        \strlen($right) <=> \strlen($left)
+                );
+                foreach ($directories as $directory) {
+                    @\rmdir($directory);
+                }
+                @\rmdir($outputDir);
+            }
+        }
+    }
+
+    public function testSensitiveErrorReservesCustomJsonSerializableParent(): void
+    {
+        $model = SmithyModel::fromJson(<<<'JSON'
+{
+    "smithy": "2.0",
+    "shapes": {
+        "example#SensitiveFailure": {
+            "type": "structure",
+            "traits": {
+                "smithy.api#error": "client",
+                "smithy.api#sensitive": {}
+            },
+            "members": {
+                "message": {"target": "smithy.api#String"}
+            }
+        }
+    }
+}
+JSON);
+        $outputDir = \sys_get_temp_dir()
+            . '/smithy-sensitive-error-parent-'
+            . \bin2hex(\random_bytes(4));
+        $namespace = 'Smithy\\Tests\\Generated\\SensitiveError'
+            . \bin2hex(\random_bytes(4));
+        $parentNamespace = $namespace . '\\Parent';
+        $parentClass = $parentNamespace . '\\JsonSerializable';
+        $settings = new CodegenSettings(
+            namespace: $namespace,
+            outputDir: $outputDir,
+            serviceExceptionClass: $parentClass
+        );
+        $symbols = new PhpSymbolProvider($model, $settings);
+        $parentFile = new GeneratedFile(
+            path: $outputDir . '/JsonSerializable.php',
+            content: \sprintf(<<<'PHP'
+<?php
+
+declare(strict_types=1);
+
+namespace %s;
+
+use Smithy\Core\Exception\ApiException;
+
+class JsonSerializable extends ApiException {}
+PHP, $parentNamespace)
+        );
+        $errorFile = (new StructureGenerator(
+            $model,
+            $symbols,
+            $settings
+        ))->generate('example#SensitiveFailure');
+        $files = [$parentFile, $errorFile];
+
+        try {
+            foreach ($files as $file) {
+                $file->writeToDisk();
+            }
+            require $parentFile->path;
+            require $errorFile->path;
+
+            $errorClass = $symbols->toClassName(
+                'example#SensitiveFailure'
+            );
+            $error = new $errorClass('secret');
+
+            $this->assertInstanceOf($parentClass, $error);
+            $this->assertInstanceOf(\JsonSerializable::class, $error);
+        } finally {
+            foreach ($files as $file) {
+                @\unlink($file->path);
+            }
+            @\rmdir(\dirname($errorFile->path));
+            @\rmdir($outputDir);
+        }
+    }
+
+    private function dumpValue(mixed $value): string
+    {
+        \ob_start();
+        \var_dump($value);
+
+        return (string) \ob_get_clean();
     }
 }

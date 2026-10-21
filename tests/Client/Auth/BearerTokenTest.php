@@ -45,11 +45,31 @@ final class BearerTokenTest extends TestCase
         }
     }
 
-    public function testDoesNotExposeTokenWhenJsonEncoded(): void
+    public function testRedactsSerializedRepresentations(): void
     {
-        $token = new BearerToken('secret-token');
+        $token = new BearerToken('secret-token', 123.0);
+        $json = \json_encode($token, JSON_THROW_ON_ERROR);
+        $serialized = \serialize($token);
 
-        self::assertSame('{}', \json_encode($token, JSON_THROW_ON_ERROR));
+        self::assertSame(
+            [
+                'token' => '***REDACTED***',
+                'expirationTime' => 123
+            ],
+            \json_decode($json, true, flags: JSON_THROW_ON_ERROR)
+        );
+        self::assertStringContainsString('***REDACTED***', $serialized);
+        self::assertStringNotContainsString('secret-token', $serialized);
+    }
+
+    public function testRejectsSerializedRestoration(): void
+    {
+        $serialized = \serialize(new BearerToken('secret-token'));
+
+        $this->expectException(\LogicException::class);
+        $this->expectExceptionMessage('cannot be restored');
+
+        \unserialize($serialized);
     }
 
     private function printValue(mixed $value): string
