@@ -7,15 +7,16 @@ namespace Smithy\Http\Client\Exception;
 use Psr\Http\Message\RequestInterface;
 
 /**
- * Remove authentication headers from requests retained by exceptions.
+ * Remove potentially sensitive headers from requests retained by exceptions.
  *
  * @internal
  */
 final class ExceptionRequestSanitizer
 {
-    private const SENSITIVE_HEADERS = [
-        'Authorization',
-        'Proxy-Authorization',
+    private const SENSITIVE_HEADER_FRAGMENTS = [
+        'authorization',
+        'password',
+        'token',
     ];
 
     /**
@@ -25,9 +26,14 @@ final class ExceptionRequestSanitizer
         RequestInterface $request
     ): RequestInterface
     {
-        foreach (self::SENSITIVE_HEADERS as $header) {
-            if ($request->hasHeader($header)) {
-                $request = $request->withoutHeader($header);
+        foreach (\array_keys($request->getHeaders()) as $header) {
+            $normalizedHeader = \strtolower($header);
+
+            foreach (self::SENSITIVE_HEADER_FRAGMENTS as $fragment) {
+                if (\str_contains($normalizedHeader, $fragment)) {
+                    $request = $request->withoutHeader($header);
+                    break;
+                }
             }
         }
 

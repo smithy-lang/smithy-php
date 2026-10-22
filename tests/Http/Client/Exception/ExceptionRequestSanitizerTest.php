@@ -26,6 +26,9 @@ final class ExceptionRequestSanitizerTest extends TestCase
             [
                 'Authorization' => 'Bearer secret',
                 'Proxy-Authorization' => 'Basic secret',
+                'X-Auth-Token' => 'token',
+                'X-Database-Password' => 'password',
+                'X-Security-Level' => 'high',
                 'X-Request-Id' => 'request-id',
             ]
         );
@@ -40,6 +43,14 @@ final class ExceptionRequestSanitizerTest extends TestCase
             self::assertFalse($sanitized->hasHeader('Authorization'));
             self::assertFalse(
                 $sanitized->hasHeader('Proxy-Authorization')
+            );
+            self::assertFalse($sanitized->hasHeader('X-Auth-Token'));
+            self::assertFalse(
+                $sanitized->hasHeader('X-Database-Password')
+            );
+            self::assertSame(
+                'high',
+                $sanitized->getHeaderLine('X-Security-Level')
             );
             self::assertSame(
                 'request-id',
