@@ -245,7 +245,8 @@ waiters and defaults to `RevoltEventLoop` when none is supplied.
 Transport failures use `HttpException` subclasses. `CurlClient` preserves
 existing `HttpException` instances and wraps other exceptions thrown during
 connection acquisition, release, or upload cleanup by injected dependencies.
-A cleanup failure does not replace an existing transfer failure.
+A cleanup failure does not replace an existing transfer failure. Requests
+retained by exceptions omit `Authorization` and `Proxy-Authorization` headers.
 
 The internal message model remains immutable PSR-7. Protocols and trusted
 runtime mutations preserve the normalized header representation through
