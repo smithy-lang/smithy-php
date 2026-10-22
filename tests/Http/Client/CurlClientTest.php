@@ -2927,6 +2927,140 @@ final class CurlClientTest extends TestCase
         );
     }
 
+    #[DataProvider('invalidStreamedResponseProvider')]
+    public function testContainsInvalidStreamedResponse(
+        string $responseMode,
+        string $validationMessage
+    ): void
+    {
+        $server = LocalServerFixture::start(
+            responseMode: $responseMode
+        );
+
+        try {
+            $this->sendRequest(
+                $server,
+                null,
+                options: new HttpRequestOptions(
+                    timeout: 2.0,
+                    maxBufferedResponseBytes: 1
+                )
+            );
+            $this->fail('Expected the invalid response to fail.');
+        } catch (NetworkExceptionInterface $error) {
+            $this->assertStringContainsString(
+                'Invalid HTTP response.',
+                $error->getMessage()
+            );
+            $this->assertInstanceOf(
+                \InvalidArgumentException::class,
+                $error->getPrevious()
+            );
+            $this->assertStringContainsString(
+                $validationMessage,
+                $error->getPrevious()->getMessage()
+            );
+        } finally {
+            $server->stop();
+        }
+    }
+
+    /**
+     * @return iterable<string, array{string, string}>
+     */
+    public static function invalidStreamedResponseProvider(): iterable
+    {
+        yield 'status' => [
+            'invalid-status-response',
+            'status codes must be between 100 and 599'
+        ];
+        yield 'reason' => [
+            'invalid-reason-response',
+            'reason phrases contain invalid control bytes'
+        ];
+        yield 'header name' => [
+            'invalid-header-response',
+            'header names must be valid tokens'
+        ];
+    }
+
+    public function testInvalidStreamedResponseDoesNotAbortOtherRequests(): void
+    {
+        $servers = [
+            'first' => LocalServerFixture::start(
+                responseMode: 'valid-stream-response'
+            ),
+            'invalid' => LocalServerFixture::start(
+                responseMode: 'invalid-status-response'
+            ),
+            'second' => LocalServerFixture::start(
+                responseMode: 'valid-stream-response'
+            )
+        ];
+        $client = new CurlClient();
+        $completed = [];
+
+        try {
+            Async::map(
+                $servers,
+                static function (
+                    LocalServerFixture $server,
+                    string $name
+                ) use ($client, &$completed): void
+                {
+                    $response = $client->sendRequest(
+                        new Request(
+                            'GET',
+                            $server->endpoint() . "/{$name}"
+                        ),
+                        new HttpRequestOptions(
+                            timeout: 2.0,
+                            maxBufferedResponseBytes: 1
+                        )
+                    );
+                    $response->getBody()->getContents();
+                    $completed[] = $name;
+                },
+                concurrency: \count($servers)
+            );
+            $this->fail('Expected the invalid response to fail.');
+        } catch (NetworkExceptionInterface $error) {
+            $this->assertStringContainsString(
+                'Invalid HTTP response.',
+                $error->getMessage()
+            );
+        } finally {
+            foreach ($servers as $server) {
+                $server->stop();
+            }
+        }
+
+        \sort($completed);
+        $this->assertSame(['first', 'second'], $completed);
+
+        $server = LocalServerFixture::start(
+            responseMode: 'valid-stream-response'
+        );
+
+        try {
+            $response = $this->sendRequest(
+                $server,
+                null,
+                client: $client,
+                options: new HttpRequestOptions(
+                    timeout: 2.0,
+                    maxBufferedResponseBytes: 1
+                )
+            );
+            $this->assertSame(
+                'OK',
+                $response->getBody()->getContents()
+            );
+        } finally {
+            $server->stop();
+        }
+    }
+
     public function testStreamsHttp2Response(): void
     {
         $this->requireHttp2();
