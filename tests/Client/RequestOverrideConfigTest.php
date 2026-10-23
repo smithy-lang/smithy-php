@@ -131,7 +131,8 @@ final class RequestOverrideConfigTest extends TestCase
             readTimeout: 8.0,
             maxResponseBodyBytes: 4096,
             uploadBufferSize: 65536,
-            bufferedDownloadBufferSize: 32768
+            bufferedDownloadBufferSize: 32768,
+            maxDecompressedResponseBodyBytes: 8192
         );
         $overrides = RequestOverrideConfig::fromArray([
             RequestOverrideConfig::HTTP => [
@@ -139,7 +140,8 @@ final class RequestOverrideConfigTest extends TestCase
                 'proxy' => null,
                 'decode_content' => false,
                 'response_buffer_size' => 65536,
-                'read_timeout' => 3.5
+                'read_timeout' => 3.5,
+                'max_decompressed_response_body_bytes' => 2048
             ]
         ]);
 
@@ -160,6 +162,10 @@ final class RequestOverrideConfigTest extends TestCase
         self::assertSame(
             32768,
             $resolved->bufferedDownloadBufferSize
+        );
+        self::assertSame(
+            2048,
+            $resolved->maxDecompressedResponseBodyBytes
         );
     }
 

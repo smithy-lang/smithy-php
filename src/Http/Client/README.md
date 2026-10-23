@@ -97,11 +97,12 @@ $response = $client->sendRequest(
 | `timeout` | 30 seconds | Limits time to final headers for streamed responses and full delivery for buffered responses. Zero disables the limit. |
 | `readTimeout` | 30 seconds | Limits inactivity while reading a streamed body. Zero disables the limit. |
 | `proxy` | `null` | Routes the request through the supplied proxy URL. |
-| `decodeContent` | `true` | Requests automatic content decoding from cURL. |
+| `decodeContent` | `true` | Decodes gzip and deflate response content. |
 | `cancellation` | `null` | Cancels connection acquisition or transfer work. |
 | `maxBufferedResponseBytes` | 1 MiB | Streams responses above this decoded size. |
 | `responseBufferSize` | 64 KiB | Bounds queued bytes for streamed responses. |
 | `maxResponseBodyBytes` | `0` | Limits decoded response bytes. Zero disables the limit. |
+| `maxDecompressedResponseBodyBytes` | 10 MiB | Limits content-decompressed response bytes. Zero disables the limit. |
 | `uploadBufferSize` | 128 KiB | Sets the preferred cURL upload buffer size. |
 | `bufferedDownloadBufferSize` | 256 KiB | Sets the preferred buffer for automatic downloads. |
 | `trailers` | `null` | Supplies request trailers to transports that support them. |
@@ -109,6 +110,16 @@ $response = $client->sendRequest(
 `CurlClient` requires `trailers` to remain `null` and throws
 `InvalidArgumentException` when a request supplies them.
 Redirect responses are returned to the caller and are not followed.
+Encoded response lengths describe the compressed representation, so decoded
+responses are streamed and checked against the decompression limit while they
+are produced. With finite response limits, libcurl 8.20 or newer performs
+bounded native content decoding. Its single native ceiling applies to both
+encoded transfer bytes and decoded output; `maxResponseBodyBytes` is still
+enforced exactly against decoded bytes delivered to the response body. Older
+versions request identity encoding and reject encoded responses, including
+when a request supplied another accepted encoding. With both limits disabled,
+cURL performs unbounded native content decoding. Compressed transfer codings
+are rejected before response body processing.
 
 ## Request Transfer
 

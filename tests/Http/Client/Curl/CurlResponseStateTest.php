@@ -11,11 +11,35 @@ namespace Smithy\Tests\Http\Client\Curl;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
+use Smithy\Http\Client\Curl\ContentDecodingStrategy;
 use Smithy\Http\Client\Curl\CurlResponseState;
 
 #[CoversClass(CurlResponseState::class)]
+#[CoversClass(ContentDecodingStrategy::class)]
 final class CurlResponseStateTest extends TestCase
 {
+    public function testSelectsContentDecodingStrategy(): void
+    {
+        $minimum = ContentDecodingStrategy::MIN_BOUNDED_CURL_VERSION;
+
+        $this->assertSame(
+            ContentDecodingStrategy::Disabled,
+            ContentDecodingStrategy::select(false, true, $minimum)
+        );
+        $this->assertSame(
+            ContentDecodingStrategy::Curl,
+            ContentDecodingStrategy::select(true, false, $minimum - 1)
+        );
+        $this->assertSame(
+            ContentDecodingStrategy::IdentityOnly,
+            ContentDecodingStrategy::select(true, true, $minimum - 1)
+        );
+        $this->assertSame(
+            ContentDecodingStrategy::Curl,
+            ContentDecodingStrategy::select(true, true, $minimum)
+        );
+    }
+
     public function testNotifiesWhenReadTimeoutTrackingStarts(): void
     {
         $notifications = 0;
@@ -176,7 +200,7 @@ final class CurlResponseStateTest extends TestCase
 
     public function testRemovesDecodedRepresentationHeaders(): void
     {
-        $state = new CurlResponseState(null, true);
+        $state = new CurlResponseState(null);
 
         $state->consumeHeader("HTTP/1.1 200 OK\r\n");
         $state->consumeHeader("Content-Encoding: gzip\r\n");
@@ -192,7 +216,10 @@ final class CurlResponseStateTest extends TestCase
 
     public function testPreservesRawRepresentationHeaders(): void
     {
-        $state = new CurlResponseState(null, false);
+        $state = new CurlResponseState(
+            null,
+            ContentDecodingStrategy::Disabled
+        );
 
         $state->consumeHeader("HTTP/1.1 200 OK\r\n");
         $state->consumeHeader("Content-Encoding: gzip\r\n");
@@ -212,7 +239,7 @@ final class CurlResponseStateTest extends TestCase
     {
         $head = new CurlResponseState(
             null,
-            true,
+            ContentDecodingStrategy::Curl,
             0,
             false
         );
@@ -221,7 +248,7 @@ final class CurlResponseStateTest extends TestCase
         $head->consumeHeader("Content-Length: 10\r\n");
         $head->consumeHeader("\r\n");
 
-        $notModified = new CurlResponseState(null, true);
+        $notModified = new CurlResponseState(null);
         $notModified->consumeHeader("HTTP/1.1 304 Not Modified\r\n");
         $notModified->consumeHeader("Content-Encoding: gzip\r\n");
         $notModified->consumeHeader("Content-Length: 10\r\n");
@@ -273,12 +300,18 @@ final class CurlResponseStateTest extends TestCase
     public function testAutomaticDeliveryStreamsDecodedResponse(): void
     {
         $state = new CurlResponseState(null);
+        $this->assertTrue(
+            $state->requiresDownloadProgressTracking()
+        );
         $state->consumeHeader("HTTP/1.1 200 OK\r\n");
         $state->consumeHeader("Content-Encoding: gzip\r\n");
         $state->consumeHeader("Content-Length: 100\r\n");
         $state->consumeHeader("\r\n");
 
         $this->assertTrue($state->shouldStreamResponseBody());
+        $this->assertTrue(
+            $state->requiresDownloadProgressTracking()
+        );
     }
 
     public function testAutomaticDeliveryBuffersBodylessResponse(): void
@@ -292,7 +325,11 @@ final class CurlResponseStateTest extends TestCase
 
     public function testBuffersBodyAtConfiguredLimit(): void
     {
-        $state = new CurlResponseState(null, true, 4);
+        $state = new CurlResponseState(
+            null,
+            ContentDecodingStrategy::Curl,
+            4
+        );
         $state->consumeHeader("HTTP/1.1 200 OK\r\n");
         $state->consumeHeader("\r\n");
 
@@ -304,7 +341,11 @@ final class CurlResponseStateTest extends TestCase
 
     public function testRejectsBodyAboveConfiguredLimit(): void
     {
-        $state = new CurlResponseState(null, true, 3);
+        $state = new CurlResponseState(
+            null,
+            ContentDecodingStrategy::Curl,
+            3
+        );
         $state->consumeHeader("HTTP/1.1 200 OK\r\n");
         $state->consumeHeader("\r\n");
 
@@ -316,4 +357,107 @@ final class CurlResponseStateTest extends TestCase
             $state->bodyWriteError
         );
     }
+
+    public function testUsesDecompressedLimitForEncodedContent(): void
+    {
+        $state = new CurlResponseState(
+            null,
+            ContentDecodingStrategy::Curl,
+            maxResponseBodyBytes: 100,
+            maxDecompressedResponseBodyBytes: 10
+        );
+        $state->consumeHeader("HTTP/1.1 200 OK\r\n");
+        $state->consumeHeader("Content-Encoding: gzip, deflate\r\n");
+        $state->consumeHeader("\r\n");
+
+        $this->assertSame(10, $state->bodyLimit());
+        $this->assertSame(10, $state->curlBodyLimit());
+    }
+
+    public function testKeepsExactBodyLimitSeparateFromNativeGuard(): void
+    {
+        $state = new CurlResponseState(
+            null,
+            ContentDecodingStrategy::Curl,
+            maxResponseBodyBytes: 7
+        );
+        $state->consumeHeader("HTTP/1.1 200 OK\r\n");
+        $state->consumeHeader("Content-Encoding: gzip\r\n");
+        $state->consumeHeader("\r\n");
+
+        $this->assertSame(7, $state->bodyLimit());
+        $this->assertSame(10 * 1024 * 1024, $state->curlBodyLimit());
+    }
+
+    public function testLimitsEncodedResetContentResponse(): void
+    {
+        $state = new CurlResponseState(
+            null,
+            ContentDecodingStrategy::Curl,
+            maxResponseBodyBytes: 7,
+            maxDecompressedResponseBodyBytes: 10
+        );
+        $state->consumeHeader("HTTP/1.1 205 Reset Content\r\n");
+        $state->consumeHeader("Content-Encoding: gzip\r\n");
+        $state->consumeHeader("Content-Length: 20\r\n");
+        $state->consumeHeader("\r\n");
+
+        $this->assertSame(7, $state->bodyLimit());
+        $this->assertSame(7, $state->curlBodyLimit());
+        $this->assertSame(
+            [
+                'Content-Encoding' => ['gzip'],
+                'Content-Length' => ['20']
+            ],
+            $state->headers
+        );
+    }
+
+    public function testDisablesNativeBodyLimitForHeadResponse(): void
+    {
+        $state = new CurlResponseState(
+            null,
+            ContentDecodingStrategy::Disabled,
+            maxResponseBodyBytes: 1,
+            responseBodyAllowed: false
+        );
+        $state->consumeHeader("HTTP/1.1 200 OK\r\n");
+        $state->consumeHeader("Content-Length: 1048576\r\n");
+        $state->consumeHeader("\r\n");
+
+        $this->assertSame(0, $state->curlBodyLimit());
+    }
+
+    public function testRejectsCompressedTransferEncoding(): void
+    {
+        $state = new CurlResponseState(
+            null,
+            ContentDecodingStrategy::Disabled
+        );
+        $state->consumeHeader("HTTP/1.1 200 OK\r\n");
+        $state->consumeHeader("Transfer-Encoding: gzip, chunked\r\n");
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage(
+            'HTTP transfer coding gzip is not supported'
+        );
+        $state->consumeHeader("\r\n");
+    }
+
+    public function testRejectsEncodedBodyWhenBoundedDecoderIsUnavailable(): void
+    {
+        $state = new CurlResponseState(
+            null,
+            ContentDecodingStrategy::IdentityOnly
+        );
+        $state->consumeHeader("HTTP/1.1 200 OK\r\n");
+        $state->consumeHeader("Content-Encoding: gzip\r\n");
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage(
+            'bounded content decoding is unavailable'
+        );
+        $state->consumeHeader("\r\n");
+    }
+
 }

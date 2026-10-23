@@ -599,6 +599,18 @@ if ($mode === 'redirect-response') {
     exit(0);
 }
 
+if ($mode === 'large-head-response') {
+    fwrite(
+        $conn,
+        "HTTP/1.1 200 OK\r\n"
+            . "Content-Length: 1048576\r\n"
+            . "Connection: close\r\n\r\n"
+    );
+    fclose($conn);
+    fclose($server);
+    exit(0);
+}
+
 if ($mode === 'discard-reuse-response') {
     $responseBody = str_repeat('d', 128 * 1024);
     fwrite(
@@ -654,19 +666,52 @@ if (in_array(
     $mode,
     [
         'gzip-response',
+        'tiny-gzip-response',
+        'gzip-bomb-response',
+        'gzip-205-bomb-response',
+        'gzip-205-memory-bomb-response',
         'slow-gzip-response',
         'chunked-gzip-response',
         'deflate-response'
     ],
     true
 )) {
-    $responseBody = str_repeat('decoded-body-', 1024);
+    $responseBody = match ($mode) {
+        'gzip-bomb-response',
+        'gzip-205-bomb-response' => str_repeat('a', 12 * 1024 * 1024),
+        'tiny-gzip-response' => 'decoded',
+        default => str_repeat('decoded-body-', 1024)
+    };
     $encoding = $mode === 'deflate-response'
         ? 'deflate'
         : 'gzip';
-    $encodedBody = $encoding === 'deflate'
-        ? gzcompress($responseBody)
-        : gzencode($responseBody);
+    if ($mode === 'gzip-205-memory-bomb-response') {
+        $context = deflate_init(ZLIB_ENCODING_GZIP, ['level' => 9]);
+        if ($context === false) {
+            fclose($conn);
+            fclose($server);
+            exit(1);
+        }
+        $encodedBody = '';
+        $chunk = str_repeat('a', 1024 * 1024);
+        for ($i = 0; $i < 128; $i++) {
+            $encodedChunk = deflate_add(
+                $context,
+                $chunk,
+                $i === 127 ? ZLIB_FINISH : ZLIB_NO_FLUSH
+            );
+            if ($encodedChunk === false) {
+                fclose($conn);
+                fclose($server);
+                exit(1);
+            }
+            $encodedBody .= $encodedChunk;
+        }
+    } else {
+        $encodedBody = $encoding === 'deflate'
+            ? gzcompress($responseBody)
+            : gzencode($responseBody);
+    }
     if (!is_string($encodedBody)) {
         fclose($conn);
         fclose($server);
@@ -696,9 +741,16 @@ if (in_array(
         exit(0);
     }
 
+    $statusLine = in_array(
+        $mode,
+        ['gzip-205-bomb-response', 'gzip-205-memory-bomb-response'],
+        true
+    )
+        ? 'HTTP/1.1 205 Reset Content'
+        : 'HTTP/1.1 200 OK';
     fwrite(
         $conn,
-        "HTTP/1.1 200 OK\r\n"
+        "{$statusLine}\r\n"
             . "Content-Encoding: {$encoding}\r\n"
             . "Content-Length: "
             . strlen($encodedBody)

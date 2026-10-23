@@ -19,6 +19,7 @@ use Smithy\Http\Client\Configuration\ConnectConfiguration;
 use Smithy\Http\Client\Configuration\HTTPVersionPolicy;
 use Smithy\Http\Client\Connection\RequestContext;
 use Smithy\Http\Client\Curl\{
+    ContentDecodingStrategy,
     CurlConnectionManager,
     CurlExchange,
     CurlResponseState,
@@ -53,9 +54,9 @@ final class CurlClient extends AbstractHttpClient
     private const SCAN_DOWNLOAD_PROGRESS = 1;
     private const SCAN_UPLOAD_PROGRESS = 2;
     private const SCAN_PRETRANSFER = 4;
-
     private readonly ConnectionManagerInterface $connectionManager;
     private readonly ConnectConfiguration $connectConfig;
+    private readonly int $curlVersionNumber;
     private \CurlMultiHandle $multiHandle;
 
     /** @var array<int, PendingRequest> */
@@ -91,6 +92,8 @@ final class CurlClient extends AbstractHttpClient
                 'The cURL PHP extension is required.'
             );
         }
+        $this->curlVersionNumber =
+            (int) (\curl_version()['version_number'] ?? 0);
 
         if ($preservePath && !\defined('CURLOPT_PATH_AS_IS')) {
             throw new \RuntimeException(
@@ -280,9 +283,10 @@ final class CurlClient extends AbstractHttpClient
             }
 
             $responseBody = null;
+            $contentDecoding = $this->contentDecodingStrategy($options);
             $responseState = new CurlResponseState(
                 $responseBody,
-                $options->decodeContent,
+                $contentDecoding,
                 $options->maxResponseBodyBytes,
                 $responseBodyAllowed,
                 function () use ($handle): void {
@@ -298,7 +302,9 @@ final class CurlClient extends AbstractHttpClient
                     ->maxBufferedResponseBytes,
                 ignoreProxyConnectResponse: $options->proxy !== null
                     && \strtolower($request->getUri()->getScheme())
-                        === 'https'
+                        === 'https',
+                maxDecompressedResponseBodyBytes:
+                    $options->maxDecompressedResponseBodyBytes
             );
             $forbidReuse = false;
             if ($this->connectionManager instanceof CurlConnectionManager) {
@@ -317,7 +323,12 @@ final class CurlClient extends AbstractHttpClient
                 CURLOPT_TIMEOUT_MS =>
                     self::timeoutToCurlMilliseconds($options->timeout),
                 CURLOPT_HTTP_CONTENT_DECODING =>
-                    $options->decodeContent,
+                    $contentDecoding === ContentDecodingStrategy::Curl,
+                CURLOPT_MAXFILESIZE_LARGE =>
+                    !$responseBodyAllowed
+                        || $contentDecoding === ContentDecodingStrategy::Curl
+                        ? 0
+                        : $options->maxResponseBodyBytes,
                 CURLOPT_FORBID_REUSE => $forbidReuse
             ];
 
@@ -333,26 +344,28 @@ final class CurlClient extends AbstractHttpClient
 
             \curl_setopt_array($handle, $curlOptions);
 
-            $acceptEncoding = $request->getHeaderLine(
-                'Accept-Encoding'
-            );
-            if ($options->decodeContent) {
+            if ($contentDecoding === ContentDecodingStrategy::IdentityOnly) {
+                $acceptEncoding = 'identity';
+            } else {
+                $acceptEncoding = $request->getHeaderLine(
+                    'Accept-Encoding'
+                );
                 if ($request->hasHeader('Accept-Encoding')
                     && $acceptEncoding === ''
                 ) {
                     $acceptEncoding = 'identity';
+                } elseif (!$request->hasHeader('Accept-Encoding')) {
+                    $acceptEncoding = $options->decodeContent
+                        ? 'gzip, deflate'
+                        : 'identity';
                 }
+            }
 
+            if ($contentDecoding === ContentDecodingStrategy::Curl) {
                 \curl_setopt(
                     $handle,
                     CURLOPT_ENCODING,
                     $acceptEncoding
-                );
-            } elseif ($acceptEncoding === '') {
-                \curl_setopt(
-                    $handle,
-                    CURLOPT_ENCODING,
-                    'identity'
                 );
             }
 
@@ -460,18 +473,16 @@ final class CurlClient extends AbstractHttpClient
             foreach ($request->getHeaders()
                 as $name => $values
             ) {
-                if ($options->decodeContent
-                    && \strcasecmp(
-                        $name,
-                        'Accept-Encoding'
-                    ) === 0
-                ) {
+                if (\strcasecmp($name, 'Accept-Encoding') === 0) {
                     continue;
                 }
 
                 foreach ($values as $value) {
                     $curlHeaders[] = "{$name}: {$value}";
                 }
+            }
+            if ($contentDecoding !== ContentDecodingStrategy::Curl) {
+                $curlHeaders[] = "Accept-Encoding: {$acceptEncoding}";
             }
             \curl_setopt(
                 $handle,
@@ -571,6 +582,28 @@ final class CurlClient extends AbstractHttpClient
                                             return;
                                         }
 
+                                        $taken = $this
+                                            ->takePendingRequest(
+                                                $handleId
+                                            );
+                                        if ($taken === null) {
+                                            return;
+                                        }
+
+                                        $limitError = $this
+                                            ->createResponseBodyLimitException(
+                                                $taken,
+                                                $result
+                                            );
+                                        if ($limitError !== null) {
+                                            $this->failPendingRequest(
+                                                $taken,
+                                                $limitError
+                                            );
+
+                                            return;
+                                        }
+
                                         $readError =
                                             new \RuntimeException(
                                                 'Unable to resume '
@@ -582,18 +615,11 @@ final class CurlClient extends AbstractHttpClient
                                             );
                                         $uploadState->readError =
                                             $readError;
-                                        $taken = $this
-                                            ->takePendingRequest(
-                                                $handleId
-                                            );
-                                        if ($taken !== null) {
-                                            $this
-                                                ->failUploadRead(
-                                                    $taken,
-                                                    $uploadState,
-                                                    $readError
-                                                );
-                                        }
+                                        $this->failUploadRead(
+                                            $taken,
+                                            $uploadState,
+                                            $readError
+                                        );
                                     }
                                 );
                             }
@@ -865,7 +891,21 @@ final class CurlClient extends AbstractHttpClient
                     $this->callbackActivityObserved = true;
 
                     try {
-                        if ($responseState->consumeHeader($header)
+                        $headersComplete =
+                            $responseState->consumeHeader($header);
+                        if ($headersComplete
+                            && !\curl_setopt(
+                                $ch,
+                                CURLOPT_MAXFILESIZE_LARGE,
+                                $responseState->curlBodyLimit()
+                            )
+                        ) {
+                            throw new \RuntimeException(
+                                'Unable to configure the response body '
+                                    . 'limit.'
+                            );
+                        }
+                        if ($headersComplete
                             && $responseState->shouldStreamResponseBody()
                             && !$responseState->isStreaming()
                         ) {
@@ -902,8 +942,12 @@ final class CurlClient extends AbstractHttpClient
                             $scanMask =
                                 $this->progressScanMasks[$handleId]
                                     ?? 0;
-                            $scanMask &=
-                                ~self::SCAN_DOWNLOAD_PROGRESS;
+                            if (!$responseState
+                                    ->requiresDownloadProgressTracking()
+                            ) {
+                                $scanMask &=
+                                    ~self::SCAN_DOWNLOAD_PROGRESS;
+                            }
                             if ($scanMask === 0) {
                                 unset(
                                     $this
@@ -989,8 +1033,13 @@ final class CurlClient extends AbstractHttpClient
                     );
                     $this->pending[$handleId] = $pending;
                     $scanMask = 0;
-                    if (!$responseState->isStreaming()
-                        && !$responseState->buffersResponseBody()
+                    if (
+                        (
+                            !$responseState->isStreaming()
+                            && !$responseState->buffersResponseBody()
+                        )
+                        || $responseState
+                            ->requiresDownloadProgressTracking()
                     ) {
                         $scanMask |= self::SCAN_DOWNLOAD_PROGRESS;
                     }
@@ -1508,6 +1557,20 @@ final class CurlClient extends AbstractHttpClient
             }
 
             if ($info['result'] !== CURLE_OK) {
+                $limitError =
+                    $this->createResponseBodyLimitException(
+                        $pending,
+                        $info['result']
+                    );
+                if ($limitError !== null) {
+                    $this->failPendingRequest(
+                        $pending,
+                        $limitError
+                    );
+
+                    continue;
+                }
+
                 if ($info['result'] === CURLE_COULDNT_CONNECT) {
                     $connectionFailure = true;
                 } elseif ($info['result'] === CURLE_OPERATION_TIMEDOUT) {
@@ -2061,6 +2124,26 @@ final class CurlClient extends AbstractHttpClient
     }
 
     /**
+     * Convert cURL's native response limit error into an HTTP failure.
+     */
+    private function createResponseBodyLimitException(
+        PendingRequest $pending,
+        int $curlCode
+    ): ?HttpException
+    {
+        if ($curlCode !== CURLE_FILESIZE_EXCEEDED
+            || $pending->responseState->bodyLimit() === 0
+        ) {
+            return null;
+        }
+
+        return $this->createBodyWriteException(
+            $pending,
+            $pending->responseState->bodyLimitException()
+        );
+    }
+
+    /**
      * Create an exception when parsed headers violate the version policy.
      */
     private function createHttpVersionPolicyExceptionFromState(
@@ -2383,6 +2466,44 @@ final class CurlClient extends AbstractHttpClient
     }
 
     /**
+     * Select bounded response content decoding for this cURL runtime.
+     */
+    private function contentDecodingStrategy(
+        HttpRequestOptions $options
+    ): ContentDecodingStrategy
+    {
+        $limit = self::smallestPositiveLimit(
+            $options->maxResponseBodyBytes,
+            $options->maxDecompressedResponseBodyBytes
+        );
+
+        return ContentDecodingStrategy::select(
+            $options->decodeContent,
+            $limit > 0,
+            $this->curlVersionNumber
+        );
+    }
+
+    /**
+     * Get the smallest enabled byte limit.
+     */
+    private static function smallestPositiveLimit(
+        int $first,
+        int $second
+    ): int
+    {
+        if ($first === 0) {
+            return $second;
+        }
+
+        if ($second === 0) {
+            return $first;
+        }
+
+        return \min($first, $second);
+    }
+
+    /**
      * Create a bounded response body attached to one cURL transfer.
      */
     private function createStreamingResponseStream(
@@ -2455,6 +2576,36 @@ final class CurlClient extends AbstractHttpClient
                                 $handleId
                             );
                         if ($taken !== null) {
+                            $bodyWriteError =
+                                $taken->responseState->bodyWriteError;
+                            if ($bodyWriteError !== null) {
+                                $this->failPendingRequest(
+                                    $taken,
+                                    $bodyWriteError instanceof HttpException
+                                        ? $bodyWriteError
+                                        : $this->createBodyWriteException(
+                                            $taken,
+                                            $bodyWriteError
+                                        )
+                                );
+
+                                return;
+                            }
+
+                            $limitError = $this
+                                ->createResponseBodyLimitException(
+                                    $taken,
+                                    $result
+                                );
+                            if ($limitError !== null) {
+                                $this->failPendingRequest(
+                                    $taken,
+                                    $limitError
+                                );
+
+                                return;
+                            }
+
                             $this->failPendingRequest(
                                 $taken,
                                 new NetworkException(
