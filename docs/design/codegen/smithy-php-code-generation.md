@@ -208,7 +208,9 @@ Additional behavior is generated only when needed:
 - modeled pagination inputs implement `PaginatedRequestInterface` and, when
   applicable, `PageSizePaginatedRequestInterface`
 - configured categories can implement readonly `ArrayAccess`
-- structures containing sensitive data use `SensitiveStringableTrait`
+- structures and unions containing sensitive data use
+  `SensitiveStringableTrait` for redacted string, debug, JSON, and PHP
+  serialization representations
 - modeled errors extend the configured service exception or runtime API
   exception and preserve modeled members that collide with inherited
   exception properties

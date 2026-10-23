@@ -4,16 +4,12 @@ declare(strict_types=1);
 
 namespace Smithy\ProtocolTests\RpcV2Cbor\Shape;
 
-use Smithy\Core\Shape\SensitiveStringableTrait;
-
 /**
  * Unknown variant for forward-compatibility.
  */
 /** @internal */
 final readonly class RpcV2CborNestedUnionUnknown extends RpcV2CborNestedUnion
 {
-    use SensitiveStringableTrait;
-
     public function __construct(private string $unknownTag, private mixed $unknownValue) {}
 
     public function getMemberIndex(): int

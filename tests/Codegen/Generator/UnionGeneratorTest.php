@@ -7,9 +7,12 @@ namespace Smithy\Tests\Codegen\Generator;
 use PHPUnit\Framework\TestCase;
 use Smithy\Codegen\CodegenSettings;
 use Smithy\Codegen\Generator\GeneratedFile;
+use Smithy\Codegen\Generator\SchemasGenerator;
+use Smithy\Codegen\Generator\StructureGenerator;
 use Smithy\Codegen\Generator\UnionGenerator;
 use Smithy\Codegen\Model\SmithyModel;
 use Smithy\Codegen\PhpSymbolProvider;
+use Smithy\Core\Serde\Schema;
 
 final class UnionGeneratorTest extends TestCase
 {
@@ -244,7 +247,7 @@ final class UnionGeneratorTest extends TestCase
             "type": "string",
             "traits": {"smithy.api#sensitive": {}}
         },
-        "smithy.example#Choice": {
+        "smithy.example#JsonSerializable": {
             "type": "union",
             "members": {
                 "secret": {"target": "smithy.example#Secret"},
@@ -266,9 +269,13 @@ JSON);
         );
 
         $content = $generator->generate(
-            'smithy.example#Choice'
+            'smithy.example#JsonSerializable'
         )[0]->content;
 
+        $this->assertStringContainsString(
+            'use JsonSerializable as PhpJsonSerializable;',
+            $content
+        );
         $this->assertStringContainsString(
             'use Smithy\\Core\\Shape\\SensitiveStringableTrait;',
             $content
@@ -277,5 +284,345 @@ JSON);
             'use SensitiveStringableTrait;',
             $content
         );
+        $this->assertStringContainsString(
+            'PhpJsonSerializable',
+            $content
+        );
+    }
+
+    public function testGeneratedUnionRedactsSerialization(): void
+    {
+        $model = SmithyModel::fromJson(<<<'JSON'
+{
+    "smithy": "2.0",
+    "shapes": {
+        "example#SensitiveChoice": {
+            "type": "union",
+            "traits": {"smithy.api#sensitive": {}},
+            "members": {
+                "jsonSerialize": {"target": "smithy.api#String"}
+            }
+        },
+        "example#NonSensitiveChoice": {
+            "type": "union",
+            "members": {
+                "jsonSerialize": {"target": "smithy.api#String"}
+            }
+        },
+        "example#MemberSensitiveChoice": {
+            "type": "union",
+            "members": {
+                "secret": {
+                    "target": "smithy.api#String",
+                    "traits": {"smithy.api#sensitive": {}}
+                }
+            }
+        }
+    }
+}
+JSON);
+        $outputDir = \sys_get_temp_dir()
+            . '/smithy-sensitive-union-'
+            . \bin2hex(\random_bytes(4));
+        $namespace = 'Smithy\\Tests\\Generated\\SensitiveUnion'
+            . \bin2hex(\random_bytes(4));
+        $settings = new CodegenSettings(
+            namespace: $namespace,
+            outputDir: $outputDir,
+            organization: 'flat'
+        );
+        $symbols = new PhpSymbolProvider($model, $settings);
+        $schemaFile = (new SchemasGenerator(
+            $model,
+            $symbols,
+            $settings
+        ))->generate([
+            'example#SensitiveChoice' => true,
+            'example#NonSensitiveChoice' => true,
+            'example#MemberSensitiveChoice' => true
+        ]);
+        $unionFiles = (new UnionGenerator(
+            $model,
+            $symbols,
+            $settings
+        ))->generate('example#SensitiveChoice');
+        $nonSensitiveUnionFiles = (new UnionGenerator(
+            $model,
+            $symbols,
+            $settings
+        ))->generate('example#NonSensitiveChoice');
+        $memberSensitiveUnionFiles = (new UnionGenerator(
+            $model,
+            $symbols,
+            $settings
+        ))->generate('example#MemberSensitiveChoice');
+        $files = [
+            $schemaFile,
+            ...$unionFiles,
+            ...$nonSensitiveUnionFiles,
+            ...$memberSensitiveUnionFiles
+        ];
+
+        try {
+            $this->assertStringContainsString(
+                'public static function jsonSerializeValue(',
+                $unionFiles[0]->content
+            );
+            $this->assertStringContainsString(
+                'public static function jsonSerializeValue(',
+                $nonSensitiveUnionFiles[0]->content
+            );
+            foreach ([
+                $nonSensitiveUnionFiles,
+                $memberSensitiveUnionFiles
+            ] as $generatedUnionFiles) {
+                $unknownFile = $generatedUnionFiles[
+                    \array_key_last($generatedUnionFiles)
+                ];
+                $this->assertStringNotContainsString(
+                    'SensitiveStringableTrait',
+                    $unknownFile->content
+                );
+                $this->assertStringNotContainsString(
+                    'JsonSerializable',
+                    $unknownFile->content
+                );
+            }
+            foreach ($files as $file) {
+                $file->writeToDisk();
+            }
+            require $schemaFile->path;
+            foreach ([
+                ...$unionFiles,
+                ...$nonSensitiveUnionFiles,
+                ...$memberSensitiveUnionFiles
+            ] as $file) {
+                require $file->path;
+            }
+
+            $class = $namespace . '\\SensitiveChoice';
+            $value = $class::jsonSerializeValue('union-secret');
+            $this->assertTrue(
+                $value->getSchema()->hasTrait(Schema::T_SENSITIVE)
+            );
+            $this->assertInstanceOf(\JsonSerializable::class, $value);
+
+            $output = \print_r($value, true)
+                . $this->dumpValue($value)
+                . (string) $value
+                . \json_encode($value, JSON_THROW_ON_ERROR)
+                . \serialize($value);
+            $this->assertStringContainsString('***REDACTED***', $output);
+            $this->assertStringNotContainsString('union-secret', $output);
+
+            $unknownClass = $namespace . '\\NonSensitiveChoice';
+            $unknown = $unknownClass::unknown('future', 'unknown-secret');
+            $this->assertFalse(
+                $unknown->getSchema()->hasTrait(Schema::T_SENSITIVE)
+            );
+            $this->assertNotInstanceOf(\JsonSerializable::class, $unknown);
+
+            $unknownOutput = \print_r($unknown, true)
+                . $this->dumpValue($unknown)
+                . \json_encode($unknown, JSON_THROW_ON_ERROR)
+                . \serialize($unknown);
+            $this->assertStringNotContainsString(
+                '***REDACTED***',
+                $unknownOutput
+            );
+            $this->assertStringContainsString(
+                'unknown-secret',
+                $unknownOutput
+            );
+
+            $memberSensitiveClass = $namespace . '\\MemberSensitiveChoice';
+            $inheritedUnknown = $memberSensitiveClass::unknown(
+                'future',
+                'inherited-secret'
+            );
+            $this->assertInstanceOf(
+                \JsonSerializable::class,
+                $inheritedUnknown
+            );
+
+            $inheritedOutput = \print_r($inheritedUnknown, true)
+                . $this->dumpValue($inheritedUnknown)
+                . (string) $inheritedUnknown
+                . \json_encode($inheritedUnknown, JSON_THROW_ON_ERROR)
+                . \serialize($inheritedUnknown);
+            $this->assertStringContainsString(
+                '***REDACTED***',
+                $inheritedOutput
+            );
+            $this->assertStringNotContainsString(
+                'inherited-secret',
+                $inheritedOutput
+            );
+        } finally {
+            foreach ($files as $file) {
+                @\unlink($file->path);
+            }
+            @\rmdir($outputDir);
+        }
+    }
+
+    public function testSensitiveUnionReservesModeledJsonSerializableType(): void
+    {
+        $model = SmithyModel::fromJson(<<<'JSON'
+{
+    "smithy": "2.0",
+    "shapes": {
+        "example#Operation": {
+            "type": "operation",
+            "input": {"target": "example#SensitiveChoice"}
+        },
+        "example#SensitiveChoice": {
+            "type": "union",
+            "traits": {"smithy.api#sensitive": {}},
+            "members": {
+                "payload": {"target": "example#JsonSerializable"}
+            }
+        },
+        "example#JsonSerializable": {
+            "type": "structure",
+            "members": {}
+        }
+    }
+}
+JSON);
+
+        foreach (['flat', 'categorized'] as $organization) {
+            $outputDir = \sys_get_temp_dir()
+                . '/smithy-sensitive-union-import-'
+                . \bin2hex(\random_bytes(4));
+            $namespace = 'Smithy\\Tests\\Generated\\SensitiveUnionImport'
+                . \bin2hex(\random_bytes(4));
+            $settings = new CodegenSettings(
+                namespace: $namespace,
+                outputDir: $outputDir,
+                organization: $organization
+            );
+            $symbols = new PhpSymbolProvider($model, $settings);
+            $schemaFile = (new SchemasGenerator(
+                $model,
+                $symbols,
+                $settings
+            ))->generate([
+                'example#SensitiveChoice' => true,
+                'example#JsonSerializable' => true
+            ]);
+            $structureFile = (new StructureGenerator(
+                $model,
+                $symbols,
+                $settings
+            ))->generate('example#JsonSerializable');
+            $unionFiles = (new UnionGenerator(
+                $model,
+                $symbols,
+                $settings
+            ))->generate('example#SensitiveChoice');
+            $files = [$schemaFile, $structureFile, ...$unionFiles];
+
+            try {
+                foreach ($files as $file) {
+                    $file->writeToDisk();
+                }
+                require $schemaFile->path;
+                require $structureFile->path;
+                foreach ($unionFiles as $file) {
+                    require $file->path;
+                }
+
+                $memberClass = $symbols->toClassName(
+                    'example#JsonSerializable'
+                );
+                $unionClass = $symbols->toClassName(
+                    'example#SensitiveChoice'
+                );
+                $member = new $memberClass();
+                $value = $unionClass::payload($member);
+
+                $this->assertSame($member, $value->value());
+                $this->assertInstanceOf(\JsonSerializable::class, $value);
+            } finally {
+                foreach ($files as $file) {
+                    @\unlink($file->path);
+                }
+                $directories = \array_unique(\array_map(
+                    static fn(GeneratedFile $file): string =>
+                        \dirname($file->path),
+                    $files
+                ));
+                \usort(
+                    $directories,
+                    static fn(string $left, string $right): int =>
+                        \strlen($right) <=> \strlen($left)
+                );
+                foreach ($directories as $directory) {
+                    @\rmdir($directory);
+                }
+                @\rmdir($outputDir);
+            }
+        }
+    }
+
+    public function testSensitiveUnionReservesVariantClassNames(): void
+    {
+        $model = SmithyModel::fromJson(<<<'JSON'
+{
+    "smithy": "2.0",
+    "shapes": {
+        "example#Json": {
+            "type": "union",
+            "traits": {"smithy.api#sensitive": {}},
+            "members": {
+                "serializable": {"target": "smithy.api#String"}
+            }
+        }
+    }
+}
+JSON);
+        $outputDir = \sys_get_temp_dir()
+            . '/smithy-sensitive-union-variant-'
+            . \bin2hex(\random_bytes(4));
+        $namespace = 'Smithy\\Tests\\Generated\\SensitiveUnionVariant'
+            . \bin2hex(\random_bytes(4));
+        $settings = new CodegenSettings(
+            namespace: $namespace,
+            outputDir: $outputDir,
+            organization: 'flat'
+        );
+        $symbols = new PhpSymbolProvider($model, $settings);
+        $files = (new UnionGenerator(
+            $model,
+            $symbols,
+            $settings
+        ))->generate('example#Json');
+
+        try {
+            foreach ($files as $file) {
+                $file->writeToDisk();
+                require $file->path;
+            }
+
+            $class = $symbols->toClassName('example#Json');
+            $value = $class::serializable('secret');
+
+            $this->assertSame('secret', $value->value());
+            $this->assertInstanceOf(\JsonSerializable::class, $value);
+        } finally {
+            foreach ($files as $file) {
+                @\unlink($file->path);
+            }
+            @\rmdir($outputDir);
+        }
+    }
+
+    private function dumpValue(mixed $value): string
+    {
+        \ob_start();
+        \var_dump($value);
+
+        return (string) \ob_get_clean();
     }
 }

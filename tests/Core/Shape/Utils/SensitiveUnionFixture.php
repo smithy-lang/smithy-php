@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 namespace Smithy\Tests\Core\Shape\Utils;
 
+use JsonSerializable;
 use Smithy\Core\Serde\Schema;
 use Smithy\Core\Serde\ShapeSerializerInterface;
 use Smithy\Core\Shape\SensitiveStringableTrait;
 use Smithy\Core\Shape\UnionInterface;
 
-final class SensitiveUnionFixture implements UnionInterface
+final class SensitiveUnionFixture implements UnionInterface, JsonSerializable
 {
     use SensitiveStringableTrait;
 

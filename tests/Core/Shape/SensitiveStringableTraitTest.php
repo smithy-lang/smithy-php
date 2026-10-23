@@ -36,7 +36,9 @@ final class SensitiveStringableTraitTest extends TestCase
         foreach ([
             (string) $value,
             $this->printValue($value),
-            $this->dumpValue($value)
+            $this->dumpValue($value),
+            \json_encode($value, JSON_THROW_ON_ERROR),
+            \serialize($value)
         ] as $output) {
             $this->assertStringContainsString('public-value', $output);
             $this->assertStringContainsString('***REDACTED***', $output);
@@ -108,9 +110,12 @@ final class SensitiveStringableTraitTest extends TestCase
             ]
         );
 
-        foreach ([$this->printValue($value), $this->dumpValue($value)]
-            as $output
-        ) {
+        foreach ([
+            $this->printValue($value),
+            $this->dumpValue($value),
+            \json_encode($value, JSON_THROW_ON_ERROR),
+            \serialize($value)
+        ] as $output) {
             $this->assertStringNotContainsString('nested-secret', $output);
             $this->assertStringNotContainsString('list-secret', $output);
             $this->assertStringNotContainsString('map-secret', $output);
@@ -218,6 +223,22 @@ final class SensitiveStringableTraitTest extends TestCase
             ['tag' => 'visible', 'value' => 'public-value'],
             $value->__debugInfo()
         );
+    }
+
+    public function testRejectsSerializedRestoration(): void
+    {
+        $value = new SensitiveStructFixture(
+            $this->structureSchema([
+                $this->member('secret', 0, true)
+            ]),
+            ['secret' => 'member-secret']
+        );
+        $serialized = \serialize($value);
+
+        $this->expectException(\LogicException::class);
+        $this->expectExceptionMessage('cannot be restored');
+
+        \unserialize($serialized);
     }
 
     public function testDebugRedactionHasADepthLimit(): void

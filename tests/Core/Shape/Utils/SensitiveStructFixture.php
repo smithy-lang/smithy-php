@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace Smithy\Tests\Core\Shape\Utils;
 
+use JsonSerializable;
 use Smithy\Core\Serde\Schema;
 use Smithy\Core\Serde\SerializableStructInterface;
 use Smithy\Core\Serde\ShapeSerializerInterface;
 use Smithy\Core\Shape\SensitiveStringableTrait;
 
-final class SensitiveStructFixture implements SerializableStructInterface
+final class SensitiveStructFixture implements
+    SerializableStructInterface,
+    JsonSerializable
 {
     use SensitiveStringableTrait;
 
