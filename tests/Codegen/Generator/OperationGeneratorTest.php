@@ -10,9 +10,124 @@ use Smithy\Codegen\CodegenSettings;
 use Smithy\Codegen\Generator\OperationGenerator;
 use Smithy\Codegen\Model\SmithyModel;
 use Smithy\Codegen\PhpSymbolProvider;
+use Smithy\Core\Serde\Schema;
 
 final class OperationGeneratorTest extends TestCase
 {
+    public function testSafelyExportsModelStringsAsPhpLiterals(): void
+    {
+        $outputDirectory = \sys_get_temp_dir()
+            . \DIRECTORY_SEPARATOR
+            . 'smithy-operation-literal-'
+            . \bin2hex(\random_bytes(4));
+        \mkdir($outputDirectory, 0755, true);
+        $markerPath = $outputDirectory
+            . \DIRECTORY_SEPARATOR
+            . 'injected';
+        $injection = '\\file_put_contents(\\base64_decode("'
+            . \base64_encode($markerPath)
+            . '"), "injected")';
+        $scalarPayload = "value\\' . {$injection} . \"\" , //";
+        $arrayPayload = "value\\' . {$injection} . \"\",], //";
+        $pathLiteral = "/prefix\\'suffix/";
+        $pathUri = $pathLiteral . '{label}';
+        $namespace = 'Smithy\\OperationLiteral'
+            . \bin2hex(\random_bytes(4));
+
+        try {
+            $model = SmithyModel::fromJson(\json_encode([
+                'smithy' => '2.0',
+                'shapes' => [
+                    'smithy.example#Unsafe' => [
+                        'type' => 'operation',
+                        'traits' => [
+                            'smithy.api#http' => [
+                                'method' => $scalarPayload,
+                                'uri' => $scalarPayload,
+                                'code' => 200
+                            ],
+                            'smithy.api#requestCompression' => [
+                                'encodings' => [$arrayPayload]
+                            ]
+                        ]
+                    ],
+                    'smithy.example#UnsafePath' => [
+                        'type' => 'operation',
+                        'input' => [
+                            'target' => 'smithy.example#UnsafePathInput'
+                        ],
+                        'traits' => [
+                            'smithy.api#http' => [
+                                'method' => 'GET',
+                                'uri' => $pathUri,
+                                'code' => 200
+                            ]
+                        ]
+                    ],
+                    'smithy.example#UnsafePathInput' => [
+                        'type' => 'structure',
+                        'members' => [
+                            'label' => [
+                                'target' => 'smithy.api#String',
+                                'traits' => [
+                                    'smithy.api#httpLabel' => []
+                                ]
+                            ]
+                        ]
+                    ]
+                ]
+            ], JSON_THROW_ON_ERROR));
+            $settings = new CodegenSettings(
+                namespace: $namespace,
+                outputDir: $outputDirectory,
+                organization: 'flat'
+            );
+            $generator = new OperationGenerator(
+                $model,
+                new PhpSymbolProvider($model, $settings),
+                $settings
+            );
+            $file = $generator->generate('smithy.example#Unsafe');
+            $file->writeToDisk($outputDirectory);
+
+            require $file->path;
+            $class = $namespace . '\\UnsafeOperation';
+            $schema = $class::schema();
+
+            self::assertFileDoesNotExist($markerPath);
+            self::assertSame(
+                [
+                    'method' => $scalarPayload,
+                    'uri' => $scalarPayload,
+                    'code' => 200
+                ],
+                $schema->getTrait(Schema::T_HTTP)
+            );
+            self::assertSame(
+                [$arrayPayload],
+                $schema->getTrait(Schema::T_REQUEST_COMPRESSION)
+            );
+
+            $pathFile = $generator->generate(
+                'smithy.example#UnsafePath'
+            );
+            self::assertStringContainsString(
+                "'pathSegments' => [["
+                    . \var_export($pathLiteral, true)
+                    . ', null, false], [null, 0, false]]',
+                $pathFile->content
+            );
+        } finally {
+            @\unlink($markerPath);
+            @\unlink(
+                $outputDirectory
+                    . \DIRECTORY_SEPARATOR
+                    . 'UnsafeOperation.php'
+            );
+            @\rmdir($outputDirectory);
+        }
+    }
+
     public function testGeneratesOperationMetadataClass(): void
     {
         // UpdateSettings is defined in the defaults fixture and takes Settings
