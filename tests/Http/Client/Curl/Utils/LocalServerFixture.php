@@ -414,6 +414,36 @@ if ($responseDelay > 0) {
     usleep($responseDelay);
 }
 
+if (in_array(
+    $mode,
+    [
+        'valid-stream-response',
+        'invalid-status-response',
+        'invalid-reason-response',
+        'invalid-header-response'
+    ],
+    true
+)) {
+    $statusLine = match ($mode) {
+        'invalid-status-response' => "HTTP/1.1 600 Invalid\r\n",
+        'invalid-reason-response' => "HTTP/1.1 200 Invalid\x01Reason\r\n",
+        default => "HTTP/1.1 200 OK\r\n"
+    };
+    $extraHeader = $mode === 'invalid-header-response'
+        ? "Bad Name: value\r\n"
+        : '';
+    fwrite(
+        $conn,
+        $statusLine
+            . $extraHeader
+            . "Content-Length: 2\r\n"
+            . "Connection: close\r\n\r\nOK"
+    );
+    fclose($conn);
+    fclose($server);
+    exit(0);
+}
+
 if ($mode === 'empty-response') {
     fwrite(
         $conn,
