@@ -334,22 +334,13 @@ final class UnionGenerator
         $variantClassName = $baseClassName . 'Unknown';
 
         $writer = new PhpCodeWriter($namespace);
-        $jsonSerializable = $writer->addImportReference(
-            'JsonSerializable',
-            'PhpJsonSerializable',
-            [$baseClassName, $variantClassName]
-        );
-        $writer->addImport('Smithy\\Core\\Shape\\SensitiveStringableTrait');
 
         $writer->writeDocBlock(['Unknown variant for forward-compatibility.']);
         $writer->writeLine("/** @internal */");
         $writer->writeClassDeclaration(
-            "final readonly class {$variantClassName} extends {$baseClassName}",
-            [$jsonSerializable]
+            "final readonly class {$variantClassName} extends {$baseClassName}"
         );
         $writer->openBlock('{');
-        $writer->writeLine('use SensitiveStringableTrait;');
-        $writer->writeLine();
         $writer->writeLine(
             'public function __construct('
             . 'private string $unknownTag, '

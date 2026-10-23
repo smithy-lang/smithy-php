@@ -308,6 +308,15 @@ JSON);
             "members": {
                 "jsonSerialize": {"target": "smithy.api#String"}
             }
+        },
+        "example#MemberSensitiveChoice": {
+            "type": "union",
+            "members": {
+                "secret": {
+                    "target": "smithy.api#String",
+                    "traits": {"smithy.api#sensitive": {}}
+                }
+            }
         }
     }
 }
@@ -329,7 +338,8 @@ JSON);
             $settings
         ))->generate([
             'example#SensitiveChoice' => true,
-            'example#NonSensitiveChoice' => true
+            'example#NonSensitiveChoice' => true,
+            'example#MemberSensitiveChoice' => true
         ]);
         $unionFiles = (new UnionGenerator(
             $model,
@@ -341,10 +351,16 @@ JSON);
             $symbols,
             $settings
         ))->generate('example#NonSensitiveChoice');
+        $memberSensitiveUnionFiles = (new UnionGenerator(
+            $model,
+            $symbols,
+            $settings
+        ))->generate('example#MemberSensitiveChoice');
         $files = [
             $schemaFile,
             ...$unionFiles,
-            ...$nonSensitiveUnionFiles
+            ...$nonSensitiveUnionFiles,
+            ...$memberSensitiveUnionFiles
         ];
 
         try {
@@ -356,11 +372,31 @@ JSON);
                 'public static function jsonSerializeValue(',
                 $nonSensitiveUnionFiles[0]->content
             );
+            foreach ([
+                $nonSensitiveUnionFiles,
+                $memberSensitiveUnionFiles
+            ] as $generatedUnionFiles) {
+                $unknownFile = $generatedUnionFiles[
+                    \array_key_last($generatedUnionFiles)
+                ];
+                $this->assertStringNotContainsString(
+                    'SensitiveStringableTrait',
+                    $unknownFile->content
+                );
+                $this->assertStringNotContainsString(
+                    'JsonSerializable',
+                    $unknownFile->content
+                );
+            }
             foreach ($files as $file) {
                 $file->writeToDisk();
             }
             require $schemaFile->path;
-            foreach ([...$unionFiles, ...$nonSensitiveUnionFiles] as $file) {
+            foreach ([
+                ...$unionFiles,
+                ...$nonSensitiveUnionFiles,
+                ...$memberSensitiveUnionFiles
+            ] as $file) {
                 require $file->path;
             }
 
@@ -384,20 +420,43 @@ JSON);
             $this->assertFalse(
                 $unknown->getSchema()->hasTrait(Schema::T_SENSITIVE)
             );
-            $this->assertInstanceOf(\JsonSerializable::class, $unknown);
+            $this->assertNotInstanceOf(\JsonSerializable::class, $unknown);
 
             $unknownOutput = \print_r($unknown, true)
                 . $this->dumpValue($unknown)
-                . (string) $unknown
                 . \json_encode($unknown, JSON_THROW_ON_ERROR)
                 . \serialize($unknown);
-            $this->assertStringContainsString(
+            $this->assertStringNotContainsString(
                 '***REDACTED***',
                 $unknownOutput
             );
-            $this->assertStringNotContainsString(
+            $this->assertStringContainsString(
                 'unknown-secret',
                 $unknownOutput
+            );
+
+            $memberSensitiveClass = $namespace . '\\MemberSensitiveChoice';
+            $inheritedUnknown = $memberSensitiveClass::unknown(
+                'future',
+                'inherited-secret'
+            );
+            $this->assertInstanceOf(
+                \JsonSerializable::class,
+                $inheritedUnknown
+            );
+
+            $inheritedOutput = \print_r($inheritedUnknown, true)
+                . $this->dumpValue($inheritedUnknown)
+                . (string) $inheritedUnknown
+                . \json_encode($inheritedUnknown, JSON_THROW_ON_ERROR)
+                . \serialize($inheritedUnknown);
+            $this->assertStringContainsString(
+                '***REDACTED***',
+                $inheritedOutput
+            );
+            $this->assertStringNotContainsString(
+                'inherited-secret',
+                $inheritedOutput
             );
         } finally {
             foreach ($files as $file) {
