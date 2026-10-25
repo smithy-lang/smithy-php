@@ -189,13 +189,12 @@ configuration type in the generic runtime.
 
 1. Resolve the operation by modeled name.
 2. Reject streaming operations outside the preview.
-3. Extract input keys beginning with `@`.
-4. Merge explicit request overrides over extracted overrides.
-5. Call `DynamicOperation::createInputFromValue()` to validate and create the
+3. Parse the explicit request overrides, when provided.
+4. Call `DynamicOperation::createInputFromValue()` to validate and create the
    schema-backed input.
-6. Call `AbstractClient::executeOperation()`.
-7. Verify that the returned schema matches the operation output schema.
-8. Return a `StructDocument`.
+5. Call `AbstractClient::executeOperation()`.
+6. Verify that the returned schema matches the operation output schema.
+7. Return a `StructDocument`.
 
 Operation lookup retries the name with an uppercase first character. This
 supports PHP method calls such as `$client->getItem()` for modeled

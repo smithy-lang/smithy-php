@@ -117,7 +117,8 @@ final class PaginationClientTest extends TestCase
         $pages = \iterator_to_array(
             $client
                 ->paginate('ListStrings', [
-                    'pageSize' => 2,
+                    'pageSize' => 2
+                ], [
                     '@http' => [
                         'headers' => ['x-paginator' => 'dynamic']
                     ]
