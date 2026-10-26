@@ -164,12 +164,10 @@ $output = $client->call(
 );
 ```
 
-Keys beginning with `@` may also appear in an array input. The client removes
-them before input coercion and passes them to `RequestOverrideConfig`.
-Explicit override arguments replace matching input override keys.
-
-Waiter inputs follow the same precedence rule: request overrides supplied by
-`WaiterConfig` replace matching `@` keys embedded in the input.
+Keys beginning with `@` in an input array remain modeled input and are not
+promoted to request configuration. Request overrides must be passed through
+the dedicated overrides argument. Waiter request overrides must be supplied
+through `WaiterConfig`.
 
 ## Pagination
 

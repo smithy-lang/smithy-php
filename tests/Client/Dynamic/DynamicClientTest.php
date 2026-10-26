@@ -199,16 +199,16 @@ final class DynamicClientTest extends TestCase
             endpoint: 'https://example.com'
         );
 
-        $output = $client->echo([
-            'message' => 'method',
-            '@http' => [
+        $output = $client->echo(
+            ['message' => 'method'],
+            ['@http' => [
                 'timeout' => 2.5,
                 'read_timeout' => 1.5,
                 'headers' => [
                     'x-test-request' => 'override'
                 ]
-            ]
-        ]);
+            ]]
+        );
 
         self::assertSame('method', $this->memberValue($output, 'message'));
         self::assertSame(
@@ -323,12 +323,12 @@ final class DynamicClientTest extends TestCase
         );
 
         $pages = \iterator_to_array(
-            $client->listStringsPaginated(input: [
-                'pageSize' => 2,
-                '@http' => [
+            $client->listStringsPaginated(
+                input: ['pageSize' => 2],
+                overrides: ['@http' => [
                     'headers' => ['x-paginator' => 'dynamic-method']
-                ]
-            ]),
+                ]]
+            ),
             false
         );
 
@@ -507,32 +507,34 @@ final class DynamicClientTest extends TestCase
         self::assertCount(1, $http->sentRequests);
     }
 
-    public function testAppliesInlineWaiterRequestOverrides(): void
+    public function testRejectsInlineWaiterRequestOverrides(): void
     {
-        $http = (new MockHttpClient())
-            ->queueResponse(self::response(
-                new GetThingOutput(status: 'ready')
-            ));
+        $http = new MockHttpClient();
         $client = self::waiterClient($http);
 
-        $client->waitUntil(
-            'ThingReady',
-            [
-                'thingId' => 'thing-1',
-                '@http' => [
-                    'headers' => ['x-waiter' => 'value']
-                ]
-            ],
-            5.0
-        );
+        try {
+            $client->waitUntil(
+                'ThingReady',
+                [
+                    'thingId' => 'thing-1',
+                    '@http' => [
+                        'proxy' => 'http://127.0.0.1:8080'
+                    ]
+                ],
+                5.0
+            );
+            self::fail('Expected inline waiter overrides to fail.');
+        } catch (InvalidShapeValueException $error) {
+            self::assertStringContainsString(
+                'Unknown member $.@http',
+                $error->getMessage()
+            );
+        }
 
-        self::assertSame(
-            'value',
-            $http->sentRequests[0]->getHeaderLine('x-waiter')
-        );
+        self::assertSame([], $http->sentRequests);
     }
 
-    public function testConfigOverridesReplaceMatchingInlineOverrides(): void
+    public function testAppliesWaiterConfigRequestOverrides(): void
     {
         $http = (new MockHttpClient())
             ->queueResponse(self::response(
@@ -542,12 +544,7 @@ final class DynamicClientTest extends TestCase
 
         $client->waitUntil(
             'ThingReady',
-            [
-                'thingId' => 'thing-1',
-                '@http' => [
-                    'headers' => ['x-waiter' => 'inline']
-                ]
-            ],
+            ['thingId' => 'thing-1'],
             5.0,
             new WaiterConfig(
                 requestOverrides: RequestOverrideConfig::fromArray([
@@ -609,14 +606,36 @@ final class DynamicClientTest extends TestCase
         [$client, $http] = $this->client();
 
         try {
-            $client->Echo([
-                'message' => 'hello',
-                '@unknown' => true
-            ]);
+            $client->Echo(
+                ['message' => 'hello'],
+                ['@unknown' => true]
+            );
             self::fail('Expected unknown request override to fail.');
         } catch (\InvalidArgumentException $error) {
             self::assertSame(
                 "Unknown request override '@unknown'.",
+                $error->getMessage()
+            );
+        }
+
+        self::assertSame(0, $http->sendCallCount);
+    }
+
+    public function testRejectsInlineRequestOverridesBeforeTransmission(): void
+    {
+        [$client, $http] = $this->client();
+
+        try {
+            $client->Echo([
+                'message' => 'hello',
+                '@http' => [
+                    'proxy' => 'http://127.0.0.1:8080'
+                ]
+            ]);
+            self::fail('Expected inline request overrides to fail.');
+        } catch (InvalidShapeValueException $error) {
+            self::assertStringContainsString(
+                'Unknown member $.@http',
                 $error->getMessage()
             );
         }
@@ -629,10 +648,10 @@ final class DynamicClientTest extends TestCase
         [$client, $http] = $this->client();
 
         try {
-            $client->Echo([
-                'message' => 'hello',
-                '@auth' => []
-            ]);
+            $client->Echo(
+                ['message' => 'hello'],
+                ['@auth' => []]
+            );
             self::fail('Expected an empty auth preference to fail.');
         } catch (\InvalidArgumentException $error) {
             self::assertSame(
@@ -657,10 +676,10 @@ final class DynamicClientTest extends TestCase
         );
 
         try {
-            $client->Echo([
-                'message' => 'hello',
-                '@retries' => 0
-            ]);
+            $client->Echo(
+                ['message' => 'hello'],
+                ['@retries' => 0]
+            );
             self::fail('Expected the first attempt to fail.');
         } catch (\RuntimeException $error) {
             self::assertSame('temporary', $error->getMessage());
