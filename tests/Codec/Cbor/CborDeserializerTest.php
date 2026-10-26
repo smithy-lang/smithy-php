@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Smithy\Tests\Codec\Cbor;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Smithy\Codec\Cbor\{
     CborCodecSettings,
@@ -328,6 +329,83 @@ final class CborDeserializerTest extends TestCase
         self::assertSame('12345e-2', $members[1]->value);
     }
 
+    public function testHonorsConfiguredBigIntegerLimit(): void
+    {
+        $members = [null];
+        (new CborDeserializer(
+            new StringRequestStream(
+                "\xA1\x62bi\xC2\x44\xFF\xFF\xFF\xFF"
+            ),
+            new CborCodecSettings(maxBigIntegerBytes: 4)
+        ))->deserialize(self::bigIntegerSchema(), $members);
+
+        self::assertInstanceOf(BigInteger::class, $members[0]);
+        self::assertSame('4294967295', $members[0]->value);
+    }
+
+    public function testSkipsEmptyIndefiniteBigIntegerChunks(): void
+    {
+        $members = [null];
+        (new CborDeserializer(
+            new StringRequestStream(
+                "\xA1\x62bi\xC2\x5F"
+                    . \str_repeat("\x40", 4096)
+                    . "\x41\x01"
+                    . \str_repeat("\x40", 4096)
+                    . "\xFF"
+            ),
+            new CborCodecSettings(maxBigIntegerBytes: 1)
+        ))->deserialize(self::bigIntegerSchema(), $members);
+
+        self::assertInstanceOf(BigInteger::class, $members[0]);
+        self::assertSame('1', $members[0]->value);
+    }
+
+    public function testRejectsInvalidBigIntegerLimit(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage(
+            'maxBigIntegerBytes must be at least one.'
+        );
+
+        new CborCodecSettings(maxBigIntegerBytes: 0);
+    }
+
+    #[DataProvider('oversizedBigIntegerProvider')]
+    public function testRejectsOversizedBigInteger(string $payload): void
+    {
+        $members = [null];
+        $deserializer = new CborDeserializer(
+            new StringRequestStream($payload),
+            new CborCodecSettings(maxBigIntegerBytes: 4)
+        );
+
+        $this->expectException(DeserializationException::class);
+        $this->expectExceptionMessage('Malformed CBOR payload.');
+
+        $deserializer->deserialize(self::bigIntegerSchema(), $members);
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function oversizedBigIntegerProvider(): iterable
+    {
+        yield 'positive definite' => [
+            "\xA1\x62bi\xC2\x45" . \str_repeat("\xFF", 5)
+        ];
+        yield 'negative definite' => [
+            "\xA1\x62bi\xC3\x45" . \str_repeat("\xFF", 5)
+        ];
+        yield 'positive indefinite' => [
+            "\xA1\x62bi\xC2\x5F\x43"
+                . \str_repeat("\xFF", 3)
+                . "\x42"
+                . \str_repeat("\xFF", 2)
+                . "\xFF"
+        ];
+    }
+
     public function testDecodesComparableValueWithTypeInformation(): void
     {
         $deserializer = new CborDeserializer(
@@ -412,5 +490,21 @@ final class CborDeserializerTest extends TestCase
         ))->decodeComparableValue();
 
         self::assertSame($integer, $float);
+    }
+
+    private static function bigIntegerSchema(): Schema
+    {
+        return new Schema(
+            id: 'smithy.test#BigIntegerContainer',
+            type: ShapeType::Structure,
+            members: [
+                new Schema(
+                    id: 'smithy.test#BigIntegerContainer$bi',
+                    type: ShapeType::BigInteger,
+                    memberName: 'bi',
+                    memberIndex: 0
+                )
+            ]
+        );
     }
 }
