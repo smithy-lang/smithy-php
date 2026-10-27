@@ -181,12 +181,11 @@ final class OperationGeneratorTest extends TestCase
             $file->content
         );
         $this->assertStringContainsString(
-            'public const SERVICE_EXCEPTION_CLASS = '
-                . 'ExampleException::class;',
+            'implements OperationInterface',
             $file->content
         );
         $this->assertStringContainsString(
-            'return self::SERVICE_EXCEPTION_CLASS;',
+            'return ExampleException::class;',
             $file->content
         );
     }

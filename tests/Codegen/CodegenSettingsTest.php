@@ -36,6 +36,7 @@ final class CodegenSettingsTest extends TestCase
             ['enabled' => false, 'categories' => ['output']],
             $settings->arrayAccess
         );
+        $this->assertNull($settings->baseServiceException);
         $this->assertNull($settings->serviceExceptionClass);
         $this->assertSame([], $settings->rulesFunctions);
         $this->assertSame([], $settings->extendedOpcodes);
@@ -86,6 +87,41 @@ final class CodegenSettingsTest extends TestCase
         $this->assertSame(
             'Aws\\Example\\Exception\\ExampleException',
             $settings->resolveServiceExceptionClass()
+        );
+
+        $custom = new CodegenSettings(
+            namespace: 'Aws\\Example',
+            outputDir: '/tmp/output',
+            serviceExceptionClass: 'Aws\\Example\\Exception\\SdkException'
+        );
+        $this->assertSame(
+            'Aws\\Example\\Exception\\SdkException',
+            $custom->resolveServiceExceptionClass()
+        );
+        $matchingParent = new CodegenSettings(
+            namespace: 'Aws\\Example',
+            outputDir: '/tmp/output',
+            baseServiceException:
+                'Aws\\Example\\Exception\\ExampleException'
+        );
+
+        $this->assertSame(
+            'Aws\\Example\\Exception\\ExampleException',
+            $matchingParent->baseServiceException
+        );
+    }
+
+    public function testRejectsReservedServiceExceptionClass(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage(
+            'serviceExceptionClass must not use a reserved PHP class name'
+        );
+
+        new CodegenSettings(
+            namespace: 'Aws\\Example',
+            outputDir: '/tmp/output',
+            serviceExceptionClass: 'class'
         );
     }
 
@@ -342,7 +378,8 @@ final class CodegenSettingsTest extends TestCase
             'namespace' => 'Aws\\Sns',
             'outputDir' => '/build/sns',
             'organization' => 'flat',
-            'serviceExceptionClass' => 'Aws\\Exception\\AwsException',
+            'baseServiceException' => 'Aws\\Exception\\AwsException',
+            'serviceExceptionClass' => 'Aws\\Sns\\Exception\\SnsException',
             'preserveExistingMemberOrder' => false,
             'waiterResourceInitialisms' => ['api' => 'API'],
             'assumeAsciiEndpointStrings' => true
@@ -353,6 +390,10 @@ final class CodegenSettingsTest extends TestCase
         $this->assertSame('flat', $settings->organization);
         $this->assertSame(
             'Aws\\Exception\\AwsException',
+            $settings->baseServiceException
+        );
+        $this->assertSame(
+            'Aws\\Sns\\Exception\\SnsException',
             $settings->serviceExceptionClass
         );
         $this->assertFalse($settings->preserveExistingMemberOrder);

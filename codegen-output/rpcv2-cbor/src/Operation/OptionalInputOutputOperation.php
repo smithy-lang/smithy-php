@@ -16,7 +16,6 @@ final class OptionalInputOutputOperation implements OperationInterface
     public const NAME = 'OptionalInputOutput';
     public const ID = 'smithy.protocoltests.rpcv2Cbor#OptionalInputOutput';
     public const SERVICE_ID = 'smithy.protocoltests.rpcv2Cbor#RpcV2Protocol';
-    public const SERVICE_EXCEPTION_CLASS = RpcV2CborException::class;
     public const INPUT_CLASS = SimpleStructure::class;
     public const OUTPUT_CLASS = SimpleStructure::class;
     public const AUTH_SCHEMES = [
@@ -51,7 +50,7 @@ final class OptionalInputOutputOperation implements OperationInterface
 
     public function getServiceExceptionClass(): string
     {
-        return self::SERVICE_EXCEPTION_CLASS;
+        return RpcV2CborException::class;
     }
 
     public function getRuntimeIdentity(): string

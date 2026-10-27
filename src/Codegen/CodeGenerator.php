@@ -138,6 +138,7 @@ final class CodeGenerator
         $this->validateServiceCount();
 
         $generatedFiles = [];
+        $serviceException = null;
 
         // Build the service closure - all shapes reachable from service
         // operations
@@ -196,7 +197,9 @@ final class CodeGenerator
             }
 
             $generatedFiles[] = $this->serviceGenerator->generate($shapeId);
-            $generatedFiles[] = $this->serviceExceptionGenerator->generate();
+            $serviceException =
+                $this->serviceExceptionGenerator->generate();
+            $generatedFiles[] = $serviceException;
             $generatedFiles[] = $this->typeRegistryGenerator->generate(
                 $shapeId,
                 $serviceClosure
@@ -224,6 +227,12 @@ final class CodeGenerator
             }
         }
 
+        if ($serviceException === null
+            && $this->settings->serviceExceptionClass !== null
+        ) {
+            $serviceException = $this->serviceExceptionGenerator->generate();
+            $generatedFiles[] = $serviceException;
+        }
 
         // Generate operations
         foreach ($this->model->getOperationShapes() as $shapeId => $shape) {
@@ -245,7 +254,46 @@ final class CodeGenerator
             $serviceClosure
         );
 
+        $this->validateServiceExceptionCollision(
+            $generatedFiles,
+            $serviceException
+        );
+
         return $generatedFiles;
+    }
+
+    /**
+     * @param list<GeneratedFile> $files
+     */
+    private function validateServiceExceptionCollision(
+        array $files,
+        ?GeneratedFile $serviceException
+    ): void
+    {
+        if ($serviceException === null) {
+            return;
+        }
+
+        $path = self::outputPathKey($serviceException->path);
+        $matches = 0;
+        foreach ($files as $file) {
+            if (self::outputPathKey($file->path) === $path
+                && ++$matches > 1
+            ) {
+                throw new \InvalidArgumentException(
+                    'Generated service exception '
+                        . $this->settings->resolveServiceExceptionClass()
+                        . ' collides with '
+                        . 'another generated artifact; configure '
+                        . 'serviceExceptionClass with a unique name'
+                );
+            }
+        }
+    }
+
+    private static function outputPathKey(string $path): string
+    {
+        return \strtolower($path);
     }
 
     /**

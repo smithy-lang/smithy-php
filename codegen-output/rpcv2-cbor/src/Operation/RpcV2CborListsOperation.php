@@ -21,7 +21,6 @@ final class RpcV2CborListsOperation implements OperationInterface
     public const NAME = 'RpcV2CborLists';
     public const ID = 'smithy.protocoltests.rpcv2Cbor#RpcV2CborLists';
     public const SERVICE_ID = 'smithy.protocoltests.rpcv2Cbor#RpcV2Protocol';
-    public const SERVICE_EXCEPTION_CLASS = RpcV2CborException::class;
     public const INPUT_CLASS = RpcV2CborListInputOutput::class;
     public const OUTPUT_CLASS = RpcV2CborListInputOutput::class;
     public const AUTH_SCHEMES = [
@@ -59,7 +58,7 @@ final class RpcV2CborListsOperation implements OperationInterface
 
     public function getServiceExceptionClass(): string
     {
-        return self::SERVICE_EXCEPTION_CLASS;
+        return RpcV2CborException::class;
     }
 
     public function getRuntimeIdentity(): string

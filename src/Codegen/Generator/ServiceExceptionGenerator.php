@@ -28,7 +28,9 @@ final class ServiceExceptionGenerator
     public function generate(): GeneratedFile
     {
         $serviceName = $this->settings->resolveServiceName();
-        $className = $serviceName . 'Exception';
+        $serviceExceptionClass =
+            $this->settings->resolveServiceExceptionClass();
+        $className = self::shortClassName($serviceExceptionClass);
         $namespace = $this->settings->resolveNamespace(
             \Smithy\Codegen\ShapeCategory::Error
         );
@@ -36,8 +38,17 @@ final class ServiceExceptionGenerator
             \Smithy\Codegen\ShapeCategory::Error
         );
 
-        $parentFqcn = $this->settings->serviceExceptionClass
+        $parentFqcn = $this->settings->baseServiceException
             ?? 'Smithy\\Core\\Exception\\ApiException';
+        if (\strcasecmp(
+            \ltrim($parentFqcn, '\\'),
+            \ltrim($serviceExceptionClass, '\\')
+        ) === 0) {
+            throw new \InvalidArgumentException(
+                'baseServiceException must not be the generated service '
+                    . 'exception class'
+            );
+        }
         $writer = new PhpCodeWriter($namespace);
         $parentClass = $writer->addImportReference(
             $parentFqcn,
@@ -68,5 +79,14 @@ final class ServiceExceptionGenerator
             path: $filePath,
             content: $writer->toFileContent()
         );
+    }
+
+    private static function shortClassName(string $class): string
+    {
+        $separator = \strrpos($class, '\\');
+
+        return $separator === false
+            ? $class
+            : \substr($class, $separator + 1);
     }
 }

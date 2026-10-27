@@ -41,7 +41,7 @@ The generated output includes:
 - operation input and output classes
 - the `PetRecord` resource representation
 - enums and union variants
-- modeled exceptions
+- the `PetStoreException` service exception and modeled exceptions
 - lazily initialized runtime schemas
 
 Generated files are build artifacts and are not committed.
@@ -91,6 +91,25 @@ $client = new PetStoreClient(new ClientConfig(
 ```
 
 The service does not require authentication.
+
+## Handle service errors
+
+Modeled exceptions such as `PetNotFoundErrorException` extend the generated
+`PetStoreException`. Catch the modeled type when its members matter, or catch
+the service exception to handle any modeled or unmodeled service error:
+
+```php
+use Smithy\Examples\PetStore\Exception\PetNotFoundErrorException;
+use Smithy\Examples\PetStore\Exception\PetStoreException;
+
+try {
+    $output = $client->getPet(new GetPetInput(petId: 'pet-1'));
+} catch (PetNotFoundErrorException $error) {
+    // Handle the modeled error and its members.
+} catch (PetStoreException $error) {
+    // Handle any other error returned by the service.
+}
+```
 
 ## Construct input from arrays
 

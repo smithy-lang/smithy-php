@@ -7,6 +7,7 @@ namespace Smithy\Protocol;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\StreamInterface;
 use Smithy\Codec\AbstractCodec;
+use Smithy\Core\Exception\ApiException;
 use Smithy\Core\Exception\ErrorFault;
 use Smithy\Core\Serde\Schema;
 use Smithy\Core\Serde\ShapeDeserializerInterface;
@@ -160,7 +161,7 @@ abstract class HttpErrorDeserializer
     }
 
     /**
-     * Create the service exception used for unmodeled or malformed errors.
+     * Create the generic exception used for unmodeled or malformed errors.
      */
     protected function createUnmodeledError(
         OperationInterface $operation,
@@ -171,14 +172,32 @@ abstract class HttpErrorDeserializer
         ?\Throwable $previous = null
     ): \Throwable
     {
+        return $this->createUnmodeledErrorWithClass(
+            $operation->getServiceExceptionClass(),
+            $response,
+            $discriminator,
+            $message,
+            $previous
+        );
+    }
+
+    /**
+     * @param class-string<ApiException> $errorClass
+     */
+    private function createUnmodeledErrorWithClass(
+        string $errorClass,
+        ResponseInterface $response,
+        ?string $discriminator,
+        string $message,
+        ?\Throwable $previous
+    ): ApiException
+    {
         $statusCode = $response->getStatusCode();
         if ($message === '') {
             $message = $discriminator !== null && $discriminator !== ''
                 ? "HTTP {$statusCode}: {$discriminator}"
                 : "HTTP {$statusCode}";
         }
-
-        $errorClass = $operation->getServiceExceptionClass();
 
         return new $errorClass(
             $message,

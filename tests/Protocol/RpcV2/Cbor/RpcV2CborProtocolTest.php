@@ -396,22 +396,34 @@ final class RpcV2CborProtocolTest extends TestCase
         $body->expects(self::never())->method('getSize');
         $body->expects(self::never())->method('getContents');
 
-        $this->expectException(ApiException::class);
-        $this->expectExceptionMessage(
-            'Malformed rpc-v2-cbor error response'
-        );
+        try {
+            (new RpcV2CborProtocol())->deserializeResponse(
+                self::operation(
+                    inputSchema: self::unitSchema(),
+                    outputSchema: self::unitSchema(),
+                    serviceExceptionClass:
+                        RpcV2CborServiceExceptionFixture::class
+                ),
+                new HttpTransportResponse(new Response(
+                    status: 400,
+                    headers: ['Smithy-Protocol' => 'wrong-protocol'],
+                    body: $body
+                ))
+            );
+        } catch (RpcV2CborServiceExceptionFixture $exception) {
+            self::assertSame(
+                'Malformed rpc-v2-cbor error response (HTTP 400).',
+                $exception->getMessage()
+            );
+            self::assertInstanceOf(
+                ProtocolException::class,
+                $exception->getPrevious()
+            );
 
-        (new RpcV2CborProtocol())->deserializeResponse(
-            self::operation(
-                inputSchema: self::unitSchema(),
-                outputSchema: self::unitSchema()
-            ),
-            new HttpTransportResponse(new Response(
-                status: 400,
-                headers: ['Smithy-Protocol' => 'wrong-protocol'],
-                body: $body
-            ))
-        );
+            return;
+        }
+
+        self::fail('Expected the service exception fallback.');
     }
 
     /**

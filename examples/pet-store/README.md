@@ -3,7 +3,7 @@
 This example generates a Smithy PHP client for an RPCv2 CBOR `PetStore`
 service and runs it against a small local PHP server. It demonstrates:
 
-- generated clients, shapes, schemas, enums, unions, and modeled errors
+- generated clients, shapes, schemas, enums, unions, and service exceptions
 - create, read, update, list, and delete resource operations
 - RPCv2 CBOR request and response handling
 - paginated operations

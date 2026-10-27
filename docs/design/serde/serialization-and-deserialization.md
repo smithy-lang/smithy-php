@@ -183,8 +183,8 @@ configuration constructs the corresponding protocol class directly.
 
 Protocols own success status rules and error envelopes. `HttpErrorDeserializer`
 uses the protocol codec, modeled error schemas, headers, and response status to
-construct a modeled exception. Unmatched service errors use the protocol's
-generic API exception.
+construct a modeled exception. Unmatched service errors use the fallback
+exception class supplied by the operation.
 
 Codec failures report malformed body data. Protocol failures report invalid
 framing, missing required headers, or invalid response status behavior.

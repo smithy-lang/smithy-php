@@ -150,7 +150,11 @@ final class OperationGenerator
         $writer->addImport('Smithy\\Core\\Serde\\Schema');
         $writer->addImport('Smithy\\Core\\Serde\\SerializableStructInterface');
         $writer->addImport('Smithy\\Core\\Shape\\ShapeType');
-        $writer->addImport('Smithy\\Core\\Shape\\OperationInterface');
+        $operationInterface = $writer->addImportReference(
+            'Smithy\\Core\\Shape\\OperationInterface',
+            'SmithyOperation',
+            [$className]
+        );
         if ($inputClass === null || $outputClass === null) {
             $writer->addImport(
                 'Smithy\\Core\\Shape\\Document\\StructDocument'
@@ -158,8 +162,8 @@ final class OperationGenerator
         }
         $serviceExceptionClass = $writer->addImportReference(
             $serviceId === null
-                ? $this->settings->serviceExceptionClass
-                    ?? 'Smithy\\Core\\Exception\\ApiException'
+                && $this->settings->serviceExceptionClass === null
+                ? 'Smithy\\Core\\Exception\\ApiException'
                 : $this->settings->resolveServiceExceptionClass(),
             'ServiceException',
             [$className]
@@ -196,10 +200,10 @@ final class OperationGenerator
             $writer->writeDocBlock([$cleanDoc]);
         }
 
-        // Every generated operation implements OperationInterface.
+        // Every generated operation provides its service-specific fallback.
         $writer->writeClassDeclaration(
             "final class {$className}",
-            ['OperationInterface']
+            [$operationInterface]
         );
 
         $writer->openBlock('{');
@@ -211,11 +215,6 @@ final class OperationGenerator
                 ? 'public const SERVICE_ID = null;'
                 : "public const SERVICE_ID = '{$serviceId}';"
         );
-        $writer->writeLine(
-            'public const SERVICE_EXCEPTION_CLASS = '
-                . "{$serviceExceptionClass}::class;"
-        );
-
         if ($inputClass !== null) {
             $writer->writeLine(
                 "public const INPUT_CLASS = {$inputClass}::class;"
@@ -307,7 +306,7 @@ final class OperationGenerator
             'public function getServiceExceptionClass(): string'
         );
         $writer->openBlock('{');
-        $writer->writeLine('return self::SERVICE_EXCEPTION_CLASS;');
+        $writer->writeLine("return {$serviceExceptionClass}::class;");
         $writer->closeBlock();
         $writer->writeLine();
 

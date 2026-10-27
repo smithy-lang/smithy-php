@@ -16,7 +16,6 @@ final class RecursiveShapesOperation implements OperationInterface
     public const NAME = 'RecursiveShapes';
     public const ID = 'smithy.protocoltests.rpcv2Cbor#RecursiveShapes';
     public const SERVICE_ID = 'smithy.protocoltests.rpcv2Cbor#RpcV2Protocol';
-    public const SERVICE_EXCEPTION_CLASS = RpcV2CborException::class;
     public const INPUT_CLASS = RecursiveShapesInputOutput::class;
     public const OUTPUT_CLASS = RecursiveShapesInputOutput::class;
     public const AUTH_SCHEMES = [
@@ -51,7 +50,7 @@ final class RecursiveShapesOperation implements OperationInterface
 
     public function getServiceExceptionClass(): string
     {
-        return self::SERVICE_EXCEPTION_CLASS;
+        return RpcV2CborException::class;
     }
 
     public function getRuntimeIdentity(): string

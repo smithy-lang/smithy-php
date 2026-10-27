@@ -18,11 +18,16 @@ use Smithy\Core\Exception\ApiException;
 use Smithy\Core\Serde\SerializableStructInterface;
 use Smithy\Core\Shape\OperationInterface;
 use Smithy\Core\Shape\Utils\ArrayShapeSerializer;
+use Smithy\Http\Message\Response;
 use Smithy\Protocol\RpcV2\RpcV2CborProtocol;
 use Smithy\ProtocolTests\RpcV2Cbor\{
     RpcV2CborClient,
     RpcV2CborClientConfig,
     RpcV2CborService
+};
+use Smithy\ProtocolTests\RpcV2Cbor\Exception\{
+    InvalidGreetingException,
+    RpcV2CborException
 };
 use Smithy\Tests\Protocol\RpcV2\Cbor\Support\RpcV2CborClientProtocolTestCase;
 use Smithy\Tests\Utils\Http\MockHttpClient;
@@ -43,6 +48,51 @@ final class GeneratedClientProtocolTest extends RpcV2CborClientProtocolTestCase
             RpcV2CborService::instance(),
             $client->getConfig()->service
         );
+    }
+
+    public function testGeneratedServiceExceptionCatchesModeledAndUnmodeledErrors(): void
+    {
+        $http = new MockHttpClient();
+        $client = $this->createClient($http, 'https://example.com');
+        $modeledBody = \base64_decode(
+            'v2ZfX3R5cGV4LnNtaXRoeS5wcm90b2NvbHRlc3RzLnJwY3YyQ2Jvci'
+                . 'NJbnZhbGlkR3JlZXRpbmdnTWVzc2FnZWJIaf8=',
+            true
+        );
+        self::assertIsString($modeledBody);
+        $http->queueResponse(new Response(
+            400,
+            [
+                'Smithy-Protocol' => 'rpc-v2-cbor',
+                'Content-Type' => 'application/cbor'
+            ],
+            $modeledBody
+        ));
+
+        try {
+            $client->greetingWithErrors();
+            self::fail('Expected a modeled service exception.');
+        } catch (RpcV2CborException $error) {
+            self::assertInstanceOf(InvalidGreetingException::class, $error);
+        }
+
+        $http->queueResponse(new Response(
+            400,
+            [
+                'Smithy-Protocol' => 'rpc-v2-cbor',
+                'Content-Length' => '0'
+            ]
+        ));
+
+        try {
+            $client->greetingWithErrors();
+            self::fail('Expected an unmodeled service exception.');
+        } catch (RpcV2CborException $error) {
+            self::assertSame(
+                RpcV2CborException::class,
+                $error::class
+            );
+        }
     }
 
     public function testCborBodyComparisonRejectsMissingNestedDefaults(): void

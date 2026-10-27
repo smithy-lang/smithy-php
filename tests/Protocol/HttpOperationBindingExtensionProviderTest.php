@@ -19,6 +19,7 @@ use Smithy\Tests\Protocol\Utils\HttpBindingFixtureSchemas;
 use Smithy\Tests\Protocol\Utils\HttpBindingInputShapeFixture;
 
 #[CoversClass(AbstractHttpBindingProtocol::class)]
+#[CoversClass(HttpErrorDeserializer::class)]
 #[CoversClass(HttpOperationBindingExtensionProvider::class)]
 final class HttpOperationBindingExtensionProviderTest extends TestCase
 {

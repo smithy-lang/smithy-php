@@ -16,7 +16,8 @@ use Smithy\ProtocolTests\RpcV2Cbor\Schemas;
  * A standard error for input validation failures. This should be thrown by services when a member of the input
  * structure falls outside of the modeled or documented constraints.
  */
-final class ValidationException extends RpcV2CborException implements SerializableStructInterface
+final class ValidationException extends \Smithy\ProtocolTests\RpcV2Cbor\Exception\RpcV2CborException implements
+    SerializableStructInterface
 {
     use FromMembersTrait;
 

@@ -28,7 +28,7 @@ The generator emits the static PHP representation of one service closure:
 - service metadata
 - a typed service client and service-specific client configuration
 - a centralized `Schemas` registry and a per-service `TypeRegistry`
-- a service exception base when configured
+- a per-service exception base
 - endpoint bytecode and an optional generated endpoint cache-key builder
 
 Generated shape classes implement the runtime serde contracts described in
@@ -211,9 +211,8 @@ Additional behavior is generated only when needed:
 - structures and unions containing sensitive data use
   `SensitiveStringableTrait` for redacted string, debug, JSON, and PHP
   serialization representations
-- modeled errors extend the configured service exception or runtime API
-  exception and preserve modeled members that collide with inherited
-  exception properties
+- modeled errors extend the generated service exception and preserve modeled
+  members that collide with inherited exception properties
 
 Associative-array conversion is centralized in `ArrayShapeSerializer`.
 Generated structures do not each emit `fromArray()` or `toArray()`.
@@ -307,9 +306,10 @@ these artifacts.
 
 The generator always emits a per-service exception base. Modeled errors extend
 that class, and protocols use it for unmodeled service errors. By default the
-service exception extends the runtime `ApiException`. The
-`serviceExceptionClass` setting can replace that parent, such as with an
-SDK-specific exception class.
+service exception extends the runtime `ApiException`. `serviceExceptionClass`
+changes the generated class name, while `baseServiceException` selects an
+SDK-specific parent. A configured class name must not collide with another
+generated artifact.
 
 ### Schema and type registries
 
