@@ -24,12 +24,10 @@ final class ServiceExceptionGenerator
 
     /**
      * Generate the service exception class.
-     *
-     * @param string $serviceName Short service name (e.g., "Weather")
-     * @return GeneratedFile
      */
-    public function generate(string $serviceName): GeneratedFile
+    public function generate(): GeneratedFile
     {
+        $serviceName = $this->settings->resolveServiceName();
         $className = $serviceName . 'Exception';
         $namespace = $this->settings->resolveNamespace(
             \Smithy\Codegen\ShapeCategory::Error
@@ -38,15 +36,14 @@ final class ServiceExceptionGenerator
             \Smithy\Codegen\ShapeCategory::Error
         );
 
-        // Resolve the parent exception class
-        $parentFqcn = $this->settings->baseServiceException
+        $parentFqcn = $this->settings->serviceExceptionClass
             ?? 'Smithy\\Core\\Exception\\ApiException';
-        $parentShortName = $this->extractShortName($parentFqcn);
-
         $writer = new PhpCodeWriter($namespace);
-
-        // Import the parent exception
-        $writer->addImport($parentFqcn);
+        $parentClass = $writer->addImportReference(
+            $parentFqcn,
+            'BaseServiceException',
+            [$className]
+        );
 
         $writer->writeDocBlock([
             "Base exception for all {$serviceName} service errors.",
@@ -55,7 +52,7 @@ final class ServiceExceptionGenerator
             'whether modeled or unmodeled.'
         ]);
 
-        $writer->writeLine("class {$className} extends {$parentShortName}");
+        $writer->writeLine("class {$className} extends {$parentClass}");
         $writer->openBlock('{');
         $writer->closeBlock();
 
@@ -65,14 +62,5 @@ final class ServiceExceptionGenerator
             path: $filePath,
             content: $writer->toFileContent()
         );
-    }
-
-    private function extractShortName(string $fqcn): string
-    {
-        $lastSlash = strrpos($fqcn, '\\');
-        if ($lastSlash === false) {
-            return $fqcn;
-        }
-        return substr($fqcn, $lastSlash + 1);
     }
 }

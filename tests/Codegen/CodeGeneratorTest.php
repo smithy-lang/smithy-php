@@ -48,6 +48,14 @@ final class CodeGeneratorTest extends TestCase
         $this->assertContains('Status.php', $fileNames);
         $this->assertContains('Priority.php', $fileNames);
         $this->assertContains('Payload.php', $fileNames);
+        $this->assertContains('ExampleException.php', $fileNames);
+
+        $errorFile = $this->findFile($files, 'ComplexErrorException.php');
+        $this->assertNotNull($errorFile);
+        $this->assertStringContainsString(
+            'extends ExampleException',
+            $errorFile->content
+        );
 
         // Should NOT generate mixin shapes
         $this->assertNotContains('Event.php', $fileNames);

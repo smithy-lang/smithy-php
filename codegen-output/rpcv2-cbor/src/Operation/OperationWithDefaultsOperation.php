@@ -8,6 +8,7 @@ use Smithy\Core\Serde\Schema;
 use Smithy\Core\Serde\SerializableStructInterface;
 use Smithy\Core\Shape\OperationInterface;
 use Smithy\Core\Shape\ShapeType;
+use Smithy\ProtocolTests\RpcV2Cbor\Exception\RpcV2CborException;
 use Smithy\ProtocolTests\RpcV2Cbor\Exception\ValidationException;
 use Smithy\ProtocolTests\RpcV2Cbor\Input\OperationWithDefaultsInput;
 use Smithy\ProtocolTests\RpcV2Cbor\Output\OperationWithDefaultsOutput;
@@ -17,6 +18,7 @@ final class OperationWithDefaultsOperation implements OperationInterface
     public const NAME = 'OperationWithDefaults';
     public const ID = 'smithy.protocoltests.rpcv2Cbor#OperationWithDefaults';
     public const SERVICE_ID = 'smithy.protocoltests.rpcv2Cbor#RpcV2Protocol';
+    public const SERVICE_EXCEPTION_CLASS = RpcV2CborException::class;
     public const INPUT_CLASS = OperationWithDefaultsInput::class;
     public const OUTPUT_CLASS = OperationWithDefaultsOutput::class;
     public const AUTH_SCHEMES = [
@@ -50,6 +52,11 @@ final class OperationWithDefaultsOperation implements OperationInterface
     public function getServiceId(): ?string
     {
         return self::SERVICE_ID;
+    }
+
+    public function getServiceExceptionClass(): string
+    {
+        return self::SERVICE_EXCEPTION_CLASS;
     }
 
     public function getRuntimeIdentity(): string

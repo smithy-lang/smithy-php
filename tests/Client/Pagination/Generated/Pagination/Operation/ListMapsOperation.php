@@ -43,6 +43,11 @@ final class ListMapsOperation implements OperationInterface
         return 'smithy.pagination#Pagination';
     }
 
+    public function getServiceExceptionClass(): string
+    {
+        return \Smithy\Core\Exception\ApiException::class;
+    }
+
     public function getRuntimeIdentity(): string
     {
         return self::class;

@@ -28,6 +28,7 @@ use Smithy\Protocol\RpcV2\RpcV2CborProtocol;
 use Smithy\Protocol\RpcV2\RpcV2ErrorDeserializer;
 use Smithy\Tests\Http\Message\Utils\GenericStreamFixture;
 use Smithy\Tests\Protocol\RpcV2\Cbor\Fixtures\RpcV2CborOperationFixture;
+use Smithy\Tests\Protocol\RpcV2\Cbor\Fixtures\RpcV2CborServiceExceptionFixture;
 
 #[CoversClass(AbstractRpcV2Protocol::class)]
 #[CoversClass(HttpErrorDeserializer::class)]
@@ -332,6 +333,38 @@ final class RpcV2CborProtocolTest extends TestCase
         self::fail('Expected a modeled error.');
     }
 
+    public function testUsesServiceExceptionForUnmodeledErrorResponse(): void
+    {
+        $operation = self::operation(
+            inputSchema: self::unitSchema(),
+            outputSchema: self::unitSchema(),
+            serviceExceptionClass:
+                RpcV2CborServiceExceptionFixture::class
+        );
+        $body = self::serializeStruct(
+            self::errorEnvelopeSchema(),
+            ['UnknownError', 'failed']
+        );
+
+        try {
+            (new RpcV2CborProtocol())->deserializeResponse(
+                $operation,
+                new HttpTransportResponse(new Response(
+                    status: 500,
+                    headers: ['Smithy-Protocol' => 'rpc-v2-cbor'],
+                    body: $body
+                ))
+            );
+        } catch (RpcV2CborServiceExceptionFixture $exception) {
+            self::assertSame('failed', $exception->getMessage());
+            self::assertTrue($exception->isServerFault());
+
+            return;
+        }
+
+        self::fail('Expected the service exception fallback.');
+    }
+
     public function testContentLengthZeroDoesNotReadErrorBody(): void
     {
         $body = $this->createMock(RequestStreamInterface::class);
@@ -388,13 +421,15 @@ final class RpcV2CborProtocolTest extends TestCase
         Schema $inputSchema,
         Schema $outputSchema,
         array $errorSchemas = [],
-        ?string $requestTarget = null
+        ?string $requestTarget = null,
+        string $serviceExceptionClass = ApiException::class
     ): RpcV2CborOperationFixture {
         return new RpcV2CborOperationFixture(
             inputSchema: $inputSchema,
             outputSchema: $outputSchema,
             errorSchemas: $errorSchemas,
-            requestTarget: $requestTarget
+            requestTarget: $requestTarget,
+            serviceExceptionClass: $serviceExceptionClass
         );
     }
 

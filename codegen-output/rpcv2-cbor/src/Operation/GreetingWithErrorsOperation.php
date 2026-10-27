@@ -10,6 +10,7 @@ use Smithy\Core\Shape\OperationInterface;
 use Smithy\Core\Shape\ShapeType;
 use Smithy\ProtocolTests\RpcV2Cbor\Exception\ComplexErrorException;
 use Smithy\ProtocolTests\RpcV2Cbor\Exception\InvalidGreetingException;
+use Smithy\ProtocolTests\RpcV2Cbor\Exception\RpcV2CborException;
 use Smithy\ProtocolTests\RpcV2Cbor\Output\GreetingWithErrorsOutput;
 use Smithy\ProtocolTests\RpcV2Cbor\Shape\Unit;
 
@@ -23,6 +24,7 @@ final class GreetingWithErrorsOperation implements OperationInterface
     public const NAME = 'GreetingWithErrors';
     public const ID = 'smithy.protocoltests.rpcv2Cbor#GreetingWithErrors';
     public const SERVICE_ID = 'smithy.protocoltests.rpcv2Cbor#RpcV2Protocol';
+    public const SERVICE_EXCEPTION_CLASS = RpcV2CborException::class;
     public const INPUT_CLASS = Unit::class;
     public const OUTPUT_CLASS = GreetingWithErrorsOutput::class;
     public const AUTH_SCHEMES = [
@@ -58,6 +60,11 @@ final class GreetingWithErrorsOperation implements OperationInterface
     public function getServiceId(): ?string
     {
         return self::SERVICE_ID;
+    }
+
+    public function getServiceExceptionClass(): string
+    {
+        return self::SERVICE_EXCEPTION_CLASS;
     }
 
     public function getRuntimeIdentity(): string

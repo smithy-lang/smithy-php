@@ -245,7 +245,9 @@ Discriminators include:
 - provider-registered protocol discriminator values
 
 `resolveErrorSchema()` performs a direct discriminator lookup. The protocol
-then deserializes modeled members through the selected codec.
+then deserializes modeled members through the selected codec. An unrecognized
+discriminator uses the operation's service exception class. Dynamic operations
+use the runtime `ApiException`.
 
 Without a generated exception class, modeled failures are represented by
 `DocumentException`. The exception retains the error schema and positional

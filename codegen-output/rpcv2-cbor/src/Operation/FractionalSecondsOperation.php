@@ -8,6 +8,7 @@ use Smithy\Core\Serde\Schema;
 use Smithy\Core\Serde\SerializableStructInterface;
 use Smithy\Core\Shape\OperationInterface;
 use Smithy\Core\Shape\ShapeType;
+use Smithy\ProtocolTests\RpcV2Cbor\Exception\RpcV2CborException;
 use Smithy\ProtocolTests\RpcV2Cbor\Output\FractionalSecondsOutput;
 use Smithy\ProtocolTests\RpcV2Cbor\Shape\Unit;
 
@@ -16,6 +17,7 @@ final class FractionalSecondsOperation implements OperationInterface
     public const NAME = 'FractionalSeconds';
     public const ID = 'smithy.protocoltests.rpcv2Cbor#FractionalSeconds';
     public const SERVICE_ID = 'smithy.protocoltests.rpcv2Cbor#RpcV2Protocol';
+    public const SERVICE_EXCEPTION_CLASS = RpcV2CborException::class;
     public const INPUT_CLASS = Unit::class;
     public const OUTPUT_CLASS = FractionalSecondsOutput::class;
     public const AUTH_SCHEMES = [
@@ -46,6 +48,11 @@ final class FractionalSecondsOperation implements OperationInterface
     public function getServiceId(): ?string
     {
         return self::SERVICE_ID;
+    }
+
+    public function getServiceExceptionClass(): string
+    {
+        return self::SERVICE_EXCEPTION_CLASS;
     }
 
     public function getRuntimeIdentity(): string

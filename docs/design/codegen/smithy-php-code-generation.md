@@ -305,10 +305,11 @@ these artifacts.
 
 ### Service exceptions
 
-When `serviceExceptionClass` is configured, the generator emits the
-per-service exception base. Error structures extend that class. Without a
-service-specific class, error structures use the configured base service
-exception or the runtime `ApiException`.
+The generator always emits a per-service exception base. Modeled errors extend
+that class, and protocols use it for unmodeled service errors. By default the
+service exception extends the runtime `ApiException`. The
+`serviceExceptionClass` setting can replace that parent, such as with an
+SDK-specific exception class.
 
 ### Schema and type registries
 

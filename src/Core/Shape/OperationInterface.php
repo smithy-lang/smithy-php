@@ -55,6 +55,13 @@ interface OperationInterface
     public function getServiceId(): ?string;
 
     /**
+     * Return the exception class used for unmodeled service errors.
+     *
+     * @return class-string<\Smithy\Core\Exception\ApiException>
+     */
+    public function getServiceExceptionClass(): string;
+
+    /**
      * Return the stable identity used by per-operation runtime caches.
      *
      * Generated operations return their class name. Runtime operations

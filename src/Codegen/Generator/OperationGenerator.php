@@ -156,6 +156,14 @@ final class OperationGenerator
                 'Smithy\\Core\\Shape\\Document\\StructDocument'
             );
         }
+        $serviceExceptionClass = $writer->addImportReference(
+            $serviceId === null
+                ? $this->settings->serviceExceptionClass
+                    ?? 'Smithy\\Core\\Exception\\ApiException'
+                : $this->settings->resolveServiceExceptionClass(),
+            'ServiceException',
+            [$className]
+        );
         // HTTP binding data is emitted as schema traits for the protocol
         // layer to read through the operation schema.
 
@@ -202,6 +210,10 @@ final class OperationGenerator
             $serviceId === null
                 ? 'public const SERVICE_ID = null;'
                 : "public const SERVICE_ID = '{$serviceId}';"
+        );
+        $writer->writeLine(
+            'public const SERVICE_EXCEPTION_CLASS = '
+                . "{$serviceExceptionClass}::class;"
         );
 
         if ($inputClass !== null) {
@@ -288,6 +300,14 @@ final class OperationGenerator
         $writer->writeLine('public function getServiceId(): ?string');
         $writer->openBlock('{');
         $writer->writeLine('return self::SERVICE_ID;');
+        $writer->closeBlock();
+        $writer->writeLine();
+
+        $writer->writeLine(
+            'public function getServiceExceptionClass(): string'
+        );
+        $writer->openBlock('{');
+        $writer->writeLine('return self::SERVICE_EXCEPTION_CLASS;');
         $writer->closeBlock();
         $writer->writeLine();
 

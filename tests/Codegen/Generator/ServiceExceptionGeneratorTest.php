@@ -19,7 +19,7 @@ final class ServiceExceptionGeneratorTest extends TestCase
         );
         $generator = new ServiceExceptionGenerator($settings);
 
-        $file = $generator->generate('S3');
+        $file = $generator->generate();
 
         $this->assertSame(
             '/tmp/out' . DIRECTORY_SEPARATOR . 'S3Exception.php',
@@ -36,17 +36,17 @@ final class ServiceExceptionGeneratorTest extends TestCase
         );
     }
 
-    public function testRespectsBaseServiceExceptionOverride(): void
+    public function testRespectsServiceExceptionParentOverride(): void
     {
         $settings = new CodegenSettings(
             namespace: 'Aws\\S3',
             outputDir: '/tmp/out',
             organization: 'flat',
-            baseServiceException: 'Aws\\Exception\\AwsException'
+            serviceExceptionClass: 'Aws\\Exception\\AwsException'
         );
         $generator = new ServiceExceptionGenerator($settings);
 
-        $file = $generator->generate('S3');
+        $file = $generator->generate();
 
         $this->assertStringContainsString(
             'use Aws\\Exception\\AwsException;',
@@ -66,7 +66,7 @@ final class ServiceExceptionGeneratorTest extends TestCase
         );
         $generator = new ServiceExceptionGenerator($settings);
 
-        $file = $generator->generate('S3');
+        $file = $generator->generate();
 
         $this->assertStringContainsString(
             'namespace Aws\\S3\\Exception;',

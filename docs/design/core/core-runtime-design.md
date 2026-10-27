@@ -87,8 +87,8 @@ Generated and dynamic values meet at a small set of interfaces:
   member access
 - `UnionInterface` exposes one union tag, member index, and value
 - `EnumInterface` exposes a modeled backing value
-- `OperationInterface` exposes operation schemas, auth, errors, streaming
-  members, factories, and runtime identity
+- `OperationInterface` exposes operation schemas, auth, errors, service-error
+  fallback, streaming members, factories, and runtime identity
 - `ServiceInterface` exposes service identity and operation lookup
 
 These contracts keep codecs and protocols free of reflection and generated

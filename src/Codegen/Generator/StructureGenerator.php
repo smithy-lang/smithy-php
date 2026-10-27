@@ -177,9 +177,7 @@ final class StructureGenerator
             $errorFault = is_string($errorTraitValue)
                 ? $errorTraitValue
                 : 'other';
-            $errorParentFqcn = $this->settings->serviceExceptionClass
-                ?? $this->settings->baseServiceException
-                ?? 'Smithy\\Core\\Exception\\ApiException';
+            $errorParentFqcn = $this->errorParentClass();
             $writer->addImport($errorParentFqcn);
             $writer->addImport('Smithy\\Core\\Exception\\ErrorFault');
         }
@@ -249,9 +247,7 @@ final class StructureGenerator
         // schema cache populated on first `schema()` call, so the class-level
         // modifier is incompatible with our schema-caching pattern.
         if ($isError) {
-            $errorParentFqcn = $this->settings->serviceExceptionClass
-                ?? $this->settings->baseServiceException
-                ?? 'Smithy\\Core\\Exception\\ApiException';
+            $errorParentFqcn = $this->errorParentClass();
             $parentClass = $this->extractShortName($errorParentFqcn);
             $writer->writeClassDeclaration(
                 "final class {$className} extends {$parentClass}",
@@ -1464,6 +1460,18 @@ final class StructureGenerator
             return $fqcn;
         }
         return substr($fqcn, $lastSlash + 1);
+    }
+
+    private function errorParentClass(): string
+    {
+        foreach ($this->model->getServiceShapes() as $shapeId => $_) {
+            if (!\str_starts_with($shapeId, 'smithy.api#')) {
+                return $this->settings->resolveServiceExceptionClass();
+            }
+        }
+
+        return $this->settings->serviceExceptionClass
+            ?? 'Smithy\\Core\\Exception\\ApiException';
     }
 
     private function smithyTypeToEnum(string $type): string

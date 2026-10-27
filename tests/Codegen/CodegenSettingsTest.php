@@ -36,7 +36,6 @@ final class CodegenSettingsTest extends TestCase
             ['enabled' => false, 'categories' => ['output']],
             $settings->arrayAccess
         );
-        $this->assertNull($settings->baseServiceException);
         $this->assertNull($settings->serviceExceptionClass);
         $this->assertSame([], $settings->rulesFunctions);
         $this->assertSame([], $settings->extendedOpcodes);
@@ -74,6 +73,20 @@ final class CodegenSettingsTest extends TestCase
             'error' => [ShapeCategory::Error, 'Aws\\Example\\Exception'],
             'shape' => [ShapeCategory::Shape, 'Aws\\Example\\Shape']
         ];
+    }
+
+    public function testResolvesServiceExceptionClass(): void
+    {
+        $settings = new CodegenSettings(
+            namespace: 'Aws\\Example',
+            outputDir: '/tmp/output'
+        );
+
+        $this->assertSame('Example', $settings->resolveServiceName());
+        $this->assertSame(
+            'Aws\\Example\\Exception\\ExampleException',
+            $settings->resolveServiceExceptionClass()
+        );
     }
 
     public function testResolveNamespaceCollapsesAllCategoriesWhenFlatOrganization(): void
@@ -329,8 +342,7 @@ final class CodegenSettingsTest extends TestCase
             'namespace' => 'Aws\\Sns',
             'outputDir' => '/build/sns',
             'organization' => 'flat',
-            'baseServiceException' => 'Aws\\Exception\\AwsException',
-            'serviceExceptionClass' => 'Aws\\Sns\\Exception\\SnsException',
+            'serviceExceptionClass' => 'Aws\\Exception\\AwsException',
             'preserveExistingMemberOrder' => false,
             'waiterResourceInitialisms' => ['api' => 'API'],
             'assumeAsciiEndpointStrings' => true
@@ -341,10 +353,6 @@ final class CodegenSettingsTest extends TestCase
         $this->assertSame('flat', $settings->organization);
         $this->assertSame(
             'Aws\\Exception\\AwsException',
-            $settings->baseServiceException
-        );
-        $this->assertSame(
-            'Aws\\Sns\\Exception\\SnsException',
             $settings->serviceExceptionClass
         );
         $this->assertFalse($settings->preserveExistingMemberOrder);

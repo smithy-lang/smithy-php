@@ -196,6 +196,7 @@ final class CodeGenerator
             }
 
             $generatedFiles[] = $this->serviceGenerator->generate($shapeId);
+            $generatedFiles[] = $this->serviceExceptionGenerator->generate();
             $generatedFiles[] = $this->typeRegistryGenerator->generate(
                 $shapeId,
                 $serviceClosure
@@ -223,21 +224,6 @@ final class CodeGenerator
             }
         }
 
-
-        // Generate service-level exception if configured
-        if ($this->settings->serviceExceptionClass !== null) {
-            $serviceName = $this->extractShortName(
-                $this->settings->serviceExceptionClass
-            );
-            $serviceName = \preg_replace(
-                '/Exception$/',
-                '',
-                $serviceName
-            );
-            $generatedFiles[] = $this->serviceExceptionGenerator->generate(
-                $serviceName
-            );
-        }
 
         // Generate operations
         foreach ($this->model->getOperationShapes() as $shapeId => $shape) {
@@ -389,15 +375,6 @@ final class CodeGenerator
         }
 
         return true;
-    }
-
-    private function extractShortName(string $fqcn): string
-    {
-        $lastSlash = strrpos($fqcn, '\\');
-        if ($lastSlash === false) {
-            return $fqcn;
-        }
-        return substr($fqcn, $lastSlash + 1);
     }
 
     /**

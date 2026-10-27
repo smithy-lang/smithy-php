@@ -19,7 +19,6 @@ final class CodegenApplication
 
     private const VALUE_OPTIONS = [
         'array-access',
-        'base-exception',
         'config',
         'namespace',
         'organization',
@@ -358,9 +357,6 @@ final class CodegenApplication
             arrayAccess: $this->parseArrayAccess(
                 $options['array-access'] ?? null
             ),
-            baseServiceException: isset($options['base-exception'])
-                ? (string) $options['base-exception']
-                : null,
             serviceExceptionClass: isset($options['service-exception'])
                 ? (string) $options['service-exception']
                 : null
@@ -436,10 +432,8 @@ Options:
   --output=<dir>, -o     Output directory
   --organization=<org>   "categorized" or "flat"
   --array-access=<cats>  Comma-separated shape categories
-  --base-exception=<fqcn>
-                         Base exception for modeled errors
   --service-exception=<fqcn>
-                         Service exception class to generate
+                         Parent class for the generated service exception
   --config=<file>        JSON configuration file
   --help, -h             Show this help
 

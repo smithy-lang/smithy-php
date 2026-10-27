@@ -58,6 +58,8 @@ final class CodegenSettings
      * @param string|null $clientConfigClass Base config type accepted by
      *     the generated client constructor and extended by generated
      *     service config classes.
+     * @param string|null $serviceExceptionClass Parent class for the
+     *     generated service exception.
      */
     public function __construct(
         public readonly string $namespace,
@@ -75,7 +77,6 @@ final class CodegenSettings
             'enabled' => false,
             'categories' => ['output']
         ],
-        public readonly ?string $baseServiceException = null,
         public readonly ?string $serviceExceptionClass = null,
         public readonly array $rulesFunctions = [],
         public readonly array $extendedOpcodes = [],
@@ -145,7 +146,6 @@ final class CodegenSettings
                 ],
                 $config['arrayAccess'] ?? []
             ),
-            baseServiceException: $config['baseServiceException'] ?? null,
             serviceExceptionClass: $config['serviceExceptionClass'] ?? null,
             rulesFunctions: $config['rulesFunctions'] ?? [],
             extendedOpcodes: $config['extendedOpcodes'] ?? [],
@@ -271,6 +271,27 @@ final class CodegenSettings
     }
 
     /**
+     * Resolve the generated service name from the configured namespace.
+     */
+    public function resolveServiceName(): string
+    {
+        $parts = \explode('\\', $this->namespace);
+
+        return (string) \end($parts);
+    }
+
+    /**
+     * Resolve the generated service exception class.
+     */
+    public function resolveServiceExceptionClass(): string
+    {
+        return $this->resolveNamespace(ShapeCategory::Error)
+            . '\\'
+            . $this->resolveServiceName()
+            . 'Exception';
+    }
+
+    /**
      * Resolve the operation namespace.
      */
     public function resolveOperationsNamespace(): string
@@ -364,10 +385,6 @@ final class CodegenSettings
 
         $this->validateSubNamespaces();
         $this->validateArrayAccess();
-        $this->validateNullableClass(
-            $this->baseServiceException,
-            'baseServiceException'
-        );
         $this->validateNullableClass(
             $this->serviceExceptionClass,
             'serviceExceptionClass'
@@ -721,7 +738,6 @@ final class CodegenSettings
             'organization',
             'subNamespaces',
             'arrayAccess',
-            'baseServiceException',
             'serviceExceptionClass',
             'rulesFunctions',
             'extendedOpcodes',

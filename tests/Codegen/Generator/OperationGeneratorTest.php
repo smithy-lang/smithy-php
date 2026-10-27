@@ -180,6 +180,15 @@ final class OperationGeneratorTest extends TestCase
             'return Unit::fromMembers($members);',
             $file->content
         );
+        $this->assertStringContainsString(
+            'public const SERVICE_EXCEPTION_CLASS = '
+                . 'ExampleException::class;',
+            $file->content
+        );
+        $this->assertStringContainsString(
+            'return self::SERVICE_EXCEPTION_CLASS;',
+            $file->content
+        );
     }
 
     public function testOperationClassLandsUnderOperationSubNamespace(): void

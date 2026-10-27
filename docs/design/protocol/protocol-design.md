@@ -36,10 +36,11 @@ interface ProtocolInterface
 }
 ```
 
-Operations provide their input, output, error, and operation schemas. Protocols
-use codecs for body encoding. A protocol's `MessageExchangeInterface`
-declares the concrete request and response envelope types it shares with a
-compatible transport.
+Operations provide their input, output, error, and operation schemas, along
+with the exception class used for unmodeled service errors. Protocols use
+codecs for body encoding. A protocol's `MessageExchangeInterface` declares the
+concrete request and response envelope types it shares with a compatible
+transport.
 
 ## Ownership
 
