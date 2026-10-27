@@ -12,6 +12,4 @@ use Smithy\Core\Exception\ApiException;
  * Catch this to handle any error from the RpcV2Cbor service,
  * whether modeled or unmodeled.
  */
-class RpcV2CborException extends ApiException
-{
-}
+class RpcV2CborException extends ApiException {}

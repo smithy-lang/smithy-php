@@ -31,7 +31,7 @@ final class ServiceExceptionGeneratorTest extends TestCase
             $file->content
         );
         $this->assertStringContainsString(
-            'class S3Exception extends ApiException',
+            'class S3Exception extends ApiException {}',
             $file->content
         );
     }
@@ -53,7 +53,25 @@ final class ServiceExceptionGeneratorTest extends TestCase
             $file->content
         );
         $this->assertStringContainsString(
-            'class S3Exception extends AwsException',
+            'class S3Exception extends AwsException {}',
+            $file->content
+        );
+    }
+
+    public function testBreaksLongEmptyClassDeclarationBeforeBody(): void
+    {
+        $serviceName = \str_repeat('Service', 16);
+        $settings = new CodegenSettings(
+            namespace: "Aws\\{$serviceName}",
+            outputDir: '/tmp/out',
+            organization: 'flat'
+        );
+        $generator = new ServiceExceptionGenerator($settings);
+
+        $file = $generator->generate();
+
+        $this->assertStringContainsString(
+            "class {$serviceName}Exception extends ApiException\n{}",
             $file->content
         );
     }

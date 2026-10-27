@@ -52,9 +52,15 @@ final class ServiceExceptionGenerator
             'whether modeled or unmodeled.'
         ]);
 
-        $writer->writeLine("class {$className} extends {$parentClass}");
-        $writer->openBlock('{');
-        $writer->closeBlock();
+        $declaration = "class {$className} extends {$parentClass}";
+        if (\strlen($declaration . ' {}')
+            <= PhpCodeWriter::MAX_GENERATED_LINE_WIDTH
+        ) {
+            $writer->writeLine($declaration . ' {}');
+        } else {
+            $writer->writeLine($declaration);
+            $writer->writeLine('{}');
+        }
 
         $filePath = $outputDir . DIRECTORY_SEPARATOR . $className . '.php';
 
