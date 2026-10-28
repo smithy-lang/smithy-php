@@ -16,8 +16,7 @@ use Smithy\ProtocolTests\RpcV2Cbor\Shape\ComplexNestedErrorData;
 /**
  * This error is thrown when a request is invalid.
  */
-final class ComplexErrorException extends \Smithy\ProtocolTests\RpcV2Cbor\Exception\RpcV2CborException implements
-    SerializableStructInterface
+final class ComplexErrorException extends RpcV2CborException implements SerializableStructInterface
 {
     use FromMembersTrait;
 
