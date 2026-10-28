@@ -334,8 +334,7 @@ final class SmithyModel
     /**
      * Normalize waiters in a service closure and validate unique names.
      *
-     * @param list<string>|null $operationShapeIds Selected service
-     *     operations, or null for every operation bound to the service.
+     * @param list<string> $operationShapeIds Selected service operations.
      *
      * @return array<string, array<string, array<string, mixed>>> Map from
      *                                                            operation shape ID to waiter-name
@@ -345,10 +344,9 @@ final class SmithyModel
      */
     public function getValidatedServiceWaiters(
         string $serviceShapeId,
-        ?array $operationShapeIds = null
+        array $operationShapeIds
     ): array {
         $serviceOperationIds = $this->getServiceOperationIds($serviceShapeId);
-        $operationShapeIds ??= $serviceOperationIds;
         $waitersByOperation = [];
 
         foreach ($operationShapeIds as $operationShapeId) {

@@ -240,12 +240,7 @@ final class CodegenSettings
                 'client_config_class',
                 null
             ),
-            operationSet: self::aliasedValue(
-                $config,
-                'operationSet',
-                'operation_set',
-                null
-            )
+            operationSet: $config['operationSet'] ?? null
         );
     }
 
@@ -835,7 +830,6 @@ final class CodegenSettings
             'generateEndpointKeyBuilder',
             'generate_endpoint_key_builder',
             'operationSet',
-            'operation_set',
             'operationConstants',
             'operation_constants',
             'clientBaseClass',

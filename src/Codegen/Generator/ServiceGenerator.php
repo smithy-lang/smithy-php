@@ -33,7 +33,7 @@ final class ServiceGenerator
      */
     public function generate(
         string $shapeId,
-        ?ServiceProjection $projection = null
+        ServiceProjection $projection
     ): GeneratedFile
     {
         $shape = $this->model->getShape($shapeId);
@@ -65,11 +65,8 @@ final class ServiceGenerator
         // Import operation classes
         $operationsNamespace = $this->settings->resolveOperationsNamespace();
         $operationImports = [];
-        if ($projection !== null) {
-            $projection->requireService($shapeId);
-        }
-        $operationIds = $projection?->operationIds
-            ?? $this->model->getServiceOperationIds($shapeId);
+        $projection->requireService($shapeId);
+        $operationIds = $projection->operationIds;
         foreach ($operationIds as $operationId) {
             $opName = SmithyModel::getShapeName($operationId);
             $opClassName = $opName . 'Operation';

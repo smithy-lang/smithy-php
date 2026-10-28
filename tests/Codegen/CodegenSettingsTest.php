@@ -50,34 +50,6 @@ final class CodegenSettingsTest extends TestCase
         );
     }
 
-    public function testConstructorPreservesExistingPositionalArguments(): void
-    {
-        $settings = new CodegenSettings(
-            'Aws\\Example',
-            '/tmp/output',
-            'categorized',
-            [
-                'input' => 'Input',
-                'output' => 'Output',
-                'shapes' => 'Shape',
-                'errors' => 'Exception',
-                'operations' => 'Operation',
-                'endpoint' => 'Endpoint'
-            ],
-            ['enabled' => false, 'categories' => ['output']],
-            null,
-            null,
-            [],
-            [],
-            true,
-            false,
-            []
-        );
-
-        $this->assertSame([], $settings->operationConstants);
-        $this->assertNull($settings->operationSet);
-    }
-
     #[DataProvider('categoryNamespaceMatrix')]
     public function testResolveNamespaceRoutesCategorizedShapesIntoSubNamespaces(
         ShapeCategory $category,
@@ -478,17 +450,6 @@ final class CodegenSettingsTest extends TestCase
             'Vendor\\Runtime\\VendorClientConfig',
             $settings->clientConfigClass
         );
-    }
-
-    public function testFromArrayAcceptsSnakeCaseOperationSet(): void
-    {
-        $settings = CodegenSettings::fromArray([
-            'namespace' => 'Aws\\Sns',
-            'outputDir' => '/build/sns',
-            'operation_set' => ['Publish']
-        ]);
-
-        $this->assertSame(['Publish'], $settings->operationSet);
     }
 
     public function testFromArrayDefaultsPreserveOrderToTrueWhenAbsent(): void

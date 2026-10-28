@@ -127,7 +127,7 @@ final class ClientGenerator
      */
     public function generate(
         string $serviceShapeId,
-        ?ServiceProjection $projection = null
+        ServiceProjection $projection
     ): GeneratedFile {
         $shape = $this->model->getShape($serviceShapeId);
         if ($shape === null) {
@@ -140,9 +140,7 @@ final class ClientGenerator
                 "Shape {$serviceShapeId} is not a service"
             );
         }
-        if ($projection !== null) {
-            $projection->requireService($serviceShapeId);
-        }
+        $projection->requireService($serviceShapeId);
 
         $baseClass = $this->settings->clientBaseClass;
         $baseClassShort = $this->shortName($baseClass);
@@ -158,8 +156,7 @@ final class ClientGenerator
         // Sort operations alphabetically by public method name for
         // stable diffs across regenerations and alignment with
         // smithy-java.
-        $operationIds = $projection?->operationIds
-            ?? $this->model->getServiceOperationIds($serviceShapeId);
+        $operationIds = $projection->operationIds;
         $waitersByOperation = $this->model->getValidatedServiceWaiters(
             $serviceShapeId,
             $operationIds

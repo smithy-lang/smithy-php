@@ -440,7 +440,8 @@ final class WaiterTraitNormalizerTest extends TestCase
         $this->expectException(\LogicException::class);
         $this->expectExceptionMessage('duplicate waiter name THINGREADY');
         $model->getValidatedServiceWaiters(
-            'smithy.example#ExampleService'
+            'smithy.example#ExampleService',
+            $model->getServiceOperationIds('smithy.example#ExampleService')
         );
     }
 
@@ -456,7 +457,8 @@ final class WaiterTraitNormalizerTest extends TestCase
         ]);
 
         $waiters = $model->getValidatedServiceWaiters(
-            'smithy.example#ExampleService'
+            'smithy.example#ExampleService',
+            $model->getServiceOperationIds('smithy.example#ExampleService')
         );
 
         $this->assertSame(
