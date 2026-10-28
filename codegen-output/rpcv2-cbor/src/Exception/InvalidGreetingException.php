@@ -15,8 +15,7 @@ use Smithy\ProtocolTests\RpcV2Cbor\Schemas;
 /**
  * This error is thrown when an invalid greeting value is provided.
  */
-final class InvalidGreetingException extends \Smithy\ProtocolTests\RpcV2Cbor\Exception\RpcV2CborException implements
-    SerializableStructInterface
+final class InvalidGreetingException extends RpcV2CborException implements SerializableStructInterface
 {
     use FromMembersTrait;
 

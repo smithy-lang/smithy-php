@@ -248,7 +248,7 @@ final class StructureGenerator
         // schema cache populated on first `schema()` call, so the class-level
         // modifier is incompatible with our schema-caching pattern.
         if ($isError) {
-            $parentClass = '\\' . \ltrim($this->errorParentClass, '\\');
+            $parentClass = $this->errorParentReference();
             $writer->writeClassDeclaration(
                 "final class {$className} extends {$parentClass}",
                 $parts
@@ -1476,6 +1476,19 @@ final class StructureGenerator
 
         return $this->settings->baseServiceException
             ?? 'Smithy\\Core\\Exception\\ApiException';
+    }
+
+    private function errorParentReference(): string
+    {
+        if (\strcasecmp(
+            \ltrim($this->errorParentClass, '\\'),
+            \ltrim($this->settings->resolveServiceExceptionClass(), '\\')
+            ) === 0
+        ) {
+            return $this->extractShortName($this->errorParentClass);
+        }
+
+        return '\\' . \ltrim($this->errorParentClass, '\\');
     }
 
     private function smithyTypeToEnum(string $type): string

@@ -53,7 +53,7 @@ final class CodeGeneratorTest extends TestCase
         $errorFile = $this->findFile($files, 'ComplexErrorException.php');
         $this->assertNotNull($errorFile);
         $this->assertStringContainsString(
-            'extends \\Smithy\\Example\\ExampleException',
+            'extends ExampleException',
             $errorFile->content
         );
 
@@ -778,7 +778,7 @@ JSON);
         $this->assertNotNull($error);
         $this->assertNotNull($operation);
         $this->assertStringContainsString(
-            'extends \\Smithy\\Example\\CustomException',
+            'extends CustomException',
             $error->content
         );
         $this->assertStringContainsString(
