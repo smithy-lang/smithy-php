@@ -183,6 +183,19 @@ final class StructureGenerator
             $writer->addImport('Smithy\\Core\\Exception\\ErrorFault');
         }
 
+        // Register modeled member imports before resolving the error parent.
+        // This allows a generated service exception to use an alias when a
+        // member type has the same short name.
+        foreach ($this->model->getMembers($shapeId) as $memberName => $_) {
+            $phpType = $this->symbolProvider->toMemberType(
+                $shapeId,
+                $memberName
+            );
+            if ($phpType->requiresImport() && $phpType->fqcn !== null) {
+                $writer->addImport($phpType->fqcn);
+            }
+        }
+
         // SensitiveStringableTrait provides redaction-aware string and debug
         // output. Emit it when this shape can transitively contain sensitive
         // data, including through unions and collections.
@@ -191,15 +204,6 @@ final class StructureGenerator
         );
         $jsonSerializable = null;
         if ($withSensitiveStringable) {
-            foreach ($this->model->getMembers($shapeId) as $memberName => $_) {
-                $phpType = $this->symbolProvider->toMemberType(
-                    $shapeId,
-                    $memberName
-                );
-                if ($phpType->requiresImport() && $phpType->fqcn !== null) {
-                    $writer->addImport($phpType->fqcn);
-                }
-            }
             $jsonSerializable = $writer->addImportReference(
                 'JsonSerializable',
                 'PhpJsonSerializable',
@@ -248,7 +252,7 @@ final class StructureGenerator
         // schema cache populated on first `schema()` call, so the class-level
         // modifier is incompatible with our schema-caching pattern.
         if ($isError) {
-            $parentClass = $this->errorParentReference();
+            $parentClass = $this->errorParentReference($writer, $className);
             $writer->writeClassDeclaration(
                 "final class {$className} extends {$parentClass}",
                 $parts
@@ -1478,14 +1482,20 @@ final class StructureGenerator
             ?? 'Smithy\\Core\\Exception\\ApiException';
     }
 
-    private function errorParentReference(): string
-    {
+    private function errorParentReference(
+        PhpCodeWriter $writer,
+        string $className
+    ): string {
         if (\strcasecmp(
             \ltrim($this->errorParentClass, '\\'),
             \ltrim($this->settings->resolveServiceExceptionClass(), '\\')
             ) === 0
         ) {
-            return $this->extractShortName($this->errorParentClass);
+            return $writer->addImportReference(
+                $this->errorParentClass,
+                'ServiceException',
+                [$className, 'AbstractDocument', 'Schemas']
+            );
         }
 
         return '\\' . \ltrim($this->errorParentClass, '\\');

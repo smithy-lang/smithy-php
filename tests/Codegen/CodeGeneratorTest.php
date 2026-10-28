@@ -787,6 +787,71 @@ JSON);
         );
     }
 
+    public function testAliasesServiceExceptionThatCollidesWithImport(): void
+    {
+        $model = SmithyModel::fromJson(<<<'JSON'
+{
+    "smithy": "2.0",
+    "shapes": {
+        "smithy.example#ExampleService": {
+            "type": "service",
+            "version": "2026-10-28",
+            "operations": [{"target": "smithy.example#GetThing"}]
+        },
+        "smithy.example#GetThing": {
+            "type": "operation",
+            "errors": [{"target": "smithy.example#Failure"}]
+        },
+        "smithy.example#Failure": {
+            "type": "structure",
+            "traits": {"smithy.api#error": "client"}
+        }
+    }
+}
+JSON);
+        $namespace = 'Smithy\\Tests\\Generated\\ExceptionCollision'
+            . \bin2hex(\random_bytes(4));
+        $outputDir = \sys_get_temp_dir()
+            . '/smithy-service-exception-collision-'
+            . \bin2hex(\random_bytes(4));
+        $settings = new CodegenSettings(
+            namespace: $namespace,
+            outputDir: $outputDir,
+            organization: 'flat',
+            serviceExceptionClass: 'Schema'
+        );
+        $files = (new CodeGenerator($settings, $model))->generate();
+        $error = $this->findFile($files, 'FailureException.php');
+        $serviceException = $this->findFile($files, 'Schema.php');
+
+        $this->assertNotNull($error);
+        $this->assertNotNull($serviceException);
+        $this->assertStringContainsString(
+            "use {$namespace}\\Schema as ServiceException;",
+            $error->content
+        );
+        $this->assertStringContainsString(
+            'extends ServiceException',
+            $error->content
+        );
+
+        try {
+            $serviceException->writeToDisk($outputDir);
+            $error->writeToDisk($outputDir);
+            require $serviceException->path;
+            require $error->path;
+
+            $errorClass = $namespace . '\\FailureException';
+            $serviceExceptionClass = $namespace . '\\Schema';
+            $this->assertInstanceOf(
+                $serviceExceptionClass,
+                new $errorClass()
+            );
+        } finally {
+            $this->removeDir($outputDir);
+        }
+    }
+
     /**
      * @param \Smithy\Codegen\Generator\GeneratedFile[] $files
      */
