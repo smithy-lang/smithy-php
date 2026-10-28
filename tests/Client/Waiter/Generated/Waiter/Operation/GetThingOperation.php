@@ -43,6 +43,11 @@ final class GetThingOperation implements OperationInterface
         return 'smithy.waiters#Waiter';
     }
 
+    public function getServiceExceptionClass(): string
+    {
+        return \Smithy\Core\Exception\ApiException::class;
+    }
+
     public function getRuntimeIdentity(): string
     {
         return self::class;

@@ -281,16 +281,17 @@ and unset operations throw.
 
 ### Error Structure
 
-Structures with the `@error` trait generate as exception classes extending
-`Smithy\Core\Exception\ApiException` or the configured service exception.
-They carry an `ErrorFault` indicating client or server origin. The generated
-schema retains `@retryable` metadata for retry-policy integrations. The base
-exception hierarchy does not expose a separate retryable flag. Errors
-implement `SerializableStructInterface` and use the same `FromMembersTrait`
-hydration path as other structures.
+Structures with the `@error` trait generate as exception classes extending the
+generated per-service exception. That service exception extends
+`Smithy\Core\Exception\ApiException` by default, or the parent selected by
+`baseServiceException`. Modeled errors carry an `ErrorFault` indicating
+client or server origin. The generated schema retains `@retryable` metadata
+for retry-policy integrations. The base exception hierarchy does not expose a
+separate retryable flag. Errors implement `SerializableStructInterface` and
+use the same `FromMembersTrait` hydration path as other structures.
 
 ```php
-final class AllTypesErrorException extends ApiException implements
+final class AllTypesErrorException extends ExampleException implements
     SerializableStructInterface
 {
     // ...

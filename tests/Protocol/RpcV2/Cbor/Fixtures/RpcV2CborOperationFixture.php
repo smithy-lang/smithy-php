@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Smithy\Tests\Protocol\RpcV2\Cbor\Fixtures;
 
+use Smithy\Core\Exception\ApiException;
 use Smithy\Core\Serde\Schema;
 use Smithy\Core\Serde\SerializableStructInterface;
 use Smithy\Core\Shape\Document\StructDocument;
@@ -14,12 +15,14 @@ final class RpcV2CborOperationFixture implements OperationInterface
 {
     /**
      * @param array<string, Schema> $errorSchemas
+     * @param class-string<ApiException> $serviceExceptionClass
      */
     public function __construct(
         private readonly Schema $inputSchema,
         private readonly Schema $outputSchema,
         private readonly array $errorSchemas = [],
-        private readonly ?string $requestTarget = null
+        private readonly ?string $requestTarget = null,
+        private readonly string $serviceExceptionClass = ApiException::class
     ) {}
 
     public function getName(): string
@@ -35,6 +38,11 @@ final class RpcV2CborOperationFixture implements OperationInterface
     public function getServiceId(): ?string
     {
         return 'smithy.example#ExampleService';
+    }
+
+    public function getServiceExceptionClass(): string
+    {
+        return $this->serviceExceptionClass;
     }
 
     public function getRuntimeIdentity(): string

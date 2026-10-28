@@ -48,6 +48,11 @@ final class HttpBindingOperationFixture implements OperationInterface
         return null;
     }
 
+    public function getServiceExceptionClass(): string
+    {
+        return \Smithy\Core\Exception\ApiException::class;
+    }
+
     /**
      * Return the runtime identity.
      */

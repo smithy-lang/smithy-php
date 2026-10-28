@@ -36,10 +36,11 @@ interface ProtocolInterface
 }
 ```
 
-Operations provide their input, output, error, and operation schemas. Protocols
-use codecs for body encoding. A protocol's `MessageExchangeInterface`
-declares the concrete request and response envelope types it shares with a
-compatible transport.
+Operations provide their input, output, error, and operation schemas.
+Generated operations may additionally provide the exception class used for
+unmodeled service errors. Protocols use codecs for body encoding. A protocol's
+`MessageExchangeInterface` declares the concrete request and response envelope
+types it shares with a compatible transport.
 
 ## Ownership
 
@@ -206,7 +207,7 @@ Protocol-specific subclasses extract the error discriminator and message.
 | RPC v2 CBOR | RPC v2 error envelope and protocol header |
 
 Modeled errors use the operation error schema. Unmatched service errors use
-the protocol's generic API exception.
+the exception class supplied by the operation.
 
 ## Generated and Dynamic Clients
 

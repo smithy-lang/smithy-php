@@ -841,7 +841,7 @@ JSON);
         $settings = new CodegenSettings(
             namespace: $namespace,
             outputDir: $outputDir,
-            serviceExceptionClass: $parentClass
+            baseServiceException: $parentClass
         );
         $symbols = new PhpSymbolProvider($model, $settings);
         $parentFile = new GeneratedFile(

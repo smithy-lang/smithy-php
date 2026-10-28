@@ -180,6 +180,14 @@ final class OperationGeneratorTest extends TestCase
             'return Unit::fromMembers($members);',
             $file->content
         );
+        $this->assertStringContainsString(
+            'implements OperationInterface',
+            $file->content
+        );
+        $this->assertStringContainsString(
+            'return ExampleException::class;',
+            $file->content
+        );
     }
 
     public function testOperationClassLandsUnderOperationSubNamespace(): void

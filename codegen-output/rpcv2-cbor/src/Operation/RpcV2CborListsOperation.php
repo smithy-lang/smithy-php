@@ -8,6 +8,7 @@ use Smithy\Core\Serde\Schema;
 use Smithy\Core\Serde\SerializableStructInterface;
 use Smithy\Core\Shape\OperationInterface;
 use Smithy\Core\Shape\ShapeType;
+use Smithy\ProtocolTests\RpcV2Cbor\Exception\RpcV2CborException;
 use Smithy\ProtocolTests\RpcV2Cbor\Exception\ValidationException;
 use Smithy\ProtocolTests\RpcV2Cbor\Shape\RpcV2CborListInputOutput;
 
@@ -53,6 +54,11 @@ final class RpcV2CborListsOperation implements OperationInterface
     public function getServiceId(): ?string
     {
         return self::SERVICE_ID;
+    }
+
+    public function getServiceExceptionClass(): string
+    {
+        return RpcV2CborException::class;
     }
 
     public function getRuntimeIdentity(): string

@@ -36,6 +36,11 @@ final class IdempotentTestOperationFixture implements OperationInterface
         return null;
     }
 
+    public function getServiceExceptionClass(): string
+    {
+        return \Smithy\Core\Exception\ApiException::class;
+    }
+
     public function getRuntimeIdentity(): string
     {
         return self::class;

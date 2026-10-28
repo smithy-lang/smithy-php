@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Smithy\ProtocolTests\RpcV2Cbor\Exception;
 
-use Smithy\Core\Exception\ApiException;
 use Smithy\Core\Exception\ErrorFault;
 use Smithy\Core\Serde\Schema;
 use Smithy\Core\Serde\SerializableStructInterface;
@@ -17,7 +16,8 @@ use Smithy\ProtocolTests\RpcV2Cbor\Shape\ComplexNestedErrorData;
 /**
  * This error is thrown when a request is invalid.
  */
-final class ComplexErrorException extends ApiException implements SerializableStructInterface
+final class ComplexErrorException extends \Smithy\ProtocolTests\RpcV2Cbor\Exception\RpcV2CborException implements
+    SerializableStructInterface
 {
     use FromMembersTrait;
 

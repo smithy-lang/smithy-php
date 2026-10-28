@@ -48,6 +48,14 @@ final class CodeGeneratorTest extends TestCase
         $this->assertContains('Status.php', $fileNames);
         $this->assertContains('Priority.php', $fileNames);
         $this->assertContains('Payload.php', $fileNames);
+        $this->assertContains('ExampleException.php', $fileNames);
+
+        $errorFile = $this->findFile($files, 'ComplexErrorException.php');
+        $this->assertNotNull($errorFile);
+        $this->assertStringContainsString(
+            'extends \\Smithy\\Example\\ExampleException',
+            $errorFile->content
+        );
 
         // Should NOT generate mixin shapes
         $this->assertNotContains('Event.php', $fileNames);
@@ -701,6 +709,82 @@ final class CodeGeneratorTest extends TestCase
         );
 
         $generator->generate();
+    }
+
+    public function testRejectsServiceExceptionNameCollision(): void
+    {
+        $model = SmithyModel::fromJson(\json_encode([
+            'smithy' => '2.0',
+            'shapes' => [
+                'smithy.example#Service' => [
+                    'type' => 'service',
+                    'version' => '2026-10-28',
+                    'operations' => [
+                        ['target' => 'smithy.example#GetThing']
+                    ]
+                ],
+                'smithy.example#GetThing' => [
+                    'type' => 'operation',
+                    'errors' => [
+                        ['target' => 'smithy.example#example']
+                    ]
+                ],
+                'smithy.example#example' => [
+                    'type' => 'structure',
+                    'traits' => ['smithy.api#error' => 'client']
+                ]
+            ]
+        ], JSON_THROW_ON_ERROR));
+        $generator = new CodeGenerator($this->settings, $model);
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage(
+            'configure serviceExceptionClass with a unique name'
+        );
+
+        $generator->generate();
+    }
+
+    public function testGeneratesConfiguredServiceExceptionWithoutService(): void
+    {
+        $model = SmithyModel::fromJson(<<<'JSON'
+{
+    "smithy": "2.0",
+    "shapes": {
+        "smithy.example#Failure": {
+            "type": "structure",
+            "traits": {"smithy.api#error": "client"}
+        },
+        "smithy.example#GetThing": {
+            "type": "operation",
+            "errors": [{"target": "smithy.example#Failure"}]
+        }
+    }
+}
+JSON);
+        $settings = new CodegenSettings(
+            namespace: 'Smithy\\Example',
+            outputDir: '/tmp/out',
+            organization: 'flat',
+            serviceExceptionClass: 'Smithy\\Example\\CustomException'
+        );
+        $files = (new CodeGenerator($settings, $model))->generate();
+        $error = $this->findFile($files, 'FailureException.php');
+        $operation = $this->findFile($files, 'GetThingOperation.php');
+
+        $this->assertNotNull(
+            $this->findFile($files, 'CustomException.php')
+        );
+        $this->assertNotNull($error);
+        $this->assertNotNull($operation);
+        $this->assertStringContainsString(
+            'extends \\Smithy\\Example\\CustomException',
+            $error->content
+        );
+        $this->assertStringContainsString(
+            'return CustomException::class;',
+            $operation->content
+        );
     }
 
     /**

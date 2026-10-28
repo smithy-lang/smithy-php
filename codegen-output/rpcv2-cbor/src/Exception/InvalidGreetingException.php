@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Smithy\ProtocolTests\RpcV2Cbor\Exception;
 
-use Smithy\Core\Exception\ApiException;
 use Smithy\Core\Exception\ErrorFault;
 use Smithy\Core\Serde\Schema;
 use Smithy\Core\Serde\SerializableStructInterface;
@@ -16,7 +15,8 @@ use Smithy\ProtocolTests\RpcV2Cbor\Schemas;
 /**
  * This error is thrown when an invalid greeting value is provided.
  */
-final class InvalidGreetingException extends ApiException implements SerializableStructInterface
+final class InvalidGreetingException extends \Smithy\ProtocolTests\RpcV2Cbor\Exception\RpcV2CborException implements
+    SerializableStructInterface
 {
     use FromMembersTrait;
 

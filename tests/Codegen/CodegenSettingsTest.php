@@ -76,6 +76,55 @@ final class CodegenSettingsTest extends TestCase
         ];
     }
 
+    public function testResolvesServiceExceptionClass(): void
+    {
+        $settings = new CodegenSettings(
+            namespace: 'Aws\\Example',
+            outputDir: '/tmp/output'
+        );
+
+        $this->assertSame('Example', $settings->resolveServiceName());
+        $this->assertSame(
+            'Aws\\Example\\Exception\\ExampleException',
+            $settings->resolveServiceExceptionClass()
+        );
+
+        $custom = new CodegenSettings(
+            namespace: 'Aws\\Example',
+            outputDir: '/tmp/output',
+            serviceExceptionClass: 'Aws\\Example\\Exception\\SdkException'
+        );
+        $this->assertSame(
+            'Aws\\Example\\Exception\\SdkException',
+            $custom->resolveServiceExceptionClass()
+        );
+        $matchingParent = new CodegenSettings(
+            namespace: 'Aws\\Example',
+            outputDir: '/tmp/output',
+            baseServiceException:
+                'Aws\\Example\\Exception\\ExampleException'
+        );
+
+        $this->assertSame(
+            'Aws\\Example\\Exception\\ExampleException',
+            $matchingParent->baseServiceException
+        );
+    }
+
+    public function testRejectsReservedServiceExceptionClass(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage(
+            'serviceExceptionClass must not use a reserved PHP class name'
+        );
+
+        new CodegenSettings(
+            namespace: 'Aws\\Example',
+            outputDir: '/tmp/output',
+            serviceExceptionClass: 'class'
+        );
+    }
+
     public function testResolveNamespaceCollapsesAllCategoriesWhenFlatOrganization(): void
     {
         $settings = new CodegenSettings(
