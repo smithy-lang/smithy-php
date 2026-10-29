@@ -205,7 +205,9 @@ final class ServiceGenerator
                 $writer->writeLine(
                     PhpCodeWriter::exportLiteral($traitId)
                         . ' => '
-                        . self::exportTraitLiteral($value)
+                        . (\array_key_exists($traitId, $configuredTraits)
+                            ? self::exportTraitLiteral($value)
+                            : PhpCodeWriter::exportLiteral($value))
                         . ','
                 );
             }

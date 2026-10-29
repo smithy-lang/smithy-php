@@ -54,7 +54,7 @@ final class RpcV2CborService implements ServiceInterface
             type: ShapeType::Service,
             traitsById: [
                 'smithy.api#title' => 'RpcV2 Protocol Service',
-                'smithy.protocols#rpcv2Cbor' => true
+                'smithy.protocols#rpcv2Cbor' => []
             ]
         );
     }

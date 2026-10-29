@@ -92,7 +92,7 @@ final class ServiceGeneratorTest extends TestCase
             $file->content
         );
         $this->assertStringContainsString(
-            "'smithy.protocols#rpcv2Cbor' => true",
+            "'smithy.protocols#rpcv2Cbor' => []",
             $file->content
         );
     }
@@ -176,7 +176,8 @@ final class ServiceGeneratorTest extends TestCase
         $this->assertTrue(
             $service->getSchema()->getTraitById('vendor.example#marker')
         );
-        $this->assertTrue(
+        $this->assertSame(
+            [],
             $service->getSchema()->getTraitById(
                 'smithy.protocols#rpcv2Cbor'
             )
