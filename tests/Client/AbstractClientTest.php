@@ -31,6 +31,7 @@ use Smithy\Client\Plugin\{
     PluginCollection,
     PluginInterface
 };
+use Smithy\Client\Protocol\ProtocolResolver;
 use Smithy\Core\Serde\{
     Schema,
     SerializableStructInterface
@@ -63,12 +64,35 @@ final class AbstractClientTest extends TestCase
         $config = $this->config();
         $client = new TestClientFixture($config);
 
-        self::assertSame($config->protocol, $client->getConfig()->protocol);
+        self::assertSame(
+            $config->getProtocol(),
+            $client->getConfig()->getProtocol()
+        );
         self::assertTrue(
             $client->getConfig()->interceptorChain->contains(
                 IdempotencyTokenInterceptor::class
             )
         );
+    }
+
+    public function testResolvesModeledProtocolDuringConstruction(): void
+    {
+        $config = new ClientConfig(
+            transport: new \Smithy\Http\Client\HttpClientTransport(
+                new MockHttpClient()
+            ),
+            endpointResolver: new StaticEndpointResolver(
+                new Endpoint('https://example.test')
+            ),
+            protocolResolver: new ProtocolResolver([
+                FakeProtocol::ID => $protocol = new FakeProtocol()
+            ])
+        );
+
+        $client = new TestClientFixture($config);
+
+        self::assertSame($protocol, $client->getConfig()->getProtocol());
+        self::assertSame(FakeService::instance(), $client->getConfig()->service);
     }
 
     public function testPluginPredicateCanRejectDefaultChild(): void

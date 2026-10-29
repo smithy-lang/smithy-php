@@ -14,7 +14,6 @@ use Smithy\Http\Client\{
     CurlClient,
     HttpClientTransport
 };
-use Smithy\Protocol\RpcV2\RpcV2CborProtocol;
 
 /**
  * Build a PetStore client configured for the local example server.
@@ -29,7 +28,6 @@ final class ClientFactory
         $endpoint ??= 'http://127.0.0.1:8080';
 
         return new PetStoreClient(new ClientConfig(
-            protocol: new RpcV2CborProtocol(),
             transport: new HttpClientTransport(
                 new CurlClient()
             ),

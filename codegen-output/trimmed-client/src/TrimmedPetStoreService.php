@@ -38,7 +38,10 @@ final class TrimmedPetStoreService implements ServiceInterface
     {
         return self::$SCHEMA ??= new Schema(
             id: 'smithy.example#PetStore',
-            type: ShapeType::Service
+            type: ShapeType::Service,
+            traitsById: [
+                'smithy.protocols#rpcv2Cbor' => []
+            ]
         );
     }
 

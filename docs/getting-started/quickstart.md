@@ -77,12 +77,11 @@ The script:
 5. deletes the pet
 6. confirms that a modeled `PetNotFoundErrorException` is returned
 
-The generated client is configured with the RPCv2 CBOR protocol, cURL
-transport, and a static local endpoint:
+The generated client selects RPCv2 CBOR from its service schema and is
+configured with the cURL transport and a static local endpoint:
 
 ```php
 $client = new PetStoreClient(new ClientConfig(
-    protocol: new RpcV2CborProtocol(),
     transport: new HttpClientTransport(new CurlClient()),
     endpointResolver: new StaticEndpointResolver(
         new Endpoint('http://127.0.0.1:8080')

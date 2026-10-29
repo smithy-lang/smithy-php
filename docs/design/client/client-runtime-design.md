@@ -56,7 +56,7 @@ paths enter the same pipeline through `OperationInterface` and
 | Type | Responsibility |
 |---|---|
 | `AbstractClient` | Resolve construction/call plugins, run call hooks and wrappers, and invoke the pipeline |
-| `ClientConfig` | Immutable runtime dependency graph and plugin state |
+| `ClientConfig` | Immutable runtime dependency graph, shared protocol resolution, and plugin state |
 | `RequestOverrideConfig` | Call-specific plugins, HTTP settings, headers, retries, and auth preference |
 | `ClientPipeline` | Execute one operation and its attempts |
 | `PreparedAttempt` | Carry the request, selected auth scheme, resolver, and identity prepared for transmission |
@@ -79,6 +79,12 @@ Generated clients pass a `ClientConfig` and `PluginCollection` to
 base ClientConfig
     |
     v
+generated or dynamic service metadata
+    |
+    v
+ProtocolResolverInterface
+    |
+    v
 PluginCollection::apply()
     |
     v
@@ -93,6 +99,13 @@ resolved ClientConfig
 plugin contributes idempotency-token handling and automatically registered
 Composer plugins. Generated clients may append modeled defaults such as
 request compression and HTTP checksum handling.
+
+The initial config may omit a protocol implementation. Generated and dynamic
+clients first attach their `ServiceInterface`, then the shared protocol
+resolver selects a registered implementation whose protocol trait is present
+on the service schema. An explicit implementation or protocol shape ID
+overrides automatic selection. Protocol resolution completes before plugins
+and the pipeline are constructed.
 
 Only the first accepted instance of each concrete plugin class is applied.
 Plugin state is retained when configurations are copied so already-applied

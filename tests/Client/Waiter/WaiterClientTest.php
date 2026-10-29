@@ -17,7 +17,6 @@ use Smithy\Client\Waiter\{
 };
 use Smithy\Core\Serde\SerializableStructInterface;
 use Smithy\Http\Message\Response;
-use Smithy\Protocol\RpcV2\RpcV2CborProtocol;
 use Smithy\Tests\Client\Waiter\Generated\Waiter\Input\GetThingInput;
 use Smithy\Tests\Client\Waiter\Generated\Waiter\Output\GetThingOutput;
 use Smithy\Tests\Client\Waiter\Generated\Waiter\{
@@ -121,7 +120,6 @@ final class WaiterClientTest extends TestCase
     ): WaiterClient
     {
         return new WaiterClient(new WaiterClientConfig(
-            protocol: new RpcV2CborProtocol(),
             transport: new \Smithy\Http\Client\HttpClientTransport($http),
             endpointResolver: new StaticEndpointResolver(
                 new Endpoint('https://example.com')

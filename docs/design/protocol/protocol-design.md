@@ -42,6 +42,21 @@ unmodeled service errors. Protocols use codecs for body encoding. A protocol's
 `MessageExchangeInterface` declares the concrete request and response envelope
 types it shares with a compatible transport.
 
+## Protocol Resolution
+
+Generated and dynamic clients use
+`Smithy\Client\Protocol\ProtocolResolverInterface`. A client config may begin
+without a selected protocol. Once the client attaches its runtime
+`ServiceInterface`, the resolver compares registered protocol IDs with the
+service schema's protocol traits and selects the first applicable
+implementation in preference order.
+
+Callers can override automatic selection with either a protocol implementation
+or a modeled protocol shape ID. `smithy-php` registers RPC v2 CBOR by default;
+provider runtimes add their own implementations to the same resolver. The
+selected protocol, all registrations, and the protocols applicable to a
+service are available through `ClientConfig`.
+
 ## Ownership
 
 | Concern | Owner |
@@ -211,7 +226,8 @@ the exception class supplied by the operation.
 
 ## Generated and Dynamic Clients
 
-Generated and dynamic clients call the same protocol classes.
+Generated and dynamic clients select and call the same protocol classes
+through the shared resolver.
 
 Generated operations construct generated outputs and errors. Dynamic
 operations construct document-backed outputs and errors from runtime schemas.

@@ -46,7 +46,8 @@ final class FakeService implements ServiceInterface
     {
         return self::$schema ??= new Schema(
             id: $this->getId(),
-            type: ShapeType::Service
+            type: ShapeType::Service,
+            traitsById: [FakeProtocol::ID => true]
         );
     }
 

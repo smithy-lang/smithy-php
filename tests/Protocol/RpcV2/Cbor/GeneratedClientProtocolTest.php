@@ -19,7 +19,6 @@ use Smithy\Core\Serde\SerializableStructInterface;
 use Smithy\Core\Shape\OperationInterface;
 use Smithy\Core\Shape\Utils\ArrayShapeSerializer;
 use Smithy\Http\Message\Response;
-use Smithy\Protocol\RpcV2\RpcV2CborProtocol;
 use Smithy\ProtocolTests\RpcV2Cbor\{
     RpcV2CborClient,
     RpcV2CborClientConfig,
@@ -160,7 +159,6 @@ final class GeneratedClientProtocolTest extends RpcV2CborClientProtocolTestCase
     {
         return new RpcV2CborClient(
             new RpcV2CborClientConfig(
-                protocol: new RpcV2CborProtocol(),
                 transport: new \Smithy\Http\Client\HttpClientTransport($http),
                 endpointResolver: new StaticEndpointResolver(
                     new Endpoint($endpoint)

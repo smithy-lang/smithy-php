@@ -48,9 +48,10 @@ that a provider subclass makes available to dynamic clients:
 | Trait registry | Trait shape ID |
 | Error discriminator trait | Trait shape ID |
 
-`DynamicClient::getDefaultRuntime()` returns class-level registrations. The
-base class includes RPC v2 CBOR and the Smithy endpoint standard functions.
-A subclass may return a merged runtime.
+`DynamicClient::getDefaultRuntime()` returns class-level registrations for
+provider additions and Smithy endpoint standard functions. The shared
+`ProtocolResolver` supplies the generic RPC v2 CBOR implementation. A
+subclass may return a merged runtime.
 
 Explicit `protocols`, `supportedAuthSchemes`, `endpointFunctions`, and
 `endpointAuthSchemeIds` arguments overlay the class registrations. The
@@ -85,11 +86,13 @@ resolver uses the implementation's declared ID.
 The resolved ID must be modeled as a service trait. An explicit protocol ID
 without an instance requires a registered implementation under that ID.
 
-Without either explicit value, the resolver:
+The dynamic factory contributes runtime registrations to the same
+`ProtocolResolverInterface` used by generated clients. After the dynamic
+service metadata is attached, client construction asks that resolver to:
 
-1. Combines caller preference, runtime preference, and registered order.
-2. Removes duplicate IDs while preserving the first occurrence.
-3. Selects the first registered protocol whose trait is present on the
+1. Combine caller preference, runtime preference, and registered order.
+2. Remove duplicate IDs while preserving the first occurrence.
+3. Select the first registered protocol whose trait is present on the
    service.
 
 Construction fails when no registered protocol matches the service.
@@ -298,7 +301,7 @@ hooks:
 
 | Hook | Use |
 |---|---|
-| `getDefaultRuntime()` | Register provider protocols, traits, auth, and endpoint functions. |
+| `getDefaultRuntime()` | Register provider protocols, traits, auth, and endpoint functions that feed shared client resolution. |
 | `createClientConfig()` | Build provider-specific immutable configuration. |
 
 These hooks keep provider rules outside `smithy-php` while preserving the

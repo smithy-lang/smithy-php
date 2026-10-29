@@ -18,7 +18,6 @@ use Smithy\Client\Pagination\PaginatedRequestInterface;
 use Smithy\Core\Serde\SerializableStructInterface;
 use Smithy\Core\Shape\Document\StructDocument;
 use Smithy\Http\Message\Response;
-use Smithy\Protocol\RpcV2\RpcV2CborProtocol;
 use Smithy\Tests\Client\Pagination\Generated\Pagination\Input\{
     ListMapsInput,
     ListStringsInput,
@@ -274,7 +273,6 @@ final class PaginationClientTest extends TestCase
     ): PaginationClient
     {
         return new PaginationClient(new PaginationClientConfig(
-            protocol: new RpcV2CborProtocol(),
             transport: new \Smithy\Http\Client\HttpClientTransport($http),
             endpointResolver: new StaticEndpointResolver(
                 new Endpoint('https://example.com')

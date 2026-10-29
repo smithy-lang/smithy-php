@@ -12,6 +12,7 @@ use Smithy\Client\ClientConfig;
 use Smithy\Client\Endpoint\EndpointResolverInterface;
 use Smithy\Client\Interceptor\InterceptorChain;
 use Smithy\Client\Plugin\PluginState;
+use Smithy\Client\Protocol\ProtocolResolverInterface;
 use Smithy\Client\Retry\RetryStrategyInterface;
 use Smithy\Client\Transport\TransportInterface;
 use Smithy\Core\Shape\ServiceInterface;
@@ -23,14 +24,17 @@ use Smithy\Protocol\ProtocolInterface;
 final class RegionalClientConfigFixture extends ClientConfig
 {
     /**
+     * @param ProtocolInterface|null $protocol
      * @param list<AuthSchemeInterface> $supportedAuthSchemes
      * @param list<string> $authSchemePreference
      * @param array<string, mixed> $context
      */
     public function __construct(
-        ProtocolInterface $protocol,
         TransportInterface $transport,
         EndpointResolverInterface $endpointResolver,
+        ?ProtocolInterface $protocol = null,
+        ?ProtocolResolverInterface $protocolResolver = null,
+        ?string $protocolId = null,
         InterceptorChain $interceptors = new InterceptorChain(),
         array $supportedAuthSchemes = [],
         ?AuthSchemeResolverInterface $authSchemeResolver = null,
@@ -40,22 +44,26 @@ final class RegionalClientConfigFixture extends ClientConfig
         array $authSchemePreference = [],
         public readonly string $region = '',
         ?ServiceInterface $service = null,
-        ?PluginState $pluginState = null
+        ?PluginState $pluginState = null,
+        ?bool $protocolIsExplicit = null
     )
     {
         parent::__construct(
-            $protocol,
-            $transport,
-            $endpointResolver,
-            $interceptors,
-            $supportedAuthSchemes,
-            $authSchemeResolver,
-            $retryStrategy,
-            $retryScope,
-            $context,
-            $authSchemePreference,
-            $service,
-            $pluginState
+            transport: $transport,
+            endpointResolver: $endpointResolver,
+            protocol: $protocol,
+            protocolResolver: $protocolResolver,
+            protocolId: $protocolId,
+            interceptors: $interceptors,
+            supportedAuthSchemes: $supportedAuthSchemes,
+            authSchemeResolver: $authSchemeResolver,
+            retryStrategy: $retryStrategy,
+            retryScope: $retryScope,
+            context: $context,
+            authSchemePreference: $authSchemePreference,
+            service: $service,
+            pluginState: $pluginState,
+            protocolIsExplicit: $protocolIsExplicit
         );
     }
 
@@ -63,10 +71,17 @@ final class RegionalClientConfigFixture extends ClientConfig
     protected function copyWith(array $overrides): static
     {
         return new static(
-            protocol: $overrides['protocol'] ?? $this->protocol,
             transport: $overrides['transport'] ?? $this->transport,
             endpointResolver: $overrides['endpointResolver']
                 ?? $this->endpointResolver,
+            protocol: \array_key_exists('protocol', $overrides)
+                ? $overrides['protocol']
+                : $this->protocol,
+            protocolResolver: $overrides['protocolResolver']
+                ?? $this->protocolResolver,
+            protocolId: \array_key_exists('protocolId', $overrides)
+                ? $overrides['protocolId']
+                : $this->protocolId,
             interceptors: $overrides['interceptors']
                 ?? $this->interceptorChain,
             supportedAuthSchemes: $overrides['supportedAuthSchemes']
@@ -82,7 +97,9 @@ final class RegionalClientConfigFixture extends ClientConfig
             region: $overrides['region'] ?? $this->region,
             service: $overrides['service'] ?? $this->service,
             pluginState: $overrides['pluginState']
-                ?? $this->getPluginState()
+                ?? $this->getPluginState(),
+            protocolIsExplicit: $overrides['protocolIsExplicit']
+                ?? $this->hasExplicitProtocol()
         );
     }
 }

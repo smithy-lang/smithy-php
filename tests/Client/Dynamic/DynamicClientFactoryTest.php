@@ -34,7 +34,7 @@ final class DynamicClientFactoryTest extends TestCase
         self::assertSame('example#Service', $client->getService()->getId());
         self::assertInstanceOf(
             RpcV2CborProtocol::class,
-            $client->getConfig()->protocol
+            $client->getConfig()->getProtocol()
         );
     }
 

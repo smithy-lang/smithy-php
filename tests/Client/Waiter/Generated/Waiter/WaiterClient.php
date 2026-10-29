@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Smithy\Tests\Client\Waiter\Generated\Waiter;
 
 use Smithy\Client\AbstractClient;
+use Smithy\Client\Plugin\PluginCollection;
 use Smithy\Client\Waiter\{
     WaiterConfig,
     WaiterFailureException,
@@ -23,6 +24,17 @@ use Smithy\Tests\Client\Waiter\Generated\Waiter\Output\GetThingOutput;
  */
 final class WaiterClient extends AbstractClient
 {
+    public function __construct(
+        WaiterClientConfig $config,
+        PluginCollection $plugins = new PluginCollection()
+    )
+    {
+        parent::__construct(
+            $config->withService(WaiterService::instance()),
+            $plugins
+        );
+    }
+
     public function getThing(GetThingInput $input): GetThingOutput
     {
         /** @var GetThingOutput */
