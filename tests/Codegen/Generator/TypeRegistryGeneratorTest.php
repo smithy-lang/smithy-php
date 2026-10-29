@@ -9,6 +9,8 @@ use Smithy\Codegen\CodegenSettings;
 use Smithy\Codegen\Generator\TypeRegistryGenerator;
 use Smithy\Codegen\Model\SmithyModel;
 use Smithy\Codegen\PhpSymbolProvider;
+use Smithy\Codegen\PhpSymbolProviderInterface;
+use Smithy\Codegen\PhpType;
 
 final class TypeRegistryGeneratorTest extends TestCase
 {
@@ -141,5 +143,74 @@ JSON);
             'smithy.example#ShapeMixin',
             $file->content
         );
+    }
+
+    public function testNormalizesLeadingNamespaceSeparator(): void
+    {
+        $model = SmithyModel::fromFile(
+            __DIR__ . '/../../fixtures/defaults-model.json'
+        );
+        $settings = new CodegenSettings(
+            namespace: 'Smithy\\Example',
+            outputDir: '/tmp/out',
+            organization: 'flat'
+        );
+        $generator = new TypeRegistryGenerator(
+            $model,
+            new LeadingSeparatorSymbolProvider(
+                new PhpSymbolProvider($model, $settings)
+            ),
+            $settings
+        );
+
+        $file = $generator->generate(
+            'smithy.example#DefaultsService',
+            ['smithy.example#Settings' => true]
+        );
+
+        self::assertStringContainsString(
+            "'Smithy\\\\Example\\\\Settings' => "
+                . "'smithy.example#Settings'",
+            $file->content
+        );
+        self::assertStringNotContainsString(
+            "'\\\\Smithy\\\\Example\\\\Settings'",
+            $file->content
+        );
+    }
+}
+
+final readonly class LeadingSeparatorSymbolProvider implements
+    PhpSymbolProviderInterface
+{
+    public function __construct(
+        private PhpSymbolProviderInterface $delegate
+    ) {}
+
+    public function toPhpType(string $shapeId): PhpType
+    {
+        return $this->delegate->toPhpType($shapeId);
+    }
+
+    public function toMemberType(
+        string $parentShapeId,
+        string $memberName
+    ): PhpType {
+        return $this->delegate->toMemberType($parentShapeId, $memberName);
+    }
+
+    public function toPropertyName(string $memberName): string
+    {
+        return $this->delegate->toPropertyName($memberName);
+    }
+
+    public function toClassName(string $shapeId): string
+    {
+        return '\\' . $this->delegate->toClassName($shapeId);
+    }
+
+    public function toShortClassName(string $shapeId): string
+    {
+        return $this->delegate->toShortClassName($shapeId);
     }
 }

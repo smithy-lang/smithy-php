@@ -7,6 +7,7 @@ namespace Smithy\Tests\Codegen\Cli;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Smithy\Codegen\Cli\CodegenApplication;
+use Smithy\Tests\Codegen\Fixtures\CliCodegenIntegration;
 
 #[CoversClass(CodegenApplication::class)]
 final class CodegenApplicationTest extends TestCase
@@ -149,6 +150,73 @@ final class CodegenApplicationTest extends TestCase
             'Unknown codegen setting: unknown',
             $this->contents($stderr)
         );
+    }
+
+    public function testLoadsConfiguredIntegration(): void
+    {
+        $outputDirectory = $this->temporaryPath('output');
+        $configPath = $this->writeConfig([
+            'namespace' => 'Smithy\\Generated',
+            'outputDir' => $outputDirectory,
+            'organization' => 'flat',
+            'integrations' => [
+                [
+                    'class' => CliCodegenIntegration::class,
+                    'settings' => [
+                        'fileName' => 'ConfiguredIntegration.php'
+                    ]
+                ]
+            ]
+        ]);
+        [$application, $stdout, $stderr] = $this->application();
+
+        $status = $application->run([
+            'smithy-php-codegen',
+            __DIR__ . '/../../fixtures/defaults-model.json',
+            '--config=' . $configPath
+        ]);
+
+        $this->assertSame(CodegenApplication::SUCCESS, $status);
+        $this->assertFileExists(
+            $outputDirectory . '/ConfiguredIntegration.php'
+        );
+        $this->assertSame('', $this->contents($stderr));
+    }
+
+    public function testReportsIntegrationCustomizedOutputDirectory(): void
+    {
+        $configuredOutput = $this->temporaryPath('configured-output');
+        $effectiveOutput = $this->temporaryPath('effective-output');
+        $configPath = $this->writeConfig([
+            'namespace' => 'Smithy\\Generated',
+            'outputDir' => $configuredOutput,
+            'organization' => 'flat',
+            'integrations' => [
+                [
+                    'class' => CliCodegenIntegration::class,
+                    'settings' => [
+                        'outputDir' => $effectiveOutput
+                    ]
+                ]
+            ]
+        ]);
+        [$application, $stdout, $stderr] = $this->application();
+
+        $status = $application->run([
+            'smithy-php-codegen',
+            __DIR__ . '/../../fixtures/defaults-model.json',
+            '--config=' . $configPath
+        ]);
+
+        $this->assertSame(CodegenApplication::SUCCESS, $status);
+        $this->assertFileExists(
+            $effectiveOutput . '/CliIntegration.php'
+        );
+        $this->assertStringContainsString(
+            " PHP file(s) in: {$effectiveOutput}\n",
+            $this->contents($stdout)
+        );
+        $this->assertSame('', $this->contents($stderr));
     }
 
     public function testPackagedCommandIsExecutable(): void

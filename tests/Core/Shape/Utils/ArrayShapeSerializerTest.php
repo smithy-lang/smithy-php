@@ -15,6 +15,7 @@ use Smithy\Core\Shape\Document\{
     StructDocument
 };
 use Smithy\Core\Shape\Utils\ArrayShapeSerializer;
+use Smithy\Tests\Client\Pagination\Fixture\PaginationResult;
 use Smithy\Tests\Core\Shape\Utils\Utils\{
     ArrayShapeSerializerAliasedFixture,
     ArrayShapeSerializerBigNumberFixture,
@@ -131,6 +132,18 @@ final class ArrayShapeSerializerTest extends TestCase
             ['name' => 'sam', 'count' => 1]
         );
         $this->assertNull($obj->active);
+    }
+
+    public function testFromArrayOmitsMissingConstructorArguments(): void
+    {
+        /** @var PaginationResult $obj */
+        $obj = ArrayShapeSerializer::fromArray(
+            PaginationResult::class,
+            ['nextToken' => null]
+        );
+
+        $this->assertNull($obj->nextToken);
+        $this->assertSame([], $obj->items);
     }
 
     public function testFromArrayPreservesNullValuePassedExplicitly(): void

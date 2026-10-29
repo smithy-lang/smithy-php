@@ -11,6 +11,25 @@ use Smithy\Codegen\ShapeCategory;
 
 final class CodegenSettingsTest extends TestCase
 {
+    public function testCopiesWithCanonicalOverrides(): void
+    {
+        $settings = new CodegenSettings(
+            namespace: 'Smithy\\Original',
+            outputDir: '/tmp/original',
+            generateClient: true
+        );
+
+        $copy = $settings->copyWith([
+            'namespace' => 'Smithy\\Integrated',
+            'generateClient' => false
+        ]);
+
+        $this->assertSame('Smithy\\Original', $settings->namespace);
+        $this->assertSame('Smithy\\Integrated', $copy->namespace);
+        $this->assertFalse($copy->generateClient);
+        $this->assertSame('/tmp/original', $copy->outputDir);
+    }
+
     public function testConstructorAppliesDefaultsWhenOnlyRequiredArgsProvided(): void
     {
         $settings = new CodegenSettings(
