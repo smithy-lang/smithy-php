@@ -29,48 +29,82 @@ if ($arguments !== [] && !$check) {
     exit(2);
 }
 
-$name = 'rpcv2-cbor';
-$modelPath = $root . '/tools/codegen-output/models/rpcv2-cbor.json';
 $buildRoot = $root . '/build/codegen-output';
-$stagingDir = $buildRoot . '/staging/' . $name
-    . '/src-' . \bin2hex(\random_bytes(8));
 $outputRoot = $root . '/codegen-output';
-$outputDir = $outputRoot . '/' . $name . '/src';
+$cases = [
+    'rpcv2-cbor' => [
+        'model' => $root . '/tools/codegen-output/models/rpcv2-cbor.json',
+        'settings' => static fn(string $outputDir): CodegenSettings =>
+            new CodegenSettings(
+                namespace: 'Smithy\\ProtocolTests\\RpcV2Cbor',
+                outputDir: $outputDir,
+                organization: 'categorized',
+                preserveExistingMemberOrder: false
+            )
+    ],
+    'trimmed-client' => [
+        'model' => $root . '/tools/codegen-output/models/trimmed-client.json',
+        'settings' => static fn(string $outputDir): CodegenSettings =>
+            new CodegenSettings(
+                namespace: 'Smithy\\CodegenOutput\\TrimmedPetStore',
+                outputDir: $outputDir,
+                organization: 'categorized',
+                preserveExistingMemberOrder: false,
+                operationSet: ['GetPet']
+            )
+    ]
+];
 
-CodegenOutput::removeDirectory($stagingDir, $buildRoot);
-CodegenOutput::validatePath($outputDir, $outputRoot);
+$stale = false;
+foreach ($cases as $name => $case) {
+    $stagingDir = $buildRoot . '/staging/' . $name
+        . '/src-' . \bin2hex(\random_bytes(8));
+    $outputDir = $outputRoot . '/' . $name . '/src';
 
-$settings = new CodegenSettings(
-    namespace: 'Smithy\\ProtocolTests\\RpcV2Cbor',
-    outputDir: $stagingDir,
-    organization: 'categorized',
-    preserveExistingMemberOrder: false
-);
-
-$count = (new CodeGenerator(
-    $settings,
-    SmithyModel::fromFile($modelPath)
-))->generateAndWrite();
-
-CodegenOutput::lintPhpFiles($stagingDir);
-
-$differences = CodegenOutput::compareDirectories(
-    $stagingDir,
-    $outputDir
-);
-if ($differences === []) {
     CodegenOutput::removeDirectory($stagingDir, $buildRoot);
-    \fwrite(STDOUT, "{$name}: {$count} generated files are current.\n");
+    CodegenOutput::validatePath($outputDir, $outputRoot);
 
-    exit(0);
+    $count = (new CodeGenerator(
+        $case['settings']($stagingDir),
+        SmithyModel::fromFile($case['model'])
+    ))->generateAndWrite();
+
+    CodegenOutput::lintPhpFiles($stagingDir);
+
+    $differences = CodegenOutput::compareDirectories(
+        $stagingDir,
+        $outputDir
+    );
+    if ($differences === []) {
+        CodegenOutput::removeDirectory($stagingDir, $buildRoot);
+        \fwrite(
+            STDOUT,
+            "{$name}: {$count} generated files are current.\n"
+        );
+        continue;
+    }
+
+    foreach ($differences as $difference) {
+        \fwrite(STDOUT, "{$name}: {$difference}\n");
+    }
+
+    if ($check) {
+        CodegenOutput::removeDirectory($stagingDir, $buildRoot);
+        $stale = true;
+        continue;
+    }
+
+    CodegenOutput::publishDirectory(
+        $stagingDir,
+        $outputDir,
+        $buildRoot,
+        $outputRoot
+    );
+
+    \fwrite(STDOUT, "{$name}: wrote {$count} generated files.\n");
 }
 
-foreach ($differences as $difference) {
-    \fwrite(STDOUT, "{$name}: {$difference}\n");
-}
-
-if ($check) {
-    CodegenOutput::removeDirectory($stagingDir, $buildRoot);
+if ($stale) {
     \fwrite(
         STDERR,
         "Generated output is stale. Run composer codegen-output.\n"
@@ -78,12 +112,3 @@ if ($check) {
 
     exit(1);
 }
-
-CodegenOutput::publishDirectory(
-    $stagingDir,
-    $outputDir,
-    $buildRoot,
-    $outputRoot
-);
-
-\fwrite(STDOUT, "{$name}: wrote {$count} generated files.\n");

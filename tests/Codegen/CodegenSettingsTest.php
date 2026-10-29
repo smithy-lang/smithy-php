@@ -41,6 +41,7 @@ final class CodegenSettingsTest extends TestCase
         $this->assertSame([], $settings->rulesFunctions);
         $this->assertSame([], $settings->extendedOpcodes);
         $this->assertTrue($settings->preserveExistingMemberOrder);
+        $this->assertNull($settings->operationSet);
         $this->assertSame([], $settings->waiterResourceInitialisms);
         $this->assertFalse($settings->assumeAsciiEndpointStrings);
         $this->assertSame(
@@ -381,12 +382,17 @@ final class CodegenSettingsTest extends TestCase
             'baseServiceException' => 'Aws\\Exception\\AwsException',
             'serviceExceptionClass' => 'Aws\\Sns\\Exception\\SnsException',
             'preserveExistingMemberOrder' => false,
+            'operationSet' => ['Publish', 'ListTopics'],
             'waiterResourceInitialisms' => ['api' => 'API'],
             'assumeAsciiEndpointStrings' => true
         ]);
 
         $this->assertSame('Aws\\Sns', $settings->namespace);
         $this->assertSame('/build/sns', $settings->outputDir);
+        $this->assertSame(
+            ['Publish', 'ListTopics'],
+            $settings->operationSet
+        );
         $this->assertSame('flat', $settings->organization);
         $this->assertSame(
             'Aws\\Exception\\AwsException',
@@ -522,6 +528,48 @@ final class CodegenSettingsTest extends TestCase
             namespace: 'Smithy\\Example',
             outputDir: '/tmp/output',
             organization: 'grouped'
+        );
+    }
+
+    public function testConstructorRejectsEmptyOperationSet(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage(
+            'operationSet must be a non-empty list'
+        );
+
+        new CodegenSettings(
+            namespace: 'Smithy\\Example',
+            outputDir: '/tmp/output',
+            operationSet: []
+        );
+    }
+
+    public function testConstructorRejectsInvalidOperationSetEntry(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage(
+            'operationSet must contain non-empty operation names or shape IDs'
+        );
+
+        new CodegenSettings(
+            namespace: 'Smithy\\Example',
+            outputDir: '/tmp/output',
+            operationSet: ['GetThing', '']
+        );
+    }
+
+    public function testConstructorRejectsDuplicateOperationSetEntry(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage(
+            'operationSet contains duplicate entry GetThing'
+        );
+
+        new CodegenSettings(
+            namespace: 'Smithy\\Example',
+            outputDir: '/tmp/output',
+            operationSet: ['GetThing', 'GetThing']
         );
     }
 

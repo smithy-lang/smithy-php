@@ -8,6 +8,7 @@ use PHPUnit\Framework\TestCase;
 use Smithy\Codegen\CodegenSettings;
 use Smithy\Codegen\Generator\ServiceGenerator;
 use Smithy\Codegen\Model\SmithyModel;
+use Smithy\Codegen\ServiceProjection;
 use Smithy\Core\Model\SmithyModel as RuntimeSmithyModel;
 use Smithy\Core\Serde\{
     SchemaConverter,
@@ -20,15 +21,19 @@ final class ServiceGeneratorTest extends TestCase
 {
     public function testGeneratesServiceMetadataClass(): void
     {
+        $model = $this->model();
         $generator = new ServiceGenerator(
-            $this->model(),
+            $model,
             new CodegenSettings(
                 namespace: 'Smithy\\Example',
                 outputDir: '/tmp/out'
             )
         );
 
-        $file = $generator->generate('smithy.example#ExampleService');
+        $file = $generator->generate(
+            'smithy.example#ExampleService',
+            $this->projection($model)
+        );
 
         $this->assertSame(
             '/tmp/out' . DIRECTORY_SEPARATOR . 'ExampleService.php',
@@ -107,7 +112,10 @@ final class ServiceGeneratorTest extends TestCase
             )
         );
 
-        $file = $generator->generate('smithy.example#EmptyService');
+        $file = $generator->generate(
+            'smithy.example#EmptyService',
+            $this->projection($model)
+        );
 
         $this->assertStringContainsString('return [];', $file->content);
     }
@@ -115,8 +123,9 @@ final class ServiceGeneratorTest extends TestCase
     public function testGeneratedServiceClassUsesTraitBehavior(): void
     {
         $namespace = 'Smithy\\Tests\\Codegen\\Generator\\Utils';
+        $model = $this->model();
         $generator = new ServiceGenerator(
-            $this->model(),
+            $model,
             new CodegenSettings(
                 namespace: $namespace,
                 outputDir: '/tmp/out',
@@ -129,7 +138,10 @@ final class ServiceGeneratorTest extends TestCase
             )
         );
 
-        $file = $generator->generate('smithy.example#ExampleService');
+        $file = $generator->generate(
+            'smithy.example#ExampleService',
+            $this->projection($model)
+        );
         $class = $namespace . '\\UtilsService';
         if (!\class_exists($class, false)) {
             eval($this->evalSource($file->content));
@@ -195,10 +207,11 @@ final class ServiceGeneratorTest extends TestCase
                 'vendor.example#nullable' => 32
             ]
         );
-        $file = (new ServiceGenerator(
-            $this->model(),
-            $settings
-        ))->generate('smithy.example#ExampleService');
+        $model = $this->model();
+        $file = (new ServiceGenerator($model, $settings))->generate(
+            'smithy.example#ExampleService',
+            $this->projection($model)
+        );
         $class = $namespace . '\\ParityService';
         if (!\class_exists($class, false)) {
             eval($this->evalSource($file->content));
@@ -252,8 +265,9 @@ final class ServiceGeneratorTest extends TestCase
 
     public function testGenerateRaisesForUnknownServiceShapeId(): void
     {
+        $model = $this->model();
         $generator = new ServiceGenerator(
-            $this->model(),
+            $model,
             new CodegenSettings(
                 namespace: 'Smithy\\Example',
                 outputDir: '/tmp/out'
@@ -265,13 +279,17 @@ final class ServiceGeneratorTest extends TestCase
             'Shape not found: smithy.example#Missing'
         );
 
-        $generator->generate('smithy.example#Missing');
+        $generator->generate(
+            'smithy.example#Missing',
+            $this->projection($model)
+        );
     }
 
     public function testGenerateRaisesForNonServiceShape(): void
     {
+        $model = $this->model();
         $generator = new ServiceGenerator(
-            $this->model(),
+            $model,
             new CodegenSettings(
                 namespace: 'Smithy\\Example',
                 outputDir: '/tmp/out'
@@ -283,12 +301,20 @@ final class ServiceGeneratorTest extends TestCase
             'Shape smithy.example#GetThing is not a service'
         );
 
-        $generator->generate('smithy.example#GetThing');
+        $generator->generate(
+            'smithy.example#GetThing',
+            $this->projection($model)
+        );
     }
 
     private function model(): SmithyModel
     {
         return SmithyModel::fromJson($this->modelJson());
+    }
+
+    private function projection(SmithyModel $model): ServiceProjection
+    {
+        return ServiceProjection::fromModel($model, null);
     }
 
     private function modelJson(): string

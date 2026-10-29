@@ -1,0 +1,230 @@
+{
+    "smithy": "2.0",
+    "shapes": {
+        "smithy.example#PetStore": {
+            "type": "service",
+            "version": "2026-10-14",
+            "operations": [
+                {
+                    "target": "smithy.example#GetPet"
+                },
+                {
+                    "target": "smithy.example#ListPets"
+                }
+            ],
+            "resources": [
+                {
+                    "target": "smithy.example#PetResource"
+                }
+            ],
+            "errors": [
+                {
+                    "target": "smithy.example#ServiceError"
+                }
+            ],
+            "traits": {
+                "smithy.protocols#rpcv2Cbor": {}
+            }
+        },
+        "smithy.example#PetResource": {
+            "type": "resource",
+            "delete": {
+                "target": "smithy.example#DeletePet"
+            }
+        },
+        "smithy.example#GetPet": {
+            "type": "operation",
+            "input": {
+                "target": "smithy.example#GetPetInput"
+            },
+            "output": {
+                "target": "smithy.example#GetPetOutput"
+            },
+            "errors": [
+                {
+                    "target": "smithy.example#CommonError"
+                }
+            ],
+            "traits": {
+                "smithy.waiters#waitable": {
+                    "PetExists": {
+                        "minDelay": 1,
+                        "maxDelay": 2,
+                        "acceptors": [
+                            {
+                                "state": "success",
+                                "matcher": {
+                                    "success": true
+                                }
+                            }
+                        ]
+                    }
+                },
+                "smithy.api#requestCompression": {
+                    "encodings": [
+                        "gzip"
+                    ]
+                }
+            }
+        },
+        "smithy.example#ListPets": {
+            "type": "operation",
+            "input": {
+                "target": "smithy.example#ListPetsInput"
+            },
+            "output": {
+                "target": "smithy.example#ListPetsOutput"
+            },
+            "errors": [
+                {
+                    "target": "smithy.example#CommonError"
+                }
+            ],
+            "traits": {
+                "smithy.api#paginated": {
+                    "inputToken": "nextToken",
+                    "outputToken": "nextToken",
+                    "pageSize": "pageSize",
+                    "items": "pets"
+                }
+            }
+        },
+        "smithy.example#DeletePet": {
+            "type": "operation",
+            "input": {
+                "target": "smithy.example#DeletePetInput"
+            },
+            "errors": [
+                {
+                    "target": "smithy.example#DeleteOnlyError"
+                }
+            ],
+            "traits": {
+                "smithy.api#httpChecksumRequired": {}
+            }
+        },
+        "smithy.example#GetPetInput": {
+            "type": "structure",
+            "members": {
+                "petId": {
+                    "target": "smithy.api#String"
+                }
+            }
+        },
+        "smithy.example#GetPetOutput": {
+            "type": "structure",
+            "members": {
+                "pet": {
+                    "target": "smithy.example#Pet"
+                },
+                "marker": {
+                    "target": "smithy.example#UnitUnion"
+                }
+            }
+        },
+        "smithy.example#ListPetsInput": {
+            "type": "structure",
+            "members": {
+                "nextToken": {
+                    "target": "smithy.api#String"
+                },
+                "pageSize": {
+                    "target": "smithy.api#Integer"
+                }
+            }
+        },
+        "smithy.example#ListPetsOutput": {
+            "type": "structure",
+            "members": {
+                "pets": {
+                    "target": "smithy.example#PetList"
+                },
+                "nextToken": {
+                    "target": "smithy.api#String"
+                }
+            }
+        },
+        "smithy.example#DeletePetInput": {
+            "type": "structure",
+            "members": {
+                "petId": {
+                    "target": "smithy.api#String"
+                }
+            }
+        },
+        "smithy.example#Pet": {
+            "type": "structure",
+            "members": {
+                "name": {
+                    "target": "smithy.api#String"
+                },
+                "details": {
+                    "target": "smithy.example#PetDetails"
+                }
+            }
+        },
+        "smithy.example#PetDetails": {
+            "type": "structure",
+            "members": {
+                "breed": {
+                    "target": "smithy.api#String"
+                }
+            }
+        },
+        "smithy.example#PetList": {
+            "type": "list",
+            "member": {
+                "target": "smithy.example#Pet"
+            }
+        },
+        "smithy.example#UnitUnion": {
+            "type": "union",
+            "members": {
+                "none": {
+                    "target": "smithy.api#Unit"
+                }
+            }
+        },
+        "smithy.example#CommonError": {
+            "type": "structure",
+            "members": {
+                "message": {
+                    "target": "smithy.api#String"
+                }
+            },
+            "traits": {
+                "smithy.api#error": "client"
+            }
+        },
+        "smithy.example#DeleteOnlyError": {
+            "type": "structure",
+            "members": {
+                "message": {
+                    "target": "smithy.api#String"
+                }
+            },
+            "traits": {
+                "smithy.api#error": "client"
+            }
+        },
+        "smithy.example#ServiceError": {
+            "type": "structure",
+            "members": {
+                "message": {
+                    "target": "smithy.api#String"
+                }
+            },
+            "traits": {
+                "smithy.api#error": "server"
+            }
+        },
+        "smithy.example#UnusedShape": {
+            "type": "structure",
+            "members": {
+                "value": {
+                    "target": "smithy.api#String"
+                }
+            }
+        }
+    }
+}

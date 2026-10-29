@@ -9,6 +9,7 @@ use Smithy\Codegen\CodegenSettings;
 use Smithy\Codegen\Generator\ClientGenerator;
 use Smithy\Codegen\Model\SmithyModel;
 use Smithy\Codegen\PhpSymbolProvider;
+use Smithy\Codegen\ServiceProjection;
 
 final class ClientGeneratorTest extends TestCase
 {
@@ -32,7 +33,10 @@ final class ClientGeneratorTest extends TestCase
             $settings
         );
 
-        $file = $generator->generate('smithy.example#DefaultsService');
+        $file = $generator->generate(
+            'smithy.example#DefaultsService',
+            $this->projection($model)
+        );
 
         $this->assertStringStartsWith(
             "<?php\n\ndeclare(strict_types=1);",
@@ -98,7 +102,10 @@ final class ClientGeneratorTest extends TestCase
             $settings
         );
 
-        $file = $generator->generate('smithy.example#DefaultsService');
+        $file = $generator->generate(
+            'smithy.example#DefaultsService',
+            $this->projection($model)
+        );
 
         $this->assertStringContainsString(
             'use Smithy\\Client\\AbstractClient;',
@@ -124,7 +131,10 @@ final class ClientGeneratorTest extends TestCase
 
         $this->expectException(\InvalidArgumentException::class);
 
-        $generator->generate('smithy.example#Nonexistent');
+        $generator->generate(
+            'smithy.example#Nonexistent',
+            $this->projection($model)
+        );
     }
 
     public function testGenerateRaisesForNonServiceShape(): void
@@ -146,7 +156,10 @@ final class ClientGeneratorTest extends TestCase
 
         $this->expectException(\InvalidArgumentException::class);
 
-        $generator->generate('smithy.example#Settings');
+        $generator->generate(
+            'smithy.example#Settings',
+            $this->projection($model)
+        );
     }
 
     public function testUsesConfiguredBaseClassAndServiceMetadata(): void
@@ -195,7 +208,8 @@ final class ClientGeneratorTest extends TestCase
         );
 
         $file = $generator->generate(
-            'smithy.example#ExampleService'
+            'smithy.example#ExampleService',
+            $this->projection($model)
         );
 
         $this->assertStringContainsString(
@@ -280,7 +294,10 @@ final class ClientGeneratorTest extends TestCase
             $model,
             new PhpSymbolProvider($model, $defaultSettings),
             $defaultSettings
-        ))->generate('smithy.example#ExampleService');
+        ))->generate(
+            'smithy.example#ExampleService',
+            $this->projection($model)
+        );
 
         $this->assertStringContainsString(
             'use Smithy\\Example\\Input\\ClientConfig;',
@@ -317,7 +334,10 @@ final class ClientGeneratorTest extends TestCase
             $model,
             new PhpSymbolProvider($model, $pluginCollectionSettings),
             $pluginCollectionSettings
-        ))->generate('smithy.example#ExampleService');
+        ))->generate(
+            'smithy.example#ExampleService',
+            $this->projection($model)
+        );
 
         $this->assertStringContainsString(
             'use Vendor\\PluginCollection as ConfiguredClientConfig;',
@@ -346,7 +366,10 @@ final class ClientGeneratorTest extends TestCase
             $model,
             new PhpSymbolProvider($model, $flatSettings),
             $flatSettings
-        ))->generate('smithy.example#ExampleService');
+        ))->generate(
+            'smithy.example#ExampleService',
+            $this->projection($model)
+        );
 
         $this->assertStringContainsString(
             'use Smithy\\Client\\ClientConfig as ConfiguredClientConfig;',
@@ -391,7 +414,10 @@ final class ClientGeneratorTest extends TestCase
             $model,
             new PhpSymbolProvider($model, $settings),
             $settings
-        ))->generate('smithy.example#DefaultsService');
+        ))->generate(
+            'smithy.example#DefaultsService',
+            $this->projection($model)
+        );
 
         $this->assertStringNotContainsString(
             'use Vendor\\PluginCollection;',
@@ -450,7 +476,10 @@ final class ClientGeneratorTest extends TestCase
             $model,
             new PhpSymbolProvider($model, $settings),
             $settings
-        ))->generate('smithy.example#Example');
+        ))->generate(
+            'smithy.example#Example',
+            $this->projection($model)
+        );
 
         $this->assertStringContainsString(
             'use Smithy\\Example\\Input\\ExampleService;',
@@ -514,7 +543,8 @@ final class ClientGeneratorTest extends TestCase
         );
 
         $file = $generator->generate(
-            'smithy.example#ExampleService'
+            'smithy.example#ExampleService',
+            $this->projection($model)
         );
         $this->assertStringNotContainsString(
             'RequestCompressionPlugin',
@@ -568,7 +598,10 @@ final class ClientGeneratorTest extends TestCase
             $settings
         );
 
-        $file = $generator->generate('smithy.example#DefaultsService');
+        $file = $generator->generate(
+            'smithy.example#DefaultsService',
+            $this->projection($model)
+        );
 
         $this->assertStringContainsString(
             'final class ExampleClient extends VendorClient',
@@ -650,7 +683,8 @@ final class ClientGeneratorTest extends TestCase
         );
 
         $file = $generator->generate(
-            'smithy.example#ExampleService'
+            'smithy.example#ExampleService',
+            $this->projection($model)
         );
 
         $this->assertStringContainsString(
@@ -671,5 +705,10 @@ final class ClientGeneratorTest extends TestCase
             'use Smithy\\Client\\Waiter\\Matcher;',
             $file->content
         );
+    }
+
+    private function projection(SmithyModel $model): ServiceProjection
+    {
+        return ServiceProjection::fromModel($model, null);
     }
 }

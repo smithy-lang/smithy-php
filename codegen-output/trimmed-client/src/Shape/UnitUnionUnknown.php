@@ -1,0 +1,29 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Smithy\CodegenOutput\TrimmedPetStore\Shape;
+
+/**
+ * Unknown variant for forward-compatibility.
+ */
+/** @internal */
+final readonly class UnitUnionUnknown extends UnitUnion
+{
+    public function __construct(private string $unknownTag, private mixed $unknownValue) {}
+
+    public function getMemberIndex(): int
+    {
+        return -1;
+    }
+
+    public function tag(): string
+    {
+        return $this->unknownTag;
+    }
+
+    public function value(): mixed
+    {
+        return $this->unknownValue;
+    }
+}

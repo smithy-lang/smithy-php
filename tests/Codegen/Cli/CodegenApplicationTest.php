@@ -45,6 +45,30 @@ final class CodegenApplicationTest extends TestCase
         $this->assertSame('', $this->contents($stderr));
     }
 
+    public function testGeneratesSelectedOperationsFromCommandLine(): void
+    {
+        $outputDirectory = $this->temporaryPath('output');
+        [$application, $stdout, $stderr] = $this->application();
+
+        $status = $application->run([
+            'smithy-php-codegen',
+            __DIR__ . '/../../fixtures/trimmed-client-model.json',
+            '--namespace=Smithy\\PetStore',
+            '--output=' . $outputDirectory,
+            '--organization=flat',
+            '--operations=GetPet'
+        ]);
+
+        $this->assertSame(CodegenApplication::SUCCESS, $status);
+        $this->assertFileExists(
+            $outputDirectory . '/GetPetOperation.php'
+        );
+        $this->assertFileDoesNotExist(
+            $outputDirectory . '/ListPetsOperation.php'
+        );
+        $this->assertSame('', $this->contents($stderr));
+    }
+
     public function testReturnsInvalidUsageForUnknownOption(): void
     {
         [$application, $stdout, $stderr] = $this->application();
