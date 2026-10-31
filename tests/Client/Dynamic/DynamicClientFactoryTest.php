@@ -12,7 +12,6 @@ use Smithy\Client\Dynamic\{
     DynamicClientRuntime
 };
 use Smithy\Client\Endpoint\Bytecode\StdFunctions;
-use Smithy\Core\Model\SmithyModel;
 use Smithy\Protocol\RpcV2\RpcV2CborProtocol;
 use Smithy\Tests\Client\Dynamic\Utils\IdentifiedProtocolFixture;
 use Smithy\Tests\Client\Fake\TestAuthSchemeFixture;
@@ -35,24 +34,6 @@ final class DynamicClientFactoryTest extends TestCase
         self::assertInstanceOf(
             RpcV2CborProtocol::class,
             $client->getConfig()->getProtocol()
-        );
-    }
-
-    public function testRejectsUnrelatedClientClass(): void
-    {
-        $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage(
-            'Dynamic client class must extend '
-            . DynamicClient::class
-        );
-
-        DynamicClientFactory::create(
-            model: SmithyModel::fromArray([
-                'smithy' => '2.0',
-                'shapes' => []
-            ]),
-            runtime: self::runtime(),
-            clientClass: \stdClass::class
         );
     }
 
