@@ -6,7 +6,6 @@ namespace Smithy\Tests\Client\Auth;
 
 use PHPUnit\Framework\TestCase;
 use Smithy\Client\Auth\{
-    AnonymousIdentity,
     ChainIdentityProviderInterface,
     ChainSetup,
     IdentityChain,
@@ -34,7 +33,6 @@ final class IdentityChainTest extends TestCase
     {
         $log = new CallLogFixture();
         $chain = new IdentityChain(
-            TestIdentityFixture::class,
             providers: [
                 new TestProviderFixture(
                     'after-a',
@@ -68,14 +66,6 @@ final class IdentityChainTest extends TestCase
             ['standard-a', 'after-a', 'before-b', 'standard-b'],
             $log->calls
         );
-        $this->assertSame(
-            ['standard-a', 'after-a', 'before-b', 'standard-b'],
-            \array_map(
-                static fn ($registration) =>
-                    $registration->metadata->providerName,
-                $chain->getRegistrations()
-            )
-        );
     }
 
     public function testTerminalResolverStopsLaterProviderSetup(): void
@@ -83,7 +73,6 @@ final class IdentityChainTest extends TestCase
         $log = new CallLogFixture();
 
         new IdentityChain(
-            TestIdentityFixture::class,
             providers: [
                 new TestProviderFixture(
                     'first',
@@ -111,7 +100,6 @@ final class IdentityChainTest extends TestCase
         $log = new CallLogFixture();
 
         new IdentityChain(
-            TestIdentityFixture::class,
             providers: [
                 new class($log) implements ChainIdentityProviderInterface {
                     public function __construct(
@@ -134,7 +122,6 @@ final class IdentityChainTest extends TestCase
                     }
 
                     public function setup(
-                        string $identityType,
                         ChainSetup $setup
                     ): void
                     {
@@ -167,7 +154,6 @@ final class IdentityChainTest extends TestCase
                     }
 
                     public function setup(
-                        string $identityType,
                         ChainSetup $setup
                     ): void
                     {
@@ -188,7 +174,6 @@ final class IdentityChainTest extends TestCase
         $firstLog = new CallLogFixture();
         $secondLog = new CallLogFixture();
         $chain = new IdentityChain(
-            TestIdentityFixture::class,
             providers: [
                 new TestProviderFixture(
                     'first',
@@ -227,7 +212,6 @@ final class IdentityChainTest extends TestCase
             new TestIdentityFixture()
         );
         $chain = new IdentityChain(
-            TestIdentityFixture::class,
             providers: [
                 new TestProviderFixture(
                     'first',
@@ -263,7 +247,6 @@ final class IdentityChainTest extends TestCase
         $second = new TestIdentityFixture();
         $resolver = new SequenceResolverFixture([$first, $second]);
         $chain = new IdentityChain(
-            TestIdentityFixture::class,
             providers: [
                 new TestProviderFixture(
                     'cache',
@@ -290,51 +273,9 @@ final class IdentityChainTest extends TestCase
         $this->assertSame(2, $resolver->calls);
     }
 
-    public function testResolveIdentityRejectsWrongIdentityType(): void
-    {
-        $wrongResolver = new SequenceResolverFixture([
-            AnonymousIdentity::instance()
-        ]);
-        $expected = new TestIdentityFixture();
-        $rightResolver = new SequenceResolverFixture([$expected]);
-        $chain = new IdentityChain(
-            TestIdentityFixture::class,
-            providers: [
-                new TestProviderFixture(
-                    'wrong',
-                    OrderingConstraint::standard('slot-a'),
-                    new CallLogFixture(),
-                    resolver: $wrongResolver
-                ),
-                new TestProviderFixture(
-                    'right',
-                    OrderingConstraint::standard('slot-b'),
-                    new CallLogFixture(),
-                    resolver: $rightResolver
-                )
-            ],
-            slotOrder: ['slot-a', 'slot-b']
-        );
-
-        try {
-            $chain->resolveIdentity();
-            $this->fail('Expected the wrong identity type to fail.');
-        } catch (\RuntimeException $error) {
-            $this->assertStringContainsString(
-                'expected ' . TestIdentityFixture::class,
-                $error->getMessage()
-            );
-        }
-
-        $this->assertSame(1, $wrongResolver->calls);
-        $this->assertSame(0, $rightResolver->calls);
-        $this->assertNull($chain->getLastResolvedMetadata());
-    }
-
     public function testResolveIdentityAggregatesFailures(): void
     {
         $chain = new IdentityChain(
-            TestIdentityFixture::class,
             providers: [
                 new TestProviderFixture(
                     'one',
@@ -369,7 +310,6 @@ final class IdentityChainTest extends TestCase
     {
         $first = new CountingNotFoundResolverFixture('missing ambient source');
         $chain = new IdentityChain(
-            TestIdentityFixture::class,
             providers: [
                 new TestProviderFixture(
                     'ambient',
@@ -416,7 +356,6 @@ final class IdentityChainTest extends TestCase
         $throwing = new CountingThrowingResolverFixture('malformed config');
         $later = new CountingResolverFixture(new TestIdentityFixture());
         $chain = new IdentityChain(
-            TestIdentityFixture::class,
             providers: [
                 new TestProviderFixture(
                     'throwing',
@@ -450,7 +389,6 @@ final class IdentityChainTest extends TestCase
         $identity = new TestIdentityFixture();
         $resolver = new CountingResolverFixture($identity);
         $chain = new IdentityChain(
-            TestIdentityFixture::class,
             providers: [
                 new TestProviderFixture(
                     'cache',
@@ -482,7 +420,6 @@ final class IdentityChainTest extends TestCase
         $identity = new TestIdentityFixture();
         $resolver = new CountingResolverFixture($identity);
         $chain = new IdentityChain(
-            TestIdentityFixture::class,
             providers: [
                 new TestProviderFixture(
                     'cache',
@@ -507,7 +444,6 @@ final class IdentityChainTest extends TestCase
         $stale = new TestIdentityFixture();
         $resolver = new CountingResolverFixture($current);
         $chain = new IdentityChain(
-            TestIdentityFixture::class,
             providers: [
                 new TestProviderFixture(
                     'cache',
@@ -537,7 +473,6 @@ final class IdentityChainTest extends TestCase
         $equivalent = new TestIdentityFixture();
         $resolver = new CountingResolverFixture($current);
         $chain = new IdentityChain(
-            TestIdentityFixture::class,
             providers: [
                 new TestProviderFixture(
                     'cache',
@@ -568,7 +503,6 @@ final class IdentityChainTest extends TestCase
         );
 
         new IdentityChain(
-            TestIdentityFixture::class,
             providers: [
                 new TestProviderFixture(
                     'dup',
@@ -593,7 +527,6 @@ final class IdentityChainTest extends TestCase
         );
 
         new IdentityChain(
-            TestIdentityFixture::class,
             providers: [
                 new TestProviderFixture(
                     'one',
@@ -618,7 +551,6 @@ final class IdentityChainTest extends TestCase
         );
 
         new IdentityChain(
-            TestIdentityFixture::class,
             providers: [],
             slotOrder: ['slot-a', 'slot-a']
         );
@@ -632,7 +564,6 @@ final class IdentityChainTest extends TestCase
         );
 
         new IdentityChain(
-            TestIdentityFixture::class,
             providers: [
                 new TestProviderFixture(
                     'mystery',

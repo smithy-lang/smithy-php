@@ -62,11 +62,11 @@ final class ChainSetupTest extends TestCase
         self::assertCount(1, $registrations);
         self::assertSame(
             'provider',
-            $registrations[0]->metadata->providerName
+            $registrations[0]['metadata']->providerName
         );
         self::assertSame(
             ['resolver-feature'],
-            $registrations[0]->metadata->featureIds
+            $registrations[0]['metadata']->featureIds
         );
         self::assertSame(['slot-a'], $setup->detectedSlots());
     }

@@ -10,6 +10,9 @@ use Smithy\Client\Auth\{
     IdentityResolverInterface,
     OrderingConstraint
 };
+/**
+ * @implements ChainIdentityProviderInterface<TestIdentityFixture>
+ */
 final class TestProviderFixture implements ChainIdentityProviderInterface
 {
     /** @param list<string> $featureIds */
@@ -37,12 +40,13 @@ final class TestProviderFixture implements ChainIdentityProviderInterface
         return $this->featureIds;
     }
 
-    public function setup(string $identityType, ChainSetup $setup): void
+    /**
+     * @param ChainSetup<TestIdentityFixture> $setup
+     */
+    public function setup(ChainSetup $setup): void
     {
         $this->log->calls[] = $this->name;
-        if ($identityType !== TestIdentityFixture::class
-            || $this->resolver === null
-        ) {
+        if ($this->resolver === null) {
             return;
         }
 
