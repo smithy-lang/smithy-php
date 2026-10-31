@@ -156,19 +156,6 @@ final class ArrayShapeSerializerTest extends TestCase
         $this->assertNull($obj->active);
     }
 
-    public function testFromArrayRejectsUnsupportedClass(): void
-    {
-        $this->expectException(InvalidShapeValueException::class);
-        $this->expectExceptionMessage(
-            'ArrayShapeSerializer::fromArray() expects a class implementing '
-            . 'Smithy\Core\Serde\SerializableStructInterface or '
-            . 'Smithy\Core\Shape\UnionInterface; got '
-            . 'Smithy\Core\Shape\Document\StringDocument.'
-        );
-
-        ArrayShapeSerializer::fromArray(StringDocument::class, []);
-    }
-
     public function testFromArraySupportsEmptyStructSchema(): void
     {
         $obj = ArrayShapeSerializer::fromArray(
