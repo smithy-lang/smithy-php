@@ -65,6 +65,7 @@ final class IdentityChain implements IdentityChainInterface
             ): bool => $cached === $rejected
             : \Closure::fromCallable($identityMatcher);
         $sortedProviders = self::sortProviders($providers, $slotOrder);
+        /** @var ChainSetup<TIdentity> $setup */
         $setup = new ChainSetup($properties);
 
         foreach ($sortedProviders as $provider) {

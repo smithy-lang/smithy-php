@@ -575,6 +575,9 @@ final class IdentityChainTest extends TestCase
         );
     }
 
+    /**
+     * @return StaticResolverFixture<TestIdentityFixture>
+     */
     private static function staticResolver(): StaticResolverFixture
     {
         return new StaticResolverFixture(new TestIdentityFixture());

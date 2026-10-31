@@ -9,6 +9,10 @@ use Smithy\Client\Auth\{
     IdentityResolverInterface,
     IdentityResult
 };
+
+/**
+ * @implements IdentityResolverInterface<never>
+ */
 final class CountingThrowingResolverFixture implements IdentityResolverInterface
 {
     public int $calls = 0;

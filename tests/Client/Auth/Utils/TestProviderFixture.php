@@ -15,7 +15,10 @@ use Smithy\Client\Auth\{
  */
 final class TestProviderFixture implements ChainIdentityProviderInterface
 {
-    /** @param list<string> $featureIds */
+    /**
+     * @param IdentityResolverInterface<TestIdentityFixture>|null $resolver
+     * @param list<string> $featureIds
+     */
     public function __construct(
         private readonly string $name,
         private readonly OrderingConstraint $ordering,

@@ -9,6 +9,10 @@ use Smithy\Client\Auth\{
     IdentityResolverInterface,
     IdentityResult
 };
+
+/**
+ * @implements IdentityResolverInterface<never>
+ */
 final class ThrowingResolverFixture implements IdentityResolverInterface
 {
     public function __construct(private readonly string $message) {}

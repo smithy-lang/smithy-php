@@ -9,10 +9,17 @@ use Smithy\Client\Auth\{
     IdentityResolverInterface,
     IdentityResult
 };
+
+/**
+ * @template TIdentity of IdentityInterface
+ * @implements IdentityResolverInterface<TIdentity>
+ */
 final class StaticResolverFixture implements IdentityResolverInterface
 {
+    /** @param TIdentity $identity */
     public function __construct(private readonly IdentityInterface $identity) {}
 
+    /** @return IdentityResult<TIdentity> */
     public function resolveIdentity(array $properties = []): IdentityResult
     {
         return IdentityResult::success($this->identity);

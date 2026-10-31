@@ -12,6 +12,8 @@ use Smithy\Client\Auth\{
 
 /**
  * Test resolver that always reports an expected identity miss.
+ *
+ * @implements IdentityResolverInterface<never>
  */
 final class NotFoundResolverFixture implements IdentityResolverInterface
 {

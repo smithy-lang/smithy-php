@@ -11,6 +11,9 @@ use Smithy\Client\Auth\{
 };
 /**
  * Test resolver that always returns the same identity and counts calls.
+ *
+ * @template TIdentity of IdentityInterface
+ * @implements IdentityResolverInterface<TIdentity>
  */
 final class CountingResolverFixture implements IdentityResolverInterface
 {
@@ -19,8 +22,10 @@ final class CountingResolverFixture implements IdentityResolverInterface
     /** @var list<IdentityInterface> */
     public array $invalidated = [];
 
+    /** @param TIdentity $identity */
     public function __construct(private readonly IdentityInterface $identity) {}
 
+    /** @return IdentityResult<TIdentity> */
     public function resolveIdentity(array $properties = []): IdentityResult
     {
         $this->calls++;
