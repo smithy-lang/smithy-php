@@ -1,27 +1,66 @@
 PHP ?= php
+COMPOSER ?= composer
 BENCHMARK_PHP ?= $(PHP) -d opcache.enable_cli=1 -d opcache.jit=tracing -d opcache.jit_buffer_size=128M
 
-.PHONY: benchmark benchmark-generate benchmark-serde benchmark-client
-.PHONY: benchmark-update-results benchmark-clean license-check
-.NOTPARALLEL: benchmark
+.DEFAULT_GOAL := help
 
-license-check:
+.PHONY: help install autoload test lint static-analysis check codegen codegen-output codegen-output-check license-check clean benchmark benchmark-generate benchmark-serde benchmark-client benchmark-update-results benchmark-clean
+.NOTPARALLEL: check benchmark
+
+help: ## List available targets
+	@awk 'BEGIN {FS = ":.*## "}; /^[a-zA-Z0-9_-]+:.*## / {printf "  %-24s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+
+install: ## Install Composer dependencies
+	$(COMPOSER) install $(ARGS)
+
+autoload: ## Regenerate Composer autoload files
+	$(COMPOSER) dump-autoload $(ARGS)
+
+test: ## Run the test suite
+	$(COMPOSER) test $(if $(ARGS),-- $(ARGS))
+
+lint: ## Check PHP syntax
+	$(PHP) tools/lint.php src tests tools benchmarks codegen-output bin/smithy-php-codegen
+
+static-analysis: ## Run PHPStan
+	$(COMPOSER) static-analysis $(if $(ARGS),-- $(ARGS))
+
+check: ## Run checks used by CI
+	$(MAKE) lint
+	$(MAKE) static-analysis ARGS=
+	$(MAKE) test ARGS=
+	$(MAKE) codegen-output-check ARGS=
+	$(MAKE) license-check
+
+codegen: ## Run the code generator; pass options with ARGS
+	$(COMPOSER) codegen $(if $(ARGS),-- $(ARGS))
+
+codegen-output: ## Regenerate checked-in codegen output
+	$(COMPOSER) codegen-output $(if $(ARGS),-- $(ARGS))
+
+codegen-output-check: ## Verify checked-in codegen output is current
+	$(COMPOSER) codegen-output:check $(if $(ARGS),-- $(ARGS))
+
+license-check: ## Check source license headers
 	$(PHP) tools/check-license-headers.php
 
-benchmark: benchmark-serde benchmark-client
+clean: ## Remove generated build and test artifacts
+	rm -rf build .phpunit.cache
 
-benchmark-generate:
+benchmark: benchmark-serde benchmark-client ## Run all benchmarks
+
+benchmark-generate: ## Generate benchmark clients and shapes
 	$(PHP) benchmarks/serde/generate.php
 
-benchmark-serde: benchmark-generate
+benchmark-serde: benchmark-generate ## Run protocol serialization benchmarks
 	$(BENCHMARK_PHP) benchmarks/serde/run.php
 
-benchmark-client: benchmark-generate
+benchmark-client: benchmark-generate ## Run generated client benchmarks
 	$(BENCHMARK_PHP) benchmarks/client/run.php
 
-benchmark-update-results: benchmark-generate
+benchmark-update-results: benchmark-generate ## Record benchmark results in the README
 	$(BENCHMARK_PHP) benchmarks/serde/run.php --update-readme
 	$(BENCHMARK_PHP) benchmarks/client/run.php --update-readme
 
-benchmark-clean:
+benchmark-clean: ## Remove generated benchmark artifacts
 	$(PHP) benchmarks/serde/generate.php --clean
