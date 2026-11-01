@@ -24,6 +24,10 @@ final class ResultWriterTest extends TestCase
         );
 
         self::assertFileExists($path);
+        self::assertMatchesRegularExpression(
+            '/-\d{8}-\d{6}-[a-f0-9]{16}\.json$/',
+            $path
+        );
         self::assertStringContainsString(
             '"lang": "PHP"',
             (string) \file_get_contents($path)

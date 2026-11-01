@@ -6,13 +6,18 @@ declare(strict_types=1);
 use Smithy\Benchmarks\Serde\Support\BenchmarkCaseRepository;
 use Smithy\Benchmarks\Serde\Support\BenchmarkEnvironment;
 use Smithy\Benchmarks\Serde\Support\BenchmarkRunner;
+use Smithy\Benchmarks\Serde\Support\BenchmarkValueComparator;
 use Smithy\Benchmarks\Serde\Support\GeneratedCodeLoader;
 use Smithy\Benchmarks\Serde\Support\ResultWriter;
 use Smithy\Codec\Cbor\CborCodec;
 use Smithy\Core\Serde\SerializableStructInterface;
 use Smithy\Core\Shape\OperationInterface;
 use Smithy\Core\Shape\Utils\ArrayShapeSerializer;
-use Smithy\Http\Message\Response;
+use Smithy\Http\Message\{
+    HttpTransportRequest,
+    HttpTransportResponse,
+    Response
+};
 use Smithy\Protocol\RpcV2\RpcV2CborProtocol;
 
 require __DIR__ . '/bootstrap.php';
@@ -41,7 +46,8 @@ Options:
   --max-iterations=N     Maximum measured calls per case (default: 5000)
   --max-seconds=N        Maximum measured seconds per case (default: 5)
   --validate             Validate selected cases without measuring
-  --update-readme        Replace the current results in benchmarks/README.md
+  --update-readme        Replace README results; requires an unfiltered
+                         all-direction measured run
   --help                 Show this help
 
 HELP);
@@ -76,6 +82,16 @@ $filter = isset($options['filter'])
     : null;
 $validateOnly = isset($options['validate']);
 $updateReadme = isset($options['update-readme']);
+if ($updateReadme
+    && ($filter !== null || $direction !== 'all' || $validateOnly)
+) {
+    \fwrite(
+        STDERR,
+        "--update-readme requires an unfiltered all-direction measured run.\n"
+    );
+
+    exit(2);
+}
 $runner = new BenchmarkRunner(
     warmupIterations: (int) ($options['warmup'] ?? 500),
     minIterations: (int) ($options['min-iterations'] ?? 1_000),
@@ -127,8 +143,7 @@ if ($direction === 'all' || $direction === 'serialize') {
         $statistics = $runner->run(
             static fn() => $protocol->serializeRequest(
                 $operation,
-                $input,
-                'http://localhost/'
+                $input
             )
         );
         $results[] = ResultWriter::benchmarkEntry(
@@ -145,10 +160,12 @@ if ($direction === 'all' || $direction === 'deserialize') {
         $body = decodeResponseBody($case['body'] ?? null);
         $headers = $case['headers'] ?? [];
         $headers['Smithy-Protocol'] = 'rpc-v2-cbor';
-        $response = new Response(
-            status: (int) ($case['code'] ?? 200),
-            headers: $headers,
-            body: $body
+        $response = new HttpTransportResponse(
+            new Response(
+                status: (int) ($case['code'] ?? 200),
+                headers: $headers,
+                body: $body
+            )
         );
 
         $output = deserializeResponse($protocol, $operation, $response);
@@ -239,11 +256,11 @@ function validateSerialization(
 ): void {
     $request = $protocol->serializeRequest(
         $operation,
-        $input,
-        'http://localhost/'
+        $input
     );
-    if ($request->getMethod() !== 'POST'
-        || $request->getHeaderLine('Smithy-Protocol') !== 'rpc-v2-cbor'
+    $httpRequest = HttpTransportRequest::expect($request)->request;
+    if ($httpRequest->getMethod() !== 'POST'
+        || $httpRequest->getHeaderLine('Smithy-Protocol') !== 'rpc-v2-cbor'
     ) {
         throw new \RuntimeException(
             "Invalid serialized request metadata for {$case['id']}."
@@ -253,11 +270,11 @@ function validateSerialization(
     $codec = new CborCodec();
     $schema = $operation->getInputSchema();
     $members = $codec->createMembersBuffer($schema);
-    $request->getBody()->rewind();
-    $codec->createDeserializer($request->getBody())
+    $httpRequest->getBody()->rewind();
+    $codec->createDeserializer($httpRequest->getBody())
         ->deserialize($schema, $members);
     $roundTrip = $operation->createInput($members);
-    if (!valuesEquivalent(
+    if (!BenchmarkValueComparator::equivalent(
         ArrayShapeSerializer::toArray($input),
         ArrayShapeSerializer::toArray($roundTrip)
     )) {
@@ -270,9 +287,9 @@ function validateSerialization(
 function deserializeResponse(
     RpcV2CborProtocol $protocol,
     OperationInterface $operation,
-    Response $response
+    HttpTransportResponse $response
 ): SerializableStructInterface {
-    $response->getBody()->rewind();
+    $response->response->getBody()->rewind();
 
     return $protocol->deserializeResponse($operation, $response);
 }
@@ -300,7 +317,7 @@ function validateDeserialization(
         $outputClass,
         $case['params']
     );
-    if (!valuesEquivalent(
+    if (!BenchmarkValueComparator::equivalent(
         ArrayShapeSerializer::toArray($expected),
         ArrayShapeSerializer::toArray($output)
     )) {
@@ -322,33 +339,6 @@ function decodeResponseBody(mixed $body): string
     }
 
     return $decoded;
-}
-
-function valuesEquivalent(mixed $expected, mixed $actual): bool
-{
-    if (\is_array($expected) && \is_array($actual)) {
-        if (\array_keys($expected) !== \array_keys($actual)) {
-            return false;
-        }
-        foreach ($expected as $key => $value) {
-            if (!valuesEquivalent($value, $actual[$key])) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-    if ($expected === $actual) {
-        return true;
-    }
-
-    return (\is_int($expected)
-            || \is_float($expected)
-            || (\is_string($expected) && \is_numeric($expected)))
-        && (\is_int($actual)
-            || \is_float($actual)
-            || (\is_string($actual) && \is_numeric($actual)))
-        && (float) $expected === (float) $actual;
 }
 
 /**

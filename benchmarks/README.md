@@ -53,14 +53,17 @@ Remove generated benchmark files and raw results:
 make benchmark-clean
 ```
 
+The Make targets enable CLI OPcache and the tracing JIT with a 128 MiB
+buffer. Override `BENCHMARK_PHP` to use different runtime flags.
+
 The scripts can also be invoked directly on systems without Make:
 
 ```shell
 php benchmarks/serde/generate.php
-php benchmarks/serde/run.php
-php benchmarks/client/run.php
-php benchmarks/serde/run.php --update-readme
-php benchmarks/client/run.php --update-readme
+php -d opcache.enable_cli=1 -d opcache.jit=tracing \
+    -d opcache.jit_buffer_size=128M benchmarks/serde/run.php
+php -d opcache.enable_cli=1 -d opcache.jit=tracing \
+    -d opcache.jit_buffer_size=128M benchmarks/client/run.php
 php benchmarks/serde/generate.php --clean
 ```
 
@@ -73,11 +76,18 @@ Raw result files are written to `build/benchmarks/results/`. Set
 - Inputs, operation metadata, protocol objects, and response fixtures are
   prepared before timing.
 - Client pipeline cases invoke a generated client with a reusable in-memory
-  HTTP response. They include endpoint resolution, auth selection, signing,
-  retries, serialization, deserialization, and optional middleware dispatch,
-  but exclude socket and TLS work.
+  HTTP response. They include endpoint resolution, anonymous auth selection,
+  serialization, deserialization, transport dispatch, and optional interceptor
+  dispatch, but do not include signing, retries, socket I/O, or TLS.
+- The `default` client case disables all plugins and measures the
+  interceptor-free pipeline. The `interceptor` case enables only the
+  pass-through benchmark interceptor.
 - Runtime code generation is not enabled.
-- Each case is validated once before measurement.
+- Each case receives a smoke validation before measurement. Serialization
+  checks request metadata and decodes the emitted CBOR back into the input
+  shape. Deserialization checks the output type and compares values when
+  the fixture supplies expected parameters. These checks do not replace the
+  protocol conformance suite.
 - Warmup calls execute before samples are collected.
 - Latencies are recorded in nanoseconds, and throughput is normalized using
   process CPU time when `getrusage()` is available.
@@ -92,70 +102,70 @@ Raw result files are written to `build/benchmarks/results/`. Set
 <!-- benchmark-results:start -->
 ### Serde
 
-Recorded: 2026-10-06T00:00:08+00:00
+Recorded: 2026-11-01T22:25:28+00:00
 
-- Revision: `4f7a16e`
-- PHP: `8.2.33 (cli)`
+- Revision: `155d9b7`
+- PHP: `8.2.35 (cli)`
 - OS: `Darwin 25.6.0 arm64`
 - Instance: `Apple M1 Pro`
 - OPcache: `enabled`
 - JIT: `enabled`
 - JIT setting: `tracing`
-- JIT buffer: `256M`
+- JIT buffer: `128M`
 
 | Direction | Case | n | Mean | p50 | p90 | p95 | p99 | Std dev | Ops/CPU s |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| serialize | `rpcv2Cbor_WideTypesRequest_S` | 5,000 | 8.478 µs | 8.083 µs | 8.500 µs | 8.833 µs | 17.250 µs | 3.706 µs | 118,226 |
-| serialize | `rpcv2Cbor_WideTypesRequest_M` | 5,000 | 14.852 µs | 14.291 µs | 15.125 µs | 15.709 µs | 30.667 µs | 3.190 µs | 67,851 |
-| serialize | `rpcv2Cbor_WideTypesRequest_L` | 5,000 | 28.985 µs | 27.583 µs | 29.250 µs | 32.708 µs | 58.375 µs | 5.781 µs | 35,094 |
-| serialize | `rpcv2Cbor_PutItemRequest_Baseline` | 5,000 | 2.055 µs | 1.917 µs | 2.042 µs | 2.125 µs | 2.500 µs | 1.630 µs | 492,078 |
-| serialize | `rpcv2Cbor_PutItemRequest_ShallowMap_S` | 5,000 | 4.180 µs | 4.000 µs | 4.250 µs | 4.334 µs | 7.125 µs | 1.790 µs | 241,920 |
-| serialize | `rpcv2Cbor_PutItemRequest_ShallowMap_M` | 5,000 | 17.611 µs | 17.167 µs | 18.083 µs | 18.417 µs | 30.125 µs | 2.559 µs | 57,152 |
-| serialize | `rpcv2Cbor_PutItemRequest_ShallowMap_L` | 5,000 | 51.544 µs | 50.792 µs | 52.333 µs | 56.500 µs | 82.166 µs | 5.889 µs | 19,549 |
-| serialize | `rpcv2Cbor_PutItemRequest_Nested_M` | 5,000 | 4.061 µs | 3.959 µs | 4.125 µs | 4.167 µs | 4.584 µs | 1.472 µs | 244,642 |
-| serialize | `rpcv2Cbor_PutItemRequest_Nested_L` | 5,000 | 11.814 µs | 11.708 µs | 12.000 µs | 12.125 µs | 14.708 µs | 1.974 µs | 84,776 |
-| serialize | `rpcv2Cbor_PutItemRequest_MixedItem_S` | 5,000 | 5.108 µs | 5.041 µs | 5.167 µs | 5.250 µs | 6.041 µs | 1.331 µs | 195,290 |
-| serialize | `rpcv2Cbor_PutItemRequest_MixedItem_M` | 5,000 | 16.871 µs | 16.458 µs | 17.125 µs | 17.583 µs | 32.292 µs | 2.827 µs | 59,713 |
-| serialize | `rpcv2Cbor_PutItemRequest_MixedItem_L` | 5,000 | 47.066 µs | 45.792 µs | 47.959 µs | 49.375 µs | 79.750 µs | 5.790 µs | 21,429 |
-| serialize | `rpcv2Cbor_PutItemRequest_BinaryData_S` | 5,000 | 2.303 µs | 2.250 µs | 2.334 µs | 2.416 µs | 2.584 µs | 984 ns | 433,877 |
-| serialize | `rpcv2Cbor_PutItemRequest_BinaryData_M` | 5,000 | 5.290 µs | 5.125 µs | 5.416 µs | 5.542 µs | 6.750 µs | 1.545 µs | 190,107 |
-| serialize | `rpcv2Cbor_PutItemRequest_BinaryData_L` | 5,000 | 16.538 µs | 16.291 µs | 17.000 µs | 17.542 µs | 22.042 µs | 2.403 µs | 60,733 |
-| deserialize | `rpcv2Cbor_WideTypesResponse_S` | 5,000 | 16.430 µs | 15.625 µs | 16.667 µs | 17.375 µs | 39.000 µs | 5.991 µs | 61,647 |
-| deserialize | `rpcv2Cbor_WideTypesResponse_M` | 5,000 | 29.716 µs | 28.750 µs | 30.166 µs | 32.291 µs | 56.292 µs | 4.900 µs | 33,930 |
-| deserialize | `rpcv2Cbor_WideTypesResponse_L` | 5,000 | 59.893 µs | 58.542 µs | 60.459 µs | 70.625 µs | 116.666 µs | 11.005 µs | 16,862 |
-| deserialize | `rpcv2Cbor_GetItemOutput_Baseline` | 5,000 | 1.899 µs | 1.750 µs | 1.875 µs | 1.875 µs | 2.042 µs | 2.624 µs | 522,139 |
-| deserialize | `rpcv2Cbor_GetItemOutput_S` | 5,000 | 5.180 µs | 5.042 µs | 5.167 µs | 5.209 µs | 5.500 µs | 2.251 µs | 193,050 |
-| deserialize | `rpcv2Cbor_GetItemOutput_M` | 5,000 | 15.899 µs | 14.750 µs | 15.083 µs | 15.417 µs | 42.458 µs | 17.187 µs | 65,987 |
-| deserialize | `rpcv2Cbor_GetItemOutput_L` | 5,000 | 89.429 µs | 86.459 µs | 91.625 µs | 96.542 µs | 151.792 µs | 13.349 µs | 11,284 |
-| deserialize | `rpcv2Cbor_GetItemOutput_OutOfOrder` | 5,000 | 17.942 µs | 17.416 µs | 18.208 µs | 18.417 µs | 36.500 µs | 4.282 µs | 56,094 |
-| deserialize | `rpcv2Cbor_GetItemOutputBinary_S` | 5,000 | 5.234 µs | 4.958 µs | 5.292 µs | 5.458 µs | 10.750 µs | 2.298 µs | 193,851 |
-| deserialize | `rpcv2Cbor_GetItemOutputBinary_M` | 5,000 | 14.966 µs | 14.334 µs | 15.250 µs | 15.584 µs | 36.958 µs | 3.950 µs | 67,515 |
-| deserialize | `rpcv2Cbor_GetItemOutputBinary_L` | 5,000 | 90.981 µs | 87.584 µs | 92.542 µs | 114.750 µs | 160.584 µs | 12.381 µs | 11,136 |
+| serialize | `rpcv2Cbor_WideTypesRequest_S` | 5,000 | 7.719 µs | 7.625 µs | 7.875 µs | 7.959 µs | 8.292 µs | 2.721 µs | 128,284 |
+| serialize | `rpcv2Cbor_WideTypesRequest_M` | 5,000 | 13.523 µs | 13.291 µs | 13.916 µs | 14.250 µs | 15.875 µs | 1.822 µs | 73,920 |
+| serialize | `rpcv2Cbor_WideTypesRequest_L` | 5,000 | 26.076 µs | 25.792 µs | 26.541 µs | 27.167 µs | 30.583 µs | 2.028 µs | 38,351 |
+| serialize | `rpcv2Cbor_PutItemRequest_Baseline` | 5,000 | 1.633 µs | 1.625 µs | 1.667 µs | 1.708 µs | 1.750 µs | 719 ns | 604,668 |
+| serialize | `rpcv2Cbor_PutItemRequest_ShallowMap_S` | 5,000 | 3.818 µs | 3.709 µs | 3.916 µs | 3.959 µs | 4.250 µs | 1.979 µs | 260,838 |
+| serialize | `rpcv2Cbor_PutItemRequest_ShallowMap_M` | 5,000 | 16.619 µs | 16.417 µs | 17.083 µs | 17.459 µs | 18.250 µs | 1.623 µs | 60,140 |
+| serialize | `rpcv2Cbor_PutItemRequest_ShallowMap_L` | 5,000 | 48.507 µs | 47.917 µs | 50.416 µs | 51.000 µs | 53.375 µs | 3.171 µs | 20,626 |
+| serialize | `rpcv2Cbor_PutItemRequest_Nested_M` | 5,000 | 3.621 µs | 3.458 µs | 3.667 µs | 3.750 µs | 4.000 µs | 4.215 µs | 279,376 |
+| serialize | `rpcv2Cbor_PutItemRequest_Nested_L` | 5,000 | 10.816 µs | 10.750 µs | 11.291 µs | 11.375 µs | 11.709 µs | 1.152 µs | 92,283 |
+| serialize | `rpcv2Cbor_PutItemRequest_MixedItem_S` | 5,000 | 4.736 µs | 4.666 µs | 4.792 µs | 4.875 µs | 5.084 µs | 1.586 µs | 210,084 |
+| serialize | `rpcv2Cbor_PutItemRequest_MixedItem_M` | 5,000 | 16.751 µs | 16.500 µs | 17.000 µs | 17.209 µs | 18.459 µs | 2.848 µs | 59,680 |
+| serialize | `rpcv2Cbor_PutItemRequest_MixedItem_L` | 5,000 | 45.619 µs | 45.417 µs | 46.958 µs | 47.542 µs | 61.875 µs | 4.856 µs | 21,957 |
+| serialize | `rpcv2Cbor_PutItemRequest_BinaryData_S` | 5,000 | 2.168 µs | 2.000 µs | 2.083 µs | 2.125 µs | 2.167 µs | 6.810 µs | 482,346 |
+| serialize | `rpcv2Cbor_PutItemRequest_BinaryData_M` | 5,000 | 4.936 µs | 4.875 µs | 5.042 µs | 5.125 µs | 5.334 µs | 1.575 µs | 202,216 |
+| serialize | `rpcv2Cbor_PutItemRequest_BinaryData_L` | 5,000 | 16.029 µs | 15.708 µs | 16.917 µs | 17.292 µs | 21.917 µs | 2.705 µs | 62,509 |
+| deserialize | `rpcv2Cbor_WideTypesResponse_S` | 5,000 | 11.811 µs | 10.917 µs | 11.625 µs | 11.875 µs | 18.042 µs | 10.180 µs | 84,704 |
+| deserialize | `rpcv2Cbor_WideTypesResponse_M` | 5,000 | 18.748 µs | 18.541 µs | 19.083 µs | 19.458 µs | 21.125 µs | 2.398 µs | 53,302 |
+| deserialize | `rpcv2Cbor_WideTypesResponse_L` | 5,000 | 35.388 µs | 34.542 µs | 36.750 µs | 37.292 µs | 52.667 µs | 4.727 µs | 28,331 |
+| deserialize | `rpcv2Cbor_GetItemOutput_Baseline` | 5,000 | 1.924 µs | 1.792 µs | 1.916 µs | 1.958 µs | 2.167 µs | 2.350 µs | 514,774 |
+| deserialize | `rpcv2Cbor_GetItemOutput_S` | 5,000 | 5.288 µs | 5.083 µs | 5.375 µs | 5.459 µs | 7.000 µs | 2.713 µs | 189,977 |
+| deserialize | `rpcv2Cbor_GetItemOutput_M` | 5,000 | 15.205 µs | 14.750 µs | 15.625 µs | 15.875 µs | 23.292 µs | 3.626 µs | 65,973 |
+| deserialize | `rpcv2Cbor_GetItemOutput_L` | 5,000 | 95.886 µs | 90.750 µs | 96.250 µs | 99.084 µs | 140.000 µs | 103.230 µs | 10,751 |
+| deserialize | `rpcv2Cbor_GetItemOutput_OutOfOrder` | 5,000 | 18.191 µs | 17.750 µs | 18.834 µs | 19.084 µs | 24.541 µs | 2.455 µs | 55,066 |
+| deserialize | `rpcv2Cbor_GetItemOutputBinary_S` | 5,000 | 5.429 µs | 5.292 µs | 5.583 µs | 5.667 µs | 5.958 µs | 1.941 µs | 184,257 |
+| deserialize | `rpcv2Cbor_GetItemOutputBinary_M` | 5,000 | 15.478 µs | 15.167 µs | 16.083 µs | 16.292 µs | 17.875 µs | 2.260 µs | 64,602 |
+| deserialize | `rpcv2Cbor_GetItemOutputBinary_L` | 5,000 | 92.752 µs | 91.375 µs | 96.625 µs | 97.333 µs | 100.209 µs | 3.580 µs | 10,782 |
 <!-- benchmark-results:end -->
 
 ### Generated client pipeline
 
-`default` uses the normal generated-client fast path. `interceptor` installs
-a pass-through plugin and interceptor to measure middleware dispatch.
+`default` uses the interceptor-free generated-client fast path. `interceptor`
+installs only a pass-through plugin and interceptor to measure dispatch.
 
 <!-- client-benchmark-results:start -->
-Recorded: 2026-10-06T00:00:10+00:00
+Recorded: 2026-11-01T22:25:30+00:00
 
-- Revision: `4f7a16e`
-- PHP: `8.2.33 (cli)`
+- Revision: `155d9b7`
+- PHP: `8.2.35 (cli)`
 - OS: `Darwin 25.6.0 arm64`
 - Instance: `Apple M1 Pro`
 - OPcache: `enabled`
 - JIT: `enabled`
 - JIT setting: `tracing`
-- JIT buffer: `256M`
+- JIT buffer: `128M`
 
 | Case | n | Mean | p50 | p90 | p95 | p99 | Std dev | Ops/CPU s |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| `rpcv2Cbor_ClientPipeline_default_S` | 5,000 | 30.319 µs | 29.500 µs | 30.625 µs | 31.458 µs | 55.500 µs | 5.304 µs | 33,113 |
-| `rpcv2Cbor_ClientPipeline_default_M` | 5,000 | 50.812 µs | 47.792 µs | 51.959 µs | 70.791 µs | 103.791 µs | 10.421 µs | 20,019 |
-| `rpcv2Cbor_ClientPipeline_default_L` | 5,000 | 98.361 µs | 92.917 µs | 105.500 µs | 137.542 µs | 206.583 µs | 23.618 µs | 10,299 |
-| `rpcv2Cbor_ClientPipeline_interceptor_S` | 5,000 | 34.951 µs | 33.042 µs | 35.666 µs | 45.125 µs | 91.584 µs | 11.456 µs | 28,946 |
-| `rpcv2Cbor_ClientPipeline_interceptor_M` | 5,000 | 52.780 µs | 49.792 µs | 53.833 µs | 64.834 µs | 116.292 µs | 12.207 µs | 19,158 |
-| `rpcv2Cbor_ClientPipeline_interceptor_L` | 5,000 | 96.037 µs | 88.000 µs | 96.291 µs | 129.041 µs | 198.542 µs | 51.819 µs | 10,732 |
+| `rpcv2Cbor_ClientPipeline_default_S` | 5,000 | 24.924 µs | 24.375 µs | 25.125 µs | 25.792 µs | 44.250 µs | 7.737 µs | 40,156 |
+| `rpcv2Cbor_ClientPipeline_default_M` | 5,000 | 38.371 µs | 36.792 µs | 39.458 µs | 42.333 µs | 75.875 µs | 8.272 µs | 26,153 |
+| `rpcv2Cbor_ClientPipeline_default_L` | 5,000 | 66.652 µs | 64.292 µs | 69.416 µs | 72.792 µs | 107.167 µs | 8.638 µs | 15,033 |
+| `rpcv2Cbor_ClientPipeline_interceptor_S` | 5,000 | 28.228 µs | 27.167 µs | 28.000 µs | 29.875 µs | 60.791 µs | 10.307 µs | 35,573 |
+| `rpcv2Cbor_ClientPipeline_interceptor_M` | 5,000 | 43.180 µs | 41.125 µs | 44.250 µs | 50.500 µs | 91.292 µs | 11.315 µs | 23,277 |
+| `rpcv2Cbor_ClientPipeline_interceptor_L` | 5,000 | 73.380 µs | 70.375 µs | 76.334 µs | 86.750 µs | 165.583 µs | 17.711 µs | 13,704 |
 <!-- client-benchmark-results:end -->

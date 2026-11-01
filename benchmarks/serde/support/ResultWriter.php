@@ -34,6 +34,7 @@ final class ResultWriter
 
         $path = $directory . '/' . $name . '-'
             . \date('Ymd-His')
+            . '-' . \bin2hex(\random_bytes(8))
             . '.json';
         $json = \json_encode(
             $results,

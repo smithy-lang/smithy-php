@@ -7,6 +7,7 @@ use Smithy\Benchmarks\RpcV2Cbor\RpcV2CborClient;
 use Smithy\Benchmarks\Serde\Support\BenchmarkCaseRepository;
 use Smithy\Benchmarks\Serde\Support\BenchmarkEnvironment;
 use Smithy\Benchmarks\Serde\Support\BenchmarkRunner;
+use Smithy\Benchmarks\Serde\Support\BenchmarkValueComparator;
 use Smithy\Benchmarks\Serde\Support\GeneratedCodeLoader;
 use Smithy\Benchmarks\Serde\Support\FixedResponseHttpClient;
 use Smithy\Benchmarks\Serde\Support\PipelineBenchmarkPlugin;
@@ -23,7 +24,10 @@ use Smithy\Client\Endpoint\{
     Endpoint,
     StaticEndpointResolver
 };
-use Smithy\Client\Plugin\PluginCollection;
+use Smithy\Client\Plugin\{
+    PluginCollection,
+    PluginInterface
+};
 use Smithy\Core\Serde\SerializableStructInterface;
 use Smithy\Core\Shape\Utils\ArrayShapeSerializer;
 use Smithy\Http\Message\Response;
@@ -53,7 +57,7 @@ Options:
   --max-iterations=N     Maximum measured calls per case (default: 5000)
   --max-seconds=N        Maximum measured seconds per case (default: 5)
   --validate             Validate selected cases without measuring
-  --update-readme        Replace the client results in benchmarks/README.md
+  --update-readme        Replace README results; requires an unfiltered run
   --help                 Show this help
 
 HELP);
@@ -78,6 +82,14 @@ $filter = isset($options['filter'])
     : null;
 $validateOnly = isset($options['validate']);
 $updateReadme = isset($options['update-readme']);
+if ($updateReadme && ($filter !== null || $validateOnly)) {
+    \fwrite(
+        STDERR,
+        "--update-readme requires an unfiltered measured run.\n"
+    );
+
+    exit(2);
+}
 $runner = new BenchmarkRunner(
     warmupIterations: (int) ($options['warmup'] ?? 500),
     minIterations: (int) ($options['min-iterations'] ?? 1_000),
@@ -236,14 +248,19 @@ function createClient(
         headers: $headers,
         body: $body
     ));
-    $config = new ClientConfig(
+    $config = (new ClientConfig(
         protocol: new RpcV2CborProtocol(),
-        httpClient: $httpClient,
+        transport: new \Smithy\Http\Client\HttpClientTransport(
+            $httpClient
+        ),
         endpointResolver: new StaticEndpointResolver(
             new Endpoint('http://localhost')
         ),
         supportedAuthSchemes: [NoAuthScheme::instance()],
         authSchemeResolver: StaticAuthSchemeResolver::noAuth()
+    ))->withPluginPredicate(
+        static fn(PluginInterface $plugin): bool =>
+            $plugin instanceof PipelineBenchmarkPlugin
     );
 
     return new RpcV2CborClient($config, $plugins);
@@ -261,9 +278,10 @@ function validatePipelineOutput(
         'Smithy\\Benchmarks\\RpcV2Cbor\\Output\\WideTypesOutput',
         $responseCase['params']
     );
-    if (ArrayShapeSerializer::toArray($expected)
-        != ArrayShapeSerializer::toArray($output)
-    ) {
+    if (!BenchmarkValueComparator::equivalent(
+        ArrayShapeSerializer::toArray($expected),
+        ArrayShapeSerializer::toArray($output)
+    )) {
         throw new \RuntimeException(
             "Generated client output mismatch for {$id}."
         );

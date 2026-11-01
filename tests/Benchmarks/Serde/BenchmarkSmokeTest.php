@@ -19,13 +19,20 @@ use Smithy\Client\Endpoint\{
     Endpoint,
     StaticEndpointResolver
 };
-use Smithy\Client\Plugin\PluginCollection;
+use Smithy\Client\Plugin\{
+    PluginCollection,
+    PluginInterface
+};
 use Smithy\Codegen\CodeGenerator;
 use Smithy\Codegen\CodegenSettings;
 use Smithy\Codegen\Model\SmithyModel;
 use Smithy\Core\Shape\OperationInterface;
 use Smithy\Core\Shape\Utils\ArrayShapeSerializer;
-use Smithy\Http\Message\Response;
+use Smithy\Http\Message\{
+    HttpTransportRequest,
+    HttpTransportResponse,
+    Response
+};
 use Smithy\Protocol\RpcV2\RpcV2CborProtocol;
 
 require_once __DIR__ . '/../../../benchmarks/serde/support/BenchmarkCaseRepository.php';
@@ -71,9 +78,9 @@ final class BenchmarkSmokeTest extends TestCase
         );
         $request = $protocol->serializeRequest(
             $requestOperation,
-            $input,
-            'http://localhost/'
+            $input
         );
+        $request = HttpTransportRequest::expect($request)->request;
 
         self::assertNotSame('', (string) $request->getBody());
         self::assertSame(
@@ -87,11 +94,11 @@ final class BenchmarkSmokeTest extends TestCase
         $responseOperation = $this->operation($loader, $responseCase);
         $output = $protocol->deserializeResponse(
             $responseOperation,
-            new Response(
+            new HttpTransportResponse(new Response(
                 status: $responseCase['code'],
                 headers: $responseCase['headers'],
                 body: \base64_decode($responseCase['body'], true)
-            )
+            ))
         );
 
         self::assertInstanceOf(
@@ -106,14 +113,22 @@ final class BenchmarkSmokeTest extends TestCase
         ));
         $config = new ClientConfig(
             protocol: $protocol,
-            httpClient: $http,
+            transport: new \Smithy\Http\Client\HttpClientTransport($http),
             endpointResolver: new StaticEndpointResolver(
                 new Endpoint('http://localhost')
             ),
             supportedAuthSchemes: [NoAuthScheme::instance()],
             authSchemeResolver: StaticAuthSchemeResolver::noAuth()
         );
+        $config = $config->withPluginPredicate(
+            static fn(PluginInterface $plugin): bool =>
+                $plugin instanceof PipelineBenchmarkPlugin
+        );
         $clientClass = 'Smithy\\BenchmarkSmoke\\BenchmarkSmokeClient';
+        $fastPathClient = new $clientClass($config);
+        self::assertTrue(
+            $fastPathClient->getConfig()->interceptorChain->isEmpty()
+        );
         $client = new $clientClass(
             $config,
             new PluginCollection(new PipelineBenchmarkPlugin())
@@ -136,7 +151,9 @@ final class BenchmarkSmokeTest extends TestCase
             body: \base64_decode($pipelineResponseCase['body'], true)
         ));
         $pipelineClient = new $clientClass(
-            $config->withHttpClient($pipelineHttp)
+            $config->withTransport(
+                new \Smithy\Http\Client\HttpClientTransport($pipelineHttp)
+            )
         );
         $pipelineInput = ArrayShapeSerializer::fromArray(
             'Smithy\\BenchmarkSmoke\\Input\\WideTypesInput',
