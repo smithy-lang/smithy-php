@@ -12,14 +12,20 @@ use Smithy\Client\Auth\{
 
 /**
  * Test resolver that returns or throws each entry in sequence.
+ *
+ * @template TIdentity of IdentityInterface
+ * @implements IdentityResolverInterface<TIdentity>
  */
 final class FlakyResolverFixture implements IdentityResolverInterface
 {
     public int $calls = 0;
 
-    /** @param list<IdentityInterface|IdentityResult|\Throwable> $sequence */
+    /**
+     * @param list<TIdentity|IdentityResult<TIdentity>|\Throwable> $sequence
+     */
     public function __construct(private readonly array $sequence) {}
 
+    /** @return IdentityResult<TIdentity> */
     public function resolveIdentity(array $properties = []): IdentityResult
     {
         $entry = $this->sequence[$this->calls] ?? null;

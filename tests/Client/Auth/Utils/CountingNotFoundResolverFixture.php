@@ -12,6 +12,8 @@ use Smithy\Client\Auth\{
 
 /**
  * Test resolver that always reports an expected miss and counts calls.
+ *
+ * @implements IdentityResolverInterface<never>
  */
 final class CountingNotFoundResolverFixture implements
     IdentityResolverInterface

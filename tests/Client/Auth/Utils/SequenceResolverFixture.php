@@ -13,6 +13,9 @@ use Smithy\Client\Auth\{
 /**
  * Test resolver that returns each identity in the given sequence, one
  * per `resolveIdentity` call.
+ *
+ * @template TIdentity of IdentityInterface
+ * @implements IdentityResolverInterface<TIdentity>
  */
 final class SequenceResolverFixture implements IdentityResolverInterface
 {
@@ -21,9 +24,10 @@ final class SequenceResolverFixture implements IdentityResolverInterface
     /** @var list<IdentityInterface> */
     public array $invalidated = [];
 
-    /** @param list<IdentityInterface> $sequence */
+    /** @param list<TIdentity> $sequence */
     public function __construct(private readonly array $sequence) {}
 
+    /** @return IdentityResult<TIdentity> */
     public function resolveIdentity(array $properties = []): IdentityResult
     {
         $identity = $this->sequence[$this->calls]

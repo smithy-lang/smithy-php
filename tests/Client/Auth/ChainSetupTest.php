@@ -22,6 +22,7 @@ final class ChainSetupTest extends TestCase
 {
     public function testStoresNullProperties(): void
     {
+        /** @var ChainSetup<TestIdentityFixture> $setup */
         $setup = new ChainSetup(['region' => null]);
 
         self::assertTrue($setup->hasProperty('region'));
@@ -41,6 +42,7 @@ final class ChainSetupTest extends TestCase
 
     public function testRegistersProviderMetadataAndDetectedSlots(): void
     {
+        /** @var ChainSetup<TestIdentityFixture> $setup */
         $setup = new ChainSetup();
         $provider = new TestProviderFixture(
             'provider',
@@ -62,17 +64,18 @@ final class ChainSetupTest extends TestCase
         self::assertCount(1, $registrations);
         self::assertSame(
             'provider',
-            $registrations[0]->metadata->providerName
+            $registrations[0]['metadata']->providerName
         );
         self::assertSame(
             ['resolver-feature'],
-            $registrations[0]->metadata->featureIds
+            $registrations[0]['metadata']->featureIds
         );
         self::assertSame(['slot-a'], $setup->detectedSlots());
     }
 
     public function testTerminalResolverPreventsFurtherRegistration(): void
     {
+        /** @var ChainSetup<TestIdentityFixture> $setup */
         $setup = new ChainSetup();
         $setup->setCurrentProvider(new TestProviderFixture(
             'provider',
