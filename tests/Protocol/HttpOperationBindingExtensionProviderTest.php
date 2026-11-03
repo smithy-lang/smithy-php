@@ -14,6 +14,7 @@ use Smithy\Protocol\AbstractHttpBindingProtocol;
 use Smithy\Protocol\HttpErrorDeserializer;
 use Smithy\Protocol\HttpOperationBindingExtension;
 use Smithy\Protocol\HttpOperationBindingExtensionProvider;
+use Smithy\Protocol\ProtocolSettings;
 use Smithy\Tests\Protocol\Utils\HttpBindingOperationFixture;
 use Smithy\Tests\Protocol\Utils\HttpBindingFixtureSchemas;
 use Smithy\Tests\Protocol\Utils\HttpBindingInputShapeFixture;
@@ -94,7 +95,8 @@ final class HttpOperationBindingExtensionProviderTest extends TestCase
         };
         $protocol = new class(
             $codec,
-            $errorDeserializer
+            $errorDeserializer,
+            new ProtocolSettings()
         ) extends AbstractHttpBindingProtocol {
             protected static string $defaultContentType = 'application/json';
 
@@ -131,7 +133,8 @@ final class HttpOperationBindingExtensionProviderTest extends TestCase
         };
         $protocol = new class(
             $codec,
-            $errorDeserializer
+            $errorDeserializer,
+            new ProtocolSettings()
         ) extends AbstractHttpBindingProtocol {
             protected static string $defaultContentType = 'application/json';
 
