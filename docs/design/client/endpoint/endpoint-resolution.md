@@ -1,6 +1,6 @@
 # Endpoint Resolution
 
-**Status:** Current as of September 30, 2026
+**Status:** Current as of October 17, 2026
 
 **Packages:** `smithy-php`, `aws-sdk-php`
 
@@ -59,6 +59,7 @@ Endpoint
     +-> URL bound to the operation-relative request
     +-> headers applied before signing
     +-> auth schemes considered by the configured auth resolver
+    +-> open properties retained for provider integrations
 ```
 
 Protocol serialization runs once per operation execution against the
@@ -95,17 +96,20 @@ interface EndpointResolverInterface
 
 ### `Endpoint`
 
-`Endpoint` is an immutable value with three fields:
+`Endpoint` is an immutable value with four fields:
 
 | Field | Type | Use |
 |---|---|---|
 | `url` | `string` | Service endpoint bound to the operation-relative request |
 | `authSchemes` | `list<EndpointAuthScheme>` | Endpoint-selected scheme IDs and signer properties |
 | `headers` | `array<string, string>` | Headers applied before request signing |
+| `properties` | `array<string, mixed>` | Open rules-engine properties available to provider integrations |
 
 The evaluator maps ruleset `properties.authSchemes` entries into
 `EndpointAuthScheme` values. Provider runtimes can map short ruleset names such
-as `sigv4` to canonical Smithy IDs such as `aws.auth#sigv4`.
+as `sigv4` to canonical Smithy IDs such as `aws.auth#sigv4`. The original
+property map remains available through `Endpoint::$properties`,
+`getProperty()`, and `hasProperty()`.
 
 ### `StaticEndpointResolver`
 
@@ -356,7 +360,45 @@ default arm delegates unknown values to an optional
 `RETURN_ENDPOINT` reads the URL, headers, and properties emitted by the
 result program. It extracts `properties.authSchemes`, maps each scheme name
 through the configured endpoint auth-scheme aliases, and returns
-`EndpointAuthScheme` values with the remaining properties.
+`EndpointAuthScheme` values with the remaining properties. The complete
+rules-engine property map is retained on the resulting `Endpoint`.
+
+## Resolution Tracing
+
+Endpoint decision tracing is opt-in. Configure an
+`EndpointResolutionTraceSinkInterface` through
+`EndpointResolverParams::CONTEXT_TRACE_SINK`:
+
+```php
+$config = $config->withContext(
+    EndpointResolverParams::CONTEXT_TRACE_SINK,
+    $traceSink
+);
+```
+
+The sink receives the merged resolver inputs and returns either:
+
+- a fresh `EndpointResolutionTraceInterface` for the resolution
+- `null` to use the normal untraced path
+
+An accepted trace receives:
+
+1. Effective modeled input parameters after defaults are applied.
+2. Every visited BDD node, its condition result, and selected branch.
+3. The matched result index and resolved endpoint.
+
+No-match outcomes use result index `-1` and a null endpoint. Rules errors
+report the matched result index with a null endpoint before the evaluator
+throws.
+
+The evaluator keeps traced and untraced BDD loops separate. The untraced path
+therefore performs no trace callback check per node. A sink that returns null
+retains normal endpoint caching. An accepted trace bypasses L1 and L2 cache
+reads and writes so its events always describe an actual evaluation.
+
+Trace sinks may be shared, but each returned trace belongs to one resolution.
+Callbacks run synchronously on the resolving call. Endpoint parameters can
+contain customer-provided values and should not be logged indiscriminately.
 
 ## Result Caching
 
@@ -537,6 +579,8 @@ handler.
 
 - `smithy-php/src/Client/Endpoint/Bytecode/Bytecode.php`
 - `smithy-php/src/Client/Endpoint/Bytecode/BytecodeEndpointResolver.php`
+- `smithy-php/src/Client/Endpoint/Bytecode/EndpointResolutionTraceInterface.php`
+- `smithy-php/src/Client/Endpoint/Bytecode/EndpointResolutionTraceSinkInterface.php`
 - `smithy-php/src/Client/Endpoint/Bytecode/Evaluator.php`
 - `smithy-php/src/Client/Endpoint/Bytecode/Opcodes.php`
 - `smithy-php/src/Client/Endpoint/Bytecode/OpcodeHandlerInterface.php`
