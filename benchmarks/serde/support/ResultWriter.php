@@ -22,7 +22,7 @@ final class ResultWriter
     public function writeJson(
         array $results,
         string $directory,
-        string $name = 'serde-rpcv2-cbor'
+        string $name = 'serde-rpcv2'
     ): string {
         if (!\is_dir($directory)
             && !\mkdir($directory, 0777, true)

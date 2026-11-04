@@ -49,3 +49,24 @@ build/codegen-output/smithy/rpcv2-cbor/model/model.json
 Review the model diff, then replace `models/rpcv2-cbor.json` and regenerate
 the PHP output. The `build` directory contains transient files and is
 excluded from Git.
+
+## RPC v2 JSON
+
+The committed model at `models/rpcv2-json.json` uses the same Smithy CLI and
+Maven artifact versions as the RPC v2 CBOR model. It projects service
+`smithy.protocoltests.rpcv2Json#RpcV2JsonProtocol`.
+
+To update the committed model, run:
+
+```shell
+smithy build \
+    --config tools/codegen-output/smithy-build.json \
+    --projection rpcv2-json \
+    --output build/codegen-output/smithy
+```
+
+The projected JSON AST is written to:
+
+```text
+build/codegen-output/smithy/rpcv2-json/model/model.json
+```

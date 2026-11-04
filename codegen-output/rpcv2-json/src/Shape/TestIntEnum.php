@@ -1,0 +1,96 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Smithy\ProtocolTests\RpcV2Json\Shape;
+
+use Smithy\Core\Serde\Schema;
+use Smithy\Core\Serde\ShapeSerializerInterface;
+use Smithy\Core\Shape\EnumInterface;
+use Smithy\ProtocolTests\RpcV2Json\Schemas;
+
+final class TestIntEnum implements EnumInterface
+{
+    public const SHAPE_ID = 'smithy.protocoltests.rpcv2Json#TestIntEnum';
+
+    private static Schema $SCHEMA;
+    private static array $known = [];
+
+    public readonly int $value;
+
+    private function __construct(int $value)
+    {
+        $this->value = $value;
+    }
+
+    public static function one(): self
+    {
+        return self::$known[1] ??= new self(1);
+    }
+
+    public static function two(): self
+    {
+        return self::$known[2] ??= new self(2);
+    }
+
+    /**
+     * Create an instance from a int value.
+     *
+     * Known values are cached as singletons.
+     * Unknown values create a fresh instance
+     * for forward-compatibility with newer service versions.
+     *
+     * @param int $value
+     * @return self
+     */
+    public static function fromValue(int $value): self
+    {
+        return match ($value) {
+            1 => self::$known[1] ??= new self(1),
+            2 => self::$known[2] ??= new self(2),
+            default => new self($value),
+        };
+    }
+
+    /**
+     * Returns all known enum values.
+     *
+     * @return list<self>
+     */
+    public static function cases(): array
+    {
+        return [self::one(), self::two()];
+    }
+
+    public function getValue(): string|int
+    {
+        return $this->value;
+    }
+
+    /**
+     * Get the shape schema.
+     */
+    public static function schema(): Schema
+    {
+        return self::$SCHEMA ??= Schemas::testIntEnum();
+    }
+
+    /**
+     * Get the shape schema for this instance.
+     */
+    public function getSchema(): Schema
+    {
+        return self::schema();
+    }
+
+    /**
+     * Serialize the shape to the desired wire format.
+     *
+     * @return void
+     */
+    public function serialize(ShapeSerializerInterface $serializer, int $idx): void
+    {
+        $serializer->serializeInteger(self::schema(), $this->value, $idx);
+    }
+
+}

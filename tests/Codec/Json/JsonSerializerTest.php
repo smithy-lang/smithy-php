@@ -59,6 +59,46 @@ final class JsonSerializerTest extends TestCase
         self::assertSame('[1,-2]', $serializer->flush());
     }
 
+    public function testSerializeBigIntegerAsString(): void
+    {
+        $serializer = new JsonSerializer(new JsonCodecSettings(
+            useStringForArbitraryPrecision: true
+        ));
+        $serializer->serializeBigInteger(
+            new Schema(
+                id: 'smithy.test#BigIntegerValue',
+                type: ShapeType::BigInteger
+            ),
+            new BigInteger('0001'),
+            0
+        );
+
+        self::assertSame('"1"', $serializer->flush());
+    }
+
+    public function testSerializeBigIntegerListAsStrings(): void
+    {
+        $schema = new Schema(
+            id: 'smithy.test#BigIntegerList',
+            type: ShapeType::List_,
+            listMember: new Schema(
+                id: 'smithy.test#BigIntegerList$member',
+                type: ShapeType::BigInteger
+            )
+        );
+        $serializer = new JsonSerializer(new JsonCodecSettings(
+            useStringForArbitraryPrecision: true
+        ));
+
+        $serializer->serializeList(
+            $schema,
+            [new BigInteger('0001'), new BigInteger('-0002')],
+            0
+        );
+
+        self::assertSame('["1","-2"]', $serializer->flush());
+    }
+
     public function testSerializeTopLevelBigDecimalMapUsesNumberTokens(): void
     {
         $schema = new Schema(
@@ -143,6 +183,31 @@ final class JsonSerializerTest extends TestCase
         );
     }
 
+    public function testSerializeCanIgnoreJsonName(): void
+    {
+        $member = new Schema(
+            id: 'smithy.test#Event$value',
+            type: ShapeType::String_,
+            memberName: 'value',
+            memberIndex: 0,
+            traits: [Schema::T_JSON_NAME => 'renamed']
+        );
+        $schema = new Schema(
+            id: 'smithy.test#Event',
+            type: ShapeType::Structure,
+            members: [$member]
+        );
+        $serializer = new JsonSerializer(new JsonCodecSettings(
+            honorJsonName: false
+        ));
+
+        $serializer->beginStruct($schema, 0);
+        $serializer->serializeString($member, 'test', 0);
+        $serializer->endStruct();
+
+        self::assertSame('{"value":"test"}', $serializer->flush());
+    }
+
     public function testNestedBigNumberMapsUseInlineSerializationPath(): void
     {
         $inner = new Schema(
@@ -175,6 +240,45 @@ final class JsonSerializerTest extends TestCase
         );
 
         self::assertSame('{"outer":{"a":1.25}}', $serializer->flush());
+    }
+
+    public function testNestedBigDecimalMapsSerializeAsStrings(): void
+    {
+        $inner = new Schema(
+            id: 'smithy.test#InnerBigDecimalMap',
+            type: ShapeType::Map,
+            mapKey: new Schema(
+                id: 'smithy.test#InnerBigDecimalMap$key',
+                type: ShapeType::String_
+            ),
+            mapValue: new Schema(
+                id: 'smithy.test#InnerBigDecimalMap$value',
+                type: ShapeType::BigDecimal
+            )
+        );
+        $outer = new Schema(
+            id: 'smithy.test#OuterBigDecimalMap',
+            type: ShapeType::Map,
+            mapKey: new Schema(
+                id: 'smithy.test#OuterBigDecimalMap$key',
+                type: ShapeType::String_
+            ),
+            mapValue: $inner
+        );
+        $serializer = new JsonSerializer(new JsonCodecSettings(
+            useStringForArbitraryPrecision: true
+        ));
+
+        $serializer->serializeMap(
+            $outer,
+            ['outer' => ['a' => new BigDecimal('1.25')]],
+            0
+        );
+
+        self::assertSame(
+            '{"outer":{"a":"1.25"}}',
+            $serializer->flush()
+        );
     }
 
     public function testSerializesRecursiveUnionUsingCanonicalTargetSchema(): void
@@ -265,6 +369,29 @@ final class JsonSerializerTest extends TestCase
         );
 
         self::assertSame('[1]', $serializer->flush());
+    }
+
+    public function testDocumentBigIntegersSerializeAsStrings(): void
+    {
+        $schema = new Schema(
+            id: 'smithy.test#DocumentList',
+            type: ShapeType::List_,
+            listMember: new Schema(
+                id: 'smithy.test#DocumentList$member',
+                type: ShapeType::Document
+            )
+        );
+        $serializer = new JsonSerializer(new JsonCodecSettings(
+            useStringForArbitraryPrecision: true
+        ));
+
+        $serializer->serializeList(
+            $schema,
+            [AbstractDocument::fromValue(new BigInteger('0001'))],
+            0
+        );
+
+        self::assertSame('["1"]', $serializer->flush());
     }
 
     public function testSerializeTimestampUsesCodecSettingsDefault(): void

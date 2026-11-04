@@ -4,23 +4,28 @@ declare(strict_types=1);
 
 namespace Smithy\Tests\Benchmarks\Serde;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Smithy\Benchmarks\Serde\Support\BenchmarkCaseRepository;
 
-require_once __DIR__ . '/../../../benchmarks/serde/support/BenchmarkCaseRepository.php';
+require_once __DIR__
+    . '/../../../benchmarks/serde/support/BenchmarkCaseRepository.php';
 
 final class BenchmarkCaseRepositoryTest extends TestCase
 {
-    private string $modelPath;
-    private BenchmarkCaseRepository $repository;
-
-    public function testModelContainsOnlyTheCborBenchmarkClosure(): void
+    #[DataProvider('protocolModels')]
+    public function testModelContainsOnlyTheProtocolBenchmarkClosure(
+        string $modelName,
+        string $protocol,
+        string $casePrefix,
+        string $serviceName
+    ): void
     {
         $model = \json_decode(
-            (string) \file_get_contents($this->modelPath),
+            (string) \file_get_contents($this->modelPath($modelName)),
             true,
             512,
-            JSON_THROW_ON_ERROR
+            \JSON_THROW_ON_ERROR
         );
 
         foreach ($model['shapes'] as $shapeId => $shape) {
@@ -30,12 +35,13 @@ final class BenchmarkCaseRepositoryTest extends TestCase
             );
             foreach ([
                 'smithy.test#httpRequestTests',
-                'smithy.test#httpResponseTests',
+                'smithy.test#httpResponseTests'
             ] as $traitId) {
                 foreach ($shape['traits'][$traitId] ?? [] as $case) {
-                    self::assertSame(
-                        BenchmarkCaseRepository::PROTOCOL,
-                        $case['protocol']
+                    self::assertSame($protocol, $case['protocol']);
+                    self::assertStringStartsWith(
+                        $casePrefix . '_',
+                        $case['id']
                     );
                     self::assertContains(
                         BenchmarkCaseRepository::TAG,
@@ -46,49 +52,87 @@ final class BenchmarkCaseRepositoryTest extends TestCase
         }
 
         $service = $model['shapes'][
-            'com.amazonaws.sdk.benchmark#SmithyRpcV2CborDataPlane'
+            "com.amazonaws.sdk.benchmark#{$serviceName}"
         ];
         self::assertSame(
             [
                 ['target' => 'com.amazonaws.sdk.benchmark#WideTypes'],
                 ['target' => 'com.amazonaws.sdk.benchmark#GetItem'],
-                ['target' => 'com.amazonaws.sdk.benchmark#PutItem'],
+                ['target' => 'com.amazonaws.sdk.benchmark#PutItem']
             ],
             $service['operations']
         );
         self::assertSame([], $service['resources']);
     }
 
-    public function testLoadsTheSameRpcV2CborCasesAsSmithyJava(): void
+    #[DataProvider('protocolModels')]
+    public function testLoadsExpectedRpcV2Cases(
+        string $modelName,
+        string $protocol,
+        string $casePrefix
+    ): void
     {
+        $repository = new BenchmarkCaseRepository(
+            $this->modelPath($modelName),
+            $protocol,
+            $casePrefix
+        );
+
         self::assertSame(
-            BenchmarkCaseRepository::SERIALIZE_CASE_IDS,
-            \array_column($this->repository->requests(), 'id')
+            self::caseIds(
+                BenchmarkCaseRepository::SERIALIZE_CASE_IDS,
+                $casePrefix
+            ),
+            \array_column($repository->requests(), 'id')
         );
         self::assertSame(
-            BenchmarkCaseRepository::DESERIALIZE_CASE_IDS,
-            \array_column($this->repository->responses(), 'id')
+            self::caseIds(
+                BenchmarkCaseRepository::DESERIALIZE_CASE_IDS,
+                $casePrefix
+            ),
+            \array_column($repository->responses(), 'id')
         );
     }
 
-    public function testFiltersCasesByIdSubstring(): void
+    #[DataProvider('protocolModels')]
+    public function testFiltersCasesByIdSubstring(
+        string $modelName,
+        string $protocol,
+        string $casePrefix
+    ): void
     {
+        $repository = new BenchmarkCaseRepository(
+            $this->modelPath($modelName),
+            $protocol,
+            $casePrefix
+        );
+
         self::assertSame(
             [
-                'rpcv2Cbor_PutItemRequest_BinaryData_S',
-                'rpcv2Cbor_PutItemRequest_BinaryData_M',
-                'rpcv2Cbor_PutItemRequest_BinaryData_L',
+                "{$casePrefix}_PutItemRequest_BinaryData_S",
+                "{$casePrefix}_PutItemRequest_BinaryData_M",
+                "{$casePrefix}_PutItemRequest_BinaryData_L"
             ],
             \array_column(
-                $this->repository->requests('BinaryData'),
+                $repository->requests('BinaryData'),
                 'id'
             )
         );
     }
 
-    public function testPreservesArbitraryPrecisionBenchmarkNumbers(): void
+    #[DataProvider('protocolModels')]
+    public function testPreservesArbitraryPrecisionBenchmarkNumbers(
+        string $modelName,
+        string $protocol,
+        string $casePrefix
+    ): void
     {
-        $params = $this->repository->requests('WideTypesRequest_S')[0][
+        $repository = new BenchmarkCaseRepository(
+            $this->modelPath($modelName),
+            $protocol,
+            $casePrefix
+        );
+        $params = $repository->requests('WideTypesRequest_S')[0][
             'params'
         ];
 
@@ -102,10 +146,82 @@ final class BenchmarkCaseRepositoryTest extends TestCase
         );
     }
 
-    protected function setUp(): void
+    public function testRpcV2JsonFixturesUseProtocolSpecificEncoding(): void
     {
-        $this->modelPath = __DIR__
-            . '/../../../benchmarks/serde/model/rpcv2-cbor.json';
-        $this->repository = new BenchmarkCaseRepository($this->modelPath);
+        $repository = new BenchmarkCaseRepository(
+            $this->modelPath('rpcv2-json.json'),
+            'smithy.protocols#rpcv2Json',
+            'rpcv2Json'
+        );
+        $wideTypes = \json_decode(
+            $repository->responses('WideTypesResponse_S')[0]['body'],
+            true,
+            512,
+            \JSON_THROW_ON_ERROR
+        );
+        $outOfOrder = \json_decode(
+            $repository->responses('OutOfOrder')[0]['body'],
+            true,
+            512,
+            \JSON_THROW_ON_ERROR
+        );
+
+        self::assertSame(
+            '123456789012345678901',
+            $wideTypes['bigIntegerA']
+        );
+        self::assertSame(
+            '1234567890123456789e-9',
+            $wideTypes['bigDecimalA']
+        );
+        self::assertSame('__unknownString', \array_key_first($outOfOrder));
+        self::assertArrayHasKey(
+            '__unknownNested',
+            $outOfOrder['ConsumedCapacity']
+        );
+    }
+
+    /**
+     * @return iterable<string, array{string, string, string, string}>
+     */
+    public static function protocolModels(): iterable
+    {
+        yield 'RPC v2 CBOR' => [
+            'rpcv2-cbor.json',
+            'smithy.protocols#rpcv2Cbor',
+            'rpcv2Cbor',
+            'SmithyRpcV2CborDataPlane'
+        ];
+        yield 'RPC v2 JSON' => [
+            'rpcv2-json.json',
+            'smithy.protocols#rpcv2Json',
+            'rpcv2Json',
+            'SmithyRpcV2JsonDataPlane'
+        ];
+    }
+
+    private function modelPath(string $modelName): string
+    {
+        return __DIR__ . '/../../../benchmarks/serde/model/' . $modelName;
+    }
+
+    /**
+     * @param list<string> $cborIds
+     *
+     * @return list<string>
+     */
+    private static function caseIds(
+        array $cborIds,
+        string $casePrefix
+    ): array
+    {
+        return \array_map(
+            fn(string $id): string => \str_replace(
+                'rpcv2Cbor',
+                $casePrefix,
+                $id
+            ),
+            $cborIds
+        );
     }
 }

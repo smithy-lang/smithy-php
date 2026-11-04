@@ -30,6 +30,7 @@
     "autoload-dev": {
         "psr-4": {
             "Smithy\\ProtocolTests\\RpcV2Cbor\\": "codegen-output/rpcv2-cbor/src/",
+            "Smithy\\ProtocolTests\\RpcV2Json\\": "codegen-output/rpcv2-json/src/",
             "Smithy\\Tests\\": "tests/"
         }
     },
