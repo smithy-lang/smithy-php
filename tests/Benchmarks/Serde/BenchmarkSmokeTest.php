@@ -6,6 +6,7 @@ namespace Smithy\Tests\Benchmarks\Serde;
 
 use PHPUnit\Framework\TestCase;
 use Smithy\Benchmarks\Serde\Support\BenchmarkCaseRepository;
+use Smithy\Benchmarks\Serde\Support\BenchmarkValueComparator;
 use Smithy\Benchmarks\Serde\Support\GeneratedCodeLoader;
 use Smithy\Benchmarks\Serde\Support\FixedResponseHttpClient;
 use Smithy\Benchmarks\Serde\Support\PipelineBenchmarkInterceptor;
@@ -33,18 +34,27 @@ use Smithy\Http\Message\{
     HttpTransportResponse,
     Response
 };
-use Smithy\Protocol\RpcV2\RpcV2CborProtocol;
+use Smithy\Protocol\RpcV2\{
+    RpcV2CborProtocol,
+    RpcV2JsonProtocol
+};
 
-require_once __DIR__ . '/../../../benchmarks/serde/support/BenchmarkCaseRepository.php';
-require_once __DIR__ . '/../../../benchmarks/serde/support/GeneratedCodeLoader.php';
-require_once __DIR__ . '/../../../benchmarks/serde/support/FixedResponseHttpClient.php';
-require_once __DIR__ . '/../../../benchmarks/serde/support/PipelineBenchmarkPlugin.php';
+require_once __DIR__
+    . '/../../../benchmarks/serde/support/BenchmarkCaseRepository.php';
+require_once __DIR__
+    . '/../../../benchmarks/serde/support/BenchmarkValueComparator.php';
+require_once __DIR__
+    . '/../../../benchmarks/serde/support/GeneratedCodeLoader.php';
+require_once __DIR__
+    . '/../../../benchmarks/serde/support/FixedResponseHttpClient.php';
+require_once __DIR__
+    . '/../../../benchmarks/serde/support/PipelineBenchmarkPlugin.php';
 
 final class BenchmarkSmokeTest extends TestCase
 {
     private string $outputDirectory;
 
-    public function testGeneratesAndRunsBaselineSerdeCases(): void
+    public function testGeneratesAndRunsRpcV2CborSerdeCases(): void
     {
         $modelPath = __DIR__
             . '/../../../benchmarks/serde/model/rpcv2-cbor.json';
@@ -163,6 +173,90 @@ final class BenchmarkSmokeTest extends TestCase
         self::assertInstanceOf(
             'Smithy\\BenchmarkSmoke\\Output\\WideTypesOutput',
             $pipelineOutput
+        );
+
+        $loader->unregister();
+    }
+
+    public function testGeneratesAndRunsRpcV2JsonSerdeCases(): void
+    {
+        $modelPath = __DIR__
+            . '/../../../benchmarks/serde/model/rpcv2-json.json';
+        (new CodeGenerator(
+            new CodegenSettings(
+                namespace: 'Smithy\\BenchmarkJsonSmoke',
+                outputDir: $this->outputDirectory,
+                organization: 'categorized',
+                preserveExistingMemberOrder: false,
+                generateClient: true,
+                generateClientConfig: false
+            ),
+            SmithyModel::fromFile($modelPath)
+        ))->generateAndWrite();
+
+        $loader = new GeneratedCodeLoader(
+            'Smithy\\BenchmarkJsonSmoke',
+            $this->outputDirectory
+        );
+        $loader->register();
+        $repository = new BenchmarkCaseRepository(
+            $modelPath,
+            RpcV2JsonProtocol::ID,
+            'rpcv2Json'
+        );
+        $protocol = new RpcV2JsonProtocol();
+
+        $requestCase = $repository->requests(
+            'WideTypesRequest_S'
+        )[0];
+        $requestOperation = $this->operation($loader, $requestCase);
+        $input = ArrayShapeSerializer::fromArray(
+            $requestOperation->getInputClass(),
+            $requestCase['params']
+        );
+        $request = $protocol->serializeRequest(
+            $requestOperation,
+            $input
+        );
+        $request = HttpTransportRequest::expect($request)->request;
+        $body = \json_decode(
+            (string) $request->getBody(),
+            true,
+            512,
+            \JSON_THROW_ON_ERROR
+        );
+
+        self::assertSame(
+            'rpc-v2-json',
+            $request->getHeaderLine('Smithy-Protocol')
+        );
+        self::assertSame(
+            '123456789012345678901',
+            $body['bigIntegerA']
+        );
+
+        $responseCase = $repository->responses(
+            'WideTypesResponse_S'
+        )[0];
+        $responseOperation = $this->operation($loader, $responseCase);
+        $output = $protocol->deserializeResponse(
+            $responseOperation,
+            new HttpTransportResponse(new Response(
+                status: $responseCase['code'],
+                headers: $responseCase['headers'],
+                body: $responseCase['body']
+            ))
+        );
+        $expected = ArrayShapeSerializer::fromArray(
+            $responseOperation->getOutputClass(),
+            $responseCase['params']
+        );
+
+        self::assertTrue(
+            BenchmarkValueComparator::equivalent(
+                ArrayShapeSerializer::toArray($expected),
+                ArrayShapeSerializer::toArray($output)
+            )
         );
 
         $loader->unregister();

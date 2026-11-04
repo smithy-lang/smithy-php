@@ -42,6 +42,16 @@ $cases = [
                 preserveExistingMemberOrder: false
             )
     ],
+    'rpcv2-json' => [
+        'model' => $root . '/tools/codegen-output/models/rpcv2-json.json',
+        'settings' => static fn(string $outputDir): CodegenSettings =>
+            new CodegenSettings(
+                namespace: 'Smithy\\ProtocolTests\\RpcV2Json',
+                outputDir: $outputDir,
+                organization: 'categorized',
+                preserveExistingMemberOrder: false
+            )
+    ],
     'trimmed-client' => [
         'model' => $root . '/tools/codegen-output/models/trimmed-client.json',
         'settings' => static fn(string $outputDir): CodegenSettings =>

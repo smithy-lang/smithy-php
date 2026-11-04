@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Smithy\Benchmarks\Serde\Support;
 
 /**
- * Loads the fixed RPC v2 CBOR benchmark cases from a Smithy JSON AST.
+ * Loads fixed protocol benchmark cases from a Smithy JSON AST.
  */
 final class BenchmarkCaseRepository
 {
@@ -27,7 +27,7 @@ final class BenchmarkCaseRepository
         'rpcv2Cbor_PutItemRequest_MixedItem_L',
         'rpcv2Cbor_PutItemRequest_BinaryData_S',
         'rpcv2Cbor_PutItemRequest_BinaryData_M',
-        'rpcv2Cbor_PutItemRequest_BinaryData_L',
+        'rpcv2Cbor_PutItemRequest_BinaryData_L'
     ];
 
     public const DESERIALIZE_CASE_IDS = [
@@ -41,7 +41,7 @@ final class BenchmarkCaseRepository
         'rpcv2Cbor_GetItemOutput_OutOfOrder',
         'rpcv2Cbor_GetItemOutputBinary_S',
         'rpcv2Cbor_GetItemOutputBinary_M',
-        'rpcv2Cbor_GetItemOutputBinary_L',
+        'rpcv2Cbor_GetItemOutputBinary_L'
     ];
 
     /** @var array<string, array<string, mixed>> */
@@ -50,7 +50,11 @@ final class BenchmarkCaseRepository
     /** @var array<string, array<string, mixed>> */
     private array $responses = [];
 
-    public function __construct(string $modelPath)
+    public function __construct(
+        string $modelPath,
+        private readonly string $protocol = self::PROTOCOL,
+        private readonly string $casePrefix = 'rpcv2Cbor'
+    )
     {
         $json = \file_get_contents($modelPath);
         if ($json === false) {
@@ -61,8 +65,8 @@ final class BenchmarkCaseRepository
 
         $model = self::decodeModel($json);
         $this->indexCases($model['shapes'] ?? []);
-        $this->requireCases(self::SERIALIZE_CASE_IDS, $this->requests);
-        $this->requireCases(self::DESERIALIZE_CASE_IDS, $this->responses);
+        $this->requireCases($this->serializeCaseIds(), $this->requests);
+        $this->requireCases($this->deserializeCaseIds(), $this->responses);
     }
 
     /**
@@ -71,7 +75,7 @@ final class BenchmarkCaseRepository
     public function requests(?string $filter = null): array
     {
         return $this->orderedCases(
-            self::SERIALIZE_CASE_IDS,
+            $this->serializeCaseIds(),
             $this->requests,
             $filter
         );
@@ -83,7 +87,7 @@ final class BenchmarkCaseRepository
     public function responses(?string $filter = null): array
     {
         return $this->orderedCases(
-            self::DESERIALIZE_CASE_IDS,
+            $this->deserializeCaseIds(),
             $this->responses,
             $filter
         );
@@ -175,7 +179,7 @@ final class BenchmarkCaseRepository
      */
     private function isBenchmarkCase(array $case): bool
     {
-        return ($case['protocol'] ?? null) === self::PROTOCOL
+        return ($case['protocol'] ?? null) === $this->protocol
             && \in_array(self::TAG, $case['tags'] ?? [], true)
             && \is_string($case['id'] ?? null);
     }
@@ -190,7 +194,8 @@ final class BenchmarkCaseRepository
         array $ids,
         array $indexed,
         ?string $filter
-    ): array {
+    ): array
+    {
         $cases = [];
         foreach ($ids as $id) {
             if ($filter !== null
@@ -217,6 +222,43 @@ final class BenchmarkCaseRepository
                 );
             }
         }
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function serializeCaseIds(): array
+    {
+        return $this->caseIds(self::SERIALIZE_CASE_IDS);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function deserializeCaseIds(): array
+    {
+        return $this->caseIds(self::DESERIALIZE_CASE_IDS);
+    }
+
+    /**
+     * @param list<string> $cborIds
+     *
+     * @return list<string>
+     */
+    private function caseIds(array $cborIds): array
+    {
+        if ($this->casePrefix === 'rpcv2Cbor') {
+            return $cborIds;
+        }
+
+        return \array_map(
+            fn(string $id): string => \str_replace(
+                'rpcv2Cbor',
+                $this->casePrefix,
+                $id
+            ),
+            $cborIds
+        );
     }
 
     private static function shapeName(string $shapeId): string

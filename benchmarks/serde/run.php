@@ -9,8 +9,16 @@ use Smithy\Benchmarks\Serde\Support\BenchmarkRunner;
 use Smithy\Benchmarks\Serde\Support\BenchmarkValueComparator;
 use Smithy\Benchmarks\Serde\Support\GeneratedCodeLoader;
 use Smithy\Benchmarks\Serde\Support\ResultWriter;
+use Smithy\Codec\AbstractCodec;
 use Smithy\Codec\Cbor\CborCodec;
-use Smithy\Core\Serde\SerializableStructInterface;
+use Smithy\Codec\Json\{
+    JsonCodec,
+    JsonCodecSettings
+};
+use Smithy\Core\Serde\{
+    SerializableStructInterface,
+    TimestampFormat
+};
 use Smithy\Core\Shape\OperationInterface;
 use Smithy\Core\Shape\Utils\ArrayShapeSerializer;
 use Smithy\Http\Message\{
@@ -18,12 +26,17 @@ use Smithy\Http\Message\{
     HttpTransportResponse,
     Response
 };
-use Smithy\Protocol\RpcV2\RpcV2CborProtocol;
+use Smithy\Protocol\ProtocolInterface;
+use Smithy\Protocol\RpcV2\{
+    RpcV2CborProtocol,
+    RpcV2JsonProtocol
+};
 
 require __DIR__ . '/bootstrap.php';
 
 $options = \getopt('', [
     'help',
+    'protocol:',
     'filter:',
     'direction:',
     'warmup:',
@@ -31,7 +44,7 @@ $options = \getopt('', [
     'max-iterations:',
     'max-seconds:',
     'validate',
-    'update-readme',
+    'update-readme'
 ]);
 
 if (isset($options['help'])) {
@@ -39,6 +52,7 @@ if (isset($options['help'])) {
 Usage: php benchmarks/serde/run.php [options]
 
 Options:
+  --protocol=VALUE       all, rpcv2-cbor, or rpcv2-json (default: all)
   --filter=TEXT          Run case IDs containing TEXT
   --direction=VALUE      all, serialize, or deserialize (default: all)
   --warmup=N             Warmup calls per case (default: 500)
@@ -47,7 +61,7 @@ Options:
   --max-seconds=N        Maximum measured seconds per case (default: 5)
   --validate             Validate selected cases without measuring
   --update-readme        Replace README results; requires an unfiltered
-                         all-direction measured run
+                         all-protocol, all-direction measured run
   --help                 Show this help
 
 HELP);
@@ -56,15 +70,55 @@ HELP);
 }
 
 $root = \dirname(__DIR__, 2);
-$generatedDirectory = $root . '/build/benchmarks/serde/rpcv2-cbor/src';
-if (!\is_dir($generatedDirectory)) {
+$jsonCodec = new JsonCodec(new JsonCodecSettings(
+    defaultTimestampFormat: TimestampFormat::EpochSeconds,
+    honorJsonName: false,
+    honorTimestampFormatTrait: false,
+    useStringForArbitraryPrecision: true
+));
+$protocols = [
+    'rpcv2-cbor' => [
+        'label' => 'RPC v2 CBOR',
+        'model' => $root . '/benchmarks/serde/model/rpcv2-cbor.json',
+        'namespace' => 'Smithy\\Benchmarks\\RpcV2Cbor',
+        'directory' => $root
+            . '/build/benchmarks/serde/rpcv2-cbor/src',
+        'protocolId' => RpcV2CborProtocol::ID,
+        'casePrefix' => 'rpcv2Cbor',
+        'header' => 'rpc-v2-cbor',
+        'contentType' => 'application/cbor',
+        'emptyBody' => "\xa0",
+        'base64Body' => true,
+        'protocol' => new RpcV2CborProtocol(),
+        'codec' => new CborCodec()
+    ],
+    'rpcv2-json' => [
+        'label' => 'RPC v2 JSON',
+        'model' => $root . '/benchmarks/serde/model/rpcv2-json.json',
+        'namespace' => 'Smithy\\Benchmarks\\RpcV2Json',
+        'directory' => $root
+            . '/build/benchmarks/serde/rpcv2-json/src',
+        'protocolId' => RpcV2JsonProtocol::ID,
+        'casePrefix' => 'rpcv2Json',
+        'header' => 'rpc-v2-json',
+        'contentType' => 'application/json',
+        'emptyBody' => '{}',
+        'base64Body' => false,
+        'protocol' => new RpcV2JsonProtocol(),
+        'codec' => $jsonCodec
+    ]
+];
+
+$protocolSelection = (string) ($options['protocol'] ?? 'all');
+if ($protocolSelection !== 'all'
+    && !isset($protocols[$protocolSelection])
+) {
     \fwrite(
         STDERR,
-        "Generated benchmark shapes are missing. "
-            . "Run make benchmark-generate.\n"
+        "--protocol must be all, rpcv2-cbor, or rpcv2-json.\n"
     );
 
-    exit(1);
+    exit(2);
 }
 
 $direction = (string) ($options['direction'] ?? 'all');
@@ -83,112 +137,153 @@ $filter = isset($options['filter'])
 $validateOnly = isset($options['validate']);
 $updateReadme = isset($options['update-readme']);
 if ($updateReadme
-    && ($filter !== null || $direction !== 'all' || $validateOnly)
+    && ($protocolSelection !== 'all'
+        || $filter !== null
+        || $direction !== 'all'
+        || $validateOnly)
 ) {
     \fwrite(
         STDERR,
-        "--update-readme requires an unfiltered all-direction measured run.\n"
+        "--update-readme requires an unfiltered all-protocol, "
+            . "all-direction measured run.\n"
     );
 
     exit(2);
 }
+
 $runner = new BenchmarkRunner(
     warmupIterations: (int) ($options['warmup'] ?? 500),
     minIterations: (int) ($options['min-iterations'] ?? 1_000),
     maxIterations: (int) ($options['max-iterations'] ?? 5_000),
     maxSeconds: (float) ($options['max-seconds'] ?? 5)
 );
-$repository = new BenchmarkCaseRepository(
-    __DIR__ . '/model/rpcv2-cbor.json'
-);
-$loader = new GeneratedCodeLoader(
-    'Smithy\\Benchmarks\\RpcV2Cbor',
-    $generatedDirectory
-);
-$loader->register();
-$protocol = new RpcV2CborProtocol();
 $results = [];
 $caseCount = 0;
 
-\fwrite(STDOUT, "Smithy PHP RPC v2 CBOR serde benchmark\n");
-\fwrite(STDOUT, "PHP " . PHP_VERSION . ' on ' . \php_uname() . "\n\n");
+\fwrite(STDOUT, "Smithy PHP RPC v2 serde benchmark\n");
+\fwrite(STDOUT, "PHP " . PHP_VERSION . ' on ' . \php_uname() . "\n");
 
-if ($direction === 'all' || $direction === 'serialize') {
-    foreach ($repository->requests($filter) as $case) {
-        $operation = resolveOperation($loader, $case);
-        $inputClass = $operation->getInputClass();
-        if ($inputClass === '') {
-            throw new \RuntimeException(
-                "No generated input class for {$case['id']}."
-            );
-        }
-
-        $input = ArrayShapeSerializer::fromArray(
-            $inputClass,
-            $case['params'] ?? []
-        );
-        if (!$input instanceof SerializableStructInterface) {
-            throw new \RuntimeException(
-                "Generated input is invalid for {$case['id']}."
-            );
-        }
-
-        validateSerialization($protocol, $operation, $input, $case);
-        $caseCount++;
-        if ($validateOnly) {
-            printValidated('serialize', $case['id']);
-            continue;
-        }
-
-        $statistics = $runner->run(
-            static fn() => $protocol->serializeRequest(
-                $operation,
-                $input
-            )
-        );
-        $results[] = ResultWriter::benchmarkEntry(
-            $case['id'],
-            $statistics
-        );
-        printResult('serialize', $case['id'], $statistics);
+foreach ($protocols as $name => $config) {
+    if ($protocolSelection !== 'all' && $protocolSelection !== $name) {
+        continue;
     }
-}
-
-if ($direction === 'all' || $direction === 'deserialize') {
-    foreach ($repository->responses($filter) as $case) {
-        $operation = resolveOperation($loader, $case);
-        $body = decodeResponseBody($case['body'] ?? null);
-        $headers = $case['headers'] ?? [];
-        $headers['Smithy-Protocol'] = 'rpc-v2-cbor';
-        $response = new HttpTransportResponse(
-            new Response(
-                status: (int) ($case['code'] ?? 200),
-                headers: $headers,
-                body: $body
-            )
+    if (!\is_dir($config['directory'])) {
+        \fwrite(
+            STDERR,
+            "Generated {$config['label']} benchmark shapes are missing. "
+                . "Run make benchmark-generate.\n"
         );
 
-        $output = deserializeResponse($protocol, $operation, $response);
-        validateDeserialization($operation, $output, $case);
-        $caseCount++;
-        if ($validateOnly) {
-            printValidated('deserialize', $case['id']);
-            continue;
-        }
+        exit(1);
+    }
 
-        $statistics = $runner->run(
-            static fn() => deserializeResponse(
-                $protocol,
+    $repository = new BenchmarkCaseRepository(
+        $config['model'],
+        $config['protocolId'],
+        $config['casePrefix']
+    );
+    $loader = new GeneratedCodeLoader(
+        $config['namespace'],
+        $config['directory']
+    );
+    $loader->register();
+    \fwrite(STDOUT, "\n{$config['label']}\n");
+
+    if ($direction === 'all' || $direction === 'serialize') {
+        foreach ($repository->requests($filter) as $case) {
+            $operation = resolveOperation($loader, $case);
+            $inputClass = $operation->getInputClass();
+            if ($inputClass === '') {
+                throw new \RuntimeException(
+                    "No generated input class for {$case['id']}."
+                );
+            }
+
+            $input = ArrayShapeSerializer::fromArray(
+                $inputClass,
+                $case['params'] ?? []
+            );
+            if (!$input instanceof SerializableStructInterface) {
+                throw new \RuntimeException(
+                    "Generated input is invalid for {$case['id']}."
+                );
+            }
+
+            validateSerialization(
+                $config['protocol'],
+                $config['codec'],
+                $config['header'],
+                $operation,
+                $input,
+                $case
+            );
+            $caseCount++;
+            if ($validateOnly) {
+                printValidated('serialize', $case['id']);
+                continue;
+            }
+
+            $statistics = $runner->run(
+                static fn() => $config['protocol']->serializeRequest(
+                    $operation,
+                    $input
+                )
+            );
+            $results[] = ResultWriter::benchmarkEntry(
+                $case['id'],
+                $statistics
+            );
+            printResult('serialize', $case['id'], $statistics);
+        }
+    }
+
+    if ($direction === 'all' || $direction === 'deserialize') {
+        foreach ($repository->responses($filter) as $case) {
+            $operation = resolveOperation($loader, $case);
+            $body = decodeResponseBody(
+                $case['body'] ?? null,
+                $config['base64Body'],
+                $config['emptyBody']
+            );
+            $headers = $case['headers'] ?? [];
+            $headers['Smithy-Protocol'] = $config['header'];
+            $headers['Content-Type'] = $config['contentType'];
+            $response = new HttpTransportResponse(
+                new Response(
+                    status: (int) ($case['code'] ?? 200),
+                    headers: $headers,
+                    body: $body
+                )
+            );
+
+            $output = deserializeResponse(
+                $config['protocol'],
                 $operation,
                 $response
-            )
-        );
-        $results[] = ResultWriter::benchmarkEntry(
-            $case['id'],
-            $statistics
-        );
-        printResult('deserialize', $case['id'], $statistics);
+            );
+            validateDeserialization($operation, $output, $case);
+            $caseCount++;
+            if ($validateOnly) {
+                printValidated('deserialize', $case['id']);
+                continue;
+            }
+
+            $statistics = $runner->run(
+                static fn() => deserializeResponse(
+                    $config['protocol'],
+                    $operation,
+                    $response
+                )
+            );
+            $results[] = ResultWriter::benchmarkEntry(
+                $case['id'],
+                $statistics
+            );
+            printResult('deserialize', $case['id'], $statistics);
+        }
     }
+
+    $loader->unregister();
 }
 
 if ($caseCount === 0) {
@@ -207,14 +302,15 @@ $resultSet = [
     'metadata' => BenchmarkEnvironment::metadata(
         $root,
         $runner,
-        'serde-rpcv2-cbor'
+        'serde-rpcv2'
     ),
-    'serde_benchmarks' => $results,
+    'serde_benchmarks' => $results
 ];
 $writer = new ResultWriter();
 $resultPath = $writer->writeJson(
     $resultSet,
-    $root . '/build/benchmarks/results'
+    $root . '/build/benchmarks/results',
+    'serde-rpcv2'
 );
 if ($updateReadme) {
     $writer->updateReadme(
@@ -234,7 +330,8 @@ if ($updateReadme) {
 function resolveOperation(
     GeneratedCodeLoader $loader,
     array $case
-): OperationInterface {
+): OperationInterface
+{
     $class = $loader->operationClass((string) $case['operation']);
     if (!\is_a($class, OperationInterface::class, true)) {
         throw new \RuntimeException(
@@ -249,25 +346,28 @@ function resolveOperation(
  * @param array<string, mixed> $case
  */
 function validateSerialization(
-    RpcV2CborProtocol $protocol,
+    ProtocolInterface $protocol,
+    AbstractCodec $codec,
+    string $protocolHeader,
     OperationInterface $operation,
     SerializableStructInterface $input,
     array $case
-): void {
+): void
+{
     $request = $protocol->serializeRequest(
         $operation,
         $input
     );
     $httpRequest = HttpTransportRequest::expect($request)->request;
     if ($httpRequest->getMethod() !== 'POST'
-        || $httpRequest->getHeaderLine('Smithy-Protocol') !== 'rpc-v2-cbor'
+        || $httpRequest->getHeaderLine('Smithy-Protocol')
+            !== $protocolHeader
     ) {
         throw new \RuntimeException(
             "Invalid serialized request metadata for {$case['id']}."
         );
     }
 
-    $codec = new CborCodec();
     $schema = $operation->getInputSchema();
     $members = $codec->createMembersBuffer($schema);
     $httpRequest->getBody()->rewind();
@@ -285,10 +385,11 @@ function validateSerialization(
 }
 
 function deserializeResponse(
-    RpcV2CborProtocol $protocol,
+    ProtocolInterface $protocol,
     OperationInterface $operation,
     HttpTransportResponse $response
-): SerializableStructInterface {
+): SerializableStructInterface
+{
     $response->response->getBody()->rewind();
 
     return $protocol->deserializeResponse($operation, $response);
@@ -301,7 +402,8 @@ function validateDeserialization(
     OperationInterface $operation,
     SerializableStructInterface $output,
     array $case
-): void {
+): void
+{
     $outputClass = $operation->getOutputClass();
     if ($outputClass === '' || !$output instanceof $outputClass) {
         throw new \RuntimeException(
@@ -327,15 +429,22 @@ function validateDeserialization(
     }
 }
 
-function decodeResponseBody(mixed $body): string
+function decodeResponseBody(
+    mixed $body,
+    bool $base64Encoded,
+    string $emptyBody
+): string
 {
     if (!\is_string($body) || $body === '') {
-        return "\xa0";
+        return $emptyBody;
+    }
+    if (!$base64Encoded) {
+        return $body;
     }
 
     $decoded = \base64_decode($body, true);
     if ($decoded === false) {
-        throw new \RuntimeException('Invalid base64 CBOR benchmark body.');
+        throw new \RuntimeException('Invalid base64 benchmark body.');
     }
 
     return $decoded;
@@ -348,7 +457,8 @@ function printResult(
     string $direction,
     string $id,
     array $statistics
-): void {
+): void
+{
     \printf(
         "%-11s %-54s %8s p50, %10s ops/CPU s\n",
         $direction,

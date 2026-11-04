@@ -13,7 +13,10 @@ use Smithy\Core\Shape\{
     ServiceInterface,
     ShapeType
 };
-use Smithy\Protocol\RpcV2\RpcV2CborProtocol;
+use Smithy\Protocol\RpcV2\{
+    RpcV2CborProtocol,
+    RpcV2JsonProtocol
+};
 use Smithy\Tests\Client\Dynamic\Utils\IdentifiedProtocolFixture;
 
 #[CoversClass(ProtocolResolver::class)]
@@ -28,6 +31,38 @@ final class ProtocolResolverTest extends TestCase
         );
 
         self::assertInstanceOf(RpcV2CborProtocol::class, $protocol);
+    }
+
+    public function testDefaultsResolveRpcV2Json(): void
+    {
+        $protocol = ProtocolResolver::defaults()->resolveProtocol(
+            new ProtocolServiceFixture([
+                RpcV2JsonProtocol::ID => true
+            ])
+        );
+
+        self::assertInstanceOf(RpcV2JsonProtocol::class, $protocol);
+    }
+
+    public function testDefaultsRetainDeterministicRegistrationOrder(): void
+    {
+        $resolver = ProtocolResolver::defaults();
+        $service = new ProtocolServiceFixture([
+            RpcV2CborProtocol::ID => true,
+            RpcV2JsonProtocol::ID => true
+        ]);
+
+        self::assertSame(
+            [
+                RpcV2CborProtocol::ID,
+                RpcV2JsonProtocol::ID
+            ],
+            \array_keys($resolver->getApplicableProtocols($service))
+        );
+        self::assertInstanceOf(
+            RpcV2CborProtocol::class,
+            $resolver->resolveProtocol($service)
+        );
     }
 
     public function testResolvesInPreferenceOrder(): void
