@@ -95,6 +95,60 @@ final class CurlClientTest extends TestCase
         );
     }
 
+    public function testNormalizesRequestPathsByDefault(): void
+    {
+        $server = LocalServerFixture::start();
+        $client = new CurlClient();
+        $request = new Request(
+            'GET',
+            $server->endpoint() . '/objects/a/../b'
+        );
+
+        try {
+            Async::all(
+                static fn() => $client->sendRequest(
+                    $request,
+                    new HttpRequestOptions(timeout: 5.0)
+                )
+            );
+            $capture = $server->capture();
+        } finally {
+            $server->stop();
+        }
+
+        $this->assertSame('/objects/b', $capture['path']);
+    }
+
+    public function testPreservesRequestPathsWhenConfigured(): void
+    {
+        if (!\defined('CURLOPT_PATH_AS_IS')) {
+            self::markTestSkipped(
+                'This cURL build does not support preserving request paths.'
+            );
+        }
+
+        $server = LocalServerFixture::start();
+        $client = new CurlClient(preservePath: true);
+        $request = new Request(
+            'GET',
+            $server->endpoint() . '/objects/a/../b'
+        );
+
+        try {
+            Async::all(
+                static fn() => $client->sendRequest(
+                    $request,
+                    new HttpRequestOptions(timeout: 5.0)
+                )
+            );
+            $capture = $server->capture();
+        } finally {
+            $server->stop();
+        }
+
+        $this->assertSame('/objects/a/../b', $capture['path']);
+    }
+
     #[DataProvider('progressBodyProvider')]
     public function testPollLoopYieldsAfterProductiveBurst(
         string|StreamInterface $body

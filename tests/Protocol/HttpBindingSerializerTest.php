@@ -4,19 +4,25 @@ declare(strict_types=1);
 
 namespace Smithy\Tests\Protocol;
 
-use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\{CoversClass, DataProvider};
 use PHPUnit\Framework\TestCase;
 use Smithy\Core\Serde\{Schema, TimestampFormat};
 use Smithy\Core\Shape\ShapeType;
 use Smithy\Codec\Json\JsonCodec;
 use Smithy\Codec\Json\JsonCodecSettings;
-use Smithy\Protocol\HttpBindingSerializer;
-use Smithy\Protocol\HttpStructBindingExtensionProvider;
+use Smithy\Protocol\{
+    HttpBindingSerializer,
+    HttpPathLabelPolicy,
+    HttpStructBindingExtensionProvider,
+    ProtocolSettings
+};
 use Smithy\Tests\Protocol\Utils\HttpBindingFixtureSchemas;
 use Smithy\Tests\Protocol\Utils\HttpBindingInputShapeFixture;
 use Smithy\Tests\Protocol\Utils\HttpBindingPayloadShapeFixture;
 
 #[CoversClass(HttpBindingSerializer::class)]
+#[CoversClass(HttpPathLabelPolicy::class)]
+#[CoversClass(ProtocolSettings::class)]
 final class HttpBindingSerializerTest extends TestCase
 {
     public function testSerializesMembersIntoHttpBindingLocations(): void
@@ -116,6 +122,126 @@ final class HttpBindingSerializerTest extends TestCase
                 [['/things/', null, false], [null, 2, true]],
                 '/things/{path+}'
             )
+        );
+    }
+
+    #[DataProvider('ambiguousNonGreedyLabelProvider')]
+    public function testRejectsAmbiguousNonGreedyLabel(string $value): void
+    {
+        $schema = HttpBindingFixtureSchemas::request();
+        $members = $schema->getMembersByIndex();
+        $bindingInfo = $schema->getExtension(
+            HttpStructBindingExtensionProvider::key()
+        );
+        $serializer = new HttpBindingSerializer(new JsonCodec(), $bindingInfo);
+
+        $serializer->serializeString($members[2], $value, 2);
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage(
+            'HTTP URI label for member index 2 contains an ambiguous path '
+                . 'segment.'
+        );
+
+        $serializer->serializePath(
+            [['/things/', null, false], [null, 2, false]],
+            '/things/{id}'
+        );
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function ambiguousNonGreedyLabelProvider(): iterable
+    {
+        yield 'empty' => [''];
+        yield 'current directory' => ['.'];
+        yield 'parent directory' => ['..'];
+    }
+
+    #[DataProvider('ambiguousGreedyLabelProvider')]
+    public function testRejectsAmbiguousGreedyLabelByDefault(
+        string $value
+    ): void
+    {
+        $schema = HttpBindingFixtureSchemas::request();
+        $members = $schema->getMembersByIndex();
+        $bindingInfo = $schema->getExtension(
+            HttpStructBindingExtensionProvider::key()
+        );
+        $serializer = new HttpBindingSerializer(new JsonCodec(), $bindingInfo);
+
+        $serializer->serializeString($members[2], $value, 2);
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage(
+            'HTTP URI label for member index 2 contains an ambiguous path '
+                . 'segment.'
+        );
+
+        $serializer->serializePath(
+            [['/things/', null, false], [null, 2, true]],
+            '/things/{path+}'
+        );
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function ambiguousGreedyLabelProvider(): iterable
+    {
+        yield 'empty label' => [''];
+        yield 'empty segment' => ['a//b'];
+        yield 'current directory segment' => ['a/./b'];
+        yield 'parent directory segment' => ['a/../b'];
+        yield 'leading empty segment' => ['/a'];
+        yield 'trailing empty segment' => ['a/'];
+    }
+
+    public function testPreservesAmbiguousGreedySegmentsWhenConfigured(): void
+    {
+        $schema = HttpBindingFixtureSchemas::request();
+        $members = $schema->getMembersByIndex();
+        $bindingInfo = $schema->getExtension(
+            HttpStructBindingExtensionProvider::key()
+        );
+        $serializer = new HttpBindingSerializer(
+            new JsonCodec(),
+            $bindingInfo,
+            new ProtocolSettings(
+                HttpPathLabelPolicy::PreserveGreedySegments
+            )
+        );
+
+        $serializer->serializeString($members[2], 'a//./../b c', 2);
+
+        self::assertSame(
+            '/things/a//./../b%20c',
+            $serializer->serializePath(
+                [['/things/', null, false], [null, 2, true]],
+                '/things/{path+}'
+            )
+        );
+    }
+
+    public function testPreservePolicyStillRejectsAmbiguousNonGreedyLabel(): void
+    {
+        $schema = HttpBindingFixtureSchemas::request();
+        $members = $schema->getMembersByIndex();
+        $bindingInfo = $schema->getExtension(
+            HttpStructBindingExtensionProvider::key()
+        );
+        $serializer = new HttpBindingSerializer(
+            new JsonCodec(),
+            $bindingInfo,
+            new ProtocolSettings(
+                HttpPathLabelPolicy::PreserveGreedySegments
+            )
+        );
+
+        $serializer->serializeString($members[2], '..', 2);
+
+        $this->expectException(\InvalidArgumentException::class);
+
+        $serializer->serializePath(
+            [['/things/', null, false], [null, 2, false]],
+            '/things/{id}'
         );
     }
 
