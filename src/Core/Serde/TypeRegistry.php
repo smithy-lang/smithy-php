@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace Smithy\Core\Serde;
 
 use Smithy\Core\Model\SmithyModel;
+use Smithy\Core\Shape\Document\DocumentInterface;
+use Smithy\Core\Shape\Exception\InvalidShapeValueException;
 
 /**
  * Lazily resolve runtime model shape IDs to schemas.
  */
-final class TypeRegistry
+final class TypeRegistry implements TypeRegistryInterface
 {
     /** @var array<string, Schema> */
     private array $schemas = [];
@@ -60,6 +62,54 @@ final class TypeRegistry
         $this->schemasById[$conversionId] ??= $schema;
 
         return $schema;
+    }
+
+    /**
+     * Resolve the PHP type projected by a runtime schema, when one exists.
+     *
+     * @return class-string<SerializableShapeInterface>|null
+     */
+    public function classFor(string $shapeId): ?string
+    {
+        return $this->schemaFor($shapeId)?->targetClass;
+    }
+
+    public function create(
+        string $shapeId,
+        DocumentInterface $value
+    ): ?SerializableShapeInterface
+    {
+        $schema = $this->schemaFor($shapeId);
+        if ($schema === null) {
+            return null;
+        }
+
+        return ShapeFactory::create(
+            $schema,
+            $this->classFor($shapeId),
+            $value
+        );
+    }
+
+    public function deserialize(
+        DocumentInterface $value
+    ): SerializableShapeInterface
+    {
+        $shapeId = $value->discriminator();
+        if ($shapeId === null) {
+            throw new InvalidShapeValueException(
+                'Cannot deserialize a document without a type discriminator'
+            );
+        }
+
+        $shape = $this->create($shapeId, $value);
+        if ($shape === null) {
+            throw new InvalidShapeValueException(
+                "No type is registered for discriminator {$shapeId}"
+            );
+        }
+
+        return $shape;
     }
 
     /**

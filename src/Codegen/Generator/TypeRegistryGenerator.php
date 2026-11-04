@@ -13,12 +13,13 @@ use Smithy\Codegen\Writer\PhpCodeWriter;
  * Generates a per-service `TypeRegistry` class that maps Smithy shape IDs
  * to the generated PHP classes for a service.
  *
- * The registry surfaces three lookups. `schemaFor(shapeId)` returns the
+ * The registry surfaces type lookup and construction. `schemaFor(shapeId)` returns the
  * lazy `Schema` for a shape (via a `[Class, 'schema']` callable that
  * dispatches through the generated shape class's `schema()` static). The
  * counterpart `classFor(shapeId)` returns the PHP class-string, and
  * `shapeIdFor(class)` is the inverse mapping used by application code
- * that starts from a typed instance.
+ * that starts from a typed instance. `create(shapeId, document)` and
+ * `deserialize(document)` materialize registered generated types.
  *
  * Callers include the protocol layer (for error-shape dispatch, where the
  * wire `__type` discriminator is a Smithy shape ID) and downstream client
@@ -75,16 +76,29 @@ final class TypeRegistryGenerator
         $entries = $this->collectShapeEntries($serviceClosure);
 
         $writer = new PhpCodeWriter($namespace);
+        $writer->addImport('Smithy\\Core\\Serde\\Schema');
+        $writer->addImport('Smithy\\Core\\Serde\\SerializableShapeInterface');
+        $writer->addImport('Smithy\\Core\\Serde\\ShapeFactory');
+        $writer->addImport('Smithy\\Core\\Serde\\TypeRegistryInterface');
+        $writer->addImport(
+            'Smithy\\Core\\Shape\\Document\\DocumentInterface'
+        );
+        $writer->addImport(
+            'Smithy\\Core\\Shape\\Exception\\InvalidShapeValueException'
+        );
 
         $writer->writeDocBlock([
             "Shape-ID registry for the {$shortName} service.",
             '',
             'Populated once at codegen time from the service closure. Callers',
             'use `schemaFor` for lazy schema resolution, `classFor` for a raw',
-            'class-string when they need to reflect on the generated type, and',
-            '`shapeIdFor` for the inverse lookup keyed by class.'
+            'class-string, `shapeIdFor` for inverse lookup, and `create` or',
+            '`deserialize` to materialize generated types from documents.'
         ]);
-        $writer->writeLine("final class {$className}");
+        $writer->writeClassDeclaration(
+            "final class {$className}",
+            ['TypeRegistryInterface']
+        );
         $writer->openBlock('{');
 
         // Both directions of the map share the same source-of-truth entries.
@@ -120,7 +134,9 @@ final class TypeRegistryGenerator
             '',
             '@return class-string|null'
         ]);
-        $writer->writeLine('public static function classFor(string $shapeId): ?string');
+        $writer->writeLine(
+            'public function classFor(string $shapeId): ?string'
+        );
         $writer->openBlock('{');
         $writer->writeLine(
             'return self::CLASSES_BY_SHAPE_ID[$shapeId] ?? null;'
@@ -134,7 +150,9 @@ final class TypeRegistryGenerator
             '',
             '@param class-string $class'
         ]);
-        $writer->writeLine('public static function shapeIdFor(string $class): ?string');
+        $writer->writeLine(
+            'public function shapeIdFor(string $class): ?string'
+        );
         $writer->openBlock('{');
         $writer->writeLine('return self::SHAPE_IDS_BY_CLASS[$class] ?? null;');
         $writer->closeBlock();
@@ -148,8 +166,7 @@ final class TypeRegistryGenerator
             'Returns null when the shape ID is not registered.'
         ]);
         $writer->writeLine(
-            'public static function schemaFor(string $shapeId): '
-            . '?\\Smithy\\Core\\Serde\\Schema'
+            'public function schemaFor(string $shapeId): ?Schema'
         );
         $writer->openBlock('{');
         $writer->writeLine(
@@ -160,13 +177,77 @@ final class TypeRegistryGenerator
         $writer->writeLine('return null;');
         $writer->popIndent();
         $writer->writeLine('}');
-        // method_exists() guards against future shape categories that omit
-        // schema() (Unit and prelude-adjacent primitives already do). The
-        // check keeps the registry usable without a hard runtime break.
+        $writer->writeLine();
+        $writer->writeLine('return $class::schema();');
+        $writer->closeBlock();
+
+        $writer->writeLine();
+        $writer->writeDocBlock([
+            'Create a registered generated type from a document value.',
+            '',
+            'Returns null when the shape ID is not registered.'
+        ]);
+        $writer->writeLine('public function create(');
+        $writer->pushIndent();
+        $writer->writeLine('string $shapeId,');
+        $writer->writeLine('DocumentInterface $value');
+        $writer->popIndent();
+        $writer->writeLine('): ?SerializableShapeInterface');
+        $writer->openBlock('{');
+        $writer->writeLine('$schema = $this->schemaFor($shapeId);');
+        $writer->writeLine('if ($schema === null) {');
+        $writer->pushIndent();
+        $writer->writeLine('return null;');
+        $writer->popIndent();
+        $writer->writeLine('}');
+        $writer->writeLine();
+        $writer->writeLine('return ShapeFactory::create(');
+        $writer->pushIndent();
+        $writer->writeLine('$schema,');
+        $writer->writeLine('$this->classFor($shapeId),');
+        $writer->writeLine('$value');
+        $writer->popIndent();
+        $writer->writeLine(');');
+        $writer->closeBlock();
+
+        $writer->writeLine();
+        $writer->writeDocBlock([
+            "Create a registered generated type using the document's",
+            'shape-ID discriminator.'
+        ]);
         $writer->writeLine(
-            'return \\method_exists($class, \'schema\')'
-            . ' ? $class::schema() : null;'
+            'public function deserialize('
+                . 'DocumentInterface $value'
+                . '): SerializableShapeInterface'
         );
+        $writer->openBlock('{');
+        $writer->writeLine('$shapeId = $value->discriminator();');
+        $writer->writeLine('if ($shapeId === null) {');
+        $writer->pushIndent();
+        $writer->writeLine('throw new InvalidShapeValueException(');
+        $writer->pushIndent();
+        $writer->writeLine(
+            "'Cannot deserialize a document without a type discriminator'"
+        );
+        $writer->popIndent();
+        $writer->writeLine(');');
+        $writer->popIndent();
+        $writer->writeLine('}');
+        $writer->writeLine();
+        $writer->writeLine('$shape = $this->create($shapeId, $value);');
+        $writer->writeLine('if ($shape === null) {');
+        $writer->pushIndent();
+        $writer->writeLine('throw new InvalidShapeValueException(');
+        $writer->pushIndent();
+        $writer->writeLine(
+            '"No type is registered for discriminator {$shapeId}"'
+        );
+        $writer->popIndent();
+        $writer->writeLine(');');
+        $writer->popIndent();
+        $writer->writeLine('}');
+        $writer->writeLine();
+        $writer->writeLine('return $shape;');
         $writer->closeBlock();
 
         $writer->writeLine();
@@ -177,7 +258,7 @@ final class TypeRegistryGenerator
             '',
             '@return array<string, class-string>'
         ]);
-        $writer->writeLine('public static function all(): array');
+        $writer->writeLine('public function all(): array');
         $writer->openBlock('{');
         $writer->writeLine('return self::CLASSES_BY_SHAPE_ID;');
         $writer->closeBlock();
@@ -236,7 +317,8 @@ final class TypeRegistryGenerator
         // keep diffs stable across regeneration runs.
         \usort(
             $entries,
-            fn(array $a, array $b): int => \strcmp($a['shapeId'], $b['shapeId'])
+            fn (array $a, array $b): int =>
+                \strcmp($a['shapeId'], $b['shapeId'])
         );
 
         return $entries;

@@ -44,6 +44,37 @@ final class TypeRegistryGeneratorTest extends TestCase
             "<?php\n\ndeclare(strict_types=1);",
             $file->content
         );
+        $this->assertStringContainsString(
+            'use Smithy\\Core\\Serde\\TypeRegistryInterface;',
+            $file->content
+        );
+        $this->assertStringContainsString(
+            'use Smithy\\Core\\Shape\\Document\\DocumentInterface;',
+            $file->content
+        );
+        $this->assertStringContainsString(
+            'final class ExampleTypeRegistry implements TypeRegistryInterface',
+            $file->content
+        );
+        $this->assertStringContainsString(
+            "public function create(\n"
+                . "        string \$shapeId,\n"
+                . "        DocumentInterface \$value\n"
+                . '    ): ?SerializableShapeInterface',
+            $file->content
+        );
+        $this->assertStringContainsString(
+            'public function deserialize(DocumentInterface $value)',
+            $file->content
+        );
+        $this->assertStringNotContainsString(
+            '\\Smithy\\Core\\',
+            $file->content
+        );
+        $this->assertStringNotContainsString(
+            '\\method_exists(',
+            $file->content
+        );
     }
 
     public function testRaisesWhenServiceShapeIdMissing(): void
@@ -195,7 +226,8 @@ final readonly class LeadingSeparatorSymbolProvider implements
     public function toMemberType(
         string $parentShapeId,
         string $memberName
-    ): PhpType {
+    ): PhpType
+    {
         return $this->delegate->toMemberType($parentShapeId, $memberName);
     }
 

@@ -4,15 +4,22 @@ declare(strict_types=1);
 
 namespace Smithy\ProtocolTests\RpcV2Cbor;
 
+use Smithy\Core\Serde\Schema;
+use Smithy\Core\Serde\SerializableShapeInterface;
+use Smithy\Core\Serde\ShapeFactory;
+use Smithy\Core\Serde\TypeRegistryInterface;
+use Smithy\Core\Shape\Document\DocumentInterface;
+use Smithy\Core\Shape\Exception\InvalidShapeValueException;
+
 /**
  * Shape-ID registry for the RpcV2Cbor service.
  *
  * Populated once at codegen time from the service closure. Callers
  * use `schemaFor` for lazy schema resolution, `classFor` for a raw
- * class-string when they need to reflect on the generated type, and
- * `shapeIdFor` for the inverse lookup keyed by class.
+ * class-string, `shapeIdFor` for inverse lookup, and `create` or
+ * `deserialize` to materialize generated types from documents.
  */
-final class RpcV2CborTypeRegistry
+final class RpcV2CborTypeRegistry implements TypeRegistryInterface
 {
     /**
      * @var array<string, class-string>
@@ -94,7 +101,7 @@ final class RpcV2CborTypeRegistry
      *
      * @return class-string|null
      */
-    public static function classFor(string $shapeId): ?string
+    public function classFor(string $shapeId): ?string
     {
         return self::CLASSES_BY_SHAPE_ID[$shapeId] ?? null;
     }
@@ -105,7 +112,7 @@ final class RpcV2CborTypeRegistry
      *
      * @param class-string $class
      */
-    public static function shapeIdFor(string $class): ?string
+    public function shapeIdFor(string $class): ?string
     {
         return self::SHAPE_IDS_BY_CLASS[$class] ?? null;
     }
@@ -117,13 +124,59 @@ final class RpcV2CborTypeRegistry
      *
      * Returns null when the shape ID is not registered.
      */
-    public static function schemaFor(string $shapeId): ?\Smithy\Core\Serde\Schema
+    public function schemaFor(string $shapeId): ?Schema
     {
         $class = self::CLASSES_BY_SHAPE_ID[$shapeId] ?? null;
         if ($class === null) {
             return null;
         }
-        return \method_exists($class, 'schema') ? $class::schema() : null;
+
+        return $class::schema();
+    }
+
+    /**
+     * Create a registered generated type from a document value.
+     *
+     * Returns null when the shape ID is not registered.
+     */
+    public function create(
+        string $shapeId,
+        DocumentInterface $value
+    ): ?SerializableShapeInterface
+    {
+        $schema = $this->schemaFor($shapeId);
+        if ($schema === null) {
+            return null;
+        }
+
+        return ShapeFactory::create(
+            $schema,
+            $this->classFor($shapeId),
+            $value
+        );
+    }
+
+    /**
+     * Create a registered generated type using the document's
+     * shape-ID discriminator.
+     */
+    public function deserialize(DocumentInterface $value): SerializableShapeInterface
+    {
+        $shapeId = $value->discriminator();
+        if ($shapeId === null) {
+            throw new InvalidShapeValueException(
+                'Cannot deserialize a document without a type discriminator'
+            );
+        }
+
+        $shape = $this->create($shapeId, $value);
+        if ($shape === null) {
+            throw new InvalidShapeValueException(
+                "No type is registered for discriminator {$shapeId}"
+            );
+        }
+
+        return $shape;
     }
 
     /**
@@ -133,7 +186,7 @@ final class RpcV2CborTypeRegistry
      *
      * @return array<string, class-string>
      */
-    public static function all(): array
+    public function all(): array
     {
         return self::CLASSES_BY_SHAPE_ID;
     }

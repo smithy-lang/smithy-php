@@ -356,9 +356,12 @@ generated shape classes.
 - shape ID to generated class
 - generated class to shape ID
 
-The generated registry exposes `classFor()`, `shapeIdFor()`, `schemaFor()`, and
-`all()`. Dynamic clients use the separate model-backed runtime `TypeRegistry`
-and `SchemaConverter`.
+Generated and runtime registries implement `TypeRegistryInterface`. In
+addition to class and schema lookup, registries create registered types from
+documents and deserialize documents using their shape-ID discriminator.
+`CompositeTypeRegistry` provides ordered composition across generated and
+runtime registries. Dynamic clients use the model-backed runtime
+`TypeRegistry` and `SchemaConverter`.
 
 ### Endpoint artifacts
 

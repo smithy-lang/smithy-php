@@ -7,8 +7,13 @@ namespace Smithy\Tests\Core\Serde;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Smithy\Core\Model\SmithyModel;
+use Smithy\Core\Serde\Schema;
 use Smithy\Core\Serde\SchemaConverter;
 use Smithy\Core\Serde\TypeRegistry;
+use Smithy\Core\Serde\TypeRegistryInterface;
+use Smithy\Core\Shape\Document\AbstractDocument;
+use Smithy\Core\Shape\Document\StructDocument;
+use Smithy\Core\Shape\Exception\InvalidShapeValueException;
 use Smithy\Core\Shape\ShapeType;
 
 #[CoversClass(TypeRegistry::class)]
@@ -19,6 +24,61 @@ final class TypeRegistryTest extends TestCase
         $registry = $this->registry();
 
         self::assertNull($registry->schemaFor('example#Missing'));
+        self::assertNull($registry->classFor('example#Missing'));
+        self::assertNull(
+            $registry->create(
+                'example#Missing',
+                AbstractDocument::fromString('value')
+            )
+        );
+    }
+
+    public function testImplementsTypeRegistryContract(): void
+    {
+        self::assertInstanceOf(TypeRegistryInterface::class, $this->registry());
+    }
+
+    public function testDeserializesDiscriminatedRuntimeStructure(): void
+    {
+        $registry = $this->registry();
+        $schema = $registry->schemaFor('example#OriginalInput');
+        self::assertNotNull($schema);
+
+        $result = $registry->deserialize(
+            StructDocument::fromMembers($schema, ['value'])
+        );
+
+        self::assertInstanceOf(StructDocument::class, $result);
+        self::assertSame($schema, $result->getSchema());
+        self::assertSame(
+            'value',
+            $result->getMemberValue($schema->getMemberByIndex(0))
+        );
+    }
+
+    public function testDeserializeRequiresDiscriminator(): void
+    {
+        $this->expectException(InvalidShapeValueException::class);
+        $this->expectExceptionMessage('without a type discriminator');
+
+        $this->registry()->deserialize(
+            AbstractDocument::fromString('value')
+        );
+    }
+
+    public function testDeserializeRejectsUnknownDiscriminator(): void
+    {
+        $schema = new Schema(
+            id: 'example#Missing',
+            type: ShapeType::Structure
+        );
+
+        $this->expectException(InvalidShapeValueException::class);
+        $this->expectExceptionMessage('example#Missing');
+
+        $this->registry()->deserialize(
+            StructDocument::fromMembers($schema, [])
+        );
     }
 
     public function testAliasCacheDoesNotExposeAbsentOriginalShape(): void
