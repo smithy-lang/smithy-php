@@ -1,8 +1,12 @@
 PHP ?= php
 BENCHMARK_PHP ?= $(PHP) -d opcache.enable_cli=1 -d opcache.jit=tracing -d opcache.jit_buffer_size=128M
 
-.PHONY: benchmark benchmark-generate benchmark-serde benchmark-client benchmark-update-results benchmark-clean
+.PHONY: benchmark benchmark-generate benchmark-serde benchmark-client
+.PHONY: benchmark-update-results benchmark-clean license-check
 .NOTPARALLEL: benchmark
+
+license-check:
+	$(PHP) tools/check-license-headers.php
 
 benchmark: benchmark-serde benchmark-client
 

@@ -10,6 +10,23 @@ permissions:
   contents: read
 
 jobs:
+  license-headers:
+    name: License headers
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup PHP 8.2
+        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
+        with:
+          php-version: '8.2'
+          coverage: none
+
+      - name: Check license headers
+        run: composer license:check
+
   codegen-output:
     name: Code generation output
     runs-on: ubuntu-latest

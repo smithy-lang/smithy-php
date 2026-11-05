@@ -1,5 +1,10 @@
 <?php
 
+/*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 declare(strict_types=1);
 
 namespace Smithy\Tests\Codegen\Generator;
@@ -40,7 +45,13 @@ final class ServiceGeneratorTest extends TestCase
             $file->path
         );
         $this->assertStringStartsWith(
-            "<?php\n\ndeclare(strict_types=1);",
+            "<?php\n\n"
+            . "/*\n"
+            . " * Copyright Amazon.com, Inc. or its affiliates."
+            . " All Rights Reserved.\n"
+            . " * SPDX-License-Identifier: Apache-2.0\n"
+            . " */\n\n"
+            . "declare(strict_types=1);",
             $file->content
         );
         $this->assertStringContainsString(
@@ -360,7 +371,8 @@ final class ServiceGeneratorTest extends TestCase
     private function evalSource(string $source): string
     {
         return (string) \preg_replace(
-            '/^<\?php\s+declare\(strict_types=1\);\s*/',
+            '/^<\?php\s+(?:\/\*.*?\*\/\s+)?'
+            . 'declare\(strict_types=1\);\s*/s',
             '',
             $source
         );

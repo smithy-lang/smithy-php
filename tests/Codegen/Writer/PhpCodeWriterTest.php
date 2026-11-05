@@ -1,5 +1,10 @@
 <?php
 
+/*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 declare(strict_types=1);
 
 namespace Smithy\Tests\Codegen\Writer;
@@ -15,7 +20,13 @@ final class PhpCodeWriterTest extends TestCase
         $writer = new PhpCodeWriter();
 
         $this->assertSame(
-            "<?php\n\ndeclare(strict_types=1);\n\n",
+            "<?php\n\n"
+            . "/*\n"
+            . " * Copyright Amazon.com, Inc. or its affiliates."
+            . " All Rights Reserved.\n"
+            . " * SPDX-License-Identifier: Apache-2.0\n"
+            . " */\n\n"
+            . "declare(strict_types=1);\n\n",
             $writer->toFileContent()
         );
     }
@@ -25,7 +36,14 @@ final class PhpCodeWriterTest extends TestCase
         $writer = new PhpCodeWriter('Aws\\Example');
 
         $this->assertSame(
-            "<?php\n\ndeclare(strict_types=1);\n\nnamespace Aws\\Example;\n\n",
+            "<?php\n\n"
+            . "/*\n"
+            . " * Copyright Amazon.com, Inc. or its affiliates."
+            . " All Rights Reserved.\n"
+            . " * SPDX-License-Identifier: Apache-2.0\n"
+            . " */\n\n"
+            . "declare(strict_types=1);\n\n"
+            . "namespace Aws\\Example;\n\n",
             $writer->toFileContent()
         );
     }
@@ -442,6 +460,11 @@ final class PhpCodeWriterTest extends TestCase
         $writer->closeBlock();
 
         $expected = "<?php\n\n"
+            . "/*\n"
+            . " * Copyright Amazon.com, Inc. or its affiliates."
+            . " All Rights Reserved.\n"
+            . " * SPDX-License-Identifier: Apache-2.0\n"
+            . " */\n\n"
             . "declare(strict_types=1);\n\n"
             . "namespace Aws\\Example;\n\n"
             . "use Aws\\Other\\Foo;\n\n"
