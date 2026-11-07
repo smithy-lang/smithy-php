@@ -81,8 +81,6 @@ items still need to align with it before the preview release:
 - Remove the now-unused AWS dynamic-client operation-target helper. AWS JSON
   and Query protocols already derive dynamic targets from service and
   operation metadata.
-- Verify that caller-supplied plugin collections cannot place required HTTP
-  checksum calculation before request compression.
 
 ## Deferred Validation
 

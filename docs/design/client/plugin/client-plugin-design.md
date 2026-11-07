@@ -104,13 +104,9 @@ client's stored configuration.
 ## Built-in Ordering Invariant
 
 Request compression must precede required HTTP checksum calculation so the
-checksum describes the transmitted representation. Dynamic clients register
-those defaults in compression-before-checksum order.
-
-Concrete-class deduplication keeps the first caller-supplied instance. A
-caller that supplies only the checksum plugin can therefore leave it before a
-later default compression plugin. Normalizing or rejecting that conflicting
-registration remains a dynamic-client preview-release check.
+checksum describes the transmitted representation. The compression plugin
+runs in `BeforeApply`, while the checksum plugin runs in `Apply`, so phase
+ordering preserves this invariant regardless of registration order.
 
 ## Concurrency
 
