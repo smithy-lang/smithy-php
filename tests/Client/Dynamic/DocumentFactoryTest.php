@@ -157,6 +157,9 @@ final class DocumentFactoryTest extends TestCase
         );
 
         self::assertNull($this->memberValue($document, 'topLevel'));
+        self::assertNull(
+            $this->memberValue($document, 'topLevelTarget')
+        );
 
         $nested = $this->memberValue($document, 'nested');
         self::assertInstanceOf(StructDocument::class, $nested);
@@ -164,6 +167,21 @@ final class DocumentFactoryTest extends TestCase
             'abc',
             $this->memberValue($nested, 'blob')
         );
+        self::assertSame(
+            'target',
+            $this->memberValue($nested, 'targetDefault')
+        );
+        self::assertSame(
+            'member',
+            $this->memberValue($nested, 'memberDefault')
+        );
+        self::assertNull(
+            $this->memberValue($nested, 'clearedDefault')
+        );
+        self::assertNull(
+            $this->memberValue($nested, 'clientOptionalDefault')
+        );
+        $this->assertInheritedScalarDefaults($nested);
 
         $clientOptional = $this->memberValue(
             $document,
@@ -186,6 +204,14 @@ final class DocumentFactoryTest extends TestCase
             'abc',
             $this->memberValue($defaulted, 'blob')
         );
+        self::assertSame(
+            'target',
+            $this->memberValue($defaulted, 'targetDefault')
+        );
+        self::assertNull(
+            $this->memberValue($defaulted, 'clearedDefault')
+        );
+        $this->assertInheritedScalarDefaults($defaulted);
 
         $decoded = $factory->createStructFromMembers(
             $schema,
@@ -538,6 +564,26 @@ final class DocumentFactoryTest extends TestCase
         );
     }
 
+    private function assertInheritedScalarDefaults(
+        StructDocument $document
+    ): void
+    {
+        self::assertEqualsWithDelta(
+            1_577_836_800.123,
+            $this->memberValue($document, 'timestamp'),
+            0.000_001
+        );
+        self::assertNan($this->memberValue($document, 'nan'));
+        self::assertSame(
+            \INF,
+            $this->memberValue($document, 'positiveInfinity')
+        );
+        self::assertSame(
+            -\INF,
+            $this->memberValue($document, 'negativeInfinity')
+        );
+    }
+
     private function converter(): SchemaConverter
     {
         return new SchemaConverter(SmithyModel::fromArray([
@@ -691,6 +737,9 @@ final class DocumentFactoryTest extends TestCase
                                 'smithy.api#default' => 'default'
                             ]
                         ],
+                        'topLevelTarget' => [
+                            'target' => 'example#DefaultString'
+                        ],
                         'nested' => ['target' => 'example#Defaults'],
                         'clientOptional' => [
                             'target' => 'example#ClientOptional'
@@ -716,6 +765,27 @@ final class DocumentFactoryTest extends TestCase
                         ],
                         'nestedUnion' => [
                             'target' => 'example#DefaultsUnion'
+                        ],
+                        'targetDefault' => [
+                            'target' => 'example#DefaultString'
+                        ],
+                        'clearedDefault' => [
+                            'target' => 'example#DefaultString',
+                            'traits' => [
+                                'smithy.api#default' => null
+                            ]
+                        ],
+                        'timestamp' => [
+                            'target' => 'example#DefaultTimestamp'
+                        ],
+                        'nan' => [
+                            'target' => 'example#DefaultFloatNaN'
+                        ],
+                        'positiveInfinity' => [
+                            'target' => 'example#DefaultDoubleInfinity'
+                        ],
+                        'negativeInfinity' => [
+                            'target' => 'example#DefaultDoubleNegInfinity'
                         ]
                     ],
                     'traits' => ['smithy.api#output' => []]
@@ -728,7 +798,71 @@ final class DocumentFactoryTest extends TestCase
                             'traits' => [
                                 'smithy.api#default' => 'YWJj'
                             ]
+                        ],
+                        'targetDefault' => [
+                            'target' => 'example#DefaultString'
+                        ],
+                        'memberDefault' => [
+                            'target' => 'example#DefaultString',
+                            'traits' => [
+                                'smithy.api#default' => 'member'
+                            ]
+                        ],
+                        'clearedDefault' => [
+                            'target' => 'example#DefaultString',
+                            'traits' => [
+                                'smithy.api#default' => null
+                            ]
+                        ],
+                        'clientOptionalDefault' => [
+                            'target' => 'example#DefaultString',
+                            'traits' => [
+                                'smithy.api#clientOptional' => []
+                            ]
+                        ],
+                        'timestamp' => [
+                            'target' => 'example#DefaultTimestamp'
+                        ],
+                        'nan' => [
+                            'target' => 'example#DefaultFloatNaN'
+                        ],
+                        'positiveInfinity' => [
+                            'target' => 'example#DefaultDoubleInfinity'
+                        ],
+                        'negativeInfinity' => [
+                            'target' => 'example#DefaultDoubleNegInfinity'
                         ]
+                    ]
+                ],
+                'example#DefaultString' => [
+                    'type' => 'string',
+                    'traits' => [
+                        'smithy.api#default' => 'target'
+                    ]
+                ],
+                'example#DefaultTimestamp' => [
+                    'type' => 'timestamp',
+                    'traits' => [
+                        'smithy.api#default' =>
+                            '2020-01-01T00:00:00.123Z'
+                    ]
+                ],
+                'example#DefaultFloatNaN' => [
+                    'type' => 'float',
+                    'traits' => [
+                        'smithy.api#default' => 'NaN'
+                    ]
+                ],
+                'example#DefaultDoubleInfinity' => [
+                    'type' => 'double',
+                    'traits' => [
+                        'smithy.api#default' => 'Infinity'
+                    ]
+                ],
+                'example#DefaultDoubleNegInfinity' => [
+                    'type' => 'double',
+                    'traits' => [
+                        'smithy.api#default' => '-Infinity'
                     ]
                 ],
                 'example#DefaultsList' => [

@@ -63,9 +63,9 @@ and caller value to the internal `DocumentFactory`. The factory handles:
 
 Validation completes before endpoint resolution or HTTP transmission.
 
-Target-shape defaults inherited through a member are not yet applied by the
-dynamic coercer. Preview-release alignment must add effective default lookup
-while preserving a direct `@default(null)` as an inherited-default override.
+Dynamic coercion applies effective member defaults, including defaults
+inherited from a target shape. A default applied directly to the member takes
+precedence, and a direct `@default(null)` clears an inherited default.
 
 ## Serialization
 
