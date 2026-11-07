@@ -8,5 +8,8 @@
             "all"
         ]
     },
+    "schemaTraitIndices": {
+        "smithy.api#length": 31
+    },
     "preserveExistingMemberOrder": false
 }
