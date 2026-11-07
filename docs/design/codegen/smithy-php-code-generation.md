@@ -242,6 +242,8 @@ Additional behavior is generated only when needed:
 - modeled pagination inputs implement `PaginatedRequestInterface` and, when
   applicable, `PageSizePaginatedRequestInterface`
 - configured categories can implement readonly `ArrayAccess`
+- configured structure categories can use `ArraySerializableTrait` to expose
+  `fromArray()` and `toArray()`
 - structures and unions containing sensitive data use
   `SensitiveStringableTrait` for redacted string, debug, JSON, and PHP
   serialization representations
@@ -249,7 +251,8 @@ Additional behavior is generated only when needed:
   members that collide with inherited exception properties
 
 Associative-array conversion is centralized in `ArrayShapeSerializer`.
-Generated structures do not each emit `fromArray()` or `toArray()`.
+`ArraySerializableTrait` delegates its optional `fromArray()` and `toArray()`
+methods to that serializer.
 
 ### Enums
 

@@ -220,8 +220,9 @@ final class CopyObjectRequest implements SerializableStructInterface
 
 `Smithy\Core\Shape\Utils\ArrayShapeSerializer` converts between generated
 shape objects and the V3-compatible associative-array representation.
-Generated structures do not emit shape-local `fromArray()` or `toArray()`
-methods.
+Generated structures can opt into shape-local `fromArray()` and `toArray()`
+methods through `ArraySerializableTrait`. The trait delegates both methods to
+`ArrayShapeSerializer`.
 
 ##### `fromArray()`
 
@@ -235,6 +236,18 @@ $req = ArrayShapeSerializer::fromArray(
         'MetadataDirective' => 'COPY'
     ]
 );
+```
+
+When array serialization is enabled for the structure's category, the
+equivalent call is:
+
+```php
+$req = CopyObjectRequest::fromArray([
+    'Bucket' => 'my-target-bucket',
+    'CopySource' => 'my-source-bucket/path/to/object',
+    'Key' => 'destination/key',
+    'MetadataDirective' => 'COPY'
+]);
 ```
 
 Input keys are modeled `memberName` values. The utility converts each key to
@@ -272,6 +285,9 @@ element by element.
 $resp = $client->headObject(...);
 $plain = ArrayShapeSerializer::toArray($resp);
 ```
+
+Structures that use `ArraySerializableTrait` can call `$resp->toArray()`
+instead.
 
 ##### `ArrayAccess` for output shapes
 
