@@ -28,7 +28,7 @@ use Smithy\CodegenOutput\TrimmedPetStore\Output\GetPetOutput;
  * the pipeline, retry loop, endpoint resolver, signer, and
  * transport all live on the base class.
  */
-final class TrimmedPetStoreClient extends AbstractClient
+final class TrimmedPetStoreClient extends AbstractClient implements TrimmedPetStoreClientInterface
 {
     public function __construct(
         ClientConfig $config,

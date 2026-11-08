@@ -665,6 +665,7 @@ final class CodeGeneratorTest extends TestCase
         );
 
         $this->assertNotContains('ExampleClient.php', $fileNames);
+        $this->assertNotContains('ExampleClientInterface.php', $fileNames);
         $this->assertNotContains('ExampleClientConfig.php', $fileNames);
         $this->assertContains('ExampleService.php', $fileNames);
     }
@@ -752,11 +753,16 @@ final class CodeGeneratorTest extends TestCase
         $this->assertNotContains('DeleteOnlyErrorException.php', $fileNames);
         $this->assertNotContains('UnusedShape.php', $fileNames);
         $client = $this->findFile($files, 'PetStoreClient.php');
+        $clientInterface = $this->findFile(
+            $files,
+            'PetStoreClientInterface.php'
+        );
         $operation = $this->findFile($files, 'GetPetOperation.php');
         $service = $this->findFile($files, 'PetStoreService.php');
         $registry = $this->findFile($files, 'PetStoreTypeRegistry.php');
         $schemas = $this->findFile($files, 'Schemas.php');
         $this->assertNotNull($client);
+        $this->assertNotNull($clientInterface);
         $this->assertNotNull($operation);
         $this->assertNotNull($service);
         $this->assertNotNull($registry);
@@ -767,12 +773,20 @@ final class CodeGeneratorTest extends TestCase
             $client->content
         );
         $this->assertStringContainsString(
+            'public function getPet(',
+            $clientInterface->content
+        );
+        $this->assertStringContainsString(
             'public function waitUntilPetExists(',
             $client->content
         );
         $this->assertStringNotContainsString(
             'public function listPets(',
             $client->content
+        );
+        $this->assertStringNotContainsString(
+            'public function listPets(',
+            $clientInterface->content
         );
         $this->assertStringNotContainsString(
             'public function deletePet(',
