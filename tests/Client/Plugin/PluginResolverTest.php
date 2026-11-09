@@ -17,11 +17,13 @@ use Smithy\Client\Endpoint\{
     StaticEndpointResolver
 };
 use Smithy\Client\Plugin\{
+    HttpChecksumPlugin,
     PluginCollection,
     PluginInterface,
     PluginPhase,
     PluginResolver,
     PluginState,
+    RequestCompressionPlugin,
     ResolvedPlugins
 };
 use Smithy\Tests\Client\Fake\FakeProtocol;
@@ -75,6 +77,29 @@ final class PluginResolverTest extends TestCase
         self::assertSame(
             ['first', 'defaults', 'apply-first', 'apply-second'],
             $calls->getArrayCopy()
+        );
+    }
+
+    public function testOrdersCompressionBeforeChecksum(): void
+    {
+        $resolved = (new PluginResolver())->resolve(
+            new PluginCollection(
+                new HttpChecksumPlugin(),
+                new RequestCompressionPlugin()
+            ),
+            new PluginState()
+        );
+
+        self::assertSame(
+            [
+                RequestCompressionPlugin::class,
+                HttpChecksumPlugin::class
+            ],
+            \array_map(
+                static fn(PluginInterface $plugin): string =>
+                    $plugin::class,
+                $resolved->getPlugins()
+            )
         );
     }
 
