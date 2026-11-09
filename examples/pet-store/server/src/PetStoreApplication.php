@@ -50,15 +50,13 @@ use Smithy\Http\Message\StringRequestStream;
  */
 final class PetStoreApplication
 {
-    private const MAX_PET_NAME_LENGTH = 64;
+    private const LENGTH_TRAIT_ID = 'smithy.api#length';
     private const MEDIA_TYPE = 'application/cbor';
     private const MODELED_CLIENT_ERROR_SHAPES = [
         'smithy.example.petstore#PetConflictError',
         'smithy.example.petstore#PetNotFoundError',
         'smithy.example.petstore#ValidationError'
     ];
-    private const PET_NAME_SHAPE_ID =
-        'smithy.example.petstore#PetName';
     private const PROTOCOL = 'rpc-v2-cbor';
     private const ROUTE_PREFIX = '/service/PetStore/operation/';
     private const MAX_REQUEST_BYTES = 1_048_576;
@@ -342,8 +340,11 @@ final class PetStoreApplication
         string $path
     ): void {
         $schema = $schema->resolveTarget();
-        if ($schema->id === self::PET_NAME_SHAPE_ID) {
-            $this->validatePetName($value, $path);
+        $length = $schema->getTraitById(self::LENGTH_TRAIT_ID);
+        if ($schema->type === ShapeType::String_->value
+            && \is_array($length)
+        ) {
+            $this->validateStringLength($value, $path, $length);
 
             return;
         }
@@ -512,15 +513,26 @@ final class PetStoreApplication
         }
     }
 
-    private function validatePetName(mixed $name, string $path): void
-    {
-        $length = \is_string($name)
-            ? \mb_strlen($name, 'UTF-8')
-            : 0;
-        if ($length < 1 || $length > self::MAX_PET_NAME_LENGTH) {
+    /**
+     * @param array{min?: int, max?: int} $constraint
+     */
+    private function validateStringLength(
+        mixed $value,
+        string $path,
+        array $constraint
+    ): void {
+        $length = \is_string($value)
+            ? \mb_strlen($value, 'UTF-8')
+            : null;
+        $min = $constraint['min'] ?? null;
+        $max = $constraint['max'] ?? null;
+        if ($length === null
+            || ($min !== null && $length < $min)
+            || ($max !== null && $length > $max)
+        ) {
             throw $this->validation(
                 $path,
-                'Pet name must contain between 1 and 64 characters.'
+                "{$path} does not satisfy its modeled length constraint."
             );
         }
     }

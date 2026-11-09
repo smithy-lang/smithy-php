@@ -91,8 +91,8 @@ final class Schemas
             id: 'smithy.framework#ValidationException',
             type: ShapeType::Structure,
             members: [
-                new Schema(id: 'smithy.api#String', type: ShapeType::String_, memberName: 'message', memberIndex: 0, traits: [14 => true]),
-                new Schema(id: 'smithy.framework#ValidationExceptionFieldList', type: ShapeType::List_, memberName: 'fieldList', memberIndex: 1, listMember: new Schema(id: 'smithy.framework#ValidationExceptionField', type: ShapeType::Structure, memberName: 'member', memberIndex: 0, members: [new Schema(id: 'smithy.api#String', type: ShapeType::String_, memberName: 'path', memberIndex: 0, traits: [14 => true]), new Schema(id: 'smithy.api#String', type: ShapeType::String_, memberName: 'message', memberIndex: 1, traits: [14 => true])], targetClass: ValidationExceptionField::class))
+                new Schema(id: 'smithy.framework#ValidationException$message', type: ShapeType::String_, memberName: 'message', memberIndex: 0, traits: [14 => true]),
+                new Schema(id: 'smithy.framework#ValidationException$fieldList', type: ShapeType::List_, memberName: 'fieldList', memberIndex: 1, listMember: new Schema(id: 'smithy.framework#ValidationExceptionFieldList$member', type: ShapeType::Structure, memberName: 'member', memberIndex: 0, members: [new Schema(id: 'smithy.framework#ValidationExceptionField$path', type: ShapeType::String_, memberName: 'path', memberIndex: 0, traits: [14 => true]), new Schema(id: 'smithy.framework#ValidationExceptionField$message', type: ShapeType::String_, memberName: 'message', memberIndex: 1, traits: [14 => true])], targetClass: ValidationExceptionField::class))
             ], traits: [23 => 'client'],
             targetClass: ValidationException::class
         );
@@ -108,8 +108,8 @@ final class Schemas
             id: 'smithy.framework#ValidationExceptionField',
             type: ShapeType::Structure,
             members: [
-                new Schema(id: 'smithy.api#String', type: ShapeType::String_, memberName: 'path', memberIndex: 0, traits: [14 => true]),
-                new Schema(id: 'smithy.api#String', type: ShapeType::String_, memberName: 'message', memberIndex: 1, traits: [14 => true])
+                new Schema(id: 'smithy.framework#ValidationExceptionField$path', type: ShapeType::String_, memberName: 'path', memberIndex: 0, traits: [14 => true]),
+                new Schema(id: 'smithy.framework#ValidationExceptionField$message', type: ShapeType::String_, memberName: 'message', memberIndex: 1, traits: [14 => true])
             ],
             targetClass: ValidationExceptionField::class
         );
@@ -125,7 +125,7 @@ final class Schemas
             id: 'smithy.protocoltests.rpcv2Json#BigDecimalStructure',
             type: ShapeType::Structure,
             members: [
-                new Schema(id: 'smithy.api#BigDecimal', type: ShapeType::BigDecimal, memberName: 'value', memberIndex: 0)
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#BigDecimalStructure$value', type: ShapeType::BigDecimal, memberName: 'value', memberIndex: 0)
             ],
             targetClass: BigDecimalStructure::class
         );
@@ -141,7 +141,7 @@ final class Schemas
             id: 'smithy.protocoltests.rpcv2Json#BigIntegerStructure',
             type: ShapeType::Structure,
             members: [
-                new Schema(id: 'smithy.api#BigInteger', type: ShapeType::BigInteger, memberName: 'value', memberIndex: 0)
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#BigIntegerStructure$value', type: ShapeType::BigInteger, memberName: 'value', memberIndex: 0)
             ],
             targetClass: BigIntegerStructure::class
         );
@@ -157,7 +157,7 @@ final class Schemas
             id: 'smithy.protocoltests.rpcv2Json#ClientOptionalDefaults',
             type: ShapeType::Structure,
             members: [
-                new Schema(id: 'smithy.api#Integer', type: ShapeType::Integer, memberName: 'member', memberIndex: 0)
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#ClientOptionalDefaults$member', type: ShapeType::Integer, memberName: 'member', memberIndex: 0)
             ],
             targetClass: ClientOptionalDefaults::class
         );
@@ -173,8 +173,8 @@ final class Schemas
             id: 'smithy.protocoltests.rpcv2Json#ComplexError',
             type: ShapeType::Structure,
             members: [
-                new Schema(id: 'smithy.api#String', type: ShapeType::String_, memberName: 'TopLevel', memberIndex: 0),
-                new Schema(id: 'smithy.protocoltests.rpcv2Json#ComplexNestedErrorData', type: ShapeType::Structure, memberName: 'Nested', memberIndex: 1, members: [new Schema(id: 'smithy.api#String', type: ShapeType::String_, memberName: 'Foo', memberIndex: 0)], targetClass: ComplexNestedErrorData::class)
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#ComplexError$TopLevel', type: ShapeType::String_, memberName: 'TopLevel', memberIndex: 0),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#ComplexError$Nested', type: ShapeType::Structure, memberName: 'Nested', memberIndex: 1, members: [new Schema(id: 'smithy.protocoltests.rpcv2Json#ComplexNestedErrorData$Foo', type: ShapeType::String_, memberName: 'Foo', memberIndex: 0)], targetClass: ComplexNestedErrorData::class)
             ], traits: [23 => 'client'],
             targetClass: ComplexErrorException::class
         );
@@ -190,7 +190,7 @@ final class Schemas
             id: 'smithy.protocoltests.rpcv2Json#ComplexNestedErrorData',
             type: ShapeType::Structure,
             members: [
-                new Schema(id: 'smithy.api#String', type: ShapeType::String_, memberName: 'Foo', memberIndex: 0)
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#ComplexNestedErrorData$Foo', type: ShapeType::String_, memberName: 'Foo', memberIndex: 0)
             ],
             targetClass: ComplexNestedErrorData::class
         );
@@ -206,29 +206,29 @@ final class Schemas
             id: 'smithy.protocoltests.rpcv2Json#Defaults',
             type: ShapeType::Structure,
             members: [
-                new Schema(id: 'smithy.api#String', type: ShapeType::String_, memberName: 'defaultString', memberIndex: 0),
-                new Schema(id: 'smithy.api#Boolean', type: ShapeType::Boolean, memberName: 'defaultBoolean', memberIndex: 1),
-                new Schema(id: 'smithy.protocoltests.rpcv2Json#TestStringList', type: ShapeType::List_, memberName: 'defaultList', memberIndex: 2, listMember: new Schema(id: 'smithy.api#String', type: ShapeType::String_, memberName: 'member', memberIndex: 0)),
-                new Schema(id: 'smithy.api#Timestamp', type: ShapeType::Timestamp, memberName: 'defaultTimestamp', memberIndex: 3),
-                new Schema(id: 'smithy.api#Blob', type: ShapeType::Blob, memberName: 'defaultBlob', memberIndex: 4),
-                new Schema(id: 'smithy.api#Byte', type: ShapeType::Byte, memberName: 'defaultByte', memberIndex: 5),
-                new Schema(id: 'smithy.api#Short', type: ShapeType::Short, memberName: 'defaultShort', memberIndex: 6),
-                new Schema(id: 'smithy.api#Integer', type: ShapeType::Integer, memberName: 'defaultInteger', memberIndex: 7),
-                new Schema(id: 'smithy.api#Long', type: ShapeType::Long, memberName: 'defaultLong', memberIndex: 8),
-                new Schema(id: 'smithy.api#Float', type: ShapeType::Float_, memberName: 'defaultFloat', memberIndex: 9),
-                new Schema(id: 'smithy.api#Double', type: ShapeType::Double, memberName: 'defaultDouble', memberIndex: 10),
-                new Schema(id: 'smithy.protocoltests.rpcv2Json#TestStringMap', type: ShapeType::Map, memberName: 'defaultMap', memberIndex: 11, mapKey: new Schema(id: 'smithy.api#String', type: ShapeType::String_, memberName: 'key', memberIndex: 0), mapValue: new Schema(id: 'smithy.api#String', type: ShapeType::String_, memberName: 'value', memberIndex: 1)),
-                new Schema(id: 'smithy.protocoltests.rpcv2Json#TestEnum', type: ShapeType::Enum, memberName: 'defaultEnum', memberIndex: 12, targetClass: TestEnum::class),
-                new Schema(id: 'smithy.protocoltests.rpcv2Json#TestIntEnum', type: ShapeType::IntEnum, memberName: 'defaultIntEnum', memberIndex: 13, targetClass: TestIntEnum::class),
-                new Schema(id: 'smithy.api#String', type: ShapeType::String_, memberName: 'emptyString', memberIndex: 14),
-                new Schema(id: 'smithy.api#Boolean', type: ShapeType::Boolean, memberName: 'falseBoolean', memberIndex: 15),
-                new Schema(id: 'smithy.api#Blob', type: ShapeType::Blob, memberName: 'emptyBlob', memberIndex: 16),
-                new Schema(id: 'smithy.api#Byte', type: ShapeType::Byte, memberName: 'zeroByte', memberIndex: 17),
-                new Schema(id: 'smithy.api#Short', type: ShapeType::Short, memberName: 'zeroShort', memberIndex: 18),
-                new Schema(id: 'smithy.api#Integer', type: ShapeType::Integer, memberName: 'zeroInteger', memberIndex: 19),
-                new Schema(id: 'smithy.api#Long', type: ShapeType::Long, memberName: 'zeroLong', memberIndex: 20),
-                new Schema(id: 'smithy.api#Float', type: ShapeType::Float_, memberName: 'zeroFloat', memberIndex: 21),
-                new Schema(id: 'smithy.api#Double', type: ShapeType::Double, memberName: 'zeroDouble', memberIndex: 22)
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#Defaults$defaultString', type: ShapeType::String_, memberName: 'defaultString', memberIndex: 0),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#Defaults$defaultBoolean', type: ShapeType::Boolean, memberName: 'defaultBoolean', memberIndex: 1),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#Defaults$defaultList', type: ShapeType::List_, memberName: 'defaultList', memberIndex: 2, listMember: new Schema(id: 'smithy.protocoltests.rpcv2Json#TestStringList$member', type: ShapeType::String_, memberName: 'member', memberIndex: 0)),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#Defaults$defaultTimestamp', type: ShapeType::Timestamp, memberName: 'defaultTimestamp', memberIndex: 3),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#Defaults$defaultBlob', type: ShapeType::Blob, memberName: 'defaultBlob', memberIndex: 4),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#Defaults$defaultByte', type: ShapeType::Byte, memberName: 'defaultByte', memberIndex: 5),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#Defaults$defaultShort', type: ShapeType::Short, memberName: 'defaultShort', memberIndex: 6),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#Defaults$defaultInteger', type: ShapeType::Integer, memberName: 'defaultInteger', memberIndex: 7),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#Defaults$defaultLong', type: ShapeType::Long, memberName: 'defaultLong', memberIndex: 8),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#Defaults$defaultFloat', type: ShapeType::Float_, memberName: 'defaultFloat', memberIndex: 9),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#Defaults$defaultDouble', type: ShapeType::Double, memberName: 'defaultDouble', memberIndex: 10),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#Defaults$defaultMap', type: ShapeType::Map, memberName: 'defaultMap', memberIndex: 11, mapKey: new Schema(id: 'smithy.protocoltests.rpcv2Json#TestStringMap$key', type: ShapeType::String_, memberName: 'key', memberIndex: 0), mapValue: new Schema(id: 'smithy.protocoltests.rpcv2Json#TestStringMap$value', type: ShapeType::String_, memberName: 'value', memberIndex: 1)),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#Defaults$defaultEnum', type: ShapeType::Enum, memberName: 'defaultEnum', memberIndex: 12, targetClass: TestEnum::class),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#Defaults$defaultIntEnum', type: ShapeType::IntEnum, memberName: 'defaultIntEnum', memberIndex: 13, targetClass: TestIntEnum::class),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#Defaults$emptyString', type: ShapeType::String_, memberName: 'emptyString', memberIndex: 14),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#Defaults$falseBoolean', type: ShapeType::Boolean, memberName: 'falseBoolean', memberIndex: 15),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#Defaults$emptyBlob', type: ShapeType::Blob, memberName: 'emptyBlob', memberIndex: 16),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#Defaults$zeroByte', type: ShapeType::Byte, memberName: 'zeroByte', memberIndex: 17),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#Defaults$zeroShort', type: ShapeType::Short, memberName: 'zeroShort', memberIndex: 18),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#Defaults$zeroInteger', type: ShapeType::Integer, memberName: 'zeroInteger', memberIndex: 19),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#Defaults$zeroLong', type: ShapeType::Long, memberName: 'zeroLong', memberIndex: 20),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#Defaults$zeroFloat', type: ShapeType::Float_, memberName: 'zeroFloat', memberIndex: 21),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#Defaults$zeroDouble', type: ShapeType::Double, memberName: 'zeroDouble', memberIndex: 22)
             ],
             targetClass: Defaults::class
         );
@@ -259,7 +259,7 @@ final class Schemas
             id: 'smithy.protocoltests.rpcv2Json#FractionalSecondsOutput',
             type: ShapeType::Structure,
             members: [
-                new Schema(id: 'smithy.api#Timestamp', type: ShapeType::Timestamp, memberName: 'datetime', memberIndex: 0)
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#FractionalSecondsOutput$datetime', type: ShapeType::Timestamp, memberName: 'datetime', memberIndex: 0)
             ],
             targetClass: FractionalSecondsOutput::class
         );
@@ -275,7 +275,7 @@ final class Schemas
             id: 'smithy.protocoltests.rpcv2Json#GreetingWithErrorsOutput',
             type: ShapeType::Structure,
             members: [
-                new Schema(id: 'smithy.api#String', type: ShapeType::String_, memberName: 'greeting', memberIndex: 0)
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#GreetingWithErrorsOutput$greeting', type: ShapeType::String_, memberName: 'greeting', memberIndex: 0)
             ],
             targetClass: GreetingWithErrorsOutput::class
         );
@@ -291,7 +291,7 @@ final class Schemas
             id: 'smithy.protocoltests.rpcv2Json#InvalidGreeting',
             type: ShapeType::Structure,
             members: [
-                new Schema(id: 'smithy.api#String', type: ShapeType::String_, memberName: 'Message', memberIndex: 0)
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#InvalidGreeting$Message', type: ShapeType::String_, memberName: 'Message', memberIndex: 0)
             ], traits: [23 => 'client'],
             targetClass: InvalidGreetingException::class
         );
@@ -307,10 +307,10 @@ final class Schemas
             id: 'smithy.protocoltests.rpcv2Json#OperationWithDefaultsInput',
             type: ShapeType::Structure,
             members: [
-                new Schema(id: 'smithy.protocoltests.rpcv2Json#Defaults', type: ShapeType::Structure, memberName: 'defaults', memberIndex: 0, members: [new Schema(id: 'smithy.api#String', type: ShapeType::String_, memberName: 'defaultString', memberIndex: 0), new Schema(id: 'smithy.api#Boolean', type: ShapeType::Boolean, memberName: 'defaultBoolean', memberIndex: 1), new Schema(id: 'smithy.protocoltests.rpcv2Json#TestStringList', type: ShapeType::List_, memberName: 'defaultList', memberIndex: 2, listMember: new Schema(id: 'smithy.api#String', type: ShapeType::String_, memberName: 'member', memberIndex: 0)), new Schema(id: 'smithy.api#Timestamp', type: ShapeType::Timestamp, memberName: 'defaultTimestamp', memberIndex: 3), new Schema(id: 'smithy.api#Blob', type: ShapeType::Blob, memberName: 'defaultBlob', memberIndex: 4), new Schema(id: 'smithy.api#Byte', type: ShapeType::Byte, memberName: 'defaultByte', memberIndex: 5), new Schema(id: 'smithy.api#Short', type: ShapeType::Short, memberName: 'defaultShort', memberIndex: 6), new Schema(id: 'smithy.api#Integer', type: ShapeType::Integer, memberName: 'defaultInteger', memberIndex: 7), new Schema(id: 'smithy.api#Long', type: ShapeType::Long, memberName: 'defaultLong', memberIndex: 8), new Schema(id: 'smithy.api#Float', type: ShapeType::Float_, memberName: 'defaultFloat', memberIndex: 9), new Schema(id: 'smithy.api#Double', type: ShapeType::Double, memberName: 'defaultDouble', memberIndex: 10), new Schema(id: 'smithy.protocoltests.rpcv2Json#TestStringMap', type: ShapeType::Map, memberName: 'defaultMap', memberIndex: 11, mapKey: new Schema(id: 'smithy.api#String', type: ShapeType::String_, memberName: 'key', memberIndex: 0), mapValue: new Schema(id: 'smithy.api#String', type: ShapeType::String_, memberName: 'value', memberIndex: 1)), new Schema(id: 'smithy.protocoltests.rpcv2Json#TestEnum', type: ShapeType::Enum, memberName: 'defaultEnum', memberIndex: 12, targetClass: TestEnum::class), new Schema(id: 'smithy.protocoltests.rpcv2Json#TestIntEnum', type: ShapeType::IntEnum, memberName: 'defaultIntEnum', memberIndex: 13, targetClass: TestIntEnum::class), new Schema(id: 'smithy.api#String', type: ShapeType::String_, memberName: 'emptyString', memberIndex: 14), new Schema(id: 'smithy.api#Boolean', type: ShapeType::Boolean, memberName: 'falseBoolean', memberIndex: 15), new Schema(id: 'smithy.api#Blob', type: ShapeType::Blob, memberName: 'emptyBlob', memberIndex: 16), new Schema(id: 'smithy.api#Byte', type: ShapeType::Byte, memberName: 'zeroByte', memberIndex: 17), new Schema(id: 'smithy.api#Short', type: ShapeType::Short, memberName: 'zeroShort', memberIndex: 18), new Schema(id: 'smithy.api#Integer', type: ShapeType::Integer, memberName: 'zeroInteger', memberIndex: 19), new Schema(id: 'smithy.api#Long', type: ShapeType::Long, memberName: 'zeroLong', memberIndex: 20), new Schema(id: 'smithy.api#Float', type: ShapeType::Float_, memberName: 'zeroFloat', memberIndex: 21), new Schema(id: 'smithy.api#Double', type: ShapeType::Double, memberName: 'zeroDouble', memberIndex: 22)], targetClass: Defaults::class),
-                new Schema(id: 'smithy.protocoltests.rpcv2Json#ClientOptionalDefaults', type: ShapeType::Structure, memberName: 'clientOptionalDefaults', memberIndex: 1, members: [new Schema(id: 'smithy.api#Integer', type: ShapeType::Integer, memberName: 'member', memberIndex: 0)], targetClass: ClientOptionalDefaults::class),
-                new Schema(id: 'smithy.api#String', type: ShapeType::String_, memberName: 'topLevelDefault', memberIndex: 2),
-                new Schema(id: 'smithy.api#Integer', type: ShapeType::Integer, memberName: 'otherTopLevelDefault', memberIndex: 3)
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#OperationWithDefaultsInput$defaults', type: ShapeType::Structure, memberName: 'defaults', memberIndex: 0, members: [new Schema(id: 'smithy.protocoltests.rpcv2Json#Defaults$defaultString', type: ShapeType::String_, memberName: 'defaultString', memberIndex: 0), new Schema(id: 'smithy.protocoltests.rpcv2Json#Defaults$defaultBoolean', type: ShapeType::Boolean, memberName: 'defaultBoolean', memberIndex: 1), new Schema(id: 'smithy.protocoltests.rpcv2Json#Defaults$defaultList', type: ShapeType::List_, memberName: 'defaultList', memberIndex: 2, listMember: new Schema(id: 'smithy.protocoltests.rpcv2Json#TestStringList$member', type: ShapeType::String_, memberName: 'member', memberIndex: 0)), new Schema(id: 'smithy.protocoltests.rpcv2Json#Defaults$defaultTimestamp', type: ShapeType::Timestamp, memberName: 'defaultTimestamp', memberIndex: 3), new Schema(id: 'smithy.protocoltests.rpcv2Json#Defaults$defaultBlob', type: ShapeType::Blob, memberName: 'defaultBlob', memberIndex: 4), new Schema(id: 'smithy.protocoltests.rpcv2Json#Defaults$defaultByte', type: ShapeType::Byte, memberName: 'defaultByte', memberIndex: 5), new Schema(id: 'smithy.protocoltests.rpcv2Json#Defaults$defaultShort', type: ShapeType::Short, memberName: 'defaultShort', memberIndex: 6), new Schema(id: 'smithy.protocoltests.rpcv2Json#Defaults$defaultInteger', type: ShapeType::Integer, memberName: 'defaultInteger', memberIndex: 7), new Schema(id: 'smithy.protocoltests.rpcv2Json#Defaults$defaultLong', type: ShapeType::Long, memberName: 'defaultLong', memberIndex: 8), new Schema(id: 'smithy.protocoltests.rpcv2Json#Defaults$defaultFloat', type: ShapeType::Float_, memberName: 'defaultFloat', memberIndex: 9), new Schema(id: 'smithy.protocoltests.rpcv2Json#Defaults$defaultDouble', type: ShapeType::Double, memberName: 'defaultDouble', memberIndex: 10), new Schema(id: 'smithy.protocoltests.rpcv2Json#Defaults$defaultMap', type: ShapeType::Map, memberName: 'defaultMap', memberIndex: 11, mapKey: new Schema(id: 'smithy.protocoltests.rpcv2Json#TestStringMap$key', type: ShapeType::String_, memberName: 'key', memberIndex: 0), mapValue: new Schema(id: 'smithy.protocoltests.rpcv2Json#TestStringMap$value', type: ShapeType::String_, memberName: 'value', memberIndex: 1)), new Schema(id: 'smithy.protocoltests.rpcv2Json#Defaults$defaultEnum', type: ShapeType::Enum, memberName: 'defaultEnum', memberIndex: 12, targetClass: TestEnum::class), new Schema(id: 'smithy.protocoltests.rpcv2Json#Defaults$defaultIntEnum', type: ShapeType::IntEnum, memberName: 'defaultIntEnum', memberIndex: 13, targetClass: TestIntEnum::class), new Schema(id: 'smithy.protocoltests.rpcv2Json#Defaults$emptyString', type: ShapeType::String_, memberName: 'emptyString', memberIndex: 14), new Schema(id: 'smithy.protocoltests.rpcv2Json#Defaults$falseBoolean', type: ShapeType::Boolean, memberName: 'falseBoolean', memberIndex: 15), new Schema(id: 'smithy.protocoltests.rpcv2Json#Defaults$emptyBlob', type: ShapeType::Blob, memberName: 'emptyBlob', memberIndex: 16), new Schema(id: 'smithy.protocoltests.rpcv2Json#Defaults$zeroByte', type: ShapeType::Byte, memberName: 'zeroByte', memberIndex: 17), new Schema(id: 'smithy.protocoltests.rpcv2Json#Defaults$zeroShort', type: ShapeType::Short, memberName: 'zeroShort', memberIndex: 18), new Schema(id: 'smithy.protocoltests.rpcv2Json#Defaults$zeroInteger', type: ShapeType::Integer, memberName: 'zeroInteger', memberIndex: 19), new Schema(id: 'smithy.protocoltests.rpcv2Json#Defaults$zeroLong', type: ShapeType::Long, memberName: 'zeroLong', memberIndex: 20), new Schema(id: 'smithy.protocoltests.rpcv2Json#Defaults$zeroFloat', type: ShapeType::Float_, memberName: 'zeroFloat', memberIndex: 21), new Schema(id: 'smithy.protocoltests.rpcv2Json#Defaults$zeroDouble', type: ShapeType::Double, memberName: 'zeroDouble', memberIndex: 22)], targetClass: Defaults::class),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#OperationWithDefaultsInput$clientOptionalDefaults', type: ShapeType::Structure, memberName: 'clientOptionalDefaults', memberIndex: 1, members: [new Schema(id: 'smithy.protocoltests.rpcv2Json#ClientOptionalDefaults$member', type: ShapeType::Integer, memberName: 'member', memberIndex: 0)], targetClass: ClientOptionalDefaults::class),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#OperationWithDefaultsInput$topLevelDefault', type: ShapeType::String_, memberName: 'topLevelDefault', memberIndex: 2),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#OperationWithDefaultsInput$otherTopLevelDefault', type: ShapeType::Integer, memberName: 'otherTopLevelDefault', memberIndex: 3)
             ],
             targetClass: OperationWithDefaultsInput::class
         );
@@ -326,29 +326,29 @@ final class Schemas
             id: 'smithy.protocoltests.rpcv2Json#OperationWithDefaultsOutput',
             type: ShapeType::Structure,
             members: [
-                new Schema(id: 'smithy.api#String', type: ShapeType::String_, memberName: 'defaultString', memberIndex: 0),
-                new Schema(id: 'smithy.api#Boolean', type: ShapeType::Boolean, memberName: 'defaultBoolean', memberIndex: 1),
-                new Schema(id: 'smithy.protocoltests.rpcv2Json#TestStringList', type: ShapeType::List_, memberName: 'defaultList', memberIndex: 2, listMember: new Schema(id: 'smithy.api#String', type: ShapeType::String_, memberName: 'member', memberIndex: 0)),
-                new Schema(id: 'smithy.api#Timestamp', type: ShapeType::Timestamp, memberName: 'defaultTimestamp', memberIndex: 3),
-                new Schema(id: 'smithy.api#Blob', type: ShapeType::Blob, memberName: 'defaultBlob', memberIndex: 4),
-                new Schema(id: 'smithy.api#Byte', type: ShapeType::Byte, memberName: 'defaultByte', memberIndex: 5),
-                new Schema(id: 'smithy.api#Short', type: ShapeType::Short, memberName: 'defaultShort', memberIndex: 6),
-                new Schema(id: 'smithy.api#Integer', type: ShapeType::Integer, memberName: 'defaultInteger', memberIndex: 7),
-                new Schema(id: 'smithy.api#Long', type: ShapeType::Long, memberName: 'defaultLong', memberIndex: 8),
-                new Schema(id: 'smithy.api#Float', type: ShapeType::Float_, memberName: 'defaultFloat', memberIndex: 9),
-                new Schema(id: 'smithy.api#Double', type: ShapeType::Double, memberName: 'defaultDouble', memberIndex: 10),
-                new Schema(id: 'smithy.protocoltests.rpcv2Json#TestStringMap', type: ShapeType::Map, memberName: 'defaultMap', memberIndex: 11, mapKey: new Schema(id: 'smithy.api#String', type: ShapeType::String_, memberName: 'key', memberIndex: 0), mapValue: new Schema(id: 'smithy.api#String', type: ShapeType::String_, memberName: 'value', memberIndex: 1)),
-                new Schema(id: 'smithy.protocoltests.rpcv2Json#TestEnum', type: ShapeType::Enum, memberName: 'defaultEnum', memberIndex: 12, targetClass: TestEnum::class),
-                new Schema(id: 'smithy.protocoltests.rpcv2Json#TestIntEnum', type: ShapeType::IntEnum, memberName: 'defaultIntEnum', memberIndex: 13, targetClass: TestIntEnum::class),
-                new Schema(id: 'smithy.api#String', type: ShapeType::String_, memberName: 'emptyString', memberIndex: 14),
-                new Schema(id: 'smithy.api#Boolean', type: ShapeType::Boolean, memberName: 'falseBoolean', memberIndex: 15),
-                new Schema(id: 'smithy.api#Blob', type: ShapeType::Blob, memberName: 'emptyBlob', memberIndex: 16),
-                new Schema(id: 'smithy.api#Byte', type: ShapeType::Byte, memberName: 'zeroByte', memberIndex: 17),
-                new Schema(id: 'smithy.api#Short', type: ShapeType::Short, memberName: 'zeroShort', memberIndex: 18),
-                new Schema(id: 'smithy.api#Integer', type: ShapeType::Integer, memberName: 'zeroInteger', memberIndex: 19),
-                new Schema(id: 'smithy.api#Long', type: ShapeType::Long, memberName: 'zeroLong', memberIndex: 20),
-                new Schema(id: 'smithy.api#Float', type: ShapeType::Float_, memberName: 'zeroFloat', memberIndex: 21),
-                new Schema(id: 'smithy.api#Double', type: ShapeType::Double, memberName: 'zeroDouble', memberIndex: 22)
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#OperationWithDefaultsOutput$defaultString', type: ShapeType::String_, memberName: 'defaultString', memberIndex: 0),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#OperationWithDefaultsOutput$defaultBoolean', type: ShapeType::Boolean, memberName: 'defaultBoolean', memberIndex: 1),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#OperationWithDefaultsOutput$defaultList', type: ShapeType::List_, memberName: 'defaultList', memberIndex: 2, listMember: new Schema(id: 'smithy.protocoltests.rpcv2Json#TestStringList$member', type: ShapeType::String_, memberName: 'member', memberIndex: 0)),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#OperationWithDefaultsOutput$defaultTimestamp', type: ShapeType::Timestamp, memberName: 'defaultTimestamp', memberIndex: 3),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#OperationWithDefaultsOutput$defaultBlob', type: ShapeType::Blob, memberName: 'defaultBlob', memberIndex: 4),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#OperationWithDefaultsOutput$defaultByte', type: ShapeType::Byte, memberName: 'defaultByte', memberIndex: 5),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#OperationWithDefaultsOutput$defaultShort', type: ShapeType::Short, memberName: 'defaultShort', memberIndex: 6),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#OperationWithDefaultsOutput$defaultInteger', type: ShapeType::Integer, memberName: 'defaultInteger', memberIndex: 7),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#OperationWithDefaultsOutput$defaultLong', type: ShapeType::Long, memberName: 'defaultLong', memberIndex: 8),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#OperationWithDefaultsOutput$defaultFloat', type: ShapeType::Float_, memberName: 'defaultFloat', memberIndex: 9),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#OperationWithDefaultsOutput$defaultDouble', type: ShapeType::Double, memberName: 'defaultDouble', memberIndex: 10),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#OperationWithDefaultsOutput$defaultMap', type: ShapeType::Map, memberName: 'defaultMap', memberIndex: 11, mapKey: new Schema(id: 'smithy.protocoltests.rpcv2Json#TestStringMap$key', type: ShapeType::String_, memberName: 'key', memberIndex: 0), mapValue: new Schema(id: 'smithy.protocoltests.rpcv2Json#TestStringMap$value', type: ShapeType::String_, memberName: 'value', memberIndex: 1)),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#OperationWithDefaultsOutput$defaultEnum', type: ShapeType::Enum, memberName: 'defaultEnum', memberIndex: 12, targetClass: TestEnum::class),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#OperationWithDefaultsOutput$defaultIntEnum', type: ShapeType::IntEnum, memberName: 'defaultIntEnum', memberIndex: 13, targetClass: TestIntEnum::class),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#OperationWithDefaultsOutput$emptyString', type: ShapeType::String_, memberName: 'emptyString', memberIndex: 14),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#OperationWithDefaultsOutput$falseBoolean', type: ShapeType::Boolean, memberName: 'falseBoolean', memberIndex: 15),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#OperationWithDefaultsOutput$emptyBlob', type: ShapeType::Blob, memberName: 'emptyBlob', memberIndex: 16),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#OperationWithDefaultsOutput$zeroByte', type: ShapeType::Byte, memberName: 'zeroByte', memberIndex: 17),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#OperationWithDefaultsOutput$zeroShort', type: ShapeType::Short, memberName: 'zeroShort', memberIndex: 18),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#OperationWithDefaultsOutput$zeroInteger', type: ShapeType::Integer, memberName: 'zeroInteger', memberIndex: 19),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#OperationWithDefaultsOutput$zeroLong', type: ShapeType::Long, memberName: 'zeroLong', memberIndex: 20),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#OperationWithDefaultsOutput$zeroFloat', type: ShapeType::Float_, memberName: 'zeroFloat', memberIndex: 21),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#OperationWithDefaultsOutput$zeroDouble', type: ShapeType::Double, memberName: 'zeroDouble', memberIndex: 22)
             ],
             targetClass: OperationWithDefaultsOutput::class
         );
@@ -364,7 +364,7 @@ final class Schemas
             id: 'smithy.protocoltests.rpcv2Json#RecursiveShapesInputOutput',
             type: ShapeType::Structure,
             members: [
-                new Schema(id: 'smithy.protocoltests.rpcv2Json#RecursiveShapesInputOutputNested1', type: ShapeType::Structure, memberName: 'nested', memberIndex: 0, members: [new Schema(id: 'smithy.api#String', type: ShapeType::String_, memberName: 'foo', memberIndex: 0), new Schema(id: 'smithy.protocoltests.rpcv2Json#RecursiveShapesInputOutputNested2', type: ShapeType::Structure, memberName: 'nested', memberIndex: 1, targetClass: RecursiveShapesInputOutputNested2::class)], targetClass: RecursiveShapesInputOutputNested1::class)
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#RecursiveShapesInputOutput$nested', type: ShapeType::Structure, memberName: 'nested', memberIndex: 0, members: [new Schema(id: 'smithy.protocoltests.rpcv2Json#RecursiveShapesInputOutputNested1$foo', type: ShapeType::String_, memberName: 'foo', memberIndex: 0), new Schema(id: 'smithy.protocoltests.rpcv2Json#RecursiveShapesInputOutputNested1$nested', type: ShapeType::Structure, memberName: 'nested', memberIndex: 1, targetClass: RecursiveShapesInputOutputNested2::class)], targetClass: RecursiveShapesInputOutputNested1::class)
             ],
             targetClass: RecursiveShapesInputOutput::class
         );
@@ -380,8 +380,8 @@ final class Schemas
             id: 'smithy.protocoltests.rpcv2Json#RecursiveShapesInputOutputNested1',
             type: ShapeType::Structure,
             members: [
-                new Schema(id: 'smithy.api#String', type: ShapeType::String_, memberName: 'foo', memberIndex: 0),
-                new Schema(id: 'smithy.protocoltests.rpcv2Json#RecursiveShapesInputOutputNested2', type: ShapeType::Structure, memberName: 'nested', memberIndex: 1, members: [new Schema(id: 'smithy.api#String', type: ShapeType::String_, memberName: 'bar', memberIndex: 0), new Schema(id: 'smithy.protocoltests.rpcv2Json#RecursiveShapesInputOutputNested1', type: ShapeType::Structure, memberName: 'recursiveMember', memberIndex: 1, targetClass: RecursiveShapesInputOutputNested1::class)], targetClass: RecursiveShapesInputOutputNested2::class)
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#RecursiveShapesInputOutputNested1$foo', type: ShapeType::String_, memberName: 'foo', memberIndex: 0),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#RecursiveShapesInputOutputNested1$nested', type: ShapeType::Structure, memberName: 'nested', memberIndex: 1, members: [new Schema(id: 'smithy.protocoltests.rpcv2Json#RecursiveShapesInputOutputNested2$bar', type: ShapeType::String_, memberName: 'bar', memberIndex: 0), new Schema(id: 'smithy.protocoltests.rpcv2Json#RecursiveShapesInputOutputNested2$recursiveMember', type: ShapeType::Structure, memberName: 'recursiveMember', memberIndex: 1, targetClass: RecursiveShapesInputOutputNested1::class)], targetClass: RecursiveShapesInputOutputNested2::class)
             ],
             targetClass: RecursiveShapesInputOutputNested1::class
         );
@@ -397,8 +397,8 @@ final class Schemas
             id: 'smithy.protocoltests.rpcv2Json#RecursiveShapesInputOutputNested2',
             type: ShapeType::Structure,
             members: [
-                new Schema(id: 'smithy.api#String', type: ShapeType::String_, memberName: 'bar', memberIndex: 0),
-                new Schema(id: 'smithy.protocoltests.rpcv2Json#RecursiveShapesInputOutputNested1', type: ShapeType::Structure, memberName: 'recursiveMember', memberIndex: 1, members: [new Schema(id: 'smithy.api#String', type: ShapeType::String_, memberName: 'foo', memberIndex: 0), new Schema(id: 'smithy.protocoltests.rpcv2Json#RecursiveShapesInputOutputNested2', type: ShapeType::Structure, memberName: 'nested', memberIndex: 1, targetClass: RecursiveShapesInputOutputNested2::class)], targetClass: RecursiveShapesInputOutputNested1::class)
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#RecursiveShapesInputOutputNested2$bar', type: ShapeType::String_, memberName: 'bar', memberIndex: 0),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#RecursiveShapesInputOutputNested2$recursiveMember', type: ShapeType::Structure, memberName: 'recursiveMember', memberIndex: 1, members: [new Schema(id: 'smithy.protocoltests.rpcv2Json#RecursiveShapesInputOutputNested1$foo', type: ShapeType::String_, memberName: 'foo', memberIndex: 0), new Schema(id: 'smithy.protocoltests.rpcv2Json#RecursiveShapesInputOutputNested1$nested', type: ShapeType::Structure, memberName: 'nested', memberIndex: 1, targetClass: RecursiveShapesInputOutputNested2::class)], targetClass: RecursiveShapesInputOutputNested1::class)
             ],
             targetClass: RecursiveShapesInputOutputNested2::class
         );
@@ -414,11 +414,11 @@ final class Schemas
             id: 'smithy.protocoltests.rpcv2Json#RpcV2JsonDenseMapsInputOutput',
             type: ShapeType::Structure,
             members: [
-                new Schema(id: 'smithy.protocoltests.rpcv2Json#DenseStructMap', type: ShapeType::Map, memberName: 'denseStructMap', memberIndex: 0, mapKey: new Schema(id: 'smithy.api#String', type: ShapeType::String_, memberName: 'key', memberIndex: 0), mapValue: new Schema(id: 'smithy.protocoltests.shared#GreetingStruct', type: ShapeType::Structure, memberName: 'value', memberIndex: 1, members: [new Schema(id: 'smithy.api#String', type: ShapeType::String_, memberName: 'hi', memberIndex: 0)], targetClass: GreetingStruct::class)),
-                new Schema(id: 'smithy.protocoltests.rpcv2Json#DenseNumberMap', type: ShapeType::Map, memberName: 'denseNumberMap', memberIndex: 1, mapKey: new Schema(id: 'smithy.api#String', type: ShapeType::String_, memberName: 'key', memberIndex: 0), mapValue: new Schema(id: 'smithy.api#Integer', type: ShapeType::Integer, memberName: 'value', memberIndex: 1)),
-                new Schema(id: 'smithy.protocoltests.rpcv2Json#DenseBooleanMap', type: ShapeType::Map, memberName: 'denseBooleanMap', memberIndex: 2, mapKey: new Schema(id: 'smithy.api#String', type: ShapeType::String_, memberName: 'key', memberIndex: 0), mapValue: new Schema(id: 'smithy.api#Boolean', type: ShapeType::Boolean, memberName: 'value', memberIndex: 1)),
-                new Schema(id: 'smithy.protocoltests.rpcv2Json#DenseStringMap', type: ShapeType::Map, memberName: 'denseStringMap', memberIndex: 3, mapKey: new Schema(id: 'smithy.api#String', type: ShapeType::String_, memberName: 'key', memberIndex: 0), mapValue: new Schema(id: 'smithy.api#String', type: ShapeType::String_, memberName: 'value', memberIndex: 1)),
-                new Schema(id: 'smithy.protocoltests.rpcv2Json#DenseSetMap', type: ShapeType::Map, memberName: 'denseSetMap', memberIndex: 4, mapKey: new Schema(id: 'smithy.api#String', type: ShapeType::String_, memberName: 'key', memberIndex: 0), mapValue: new Schema(id: 'smithy.protocoltests.shared#StringSet', type: ShapeType::List_, memberName: 'value', memberIndex: 1, listMember: new Schema(id: 'smithy.api#String', type: ShapeType::String_, memberName: 'member', memberIndex: 0)))
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#RpcV2JsonDenseMapsInputOutput$denseStructMap', type: ShapeType::Map, memberName: 'denseStructMap', memberIndex: 0, mapKey: new Schema(id: 'smithy.protocoltests.rpcv2Json#DenseStructMap$key', type: ShapeType::String_, memberName: 'key', memberIndex: 0), mapValue: new Schema(id: 'smithy.protocoltests.rpcv2Json#DenseStructMap$value', type: ShapeType::Structure, memberName: 'value', memberIndex: 1, members: [new Schema(id: 'smithy.protocoltests.shared#GreetingStruct$hi', type: ShapeType::String_, memberName: 'hi', memberIndex: 0)], targetClass: GreetingStruct::class)),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#RpcV2JsonDenseMapsInputOutput$denseNumberMap', type: ShapeType::Map, memberName: 'denseNumberMap', memberIndex: 1, mapKey: new Schema(id: 'smithy.protocoltests.rpcv2Json#DenseNumberMap$key', type: ShapeType::String_, memberName: 'key', memberIndex: 0), mapValue: new Schema(id: 'smithy.protocoltests.rpcv2Json#DenseNumberMap$value', type: ShapeType::Integer, memberName: 'value', memberIndex: 1)),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#RpcV2JsonDenseMapsInputOutput$denseBooleanMap', type: ShapeType::Map, memberName: 'denseBooleanMap', memberIndex: 2, mapKey: new Schema(id: 'smithy.protocoltests.rpcv2Json#DenseBooleanMap$key', type: ShapeType::String_, memberName: 'key', memberIndex: 0), mapValue: new Schema(id: 'smithy.protocoltests.rpcv2Json#DenseBooleanMap$value', type: ShapeType::Boolean, memberName: 'value', memberIndex: 1)),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#RpcV2JsonDenseMapsInputOutput$denseStringMap', type: ShapeType::Map, memberName: 'denseStringMap', memberIndex: 3, mapKey: new Schema(id: 'smithy.protocoltests.rpcv2Json#DenseStringMap$key', type: ShapeType::String_, memberName: 'key', memberIndex: 0), mapValue: new Schema(id: 'smithy.protocoltests.rpcv2Json#DenseStringMap$value', type: ShapeType::String_, memberName: 'value', memberIndex: 1)),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#RpcV2JsonDenseMapsInputOutput$denseSetMap', type: ShapeType::Map, memberName: 'denseSetMap', memberIndex: 4, mapKey: new Schema(id: 'smithy.protocoltests.rpcv2Json#DenseSetMap$key', type: ShapeType::String_, memberName: 'key', memberIndex: 0), mapValue: new Schema(id: 'smithy.protocoltests.rpcv2Json#DenseSetMap$value', type: ShapeType::List_, memberName: 'value', memberIndex: 1, listMember: new Schema(id: 'smithy.protocoltests.shared#StringSet$member', type: ShapeType::String_, memberName: 'member', memberIndex: 0)))
             ],
             targetClass: RpcV2JsonDenseMapsInputOutput::class
         );
@@ -434,16 +434,16 @@ final class Schemas
             id: 'smithy.protocoltests.rpcv2Json#RpcV2JsonListInputOutput',
             type: ShapeType::Structure,
             members: [
-                new Schema(id: 'smithy.protocoltests.shared#StringList', type: ShapeType::List_, memberName: 'stringList', memberIndex: 0, listMember: new Schema(id: 'smithy.api#String', type: ShapeType::String_, memberName: 'member', memberIndex: 0)),
-                new Schema(id: 'smithy.protocoltests.shared#StringSet', type: ShapeType::List_, memberName: 'stringSet', memberIndex: 1, listMember: new Schema(id: 'smithy.api#String', type: ShapeType::String_, memberName: 'member', memberIndex: 0)),
-                new Schema(id: 'smithy.protocoltests.shared#IntegerList', type: ShapeType::List_, memberName: 'integerList', memberIndex: 2, listMember: new Schema(id: 'smithy.api#Integer', type: ShapeType::Integer, memberName: 'member', memberIndex: 0)),
-                new Schema(id: 'smithy.protocoltests.shared#BooleanList', type: ShapeType::List_, memberName: 'booleanList', memberIndex: 3, listMember: new Schema(id: 'smithy.api#Boolean', type: ShapeType::Boolean, memberName: 'member', memberIndex: 0)),
-                new Schema(id: 'smithy.protocoltests.shared#TimestampList', type: ShapeType::List_, memberName: 'timestampList', memberIndex: 4, listMember: new Schema(id: 'smithy.api#Timestamp', type: ShapeType::Timestamp, memberName: 'member', memberIndex: 0)),
-                new Schema(id: 'smithy.protocoltests.shared#FooEnumList', type: ShapeType::List_, memberName: 'enumList', memberIndex: 5, listMember: new Schema(id: 'smithy.protocoltests.shared#FooEnum', type: ShapeType::Enum, memberName: 'member', memberIndex: 0, targetClass: FooEnum::class)),
-                new Schema(id: 'smithy.protocoltests.shared#IntegerEnumList', type: ShapeType::List_, memberName: 'intEnumList', memberIndex: 6, listMember: new Schema(id: 'smithy.protocoltests.shared#IntegerEnum', type: ShapeType::IntEnum, memberName: 'member', memberIndex: 0, targetClass: IntegerEnum::class)),
-                new Schema(id: 'smithy.protocoltests.shared#NestedStringList', type: ShapeType::List_, memberName: 'nestedStringList', memberIndex: 7, listMember: new Schema(id: 'smithy.protocoltests.shared#StringList', type: ShapeType::List_, memberName: 'member', memberIndex: 0, listMember: new Schema(id: 'smithy.api#String', type: ShapeType::String_, memberName: 'member', memberIndex: 0))),
-                new Schema(id: 'smithy.protocoltests.rpcv2Json#StructureList', type: ShapeType::List_, memberName: 'structureList', memberIndex: 8, listMember: new Schema(id: 'smithy.protocoltests.rpcv2Json#StructureListMember', type: ShapeType::Structure, memberName: 'member', memberIndex: 0, members: [new Schema(id: 'smithy.api#String', type: ShapeType::String_, memberName: 'a', memberIndex: 0), new Schema(id: 'smithy.api#String', type: ShapeType::String_, memberName: 'b', memberIndex: 1)], targetClass: StructureListMember::class)),
-                new Schema(id: 'smithy.protocoltests.shared#BlobList', type: ShapeType::List_, memberName: 'blobList', memberIndex: 9, listMember: new Schema(id: 'smithy.api#Blob', type: ShapeType::Blob, memberName: 'member', memberIndex: 0))
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#RpcV2JsonListInputOutput$stringList', type: ShapeType::List_, memberName: 'stringList', memberIndex: 0, listMember: new Schema(id: 'smithy.protocoltests.shared#StringList$member', type: ShapeType::String_, memberName: 'member', memberIndex: 0)),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#RpcV2JsonListInputOutput$stringSet', type: ShapeType::List_, memberName: 'stringSet', memberIndex: 1, listMember: new Schema(id: 'smithy.protocoltests.shared#StringSet$member', type: ShapeType::String_, memberName: 'member', memberIndex: 0)),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#RpcV2JsonListInputOutput$integerList', type: ShapeType::List_, memberName: 'integerList', memberIndex: 2, listMember: new Schema(id: 'smithy.protocoltests.shared#IntegerList$member', type: ShapeType::Integer, memberName: 'member', memberIndex: 0)),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#RpcV2JsonListInputOutput$booleanList', type: ShapeType::List_, memberName: 'booleanList', memberIndex: 3, listMember: new Schema(id: 'smithy.protocoltests.shared#BooleanList$member', type: ShapeType::Boolean, memberName: 'member', memberIndex: 0)),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#RpcV2JsonListInputOutput$timestampList', type: ShapeType::List_, memberName: 'timestampList', memberIndex: 4, listMember: new Schema(id: 'smithy.protocoltests.shared#TimestampList$member', type: ShapeType::Timestamp, memberName: 'member', memberIndex: 0)),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#RpcV2JsonListInputOutput$enumList', type: ShapeType::List_, memberName: 'enumList', memberIndex: 5, listMember: new Schema(id: 'smithy.protocoltests.shared#FooEnumList$member', type: ShapeType::Enum, memberName: 'member', memberIndex: 0, targetClass: FooEnum::class)),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#RpcV2JsonListInputOutput$intEnumList', type: ShapeType::List_, memberName: 'intEnumList', memberIndex: 6, listMember: new Schema(id: 'smithy.protocoltests.shared#IntegerEnumList$member', type: ShapeType::IntEnum, memberName: 'member', memberIndex: 0, targetClass: IntegerEnum::class)),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#RpcV2JsonListInputOutput$nestedStringList', type: ShapeType::List_, memberName: 'nestedStringList', memberIndex: 7, listMember: new Schema(id: 'smithy.protocoltests.shared#NestedStringList$member', type: ShapeType::List_, memberName: 'member', memberIndex: 0, listMember: new Schema(id: 'smithy.protocoltests.shared#StringList$member', type: ShapeType::String_, memberName: 'member', memberIndex: 0))),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#RpcV2JsonListInputOutput$structureList', type: ShapeType::List_, memberName: 'structureList', memberIndex: 8, listMember: new Schema(id: 'smithy.protocoltests.rpcv2Json#StructureList$member', type: ShapeType::Structure, memberName: 'member', memberIndex: 0, members: [new Schema(id: 'smithy.protocoltests.rpcv2Json#StructureListMember$a', type: ShapeType::String_, memberName: 'a', memberIndex: 0), new Schema(id: 'smithy.protocoltests.rpcv2Json#StructureListMember$b', type: ShapeType::String_, memberName: 'b', memberIndex: 1)], targetClass: StructureListMember::class)),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#RpcV2JsonListInputOutput$blobList', type: ShapeType::List_, memberName: 'blobList', memberIndex: 9, listMember: new Schema(id: 'smithy.protocoltests.shared#BlobList$member', type: ShapeType::Blob, memberName: 'member', memberIndex: 0))
             ],
             targetClass: RpcV2JsonListInputOutput::class
         );
@@ -459,11 +459,11 @@ final class Schemas
             id: 'smithy.protocoltests.rpcv2Json#RpcV2JsonSparseMapsInputOutput',
             type: ShapeType::Structure,
             members: [
-                new Schema(id: 'smithy.protocoltests.rpcv2Json#SparseStructMap', type: ShapeType::Map, memberName: 'sparseStructMap', memberIndex: 0, mapKey: new Schema(id: 'smithy.api#String', type: ShapeType::String_, memberName: 'key', memberIndex: 0), mapValue: new Schema(id: 'smithy.protocoltests.shared#GreetingStruct', type: ShapeType::Structure, memberName: 'value', memberIndex: 1, members: [new Schema(id: 'smithy.api#String', type: ShapeType::String_, memberName: 'hi', memberIndex: 0)], targetClass: GreetingStruct::class), traits: [15 => true]),
-                new Schema(id: 'smithy.protocoltests.rpcv2Json#SparseNumberMap', type: ShapeType::Map, memberName: 'sparseNumberMap', memberIndex: 1, mapKey: new Schema(id: 'smithy.api#String', type: ShapeType::String_, memberName: 'key', memberIndex: 0), mapValue: new Schema(id: 'smithy.api#Integer', type: ShapeType::Integer, memberName: 'value', memberIndex: 1), traits: [15 => true]),
-                new Schema(id: 'smithy.protocoltests.rpcv2Json#SparseBooleanMap', type: ShapeType::Map, memberName: 'sparseBooleanMap', memberIndex: 2, mapKey: new Schema(id: 'smithy.api#String', type: ShapeType::String_, memberName: 'key', memberIndex: 0), mapValue: new Schema(id: 'smithy.api#Boolean', type: ShapeType::Boolean, memberName: 'value', memberIndex: 1), traits: [15 => true]),
-                new Schema(id: 'smithy.protocoltests.shared#SparseStringMap', type: ShapeType::Map, memberName: 'sparseStringMap', memberIndex: 3, mapKey: new Schema(id: 'smithy.api#String', type: ShapeType::String_, memberName: 'key', memberIndex: 0), mapValue: new Schema(id: 'smithy.api#String', type: ShapeType::String_, memberName: 'value', memberIndex: 1), traits: [15 => true]),
-                new Schema(id: 'smithy.protocoltests.rpcv2Json#SparseSetMap', type: ShapeType::Map, memberName: 'sparseSetMap', memberIndex: 4, mapKey: new Schema(id: 'smithy.api#String', type: ShapeType::String_, memberName: 'key', memberIndex: 0), mapValue: new Schema(id: 'smithy.protocoltests.shared#StringSet', type: ShapeType::List_, memberName: 'value', memberIndex: 1, listMember: new Schema(id: 'smithy.api#String', type: ShapeType::String_, memberName: 'member', memberIndex: 0)), traits: [15 => true])
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#RpcV2JsonSparseMapsInputOutput$sparseStructMap', type: ShapeType::Map, memberName: 'sparseStructMap', memberIndex: 0, mapKey: new Schema(id: 'smithy.protocoltests.rpcv2Json#SparseStructMap$key', type: ShapeType::String_, memberName: 'key', memberIndex: 0), mapValue: new Schema(id: 'smithy.protocoltests.rpcv2Json#SparseStructMap$value', type: ShapeType::Structure, memberName: 'value', memberIndex: 1, members: [new Schema(id: 'smithy.protocoltests.shared#GreetingStruct$hi', type: ShapeType::String_, memberName: 'hi', memberIndex: 0)], targetClass: GreetingStruct::class), traits: [15 => true]),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#RpcV2JsonSparseMapsInputOutput$sparseNumberMap', type: ShapeType::Map, memberName: 'sparseNumberMap', memberIndex: 1, mapKey: new Schema(id: 'smithy.protocoltests.rpcv2Json#SparseNumberMap$key', type: ShapeType::String_, memberName: 'key', memberIndex: 0), mapValue: new Schema(id: 'smithy.protocoltests.rpcv2Json#SparseNumberMap$value', type: ShapeType::Integer, memberName: 'value', memberIndex: 1), traits: [15 => true]),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#RpcV2JsonSparseMapsInputOutput$sparseBooleanMap', type: ShapeType::Map, memberName: 'sparseBooleanMap', memberIndex: 2, mapKey: new Schema(id: 'smithy.protocoltests.rpcv2Json#SparseBooleanMap$key', type: ShapeType::String_, memberName: 'key', memberIndex: 0), mapValue: new Schema(id: 'smithy.protocoltests.rpcv2Json#SparseBooleanMap$value', type: ShapeType::Boolean, memberName: 'value', memberIndex: 1), traits: [15 => true]),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#RpcV2JsonSparseMapsInputOutput$sparseStringMap', type: ShapeType::Map, memberName: 'sparseStringMap', memberIndex: 3, mapKey: new Schema(id: 'smithy.protocoltests.shared#SparseStringMap$key', type: ShapeType::String_, memberName: 'key', memberIndex: 0), mapValue: new Schema(id: 'smithy.protocoltests.shared#SparseStringMap$value', type: ShapeType::String_, memberName: 'value', memberIndex: 1), traits: [15 => true]),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#RpcV2JsonSparseMapsInputOutput$sparseSetMap', type: ShapeType::Map, memberName: 'sparseSetMap', memberIndex: 4, mapKey: new Schema(id: 'smithy.protocoltests.rpcv2Json#SparseSetMap$key', type: ShapeType::String_, memberName: 'key', memberIndex: 0), mapValue: new Schema(id: 'smithy.protocoltests.rpcv2Json#SparseSetMap$value', type: ShapeType::List_, memberName: 'value', memberIndex: 1, listMember: new Schema(id: 'smithy.protocoltests.shared#StringSet$member', type: ShapeType::String_, memberName: 'member', memberIndex: 0)), traits: [15 => true])
             ],
             targetClass: RpcV2JsonSparseMapsInputOutput::class
         );
@@ -479,16 +479,16 @@ final class Schemas
             id: 'smithy.protocoltests.rpcv2Json#SimpleScalarStructure',
             type: ShapeType::Structure,
             members: [
-                new Schema(id: 'smithy.api#Boolean', type: ShapeType::Boolean, memberName: 'trueBooleanValue', memberIndex: 0),
-                new Schema(id: 'smithy.api#Boolean', type: ShapeType::Boolean, memberName: 'falseBooleanValue', memberIndex: 1),
-                new Schema(id: 'smithy.api#Byte', type: ShapeType::Byte, memberName: 'byteValue', memberIndex: 2),
-                new Schema(id: 'smithy.api#Double', type: ShapeType::Double, memberName: 'doubleValue', memberIndex: 3),
-                new Schema(id: 'smithy.api#Float', type: ShapeType::Float_, memberName: 'floatValue', memberIndex: 4),
-                new Schema(id: 'smithy.api#Integer', type: ShapeType::Integer, memberName: 'integerValue', memberIndex: 5),
-                new Schema(id: 'smithy.api#Long', type: ShapeType::Long, memberName: 'longValue', memberIndex: 6),
-                new Schema(id: 'smithy.api#Short', type: ShapeType::Short, memberName: 'shortValue', memberIndex: 7),
-                new Schema(id: 'smithy.api#String', type: ShapeType::String_, memberName: 'stringValue', memberIndex: 8),
-                new Schema(id: 'smithy.api#Blob', type: ShapeType::Blob, memberName: 'blobValue', memberIndex: 9)
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#SimpleScalarStructure$trueBooleanValue', type: ShapeType::Boolean, memberName: 'trueBooleanValue', memberIndex: 0),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#SimpleScalarStructure$falseBooleanValue', type: ShapeType::Boolean, memberName: 'falseBooleanValue', memberIndex: 1),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#SimpleScalarStructure$byteValue', type: ShapeType::Byte, memberName: 'byteValue', memberIndex: 2),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#SimpleScalarStructure$doubleValue', type: ShapeType::Double, memberName: 'doubleValue', memberIndex: 3),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#SimpleScalarStructure$floatValue', type: ShapeType::Float_, memberName: 'floatValue', memberIndex: 4),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#SimpleScalarStructure$integerValue', type: ShapeType::Integer, memberName: 'integerValue', memberIndex: 5),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#SimpleScalarStructure$longValue', type: ShapeType::Long, memberName: 'longValue', memberIndex: 6),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#SimpleScalarStructure$shortValue', type: ShapeType::Short, memberName: 'shortValue', memberIndex: 7),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#SimpleScalarStructure$stringValue', type: ShapeType::String_, memberName: 'stringValue', memberIndex: 8),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#SimpleScalarStructure$blobValue', type: ShapeType::Blob, memberName: 'blobValue', memberIndex: 9)
             ],
             targetClass: SimpleScalarStructure::class
         );
@@ -504,7 +504,7 @@ final class Schemas
             id: 'smithy.protocoltests.rpcv2Json#SimpleStructure',
             type: ShapeType::Structure,
             members: [
-                new Schema(id: 'smithy.api#String', type: ShapeType::String_, memberName: 'value', memberIndex: 0)
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#SimpleStructure$value', type: ShapeType::String_, memberName: 'value', memberIndex: 0)
             ],
             targetClass: SimpleStructure::class
         );
@@ -520,8 +520,8 @@ final class Schemas
             id: 'smithy.protocoltests.rpcv2Json#SparseNullsOperationInputOutput',
             type: ShapeType::Structure,
             members: [
-                new Schema(id: 'smithy.protocoltests.shared#SparseStringList', type: ShapeType::List_, memberName: 'sparseStringList', memberIndex: 0, listMember: new Schema(id: 'smithy.api#String', type: ShapeType::String_, memberName: 'member', memberIndex: 0), traits: [15 => true]),
-                new Schema(id: 'smithy.protocoltests.shared#SparseStringMap', type: ShapeType::Map, memberName: 'sparseStringMap', memberIndex: 1, mapKey: new Schema(id: 'smithy.api#String', type: ShapeType::String_, memberName: 'key', memberIndex: 0), mapValue: new Schema(id: 'smithy.api#String', type: ShapeType::String_, memberName: 'value', memberIndex: 1), traits: [15 => true])
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#SparseNullsOperationInputOutput$sparseStringList', type: ShapeType::List_, memberName: 'sparseStringList', memberIndex: 0, listMember: new Schema(id: 'smithy.protocoltests.shared#SparseStringList$member', type: ShapeType::String_, memberName: 'member', memberIndex: 0), traits: [15 => true]),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#SparseNullsOperationInputOutput$sparseStringMap', type: ShapeType::Map, memberName: 'sparseStringMap', memberIndex: 1, mapKey: new Schema(id: 'smithy.protocoltests.shared#SparseStringMap$key', type: ShapeType::String_, memberName: 'key', memberIndex: 0), mapValue: new Schema(id: 'smithy.protocoltests.shared#SparseStringMap$value', type: ShapeType::String_, memberName: 'value', memberIndex: 1), traits: [15 => true])
             ],
             targetClass: SparseNullsOperationInputOutput::class
         );
@@ -537,8 +537,8 @@ final class Schemas
             id: 'smithy.protocoltests.rpcv2Json#StructureListMember',
             type: ShapeType::Structure,
             members: [
-                new Schema(id: 'smithy.api#String', type: ShapeType::String_, memberName: 'a', memberIndex: 0),
-                new Schema(id: 'smithy.api#String', type: ShapeType::String_, memberName: 'b', memberIndex: 1)
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#StructureListMember$a', type: ShapeType::String_, memberName: 'a', memberIndex: 0),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#StructureListMember$b', type: ShapeType::String_, memberName: 'b', memberIndex: 1)
             ],
             targetClass: StructureListMember::class
         );
@@ -554,10 +554,10 @@ final class Schemas
             id: 'smithy.protocoltests.rpcv2Json#TimestampFormatIgnoredIO',
             type: ShapeType::Structure,
             members: [
-                new Schema(id: 'smithy.protocoltests.shared#DateTime', type: ShapeType::Timestamp, memberName: 'dateTime', memberIndex: 0, traits: [4 => 'date-time']),
-                new Schema(id: 'smithy.protocoltests.shared#HttpDate', type: ShapeType::Timestamp, memberName: 'httpDate', memberIndex: 1, traits: [4 => 'http-date']),
-                new Schema(id: 'smithy.protocoltests.shared#EpochSeconds', type: ShapeType::Timestamp, memberName: 'epochSeconds', memberIndex: 2, traits: [4 => 'epoch-seconds']),
-                new Schema(id: 'smithy.api#Timestamp', type: ShapeType::Timestamp, memberName: 'normal', memberIndex: 3)
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#TimestampFormatIgnoredIO$dateTime', type: ShapeType::Timestamp, memberName: 'dateTime', memberIndex: 0, traits: [4 => 'date-time']),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#TimestampFormatIgnoredIO$httpDate', type: ShapeType::Timestamp, memberName: 'httpDate', memberIndex: 1, traits: [4 => 'http-date']),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#TimestampFormatIgnoredIO$epochSeconds', type: ShapeType::Timestamp, memberName: 'epochSeconds', memberIndex: 2, traits: [4 => 'epoch-seconds']),
+                new Schema(id: 'smithy.protocoltests.rpcv2Json#TimestampFormatIgnoredIO$normal', type: ShapeType::Timestamp, memberName: 'normal', memberIndex: 3)
             ],
             targetClass: TimestampFormatIgnoredIO::class
         );
@@ -573,7 +573,7 @@ final class Schemas
             id: 'smithy.protocoltests.shared#GreetingStruct',
             type: ShapeType::Structure,
             members: [
-                new Schema(id: 'smithy.api#String', type: ShapeType::String_, memberName: 'hi', memberIndex: 0)
+                new Schema(id: 'smithy.protocoltests.shared#GreetingStruct$hi', type: ShapeType::String_, memberName: 'hi', memberIndex: 0)
             ],
             targetClass: GreetingStruct::class
         );

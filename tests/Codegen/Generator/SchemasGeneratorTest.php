@@ -10,14 +10,54 @@ declare(strict_types=1);
 namespace Smithy\Tests\Codegen\Generator;
 
 use PHPUnit\Framework\TestCase;
+use Smithy\Client\Dynamic\DynamicService;
 use Smithy\Codegen\CodegenSettings;
 use Smithy\Codegen\Generator\SchemasGenerator;
 use Smithy\Codegen\Model\SmithyModel;
 use Smithy\Codegen\PhpSymbolProvider;
 use Smithy\Codegen\PriorCodegenEvaluator;
+use Smithy\Core\Model\SmithyModel as RuntimeSmithyModel;
+use Smithy\Core\Serde\Schema;
+use Smithy\Core\Serde\SchemaConverter;
+use Smithy\Core\Shape\ServiceInterface;
+use Smithy\Core\Shape\ShapeType;
+use Smithy\ProtocolTests\RpcV2Cbor\RpcV2CborService;
+use Smithy\ProtocolTests\RpcV2Json\RpcV2JsonService;
 
 final class SchemasGeneratorTest extends TestCase
 {
+    public function testGeneratedSchemasMatchRuntimeSemantics(): void
+    {
+        $root = \dirname(__DIR__, 3);
+        $cases = [
+            [
+                RpcV2CborService::instance(),
+                $root . '/tools/codegen-output/models/rpcv2-cbor.json',
+                'smithy.protocoltests.rpcv2Cbor#RpcV2Protocol'
+            ],
+            [
+                RpcV2JsonService::instance(),
+                $root . '/tools/codegen-output/models/rpcv2-json.json',
+                'smithy.protocoltests.rpcv2Json#RpcV2JsonProtocol'
+            ]
+        ];
+
+        foreach ($cases as [$generated, $modelPath, $serviceId]) {
+            $model = RuntimeSmithyModel::fromFile($modelPath);
+            $runtime = new DynamicService(
+                $model,
+                new SchemaConverter($model),
+                $serviceId
+            );
+
+            self::assertSame(
+                $this->normalizeServiceSchemas($runtime),
+                $this->normalizeServiceSchemas($generated),
+                "Generated schema semantics differ for {$serviceId}."
+            );
+        }
+    }
+
     public function testGeneratesSchemasClassAtBaseNamespace(): void
     {
         $model = SmithyModel::fromFile(
@@ -373,6 +413,231 @@ final class SchemasGeneratorTest extends TestCase
         );
     }
 
+    /**
+     * @return array<string, mixed>
+     */
+    private function normalizeServiceSchemas(ServiceInterface $service): array
+    {
+        $schemas = [];
+        $operations = [];
+        $this->addSchema($service->getSchema(), $schemas);
+
+        foreach ($service->getOperations() as $operation) {
+            $this->addSchema($operation->getSchema(), $schemas);
+            $this->addSchema($operation->getInputSchema(), $schemas);
+            $this->addSchema($operation->getOutputSchema(), $schemas);
+            $errors = [];
+            foreach ($operation->getErrorSchemas() as $error) {
+                $this->addSchema($error, $schemas);
+                $errors[] = $error->id;
+            }
+            $operations[$operation->getId()] = [
+                'input' => $operation->getInputSchema()->id,
+                'output' => $operation->getOutputSchema()->id,
+                'errors' => $errors
+            ];
+        }
+
+        \ksort($operations, SORT_STRING);
+        \ksort($schemas, SORT_STRING);
+
+        return [
+            'service' => $service->getSchema()->id,
+            'operations' => $operations,
+            'schemas' => $schemas
+        ];
+    }
+
+    /**
+     * @param array<string, array<string, mixed>> $schemas
+     */
+    private function addSchema(Schema $schema, array &$schemas): void
+    {
+        if (isset($schemas[$schema->id])) {
+            return;
+        }
+
+        $schemas[$schema->id] = $this->normalizeSchema($schema, []);
+    }
+
+    /**
+     * @param array<string, true> $visiting
+     * @return array<string, mixed>
+     */
+    private function normalizeSchema(Schema $schema, array $visiting): array
+    {
+        if (isset($visiting[$schema->id])) {
+            return ['ref' => $schema->id];
+        }
+        $visiting[$schema->id] = true;
+
+        $target = null;
+        if ($schema->isMember()
+            && \in_array(
+                $schema->type,
+                [
+                    ShapeType::Structure->value,
+                    ShapeType::Union->value
+                ],
+                true
+            )
+        ) {
+            $resolved = $schema->resolveTarget();
+            if ($resolved !== $schema) {
+                $this->assertPopulatedInlineIdsMatchTarget(
+                    $schema,
+                    $resolved
+                );
+                $target = $this->normalizeSchema($resolved, $visiting);
+            }
+        }
+
+        $members = [];
+        if ($target === null) {
+            foreach ($schema->getMembers() as $name => $member) {
+                $members[$name] = $this->normalizeSchema(
+                    $member,
+                    $visiting
+                );
+            }
+        }
+        \ksort($members, SORT_STRING);
+
+        return [
+            'id' => $schema->id,
+            'type' => $schema->type,
+            'isMember' => $schema->isMember(),
+            'name' => $schema->memberName,
+            'index' => $schema->memberIndex,
+            'traits' => $this->normalizeValue($schema->getTraits()),
+            'target' => $target,
+            'members' => $members,
+            'listMember' => $schema->getListMember() === null
+                ? null
+                : $this->normalizeSchema(
+                    $schema->getListMember(),
+                    $visiting
+                ),
+            'mapKey' => $schema->getMapKey() === null
+                ? null
+                : $this->normalizeSchema(
+                    $schema->getMapKey(),
+                    $visiting
+                ),
+            'mapValue' => $schema->getMapValue() === null
+                ? null
+                : $this->normalizeSchema(
+                    $schema->getMapValue(),
+                    $visiting
+                )
+        ];
+    }
+
+    private function assertPopulatedInlineIdsMatchTarget(
+        Schema $schema,
+        Schema $target
+    ): void
+    {
+        $members = $schema->getMembers();
+        if ($members !== []) {
+            $targetMembers = $target->getMembers();
+            $inlineIds = [];
+            foreach ($members as $name => $member) {
+                $inlineIds[$name] = $member->id;
+            }
+
+            $targetIds = [];
+            foreach ($targetMembers as $name => $member) {
+                $targetIds[$name] = $member->id;
+            }
+
+            \ksort($inlineIds, SORT_STRING);
+            \ksort($targetIds, SORT_STRING);
+
+            self::assertSame(
+                $targetIds,
+                $inlineIds,
+                "Inline member IDs differ for {$schema->id}."
+            );
+
+            foreach ($members as $name => $member) {
+                $targetMember = $targetMembers[$name] ?? null;
+                self::assertNotNull($targetMember);
+                $this->assertPopulatedInlineIdsMatchTarget(
+                    $member,
+                    $targetMember
+                );
+            }
+        }
+
+        $this->assertPopulatedInlineCollectionIdMatchesTarget(
+            $schema->getListMember(),
+            $target->getListMember(),
+            'list member',
+            $schema->id
+        );
+        $this->assertPopulatedInlineCollectionIdMatchesTarget(
+            $schema->getMapKey(),
+            $target->getMapKey(),
+            'map key',
+            $schema->id
+        );
+        $this->assertPopulatedInlineCollectionIdMatchesTarget(
+            $schema->getMapValue(),
+            $target->getMapValue(),
+            'map value',
+            $schema->id
+        );
+    }
+
+    private function assertPopulatedInlineCollectionIdMatchesTarget(
+        ?Schema $schema,
+        ?Schema $target,
+        string $kind,
+        string $containerId
+    ): void
+    {
+        if ($schema === null) {
+            return;
+        }
+
+        self::assertNotNull(
+            $target,
+            "Inline {$kind} is missing from target {$containerId}."
+        );
+        self::assertSame(
+            $target->id,
+            $schema->id,
+            "Inline {$kind} ID differs for {$containerId}."
+        );
+        $this->assertPopulatedInlineIdsMatchTarget(
+            $schema,
+            $target
+        );
+    }
+
+    /**
+     * Normalize trait values that may contain schema references.
+     */
+    private function normalizeValue(mixed $value): mixed
+    {
+        if ($value instanceof Schema) {
+            return $value->id;
+        }
+        if (!\is_array($value)) {
+            return $value;
+        }
+
+        foreach ($value as $key => $item) {
+            $value[$key] = $this->normalizeValue($item);
+        }
+        if (!\array_is_list($value)) {
+            \ksort($value, SORT_STRING);
+        }
+
+        return $value;
+    }
+
     public function testPreservesConfiguredTraitIdsOnCollectionSchemas(): void
     {
         $model = SmithyModel::fromJson(\json_encode([
@@ -461,19 +726,19 @@ final class SchemasGeneratorTest extends TestCase
             );
         }
         $this->assertStringContainsString(
-            "listMember: new Schema(id: 'smithy.example#Item', "
+            "listMember: new Schema(id: 'smithy.example#ItemList\$member', "
                 . "type: ShapeType::Structure, memberName: 'member', "
                 . "memberIndex: 0",
             $content
         );
         $this->assertStringContainsString(
-            "mapKey: new Schema(id: 'smithy.api#String', "
+            "mapKey: new Schema(id: 'smithy.example#AttributeMap\$key', "
                 . "type: ShapeType::String_, memberName: 'key', "
                 . "memberIndex: 0",
             $content
         );
         $this->assertStringContainsString(
-            "mapValue: new Schema(id: 'smithy.api#String', "
+            "mapValue: new Schema(id: 'smithy.example#AttributeMap\$value', "
                 . "type: ShapeType::String_, memberName: 'value', "
                 . "memberIndex: 1",
             $content
