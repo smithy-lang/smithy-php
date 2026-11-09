@@ -81,8 +81,6 @@ items still need to align with it before the preview release:
 - Remove the now-unused AWS dynamic-client operation-target helper. AWS JSON
   and Query protocols already derive dynamic targets from service and
   operation metadata.
-- Apply target-shape defaults during dynamic input coercion while preserving
-  direct `@default(null)` as the mechanism that clears an inherited default.
 - Verify that caller-supplied plugin collections cannot place required HTTP
   checksum calculation before request compression.
 
