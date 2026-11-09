@@ -364,9 +364,161 @@ final class CodeGeneratorTest extends TestCase
             'use ReadonlyArrayAccessTrait;',
             $content
         );
+        $this->assertStringContainsString(
+            'use Smithy\\Core\\Shape\\ReadonlyArrayAccessTrait;',
+            $content
+        );
     }
 
-    public function testArrayAccessDisabledByDefault(): void
+    public function testArraySerializationUsesQualifiedImportWhenEnabled(): void
+    {
+        $settings = new CodegenSettings(
+            namespace: 'Aws\\Sts',
+            outputDir: sys_get_temp_dir() . '/smithy-php-test-' . uniqid(),
+            organization: 'flat',
+            arraySerialization: [
+                'enabled' => true,
+                'categories' => ['shape']
+            ]
+        );
+
+        $generator = new CodeGenerator($settings, $this->model);
+        $files = $generator->generate();
+
+        $humanFile = $this->findFile($files, 'Human.php');
+        $this->assertNotNull($humanFile);
+
+        $this->assertStringContainsString(
+            'use Smithy\\Core\\Shape\\ArraySerializableTrait;',
+            $humanFile->content
+        );
+        $this->assertStringContainsString(
+            'use ArraySerializableTrait;',
+            $humanFile->content
+        );
+    }
+
+    public function testArrayTraitImportsAvoidGeneratedSymbolCollisions(): void
+    {
+        $model = SmithyModel::fromJson(\json_encode([
+            'smithy' => '2.0',
+            'shapes' => [
+                'smithy.example#Container' => [
+                    'type' => 'structure',
+                    'members' => [
+                        'serializable' => [
+                            'target' =>
+                                'smithy.example#ArraySerializableTrait'
+                        ],
+                        'readonly' => [
+                            'target' =>
+                                'smithy.example#ReadonlyArrayAccessTrait'
+                        ]
+                    ]
+                ],
+                'smithy.example#ArraySerializableTrait' => [
+                    'type' => 'structure',
+                    'members' => []
+                ],
+                'smithy.example#ReadonlyArrayAccessTrait' => [
+                    'type' => 'structure',
+                    'members' => []
+                ]
+            ]
+        ], JSON_THROW_ON_ERROR));
+        $settings = new CodegenSettings(
+            namespace: 'Smithy\\Example',
+            outputDir: '/tmp/out',
+            organization: 'flat',
+            arrayAccess: [
+                'enabled' => true,
+                'categories' => ['all']
+            ],
+            arraySerialization: [
+                'enabled' => true,
+                'categories' => ['all']
+            ]
+        );
+
+        $files = (new CodeGenerator($settings, $model))->generate();
+        foreach ([
+            'Container.php',
+            'ArraySerializableTrait.php',
+            'ReadonlyArrayAccessTrait.php'
+        ] as $fileName) {
+            $file = $this->findFile($files, $fileName);
+            $this->assertNotNull($file);
+            $this->assertValidPhp($file->content);
+        }
+
+        $container = $this->findFile($files, 'Container.php');
+        $this->assertNotNull($container);
+        $this->assertStringContainsString(
+            'use Smithy\\Core\\Shape\\ArraySerializableTrait '
+                . 'as SmithyArraySerializableTrait;',
+            $container->content
+        );
+        $this->assertStringContainsString(
+            'use Smithy\\Core\\Shape\\ReadonlyArrayAccessTrait '
+                . 'as SmithyReadonlyArrayAccessTrait;',
+            $container->content
+        );
+        $this->assertStringContainsString(
+            'use SmithyArraySerializableTrait;',
+            $container->content
+        );
+        $this->assertStringContainsString(
+            'use SmithyReadonlyArrayAccessTrait;',
+            $container->content
+        );
+    }
+
+    public function testArrayTraitsApplyToUnit(): void
+    {
+        $model = SmithyModel::fromFile(
+            __DIR__ . '/../fixtures/defaults-model.json'
+        );
+        $settings = new CodegenSettings(
+            namespace: 'Smithy\\Example',
+            outputDir: '/tmp/out',
+            organization: 'flat',
+            arrayAccess: [
+                'enabled' => true,
+                'categories' => ['all']
+            ],
+            arraySerialization: [
+                'enabled' => true,
+                'categories' => ['all']
+            ]
+        );
+
+        $files = (new CodeGenerator($settings, $model))->generate();
+        $unit = $this->findFile($files, 'Unit.php');
+        $this->assertNotNull($unit);
+        $this->assertValidPhp($unit->content);
+        $this->assertStringContainsString(
+            'implements SerializableStructInterface, \\ArrayAccess',
+            $unit->content
+        );
+        $this->assertStringContainsString(
+            'use Smithy\\Core\\Shape\\ReadonlyArrayAccessTrait;',
+            $unit->content
+        );
+        $this->assertStringContainsString(
+            'use Smithy\\Core\\Shape\\ArraySerializableTrait;',
+            $unit->content
+        );
+        $this->assertStringContainsString(
+            'use ReadonlyArrayAccessTrait;',
+            $unit->content
+        );
+        $this->assertStringContainsString(
+            'use ArraySerializableTrait;',
+            $unit->content
+        );
+    }
+
+    public function testArrayTraitsDisabledByDefault(): void
     {
         $generator = new CodeGenerator($this->settings, $this->model);
         $files = $generator->generate();
@@ -380,6 +532,10 @@ final class CodeGeneratorTest extends TestCase
         $this->assertStringNotContainsString('\\ArrayAccess', $content);
         $this->assertStringNotContainsString(
             'ReadonlyArrayAccessTrait',
+            $content
+        );
+        $this->assertStringNotContainsString(
+            'ArraySerializableTrait',
             $content
         );
     }

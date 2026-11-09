@@ -75,6 +75,37 @@ final class CodegenApplicationTest extends TestCase
         $this->assertSame('', $this->contents($stderr));
     }
 
+    public function testEnablesArrayTraitsFromCommandLine(): void
+    {
+        $outputDirectory = $this->temporaryPath('output');
+        [$application, $stdout, $stderr] = $this->application();
+
+        $status = $application->run([
+            'smithy-php-codegen',
+            __DIR__ . '/../../fixtures/defaults-model.json',
+            '--namespace=Smithy\\Generated',
+            '--output=' . $outputDirectory,
+            '--organization=flat',
+            '--array-access=all',
+            '--array-serialization=all'
+        ]);
+
+        $this->assertSame(CodegenApplication::SUCCESS, $status);
+        $contents = \file_get_contents(
+            $outputDirectory . DIRECTORY_SEPARATOR . 'Settings.php'
+        );
+        $this->assertNotFalse($contents);
+        $this->assertStringContainsString(
+            'use Smithy\\Core\\Shape\\ReadonlyArrayAccessTrait;',
+            $contents
+        );
+        $this->assertStringContainsString(
+            'use Smithy\\Core\\Shape\\ArraySerializableTrait;',
+            $contents
+        );
+        $this->assertSame('', $this->contents($stderr));
+    }
+
     public function testReturnsInvalidUsageForUnknownOption(): void
     {
         [$application, $stdout, $stderr] = $this->application();

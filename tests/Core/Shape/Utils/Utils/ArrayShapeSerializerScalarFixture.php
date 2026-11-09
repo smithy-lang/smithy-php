@@ -10,10 +10,13 @@ declare(strict_types=1);
 namespace Smithy\Tests\Core\Shape\Utils\Utils;
 
 use Smithy\Core\Serde\Schema;
+use Smithy\Core\Shape\ArraySerializableTrait;
 use Smithy\Core\Shape\ShapeType;
 
 final class ArrayShapeSerializerScalarFixture extends AbstractArrayShapeSerializerFixture
 {
+    use ArraySerializableTrait;
+
     private static Schema $SCHEMA;
 
     public function __construct(

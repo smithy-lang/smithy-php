@@ -60,6 +60,10 @@ final class CodegenSettingsTest extends TestCase
             ['enabled' => false, 'categories' => ['output']],
             $settings->arrayAccess
         );
+        $this->assertSame(
+            ['enabled' => false, 'categories' => ['all']],
+            $settings->arraySerialization
+        );
         $this->assertNull($settings->baseServiceException);
         $this->assertNull($settings->serviceExceptionClass);
         $this->assertSame([], $settings->rulesFunctions);
@@ -395,6 +399,65 @@ final class CodegenSettingsTest extends TestCase
         $this->assertTrue(
             $settings->shouldGenerateArrayAccess(ShapeCategory::Shape)
         );
+    }
+
+    public function testShouldGenerateArraySerializationReturnsFalseWhenDisabled(): void
+    {
+        $settings = new CodegenSettings(
+            namespace: 'Aws\\Example',
+            outputDir: '/tmp/output',
+            arraySerialization: [
+                'enabled' => false,
+                'categories' => ['all']
+            ]
+        );
+
+        $this->assertFalse(
+            $settings->shouldGenerateArraySerialization(
+                ShapeCategory::Output
+            )
+        );
+    }
+
+    public function testShouldGenerateArraySerializationUsesConfiguredCategories(): void
+    {
+        $settings = new CodegenSettings(
+            namespace: 'Aws\\Example',
+            outputDir: '/tmp/output',
+            arraySerialization: [
+                'enabled' => true,
+                'categories' => ['output']
+            ]
+        );
+
+        $this->assertTrue(
+            $settings->shouldGenerateArraySerialization(
+                ShapeCategory::Output
+            )
+        );
+        $this->assertFalse(
+            $settings->shouldGenerateArraySerialization(
+                ShapeCategory::Input
+            )
+        );
+    }
+
+    public function testShouldGenerateArraySerializationSupportsAllCategories(): void
+    {
+        $settings = new CodegenSettings(
+            namespace: 'Aws\\Example',
+            outputDir: '/tmp/output',
+            arraySerialization: [
+                'enabled' => true,
+                'categories' => ['all']
+            ]
+        );
+
+        foreach (ShapeCategory::cases() as $category) {
+            $this->assertTrue(
+                $settings->shouldGenerateArraySerialization($category)
+            );
+        }
     }
 
     public function testFromArrayBuildsSettingsFromConfigArray(): void

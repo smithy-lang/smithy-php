@@ -50,6 +50,28 @@ final class ArrayShapeSerializerTest extends TestCase
         );
     }
 
+    public function testTraitDelegatesArrayConversion(): void
+    {
+        $obj = new ArrayShapeSerializerScalarFixture(
+            name: 'sam',
+            count: 42,
+            active: true
+        );
+
+        $this->assertSame(
+            ['name' => 'sam', 'count' => 42, 'active' => true],
+            $obj->toArray()
+        );
+
+        $hydrated = ArrayShapeSerializerScalarFixture::fromArray([
+            'name' => 'pat',
+            'count' => 7
+        ]);
+        $this->assertSame('pat', $hydrated->name);
+        $this->assertSame(7, $hydrated->count);
+        $this->assertNull($hydrated->active);
+    }
+
     public function testToArraySkipsAbsentOptionals(): void
     {
         $obj = new ArrayShapeSerializerScalarFixture(name: 'sam', count: 42);
