@@ -59,7 +59,8 @@ final class ClientGeneratorTest extends TestCase
             $file->content
         );
         $this->assertMatchesRegularExpression(
-            '/final class \w+Client extends AbstractClient/',
+            '/final class \w+Client extends AbstractClient '
+                . 'implements \w+ClientInterface/',
             $file->content
         );
         $this->assertStringEndsWith('Client.php', $file->path);
@@ -90,6 +91,104 @@ final class ClientGeneratorTest extends TestCase
         );
         $this->assertStringContainsString(
             '): Unit',
+            $file->content
+        );
+    }
+
+    public function testGeneratesClientInterfaceForKnownServiceShape(): void
+    {
+        $model = SmithyModel::fromFile(
+            __DIR__ . '/../../fixtures/defaults-model.json'
+        );
+        $settings = new CodegenSettings(
+            namespace: 'Smithy\\Example',
+            outputDir: '/tmp/out',
+            organization: 'flat'
+        );
+        $generator = new ClientGenerator(
+            $model,
+            new PhpSymbolProvider($model, $settings),
+            $settings
+        );
+
+        $file = $generator->generateInterface(
+            'smithy.example#DefaultsService',
+            $this->projection($model)
+        );
+
+        $this->assertStringEndsWith(
+            'ExampleClientInterface.php',
+            $file->path
+        );
+        $this->assertStringContainsString(
+            'use Smithy\\Client\\ClientInterface;',
+            $file->content
+        );
+        $this->assertStringContainsString(
+            'interface ExampleClientInterface extends ClientInterface',
+            $file->content
+        );
+        $this->assertStringContainsString(
+            'public function updateSettings(',
+            $file->content
+        );
+        $this->assertStringContainsString('): Unit;', $file->content);
+        $this->assertStringNotContainsString(
+            'public function __construct(',
+            $file->content
+        );
+        $this->assertStringNotContainsString(
+            'executeOperation(',
+            $file->content
+        );
+    }
+
+    public function testClientInterfaceIncludesConvenienceMethods(): void
+    {
+        $model = SmithyModel::fromFile(
+            __DIR__ . '/../../fixtures/trimmed-client-model.json'
+        );
+        $settings = new CodegenSettings(
+            namespace: 'Smithy\\PetStore',
+            outputDir: '/tmp/out',
+            organization: 'flat',
+            clientBaseInterface:
+                'Vendor\\Runtime\\VendorClientInterface'
+        );
+        $generator = new ClientGenerator(
+            $model,
+            new PhpSymbolProvider($model, $settings),
+            $settings
+        );
+
+        $file = $generator->generateInterface(
+            'smithy.example#PetStore',
+            $this->projection($model)
+        );
+
+        $this->assertStringContainsString(
+            'use Vendor\\Runtime\\VendorClientInterface;',
+            $file->content
+        );
+        $this->assertStringContainsString(
+            'interface PetStoreClientInterface '
+                . 'extends VendorClientInterface',
+            $file->content
+        );
+        $this->assertStringContainsString(
+            'public function listPetsPaginated(',
+            $file->content
+        );
+        $this->assertStringContainsString(
+            'public function waitUntilPetExists(',
+            $file->content
+        );
+        $this->assertStringContainsString(
+            '): Paginator;',
+            $file->content
+        );
+        $this->assertStringContainsString(
+            '): WaiterResult;',
             $file->content
         );
     }

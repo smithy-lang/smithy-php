@@ -53,7 +53,7 @@ use Smithy\ProtocolTests\RpcV2Json\Shape\Unit;
  * the pipeline, retry loop, endpoint resolver, signer, and
  * transport all live on the base class.
  */
-final class RpcV2JsonClient extends AbstractClient
+final class RpcV2JsonClient extends AbstractClient implements RpcV2JsonClientInterface
 {
     public function __construct(
         ClientConfig $config,

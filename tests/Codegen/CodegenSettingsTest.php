@@ -76,6 +76,10 @@ final class CodegenSettingsTest extends TestCase
             'Smithy\\Client\\ClientConfig',
             $settings->clientConfigClass
         );
+        $this->assertSame(
+            'Smithy\\Client\\ClientInterface',
+            $settings->clientBaseInterface
+        );
     }
 
     #[DataProvider('categoryNamespaceMatrix')]
@@ -539,6 +543,25 @@ final class CodegenSettingsTest extends TestCase
         );
     }
 
+    public function testFromArrayAcceptsClientBaseInterfaceAliases(): void
+    {
+        $settings = CodegenSettings::fromArray([
+            'namespace' => 'Aws\\Sns',
+            'outputDir' => '/build/sns',
+            'client_base_interface' =>
+                'Vendor\\Runtime\\VendorClientInterface'
+        ]);
+
+        $this->assertSame(
+            'Vendor\\Runtime\\VendorClientInterface',
+            $settings->clientBaseInterface
+        );
+        $this->assertSame(
+            'Vendor\\Runtime\\VendorClientInterface',
+            $settings->toArray()['clientBaseInterface']
+        );
+    }
+
     public function testFromArrayDefaultsPreserveOrderToTrueWhenAbsent(): void
     {
         $settings = CodegenSettings::fromArray([
@@ -671,6 +694,20 @@ final class CodegenSettingsTest extends TestCase
             namespace: 'Smithy\\Example',
             outputDir: '/tmp/output',
             clientConfigClass: 'not a class'
+        );
+    }
+
+    public function testConstructorRejectsInvalidClientBaseInterface(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage(
+            'clientBaseInterface must be a valid PHP class name'
+        );
+
+        new CodegenSettings(
+            namespace: 'Smithy\\Example',
+            outputDir: '/tmp/output',
+            clientBaseInterface: 'not an interface'
         );
     }
 

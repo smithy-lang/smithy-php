@@ -319,11 +319,14 @@ lazily initialized service schema. Configured schema traits are retained in
 both packed and shape-ID keyed views. The metadata class is not the callable
 client.
 
-`ClientGenerator` emits the typed public client. Each operation method is a
-thin wrapper around the configured base client's `executeOperation()` method
-and accepts an optional `RequestOverrideConfig`.
+`ClientGenerator` emits the typed public client and a sibling service client
+interface. Each operation method is a thin wrapper around the configured base
+client's `executeOperation()` method and accepts an optional
+`RequestOverrideConfig`. The concrete client implements the generated
+interface so applications can use ordinary test doubles without subclassing
+the client.
 
-The client generator also emits:
+The client and its interface also expose:
 
 - paginator factory methods for validated `@paginated` operations
 - waiter methods for normalized `smithy.waiters#waitable` definitions
@@ -335,9 +338,10 @@ its interceptors inspect the current operation schema when a request executes.
 Dynamic clients use the same plugin path.
 
 `ClientConfigGenerator` emits a service-specific subclass of the runtime
-`ClientConfig`. `CodegenSettings::$clientBaseClass`, `generateClient`, and
-`generateClientConfig` allow SDK layers to replace the base client or suppress
-these artifacts.
+`ClientConfig`. `CodegenSettings::$clientBaseClass` and
+`clientBaseInterface` allow SDK layers to replace the base client contract.
+The `generateClient` and `generateClientConfig` settings allow SDK layers to
+suppress these artifacts.
 
 ### Service exceptions
 

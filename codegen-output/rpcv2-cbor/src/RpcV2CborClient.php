@@ -51,7 +51,7 @@ use Smithy\ProtocolTests\RpcV2Cbor\Shape\Unit;
  * the pipeline, retry loop, endpoint resolver, signer, and
  * transport all live on the base class.
  */
-final class RpcV2CborClient extends AbstractClient
+final class RpcV2CborClient extends AbstractClient implements RpcV2CborClientInterface
 {
     public function __construct(
         ClientConfig $config,
