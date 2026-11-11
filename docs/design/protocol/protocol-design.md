@@ -70,8 +70,8 @@ service are available through `ClientConfig`.
 | HTTP network transfer | HTTP client through `HttpClientTransport` |
 
 `smithy-php` provides generic HTTP binding components, the RPC v2 protocols,
-and AWS Rest XML. `aws-sdk-php` provides the remaining AWS protocol variants
-and error envelopes.
+AWS Rest JSON, and AWS Rest XML. `aws-sdk-php` provides the remaining AWS
+protocol variants and error envelopes.
 
 ## HTTP Binding Protocols
 
@@ -126,7 +126,7 @@ validated before entering trusted normalized message paths.
 
 ## RestJson
 
-`Aws\Core\Protocol\RestJsonProtocol` combines:
+`Smithy\Protocol\Aws\RestJsonProtocol` combines:
 
 - `AbstractHttpBindingProtocol`
 - `JsonCodec`
@@ -240,10 +240,10 @@ contracts.
 
 ## Validation
 
-Smithy tests cover the RPC v2 protocols, Rest XML, directional HTTP bindings,
-header validation, error deserialization, relative endpoint binding, and URI
-construction. AWS SDK protocol suites cover AWS Query, EC2 Query, AWS JSON,
-and RestJson generated and dynamic paths.
+Smithy tests cover the RPC v2 protocols, Rest JSON, Rest XML, directional HTTP
+bindings, header validation, error deserialization, relative endpoint binding,
+and URI construction. AWS SDK protocol suites cover AWS Query, EC2 Query, and
+AWS JSON generated and dynamic paths.
 
 ## Related Documents
 
