@@ -75,10 +75,21 @@ use Smithy\Protocol\RpcV2\RpcV2JsonProtocol;
 $protocol = new RpcV2JsonProtocol();
 ```
 
-## AWS JSON 1.1
+## AWS JSON
+
+`AwsJson1_0Protocol` implements `aws.protocols#awsJson1_0` with AWS JSON RPC
+framing, the `application/x-amz-json-1.0` content type, and AWS JSON error
+envelopes.
+
+```php
+use Smithy\Protocol\Aws\AwsJson1_0Protocol;
+
+$protocol = new AwsJson1_0Protocol();
+```
 
 `AwsJson1_1Protocol` implements `aws.protocols#awsJson1_1` with AWS JSON RPC
-framing and error envelopes.
+framing, the `application/x-amz-json-1.1` content type, and AWS JSON error
+envelopes.
 
 ```php
 use Smithy\Protocol\Aws\AwsJson1_1Protocol;
@@ -108,8 +119,8 @@ use Smithy\Protocol\Aws\RestXmlProtocol;
 $protocol = new RestXmlProtocol();
 ```
 
-Provider packages compose the remaining protocol implementations from the
-shared codec and error-deserialization components.
+Provider packages compose the query protocol implementations from the shared
+codec and error-deserialization components.
 
 ## Component Boundaries
 
