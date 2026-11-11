@@ -38,6 +38,17 @@ if ($arguments !== [] && !$check) {
 $buildRoot = $root . '/build/codegen-output';
 $outputRoot = $root . '/codegen-output';
 $cases = [
+    'aws-json-1-1' => [
+        'model' => $root . '/tools/codegen-output/models/aws-json-1-1.json',
+        'settings' => static fn(string $outputDir): CodegenSettings =>
+            new CodegenSettings(
+                namespace: 'Smithy\\ProtocolTests\\AwsJson1_1',
+                outputDir: $outputDir,
+                organization: 'categorized',
+                preserveExistingMemberOrder: false,
+                baseServiceException: AwsProtocolException::class
+            )
+    ],
     'rpcv2-cbor' => [
         'model' => $root . '/tools/codegen-output/models/rpcv2-cbor.json',
         'settings' => static fn(string $outputDir): CodegenSettings =>

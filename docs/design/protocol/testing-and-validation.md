@@ -9,13 +9,12 @@
 The protocol test harness runs official Smithy request, response, and error
 fixtures against generated and dynamic clients.
 
-Smithy PHP owns the Rest JSON, Rest XML, and RPC v2 protocol suites. The AWS
-SDK owns:
+Smithy PHP owns the AWS JSON 1.1, Rest JSON, Rest XML, and RPC v2 protocol
+suites. The AWS SDK owns:
 
 - AWS Query
 - EC2 Query
 - AWS JSON 1.0
-- AWS JSON 1.1
 
 ## Fixture Flow
 
@@ -103,28 +102,29 @@ responses.
 
 ## Current Results
 
-The Smithy PHP REST protocol suites are green on PHP 8.2.35:
+The Smithy PHP AWS protocol suites are green on PHP 8.2.35:
 
 | Protocol | Projection | Tests | Assertions |
 |---|---|---:|---:|
+| AWS JSON 1.1 | Generated | 122 | 527 |
+| AWS JSON 1.1 | Dynamic | 118 | 858 |
 | Rest JSON | Generated | 223 | 903 |
 | Rest JSON | Dynamic | 220 | 1,542 |
 | Rest XML | Generated | 179 | 722 |
 | Rest XML | Dynamic | 176 | 1,240 |
-| **Total** |  | **798** | **4,407** |
+| **Total** |  | **1,038** | **5,792** |
 
-Each generated suite includes three focused protocol and error tests in
-addition to its shared conformance cases.
+Generated suites include focused protocol and error tests in addition to
+their shared conformance cases.
 
-The remaining AWS SDK protocol suites contain 629 tests:
+The remaining AWS SDK protocol suites contain 392 tests:
 
 | Protocol | Tests |
 |---|---:|
 | AWS Query | 155 |
 | EC2 Query | 122 |
 | AWS JSON 1.0 | 115 |
-| AWS JSON 1.1 | 237 |
-| **Total** | **629** |
+| **Total** | **392** |
 
 ## Coverage Boundaries
 
