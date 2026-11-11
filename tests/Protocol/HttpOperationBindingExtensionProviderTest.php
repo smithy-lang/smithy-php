@@ -9,7 +9,7 @@ declare(strict_types=1);
 
 namespace Smithy\Tests\Protocol;
 
-use Psr\Http\Message\StreamInterface;
+use Psr\Http\Message\ResponseInterface;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Smithy\Codec\Json\JsonCodec;
@@ -63,7 +63,10 @@ final class HttpOperationBindingExtensionProviderTest extends TestCase
             [['/things/', null, false], [null, 2, false]],
             $extension->pathSegments
         );
-        self::assertSame('fixed=true', $extension->pathQueryString);
+        self::assertSame(
+            'fixed=true&flag',
+            $extension->pathQueryString
+        );
         self::assertSame(206, $extension->httpResponseCode);
         self::assertSame(
             HttpBindingOperationFixture::class,
@@ -93,7 +96,9 @@ final class HttpOperationBindingExtensionProviderTest extends TestCase
     {
         $codec = new JsonCodec();
         $errorDeserializer = new class($codec) extends HttpErrorDeserializer {
-            protected function parseError(StreamInterface $body): array
+            protected function parseError(
+                ResponseInterface $response
+            ): array
             {
                 throw new \LogicException('Not used by this test.');
             }
@@ -122,7 +127,7 @@ final class HttpOperationBindingExtensionProviderTest extends TestCase
         $request = HttpTransportRequest::expect($request)->request;
 
         self::assertSame(
-            'mode=true&fixed=true',
+            'mode=true&fixed=true&flag',
             $request->getUri()->getQuery()
         );
     }
@@ -131,7 +136,9 @@ final class HttpOperationBindingExtensionProviderTest extends TestCase
     {
         $codec = new JsonCodec();
         $errorDeserializer = new class($codec) extends HttpErrorDeserializer {
-            protected function parseError(StreamInterface $body): array
+            protected function parseError(
+                ResponseInterface $response
+            ): array
             {
                 throw new \LogicException('Not used by this test.');
             }
@@ -159,7 +166,7 @@ final class HttpOperationBindingExtensionProviderTest extends TestCase
         $request = HttpTransportRequest::expect($transportRequest)->request;
 
         self::assertSame(
-            '/things/thing?mode=true&fixed=true',
+            '/things/thing?mode=true&fixed=true&flag',
             (string) $request->getUri()
         );
         self::assertSame('', $request->getHeaderLine('Host'));
@@ -171,7 +178,7 @@ final class HttpOperationBindingExtensionProviderTest extends TestCase
         $request = HttpTransportRequest::expect($transportRequest)->request;
 
         self::assertSame(
-            'https://example.com/base/things/thing?mode=true&fixed=true',
+            'https://example.com/base/things/thing?mode=true&fixed=true&flag',
             (string) $request->getUri()
         );
         self::assertSame('example.com', $request->getHeaderLine('Host'));

@@ -1,24 +1,21 @@
 # Protocol Test Harness
 
-**Status:** Evidence recorded August 30, 2026
+**Status:** Evidence recorded November 11, 2026
 
-**Package:** `aws-sdk-php`
+**Packages:** `smithy-php`, `aws-sdk-php`
 
 ## Scope
 
-The protocol test harness runs the official Smithy request, response, and
-error fixtures against generated and dynamic AWS clients.
+The protocol test harness runs official Smithy request, response, and error
+fixtures against generated and dynamic clients.
 
-It covers:
+Smithy PHP owns the Rest XML and RPC v2 protocol suites. The AWS SDK owns:
 
 - AWS Query
 - EC2 Query
 - AWS JSON 1.0
 - AWS JSON 1.1
 - RestJson
-- RestXml
-
-RPC v2 CBOR conformance lives in the smithy-php codec and protocol suites.
 
 ## Fixture Flow
 
@@ -38,9 +35,10 @@ Smithy protocol fixture
     -> request, output, or exception assertions
 ```
 
-Generated artifacts are committed under each protocol's `Generated/`
-directory. The dynamic path reads the same fixture through
-`DynamicProtocolTestHelper` and constructs operations from the model.
+Smithy PHP commits generated artifacts under
+`codegen-output/<protocol>/src`. The AWS SDK commits its protocol artifacts
+under each suite's `Generated/` directory. Each dynamic path reads the same
+fixture and constructs operations from the model.
 
 ## Test Loader
 
@@ -105,7 +103,18 @@ responses.
 
 ## Current Results
 
-The AWS protocol suite is green on PHP 8.2.33:
+The Smithy PHP Rest XML suite is green on PHP 8.2.35:
+
+| Projection | Tests | Assertions |
+|---|---:|---:|
+| Generated | 179 | 722 |
+| Dynamic | 176 | 1,240 |
+| **Total** | **355** | **1,962** |
+
+The generated suite includes three focused protocol and error tests in
+addition to the shared conformance cases.
+
+The remaining AWS SDK protocol suites contain 1,072 tests:
 
 | Protocol | Tests |
 |---|---:|
@@ -114,19 +123,13 @@ The AWS protocol suite is green on PHP 8.2.33:
 | AWS JSON 1.0 | 115 |
 | AWS JSON 1.1 | 237 |
 | RestJson | 443 |
-| RestXml | 356 |
-| **Total** | **1,428** |
-
-The full suite reports 4,906 assertions and 33 PHPUnit deprecations. The
-deprecations do not change protocol behavior, but they should be removed
-before upgrading to a PHPUnit version that treats them as errors.
+| **Total** | **1,072** |
 
 ## Coverage Boundaries
 
 The current harness does not provide:
 
 - dynamic-client streaming coverage
-- RPC v2 CBOR fixtures in the AWS protocol suite
 - live network interoperability
 
 Codec unit tests and HTTP integration tests cover those components
