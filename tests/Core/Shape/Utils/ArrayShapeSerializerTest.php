@@ -11,13 +11,16 @@ namespace Smithy\Tests\Core\Shape\Utils;
 
 use PHPUnit\Framework\TestCase;
 use Smithy\Core\Serde\Schema;
+use Smithy\Core\Shape\BigDecimal;
 use Smithy\Core\Shape\BigInteger;
 use Smithy\Core\Shape\ShapeType;
 use Smithy\Core\Shape\Exception\InvalidShapeValueException;
 use Smithy\Core\Shape\Document\{
+    AbstractDocument,
     IntegerDocument,
     StringDocument,
-    StructDocument
+    StructDocument,
+    UnionDocument
 };
 use Smithy\Core\Shape\Utils\ArrayShapeSerializer;
 use Smithy\Tests\Client\Pagination\Fixture\PaginationResult;
@@ -383,6 +386,122 @@ final class ArrayShapeSerializerTest extends TestCase
             ['doc' => $doc]
         );
         $this->assertSame($doc, $obj->doc);
+    }
+
+    public function testToArrayRecursivelyUnwrapsDocumentValues(): void
+    {
+        $structSchema = new Schema(
+            id: 'example#DocumentStruct',
+            type: ShapeType::Structure,
+            members: [
+                new Schema(
+                    id: 'smithy.api#String',
+                    type: ShapeType::String_,
+                    memberName: 'value',
+                    memberIndex: 0
+                )
+            ]
+        );
+        $unionSchema = new Schema(
+            id: 'example#DocumentUnion',
+            type: ShapeType::Union,
+            members: [
+                new Schema(
+                    id: 'smithy.api#String',
+                    type: ShapeType::String_,
+                    memberName: 'value',
+                    memberIndex: 0
+                )
+            ]
+        );
+        $document = AbstractDocument::fromMap([
+            'boolean' => AbstractDocument::fromBoolean(true),
+            'byte' => AbstractDocument::fromByte(1),
+            'short' => AbstractDocument::fromShort(2),
+            'integer' => AbstractDocument::fromInteger(3),
+            'long' => AbstractDocument::fromLong(4),
+            'float' => AbstractDocument::fromFloat(5.5),
+            'double' => AbstractDocument::fromDouble(6.5),
+            'bigInteger' => AbstractDocument::fromBigInteger(
+                new BigInteger('99999999999999999999')
+            ),
+            'bigDecimal' => AbstractDocument::fromBigDecimal(
+                new BigDecimal('1234567890.123456789')
+            ),
+            'string' => AbstractDocument::fromString('hello'),
+            'blob' => AbstractDocument::fromBlob('bytes'),
+            'timestamp' => AbstractDocument::fromTimestamp(1234.5),
+            'list' => AbstractDocument::fromList([
+                AbstractDocument::fromString('nested'),
+                AbstractDocument::fromMap([
+                    'value' => AbstractDocument::fromInteger(7)
+                ]),
+                null
+            ]),
+            'structure' => StructDocument::fromMembers(
+                $structSchema,
+                ['structure value']
+            ),
+            'emptyStructure' => StructDocument::fromMembers(
+                $structSchema,
+                []
+            ),
+            'union' => UnionDocument::create(
+                $unionSchema,
+                'value',
+                'union value'
+            ),
+            'null' => null
+        ]);
+        $obj = new ArrayShapeSerializerDocumentFixture($document);
+
+        self::assertSame(
+            [
+                'doc' => [
+                    'boolean' => true,
+                    'byte' => 1,
+                    'short' => 2,
+                    'integer' => 3,
+                    'long' => 4,
+                    'float' => 5.5,
+                    'double' => 6.5,
+                    'bigInteger' => '99999999999999999999',
+                    'bigDecimal' => '1234567890.123456789',
+                    'string' => 'hello',
+                    'blob' => 'bytes',
+                    'timestamp' => 1234.5,
+                    'list' => [
+                        'nested',
+                        ['value' => 7],
+                        null
+                    ],
+                    'structure' => ['value' => 'structure value'],
+                    'emptyStructure' => [],
+                    'union' => ['value' => 'union value'],
+                    'null' => null
+                ]
+            ],
+            ArrayShapeSerializer::toArray($obj)
+        );
+    }
+
+    public function testToArrayPreservesNativeDocumentValues(): void
+    {
+        $obj = new PaginationResult([
+            'native' => 'value',
+            'wrapped' => new StringDocument('unwrapped')
+        ]);
+
+        self::assertSame(
+            [
+                'nextToken' => [
+                    'native' => 'value',
+                    'wrapped' => 'unwrapped'
+                ],
+                'items' => []
+            ],
+            ArrayShapeSerializer::toArray($obj)
+        );
     }
 
     public function testFromArrayHydratesRootUnionVariant(): void

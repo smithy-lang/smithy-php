@@ -278,8 +278,9 @@ values into the generated constructor types. The coercion rules track
 
 `ArrayShapeSerializer::toArray()` produces the V3-equivalent associative
 array. Scalars pass through, structures and unions recurse, enums and
-big-numerics unwrap to their `value`, and typed list and map values convert
-element by element.
+big-numerics unwrap to their `value`, typed list and map values convert
+element by element, and document values recursively unwrap to native PHP
+values.
 
 ```php
 $resp = $client->headObject(...);
