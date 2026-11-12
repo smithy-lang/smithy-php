@@ -33,6 +33,7 @@
             "Smithy\\ProtocolTests\\AwsJson1_0\\": "codegen-output/aws-json-1-0/src/",
             "Smithy\\ProtocolTests\\AwsJson1_1\\": "codegen-output/aws-json-1-1/src/",
             "Smithy\\ProtocolTests\\AwsQuery\\": "codegen-output/aws-query/src/",
+            "Smithy\\ProtocolTests\\Ec2Query\\": "codegen-output/ec2-query/src/",
             "Smithy\\ProtocolTests\\RpcV2Cbor\\": "codegen-output/rpcv2-cbor/src/",
             "Smithy\\ProtocolTests\\RpcV2Json\\": "codegen-output/rpcv2-json/src/",
             "Smithy\\ProtocolTests\\RestJson\\": "codegen-output/rest-json/src/",

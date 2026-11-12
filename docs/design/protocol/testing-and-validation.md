@@ -2,15 +2,15 @@
 
 **Status:** Evidence recorded November 12, 2026
 
-**Packages:** `smithy-php`, `aws-sdk-php`
+**Package:** `smithy-php`
 
 ## Scope
 
 The protocol test harness runs official Smithy request, response, and error
 fixtures against generated and dynamic clients.
 
-Smithy PHP owns the AWS JSON, Rest JSON, Rest XML, AWS Query, and RPC v2
-protocol suites. The AWS SDK owns the EC2 Query suite.
+Smithy PHP owns the AWS JSON, Rest JSON, Rest XML, AWS Query, EC2 Query, and
+RPC v2 protocol suites.
 
 ## Fixture Flow
 
@@ -31,9 +31,8 @@ Smithy protocol fixture
 ```
 
 Smithy PHP commits generated artifacts under
-`codegen-output/<protocol>/src`. The AWS SDK commits its protocol artifacts
-under each suite's `Generated/` directory. Each dynamic path reads the same
-fixture and constructs operations from the model.
+`codegen-output/<protocol>/src`. Each dynamic path reads the same fixture and
+constructs operations from the model.
 
 ## Test Loader
 
@@ -108,21 +107,16 @@ The Smithy PHP AWS protocol suites are green on PHP 8.2.35:
 | AWS JSON 1.1 | Dynamic | 118 | 858 |
 | AWS Query | Generated | 81 | 330 |
 | AWS Query | Dynamic | 77 | 546 |
+| EC2 Query | Generated | 63 | 273 |
+| EC2 Query | Dynamic | 59 | 436 |
 | Rest JSON | Generated | 223 | 903 |
 | Rest JSON | Dynamic | 220 | 1,542 |
 | Rest XML | Generated | 179 | 722 |
 | Rest XML | Dynamic | 176 | 1,240 |
-| **Total** |  | **1,312** | **7,263** |
+| **Total** |  | **1,434** | **7,972** |
 
 Generated suites include focused protocol and error tests in addition to
 their shared conformance cases.
-
-The remaining AWS SDK protocol suite contains 122 tests:
-
-| Protocol | Tests |
-|---|---:|
-| EC2 Query | 122 |
-| **Total** | **122** |
 
 ## Coverage Boundaries
 

@@ -133,8 +133,18 @@ $protocol = new AwsQueryProtocol('2020-01-08');
 Pass the service version from the Smithy service shape. The protocol sends it
 with the operation action in every request body.
 
-Provider packages can extend `AbstractQueryProtocol` for query protocol
-variants such as EC2 Query.
+## EC2 Query
+
+`Ec2QueryProtocol` implements `aws.protocols#ec2Query` with EC2-specific form
+member names, flattened lists, and XML response wrappers.
+
+```php
+use Smithy\Protocol\Aws\Ec2QueryProtocol;
+
+$protocol = new Ec2QueryProtocol('2020-01-08');
+```
+
+Pass the service version from the Smithy service shape.
 
 ## Component Boundaries
 

@@ -11,6 +11,7 @@ declare(strict_types=1);
 use Smithy\Codegen\CodeGenerator;
 use Smithy\Codegen\CodegenSettings;
 use Smithy\Codegen\Model\SmithyModel;
+use Smithy\Core\Serde\Schema;
 use Smithy\Protocol\Aws\AwsProtocolException;
 use Smithy\Tools\CodegenOutput\CodegenOutput;
 
@@ -73,6 +74,21 @@ $cases = [
                     'aws.protocoltests.query#CustomCodeError' => [
                         'Customized'
                     ]
+                ]
+            )
+    ],
+    'ec2-query' => [
+        'model' => $root . '/tools/codegen-output/models/ec2-query.json',
+        'settings' => static fn(string $outputDir): CodegenSettings =>
+            new CodegenSettings(
+                namespace: 'Smithy\\ProtocolTests\\Ec2Query',
+                outputDir: $outputDir,
+                organization: 'categorized',
+                preserveExistingMemberOrder: false,
+                baseServiceException: AwsProtocolException::class,
+                schemaTraitIndices: [
+                    'aws.protocols#ec2QueryName' =>
+                        Schema::T_EC2_QUERY_NAME
                 ]
             )
     ],
