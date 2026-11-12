@@ -11,6 +11,7 @@ declare(strict_types=1);
 use Smithy\Codegen\CodeGenerator;
 use Smithy\Codegen\CodegenSettings;
 use Smithy\Codegen\Model\SmithyModel;
+use Smithy\Protocol\Aws\AwsProtocolException;
 use Smithy\Tools\CodegenOutput\CodegenOutput;
 
 $root = \dirname(__DIR__, 2);
@@ -55,6 +56,17 @@ $cases = [
                 outputDir: $outputDir,
                 organization: 'categorized',
                 preserveExistingMemberOrder: false
+            )
+    ],
+    'rest-xml' => [
+        'model' => $root . '/tools/codegen-output/models/rest-xml.json',
+        'settings' => static fn(string $outputDir): CodegenSettings =>
+            new CodegenSettings(
+                namespace: 'Smithy\\ProtocolTests\\RestXml',
+                outputDir: $outputDir,
+                organization: 'categorized',
+                preserveExistingMemberOrder: false,
+                baseServiceException: AwsProtocolException::class
             )
     ],
     'trimmed-client' => [

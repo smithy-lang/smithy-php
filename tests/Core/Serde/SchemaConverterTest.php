@@ -405,7 +405,8 @@ final class SchemaConverterTest extends TestCase
                         'traits' => [
                             'smithy.api#http' => [
                                 'method' => 'PUT',
-                                'uri' => '/{bucket}/{key+}?x-id=PutObject',
+                                'uri' => '/{bucket}/{key+}'
+                                    . '?x-id=PutObject&uploads',
                                 'code' => 200
                             ]
                         ]
@@ -426,7 +427,10 @@ final class SchemaConverterTest extends TestCase
             ],
             $http['pathSegments']
         );
-        self::assertSame('x-id=PutObject', $http['pathQueryString']);
+        self::assertSame(
+            'x-id=PutObject&uploads',
+            $http['pathQueryString']
+        );
         self::assertSame(
             $http,
             $converter->getSchema('example#PutObject')

@@ -10,10 +10,17 @@ declare(strict_types=1);
 namespace Smithy\Tests\Codegen;
 
 use PHPUnit\Framework\TestCase;
+use Smithy\Codec\Xml\XmlCodec;
 use Smithy\Codegen\CodeGenerator;
 use Smithy\Codegen\CodegenSettings;
 use Smithy\Codegen\Generator\GeneratedFile;
 use Smithy\Codegen\Model\SmithyModel;
+use Smithy\Core\Shape\OperationInterface;
+use Smithy\Http\Message\Response;
+use Smithy\Protocol\Aws\{
+    AwsProtocolException,
+    RestXmlErrorDeserializer
+};
 
 final class CodeGeneratorTest extends TestCase
 {
@@ -1360,6 +1367,88 @@ JSON);
                 $serviceExceptionClass,
                 new $errorClass()
             );
+        } finally {
+            $this->removeDir($outputDir);
+        }
+    }
+
+    public function testAwsMetadataDoesNotCollideWithGeneratedErrorMembers(): void
+    {
+        $model = SmithyModel::fromJson(<<<'JSON'
+{
+    "smithy": "2.0",
+    "shapes": {
+        "example#Service": {
+            "type": "service",
+            "version": "2026-11-12",
+            "operations": [{"target": "example#GetThing"}]
+        },
+        "example#GetThing": {
+            "type": "operation",
+            "errors": [{"target": "example#Failure"}]
+        },
+        "example#Failure": {
+            "type": "structure",
+            "traits": {"smithy.api#error": "client"},
+            "members": {
+                "RequestId": {"target": "smithy.api#String"},
+                "AwsErrorCode": {"target": "smithy.api#String"},
+                "HttpStatusCode": {"target": "smithy.api#Integer"}
+            }
+        }
+    }
+}
+JSON);
+        $suffix = \bin2hex(\random_bytes(4));
+        $namespace = 'Smithy\\Tests\\Generated\\AwsMetadata' . $suffix;
+        $outputDir = \sys_get_temp_dir() . '/smithy-aws-metadata-' . $suffix;
+        $settings = new CodegenSettings(
+            namespace: $namespace,
+            outputDir: $outputDir,
+            organization: 'flat',
+            serviceExceptionClass: 'MetadataServiceException',
+            baseServiceException: AwsProtocolException::class,
+            generateClient: false,
+            generateClientConfig: false
+        );
+        $files = (new CodeGenerator($settings, $model))->generate();
+
+        try {
+            foreach ([
+                'Schemas.php',
+                'MetadataServiceException.php',
+                'FailureException.php'
+            ] as $name) {
+                $file = $this->findFile($files, $name);
+                self::assertNotNull($file);
+                $file->writeToDisk($outputDir);
+                require $file->path;
+            }
+            $errorClass = $namespace . '\\FailureException';
+            $operation = $this->createStub(OperationInterface::class);
+            $operation->method('getServiceExceptionClass')
+                ->willReturn($namespace . '\\MetadataServiceException');
+            $operation->method('resolveErrorSchema')
+                ->willReturn($errorClass::schema());
+            $deserializer = new RestXmlErrorDeserializer(new XmlCodec());
+            $error = $deserializer->deserialize(
+                $operation,
+                new Response(400, [], <<<'XML'
+<ErrorResponse>
+    <Error>
+        <Code>Failure</Code>
+        <RequestId>modeled-request-id</RequestId>
+        <AwsErrorCode>modeled-code</AwsErrorCode>
+        <HttpStatusCode>123</HttpStatusCode>
+    </Error>
+</ErrorResponse>
+XML)
+            );
+
+            self::assertInstanceOf($errorClass, $error);
+            self::assertSame('modeled-request-id', $error->requestId);
+            self::assertSame('modeled-code', $error->awsErrorCode);
+            self::assertSame(123, $error->httpStatusCode);
         } finally {
             $this->removeDir($outputDir);
         }

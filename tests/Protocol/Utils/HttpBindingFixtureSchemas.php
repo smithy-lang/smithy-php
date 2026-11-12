@@ -464,12 +464,15 @@ final class HttpBindingFixtureSchemas
             traits: [
                 Schema::T_HTTP => [
                     'method' => 'GET',
-                    'uri' => '/things/{id}?fixed=true',
+                    'uri' => '/things/{id}?fixed=true&flag',
                     'pathSegments' => [
                         ['/things/', null, false],
                         [null, 2, false]
                     ],
-                    'pathQueryPairs' => [['fixed', 'true']],
+                    'pathQueryPairs' => [
+                        ['fixed', 'true'],
+                        ['flag']
+                    ],
                     'code' => 206
                 ]
             ]
