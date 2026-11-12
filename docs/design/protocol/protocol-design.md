@@ -137,6 +137,10 @@ validated before entering trusted normalized message paths.
 The JSON codec honors `@jsonName`. HTTP header timestamps follow Smithy HTTP
 binding defaults.
 
+`RestJsonErrorDeserializer` extends `AbstractAwsErrorDeserializer` directly.
+It owns Rest JSON envelope parsing and HTTP-bound error members. The
+`X-Amzn-Errortype` header takes precedence over body error fields.
+
 ## RestXml
 
 `Smithy\Protocol\Aws\RestXmlProtocol` combines:
@@ -160,7 +164,7 @@ Both protocols:
 - use `X-Amz-Target` for operation dispatch
 - serialize the complete input as JSON
 - deserialize the complete output from JSON
-- use `AwsJsonErrorDeserializer`
+- identify errors from AWS JSON error envelopes
 - ignore `@jsonName`
 
 The content type distinguishes the versions:

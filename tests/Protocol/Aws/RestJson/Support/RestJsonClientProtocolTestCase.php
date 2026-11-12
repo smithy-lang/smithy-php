@@ -231,6 +231,77 @@ abstract class RestJsonClientProtocolTestCase extends TestCase
         }
     }
 
+    #[DataProvider('errorDiscriminators')]
+    final public function testResolvesRestJsonErrorDiscriminator(
+        array $headers,
+        array $discriminators
+    ): void
+    {
+        $http = new MockHttpClient();
+        $client = $this->createClient($http, 'https://example.com');
+        $operation = $this->resolveOperation(
+            $client,
+            'aws.protocoltests.restjson#GreetingWithErrors'
+        );
+        $body = \json_encode(
+            $discriminators + [
+                'TopLevel' => 'Top level',
+                'Nested' => ['Fooooo' => 'bar']
+            ],
+            \JSON_THROW_ON_ERROR
+        );
+
+        try {
+            self::executeResponse(
+                $client,
+                $http,
+                $operation,
+                $this->createInput($operation, []),
+                new Response(403, $headers + ['X-Header' => 'Header'], $body)
+            );
+        } catch (\Throwable $error) {
+            $modeledError = $this->expectModeledError($error);
+            self::assertSame(
+                'aws.protocoltests.restjson#ComplexError',
+                $modeledError->getSchema()->id
+            );
+            self::assertSame(
+                [
+                    'Header' => 'Header',
+                    'TopLevel' => 'Top level',
+                    'Nested' => ['Foo' => 'bar']
+                ],
+                ArrayShapeSerializer::toArray($modeledError)
+            );
+
+            return;
+        }
+
+        self::fail('Expected a modeled ComplexError.');
+    }
+
+    /**
+     * @return iterable<string, array{array<string, string>, array<string, string>}>
+     */
+    final public static function errorDiscriminators(): iterable
+    {
+        yield 'header overrides both body fields' => [
+            [
+                'x-amzn-errortype' => 'aws.protocoltests.restjson#'
+                    . 'ComplexError:http://example.com'
+            ],
+            ['__type' => 'InvalidGreeting', 'code' => 'FooError']
+        ];
+        yield 'body type without header' => [
+            [],
+            ['__type' => 'aws.protocoltests.restjson#ComplexError']
+        ];
+        yield 'body code without header' => [
+            [],
+            ['code' => 'ComplexError:http://example.com']
+        ];
+    }
+
     abstract protected function createClient(
         MockHttpClient $http,
         string $endpoint
