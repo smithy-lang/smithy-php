@@ -60,6 +60,22 @@ $cases = [
                 baseServiceException: AwsProtocolException::class
             )
     ],
+    'aws-query' => [
+        'model' => $root . '/tools/codegen-output/models/aws-query.json',
+        'settings' => static fn(string $outputDir): CodegenSettings =>
+            new CodegenSettings(
+                namespace: 'Smithy\\ProtocolTests\\AwsQuery',
+                outputDir: $outputDir,
+                organization: 'categorized',
+                preserveExistingMemberOrder: false,
+                baseServiceException: AwsProtocolException::class,
+                errorDiscriminators: [
+                    'aws.protocoltests.query#CustomCodeError' => [
+                        'Customized'
+                    ]
+                ]
+            )
+    ],
     'rpcv2-cbor' => [
         'model' => $root . '/tools/codegen-output/models/rpcv2-cbor.json',
         'settings' => static fn(string $outputDir): CodegenSettings =>
