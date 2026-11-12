@@ -138,8 +138,10 @@ The JSON codec honors `@jsonName`. HTTP header timestamps follow Smithy HTTP
 binding defaults.
 
 `RestJsonErrorDeserializer` extends `AbstractAwsErrorDeserializer` directly.
-It owns Rest JSON envelope parsing and HTTP-bound error members. The
-`X-Amzn-Errortype` header takes precedence over body error fields.
+It uses `JsonErrorEnvelopeParser` to decode error-code candidates and messages
+and normalize legacy error types. Rest JSON owns discriminator precedence and
+HTTP-bound error members. The `X-Amzn-Errortype` header takes precedence over
+body error fields.
 
 ## RestXml
 

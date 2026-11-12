@@ -32,23 +32,12 @@ final class RestJsonErrorDeserializer extends AbstractAwsErrorDeserializer
     protected function parseError(ResponseInterface $response): array
     {
         $body = (string) $response->getBody();
-        $document = [];
-        if ($body !== '') {
-            $decoded = \json_decode(
-                $body,
-                true,
-                512,
-                \JSON_THROW_ON_ERROR
-            );
-            if (\is_array($decoded)) {
-                $document = $decoded;
-            }
-        }
+        $envelope = JsonErrorEnvelopeParser::parse($body);
 
         // Rest JSON prefers the header discriminator over body fields.
         $rawType = $response->getHeaderLine('x-amzn-errortype');
         if ($rawType === '') {
-            $candidate = $document['__type'] ?? $document['code'] ?? null;
+            $candidate = $envelope['type'] ?? $envelope['code'];
             $rawType = \is_string($candidate) ? $candidate : 'Unknown';
         }
 
@@ -58,12 +47,9 @@ final class RestJsonErrorDeserializer extends AbstractAwsErrorDeserializer
         }
 
         return [
-            'discriminator' => self::normalizeErrorType($rawType),
-            'message' => (string) (
-                $document['message']
-                ?? $document['Message']
-                ?? ''
-            ),
+            'discriminator' =>
+                JsonErrorEnvelopeParser::normalizeErrorType($rawType),
+            'message' => $envelope['message'],
             'body' => $body,
             'requestId' => $requestId !== '' ? $requestId : null
         ];
@@ -104,20 +90,5 @@ final class RestJsonErrorDeserializer extends AbstractAwsErrorDeserializer
             $response->getStatusCode()
         );
         $deserializer->deserialize($schema, $members);
-    }
-
-    private static function normalizeErrorType(string $raw): string
-    {
-        $colonPos = \strpos($raw, ':');
-        if ($colonPos !== false) {
-            $raw = \substr($raw, 0, $colonPos);
-        }
-
-        $hashPos = \strrpos($raw, '#');
-        if ($hashPos !== false) {
-            $raw = \substr($raw, $hashPos + 1);
-        }
-
-        return $raw;
     }
 }
