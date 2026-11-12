@@ -33,6 +33,7 @@ final class XmlDeserializer implements ShapeDeserializerInterface
 {
     private readonly XmlCodecSettings $settings;
     private readonly bool $honorTimestampFormatTrait;
+    private readonly bool $hasNamespacePrefixes;
 
     public function __construct(
         private \SimpleXMLElement $element,
@@ -41,6 +42,10 @@ final class XmlDeserializer implements ShapeDeserializerInterface
         $this->settings = $settings ?? new XmlCodecSettings();
         $this->honorTimestampFormatTrait =
             $this->settings->honorTimestampFormatTrait;
+        $this->hasNamespacePrefixes = \array_diff_key(
+            $element->getNamespaces(true),
+            ['' => true]
+        ) !== [];
     }
 
     /**
@@ -85,10 +90,17 @@ final class XmlDeserializer implements ShapeDeserializerInterface
         // Attribute decode metadata is prepacked on the extension.
         if ($info->hasAttributes) {
             $attrs = $element->attributes();
+            if ($this->hasNamespacePrefixes) {
+                $attrs = [];
+                foreach ($element->xpath('./@*') ?: [] as $attribute) {
+                    $attrs[$attribute->getName()] = $attribute;
+                }
+            }
+
             if ($attrs !== null) {
                 foreach ($info->attributeDeserMembers as $entry) {
                     $attrName = $entry[0];
-                    $attrValue = $attrs->{$attrName};
+                    $attrValue = $attrs[$attrName] ?? null;
                     if ($attrValue !== null) {
                         $value = (string) $attrValue;
                         $idx = $entry[1];
@@ -145,7 +157,8 @@ final class XmlDeserializer implements ShapeDeserializerInterface
         $ordered = $info->orderedChildMembers;
         $orderedCount = $info->childMemberCount;
         $hint = 0;
-        foreach ($element->children() as $childName => $child) {
+        foreach ($this->children($element) as $child) {
+            $childName = $child->getName();
             if ($hint < $orderedCount && $ordered[$hint][0] === $childName) {
                 $entry = $ordered[$hint][1];
                 $hint++;
@@ -255,13 +268,13 @@ final class XmlDeserializer implements ShapeDeserializerInterface
                     );
                     break;
                 case 3:
-                    $key = isset($child->{$entry[3]})
-                        ? (string) $child->{$entry[3]}
-                        : null;
+                    $keyElement = $this->child($child, $entry[3]);
+                    $key = $keyElement !== null ? (string) $keyElement : null;
                     if ($key !== null) {
-                        $out[$entry[1]][$key] = isset($child->{$entry[4]})
+                        $valueElement = $this->child($child, $entry[4]);
+                        $out[$entry[1]][$key] = $valueElement !== null
                             ? $this->readValueFromElement(
-                                $child->{$entry[4]},
+                                $valueElement,
                                 $entry[5]
                             )
                             : null;
@@ -293,16 +306,17 @@ final class XmlDeserializer implements ShapeDeserializerInterface
         $memberName = $info->listMemberName ?? 'member';
         $memberType = $info->listMemberType ?? ShapeType::String_->value;
         $result = [];
+        $children = $this->children($element, $memberName);
 
         switch ($memberType) {
             case ShapeType::String_->value:
-                foreach ($element->{$memberName} as $child) {
+                foreach ($children as $child) {
                     $result[] = (string) $child;
                 }
                 break;
             case ShapeType::Enum->value:
                 $class = $listMember->targetClass;
-                foreach ($element->{$memberName} as $child) {
+                foreach ($children as $child) {
                     $value = (string) $child;
                     $result[] = $class !== null
                         ? $class::fromValue($value)
@@ -313,13 +327,13 @@ final class XmlDeserializer implements ShapeDeserializerInterface
             case ShapeType::Long->value:
             case ShapeType::Short->value:
             case ShapeType::Byte->value:
-                foreach ($element->{$memberName} as $child) {
+                foreach ($children as $child) {
                     $result[] = (int) (string) $child;
                 }
                 break;
             case ShapeType::IntEnum->value:
                 $class = $listMember->targetClass;
-                foreach ($element->{$memberName} as $child) {
+                foreach ($children as $child) {
                     $value = (int) (string) $child;
                     $result[] = $class !== null
                         ? $class::fromValue($value)
@@ -327,23 +341,23 @@ final class XmlDeserializer implements ShapeDeserializerInterface
                 }
                 break;
             case ShapeType::BigInteger->value:
-                foreach ($element->{$memberName} as $child) {
+                foreach ($children as $child) {
                     $result[] = new BigInteger((string) $child);
                 }
                 break;
             case ShapeType::BigDecimal->value:
-                foreach ($element->{$memberName} as $child) {
+                foreach ($children as $child) {
                     $result[] = new BigDecimal((string) $child);
                 }
                 break;
             case ShapeType::Boolean->value:
-                foreach ($element->{$memberName} as $child) {
+                foreach ($children as $child) {
                     $result[] = ($s = (string) $child) === 'true' || $s === '1';
                 }
                 break;
             case ShapeType::Float_->value:
             case ShapeType::Double->value:
-                foreach ($element->{$memberName} as $child) {
+                foreach ($children as $child) {
                     $s = (string) $child;
                     $result[] = match ($s) {
                         'NaN' => NAN,
@@ -358,13 +372,13 @@ final class XmlDeserializer implements ShapeDeserializerInterface
                     ? $info->listMemberTimestampFormat
                     : null
                 ) ?? $this->settings->defaultTimestampFormat;
-                foreach ($element->{$memberName} as $child) {
+                foreach ($children as $child) {
                     $result[] = $fmt->parse((string) $child);
                 }
                 break;
             case ShapeType::Structure->value:
                 $memberInfo = $info->listMemberExtension;
-                foreach ($element->{$memberName} as $child) {
+                foreach ($children as $child) {
                     $result[] = $this->readNestedStructFromElement(
                         $child,
                         $listMember,
@@ -374,7 +388,7 @@ final class XmlDeserializer implements ShapeDeserializerInterface
                 break;
             case ShapeType::Union->value:
                 $memberInfo = $info->listMemberExtension;
-                foreach ($element->{$memberName} as $child) {
+                foreach ($children as $child) {
                     $result[] = $this->readUnionFromElement(
                         $child,
                         $listMember,
@@ -383,7 +397,7 @@ final class XmlDeserializer implements ShapeDeserializerInterface
                 }
                 break;
             default:
-                foreach ($element->{$memberName} as $child) {
+                foreach ($children as $child) {
                     $result[] = $this->readValueFromElement(
                         $child,
                         $listMember
@@ -417,34 +431,35 @@ final class XmlDeserializer implements ShapeDeserializerInterface
         $valueName = $info->mapValueName;
         $entryName = $info->mapEntryName;
         $result = [];
+        $entries = $this->children($element, $entryName);
 
         if ($mapValue !== null && $mapValue->type === ShapeType::Timestamp->value) {
             $fmt = ($this->honorTimestampFormatTrait
                 ? $info->mapValueTimestampFormat
                 : null
             ) ?? $this->settings->defaultTimestampFormat;
-            foreach ($element->{$entryName} as $entry) {
-                $key = isset($entry->{$keyName})
-                    ? (string) $entry->{$keyName}
-                    : null;
+            foreach ($entries as $entry) {
+                $keyElement = $this->child($entry, $keyName);
+                $key = $keyElement !== null ? (string) $keyElement : null;
                 if ($key === null) {
                     continue;
                 }
-                $result[$key] = isset($entry->{$valueName})
-                    ? $fmt->parse((string) $entry->{$valueName})
+                $valueElement = $this->child($entry, $valueName);
+                $result[$key] = $valueElement !== null
+                    ? $fmt->parse((string) $valueElement)
                     : null;
             }
             return $result;
         }
 
-        foreach ($element->{$entryName} as $entry) {
-            $key = isset($entry->{$keyName})
-                ? (string) $entry->{$keyName}
-                : null;
+        foreach ($entries as $entry) {
+            $keyElement = $this->child($entry, $keyName);
+            $key = $keyElement !== null ? (string) $keyElement : null;
             if ($key !== null) {
-                $result[$key] = isset($entry->{$valueName})
+                $valueElement = $this->child($entry, $valueName);
+                $result[$key] = $valueElement !== null
                     ? $this->readValueFromElement(
-                        $entry->{$valueName},
+                        $valueElement,
                         $mapValue
                     )
                     : null;
@@ -476,7 +491,8 @@ final class XmlDeserializer implements ShapeDeserializerInterface
         $targetClass = $iterSchema->targetClass;
         $membersByXmlName = $info->unionMembersByXmlName;
 
-        foreach ($element->children() as $childName => $child) {
+        foreach ($this->children($element) as $child) {
+            $childName = $child->getName();
             $entry = $membersByXmlName[$childName] ?? null;
             if ($entry === null) {
                 $value = (string) $child;
@@ -507,6 +523,50 @@ final class XmlDeserializer implements ShapeDeserializerInterface
                 $memberSchema->memberName,
                 $value
             );
+        }
+
+        return null;
+    }
+
+    /**
+     * Match local names across prefixes while retaining the unprefixed path.
+     *
+     * @return iterable<\SimpleXMLElement>
+     */
+    private function children(
+        \SimpleXMLElement $element,
+        ?string $name = null
+    ): iterable
+    {
+        if (!$this->hasNamespacePrefixes) {
+            return $name === null
+                ? $element->children()
+                : $element->{$name};
+        }
+
+        $children = $element->xpath('./*') ?: [];
+        if ($name === null) {
+            return $children;
+        }
+
+        return \array_filter(
+            $children,
+            static fn(\SimpleXMLElement $child): bool =>
+                $child->getName() === $name
+        );
+    }
+
+    private function child(
+        \SimpleXMLElement $element,
+        string $name
+    ): ?\SimpleXMLElement
+    {
+        if (!$this->hasNamespacePrefixes) {
+            return isset($element->{$name}) ? $element->{$name} : null;
+        }
+
+        foreach ($this->children($element, $name) as $child) {
+            return $child;
         }
 
         return null;

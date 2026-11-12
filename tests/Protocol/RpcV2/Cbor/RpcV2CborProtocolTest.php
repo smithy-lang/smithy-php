@@ -373,6 +373,7 @@ final class RpcV2CborProtocolTest extends TestCase
     public function testContentLengthZeroDoesNotReadErrorBody(): void
     {
         $body = $this->createMock(RequestStreamInterface::class);
+        $body->expects(self::never())->method('__toString');
         $body->expects(self::never())->method('getSize');
         $body->expects(self::never())->method('getContents');
 
@@ -398,6 +399,7 @@ final class RpcV2CborProtocolTest extends TestCase
     public function testInvalidErrorProtocolHeaderDoesNotReadBody(): void
     {
         $body = $this->createMock(RequestStreamInterface::class);
+        $body->expects(self::never())->method('__toString');
         $body->expects(self::never())->method('getSize');
         $body->expects(self::never())->method('getContents');
 

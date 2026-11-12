@@ -114,6 +114,44 @@ final class XmlDeserializerTest extends TestCase
         self::assertSame([100.0, 200.0], $output->checkpoints);
     }
 
+    public function testDeserializesPrefixedCollectionsAndAttributes(): void
+    {
+        $deserializer = $this->createDeserializer(<<<'XML'
+<a:SampleStruct xmlns:a="urn:test" xmlns:b="urn:other" b:id="abc">
+    <a:tags><b:member>one</b:member><a:member>two</a:member></a:tags>
+    <a:tag>flat-one</a:tag><b:tag>flat-two</b:tag>
+    <a:scores>
+        <a:entry><b:key>a</b:key><a:value>1</a:value></a:entry>
+    </a:scores>
+    <a:scoreEntry><b:key>x</b:key><a:value>ex</a:value></a:scoreEntry>
+    <a:milestones>
+        <a:entry><b:key>start</b:key><a:value>100</a:value></a:entry>
+    </a:milestones>
+    <a:checkpoints><b:member>100</b:member></a:checkpoints>
+    <a:child><b:value>kid</b:value></a:child>
+    <a:choice><b:count>2</b:count></a:choice>
+</a:SampleStruct>
+XML);
+        $members = \array_fill(
+            0,
+            XmlSampleStructFixture::schema()->getMemberCount(),
+            null
+        );
+        $deserializer->deserialize(XmlSampleStructFixture::schema(), $members);
+        $output = XmlSampleStructFixture::fromMembers($members);
+
+        self::assertSame('abc', $output->id);
+        self::assertSame(['one', 'two'], $output->tags);
+        self::assertSame(['flat-one', 'flat-two'], $output->flatTags);
+        self::assertSame(['a' => 1], $output->scores);
+        self::assertSame(['x' => 'ex'], $output->flatScores);
+        self::assertSame(['start' => 100.0], $output->milestones);
+        self::assertSame([100.0], $output->checkpoints);
+        self::assertSame('kid', $output->child->value);
+        self::assertSame('count', $output->choice->tag());
+        self::assertSame(2, $output->choice->value());
+    }
+
     public function testDeserializesKnownRootUnionVariant(): void
     {
         XmlSampleUnionFixture::$indexedCreations = 0;

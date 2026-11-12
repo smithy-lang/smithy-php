@@ -58,7 +58,9 @@ final class RpcV2ErrorDeserializer extends HttpErrorDeserializer
             );
         }
 
-        $body = (string) $response->getBody();
+        $body = $response->getHeaderLine('Content-Length') === '0'
+            ? ''
+            : $response->getBody()->getContents();
         if ($body === '') {
             return [
                 'discriminator' => null,

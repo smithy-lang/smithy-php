@@ -87,9 +87,9 @@ XML
         } catch (RestXmlException $error) {
             self::assertInstanceOf(AwsProtocolException::class, $error);
             self::assertSame('Something went wrong', $error->getMessage());
-            self::assertSame('UnmodeledError', $error->awsErrorCode);
-            self::assertSame('request-id', $error->requestId);
-            self::assertSame(400, $error->httpStatusCode);
+            self::assertSame('UnmodeledError', $error->getAwsErrorCode());
+            self::assertSame('request-id', $error->getAwsRequestId());
+            self::assertSame(400, $error->getHttpStatusCode());
             self::assertTrue($error->isClientFault());
 
             return;
