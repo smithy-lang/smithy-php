@@ -31,18 +31,28 @@ use Smithy\Core\Shape\Document\UnionDocument;
  */
 final class XmlDeserializer implements ShapeDeserializerInterface
 {
+    // Amortize the namespace-scope check over larger maps.
+    private const NATIVE_MAP_MIN_ENTRIES = 32;
+
     private readonly XmlCodecSettings $settings;
     private readonly bool $honorTimestampFormatTrait;
     private readonly bool $hasNamespacePrefixes;
 
+    /**
+     * Initialize namespace handling from the codec's prefix check.
+     *
+     * Inspect the parsed tree when no prefix flag is supplied.
+     */
     public function __construct(
         private \SimpleXMLElement $element,
-        ?XmlCodecSettings $settings = null
-    ) {
+        ?XmlCodecSettings $settings = null,
+        ?bool $hasNamespacePrefixes = null
+    )
+    {
         $this->settings = $settings ?? new XmlCodecSettings();
         $this->honorTimestampFormatTrait =
             $this->settings->honorTimestampFormatTrait;
-        $this->hasNamespacePrefixes = \array_diff_key(
+        $this->hasNamespacePrefixes = $hasNamespacePrefixes ?? \array_diff_key(
             $element->getNamespaces(true),
             ['' => true]
         ) !== [];
@@ -157,8 +167,10 @@ final class XmlDeserializer implements ShapeDeserializerInterface
         $ordered = $info->orderedChildMembers;
         $orderedCount = $info->childMemberCount;
         $hint = 0;
-        foreach ($this->children($element) as $child) {
-            $childName = $child->getName();
+        $children = $this->hasNamespacePrefixes
+            ? $this->namedChildren($element)
+            : $element->children();
+        foreach ($children as $childName => $child) {
             if ($hint < $orderedCount && $ordered[$hint][0] === $childName) {
                 $entry = $ordered[$hint][1];
                 $hint++;
@@ -268,13 +280,28 @@ final class XmlDeserializer implements ShapeDeserializerInterface
                     );
                     break;
                 case 3:
-                    $keyElement = $this->child($child, $entry[3]);
-                    $key = $keyElement !== null ? (string) $keyElement : null;
+                    if ($this->hasNamespacePrefixes) {
+                        $fields = $this->indexedChildren($child);
+                        $keyElement = $fields[$entry[3]] ?? null;
+                        if ($keyElement !== null) {
+                            $key = (string) $keyElement;
+                            $valueElement = $fields[$entry[4]] ?? null;
+                            $out[$entry[1]][$key] = $valueElement !== null
+                                ? $this->readValueFromElement(
+                                    $valueElement,
+                                    $entry[5]
+                                )
+                                : null;
+                        }
+                        break;
+                    }
+                    $key = isset($child->{$entry[3]})
+                        ? (string) $child->{$entry[3]}
+                        : null;
                     if ($key !== null) {
-                        $valueElement = $this->child($child, $entry[4]);
-                        $out[$entry[1]][$key] = $valueElement !== null
+                        $out[$entry[1]][$key] = isset($child->{$entry[4]})
                             ? $this->readValueFromElement(
-                                $valueElement,
+                                $child->{$entry[4]},
                                 $entry[5]
                             )
                             : null;
@@ -306,7 +333,9 @@ final class XmlDeserializer implements ShapeDeserializerInterface
         $memberName = $info->listMemberName ?? 'member';
         $memberType = $info->listMemberType ?? ShapeType::String_->value;
         $result = [];
-        $children = $this->children($element, $memberName);
+        $children = $this->hasNamespacePrefixes
+            ? $this->children($element, $memberName)
+            : $element->{$memberName};
 
         switch ($memberType) {
             case ShapeType::String_->value:
@@ -431,35 +460,49 @@ final class XmlDeserializer implements ShapeDeserializerInterface
         $valueName = $info->mapValueName;
         $entryName = $info->mapEntryName;
         $result = [];
-        $entries = $this->children($element, $entryName);
+        if ($this->hasNamespacePrefixes) {
+            $entries = $this->children($element, $entryName);
+            $namespace = \count($entries) >= self::NATIVE_MAP_MIN_ENTRIES
+                ? $this->uniformMapNamespace($element)
+                : null;
+            if ($namespace === null) {
+                return $this->readPrefixedMapEntries($entries, $info);
+            }
+            $entries = $element->children($namespace)->{$entryName};
+        } else {
+            $entries = $element->{$entryName};
+        }
 
-        if ($mapValue !== null && $mapValue->type === ShapeType::Timestamp->value) {
+        if ($mapValue !== null
+            && $mapValue->type === ShapeType::Timestamp->value
+        ) {
             $fmt = ($this->honorTimestampFormatTrait
                 ? $info->mapValueTimestampFormat
                 : null
             ) ?? $this->settings->defaultTimestampFormat;
             foreach ($entries as $entry) {
-                $keyElement = $this->child($entry, $keyName);
-                $key = $keyElement !== null ? (string) $keyElement : null;
+                $key = isset($entry->{$keyName})
+                    ? (string) $entry->{$keyName}
+                    : null;
                 if ($key === null) {
                     continue;
                 }
-                $valueElement = $this->child($entry, $valueName);
-                $result[$key] = $valueElement !== null
-                    ? $fmt->parse((string) $valueElement)
+                $result[$key] = isset($entry->{$valueName})
+                    ? $fmt->parse((string) $entry->{$valueName})
                     : null;
             }
+
             return $result;
         }
 
         foreach ($entries as $entry) {
-            $keyElement = $this->child($entry, $keyName);
-            $key = $keyElement !== null ? (string) $keyElement : null;
+            $key = isset($entry->{$keyName})
+                ? (string) $entry->{$keyName}
+                : null;
             if ($key !== null) {
-                $valueElement = $this->child($entry, $valueName);
-                $result[$key] = $valueElement !== null
+                $result[$key] = isset($entry->{$valueName})
                     ? $this->readValueFromElement(
-                        $valueElement,
+                        $entry->{$valueName},
                         $mapValue
                     )
                     : null;
@@ -491,8 +534,10 @@ final class XmlDeserializer implements ShapeDeserializerInterface
         $targetClass = $iterSchema->targetClass;
         $membersByXmlName = $info->unionMembersByXmlName;
 
-        foreach ($this->children($element) as $child) {
-            $childName = $child->getName();
+        $children = $this->hasNamespacePrefixes
+            ? $this->namedChildren($element)
+            : $element->children();
+        foreach ($children as $childName => $child) {
             $entry = $membersByXmlName[$childName] ?? null;
             if ($entry === null) {
                 $value = (string) $child;
@@ -529,47 +574,108 @@ final class XmlDeserializer implements ShapeDeserializerInterface
     }
 
     /**
-     * Match local names across prefixes while retaining the unprefixed path.
+     * Preserve document order and repeated local names across prefixes.
      *
-     * @return iterable<\SimpleXMLElement>
+     * @return \Generator<string, \SimpleXMLElement>
+     */
+    private function namedChildren(\SimpleXMLElement $element): \Generator
+    {
+        foreach ($element->xpath('./*') ?: [] as $child) {
+            yield $child->getName() => $child;
+        }
+    }
+
+    /**
+     * Select prefixed children by local name.
+     *
+     * @return list<\SimpleXMLElement>
      */
     private function children(
         \SimpleXMLElement $element,
-        ?string $name = null
-    ): iterable
+        string $name
+    ): array
     {
-        if (!$this->hasNamespacePrefixes) {
-            return $name === null
-                ? $element->children()
-                : $element->{$name};
+        $matches = [];
+        foreach ($element->xpath('./*') ?: [] as $child) {
+            if ($child->getName() === $name) {
+                $matches[] = $child;
+            }
         }
 
-        $children = $element->xpath('./*') ?: [];
-        if ($name === null) {
-            return $children;
-        }
-
-        return \array_filter(
-            $children,
-            static fn(\SimpleXMLElement $child): bool =>
-                $child->getName() === $name
-        );
+        return $matches;
     }
 
-    private function child(
-        \SimpleXMLElement $element,
-        string $name
-    ): ?\SimpleXMLElement
+    /**
+     * Index the first child for each local name with one XPath traversal.
+     *
+     * @return array<string, \SimpleXMLElement>
+     */
+    private function indexedChildren(\SimpleXMLElement $element): array
     {
-        if (!$this->hasNamespacePrefixes) {
-            return isset($element->{$name}) ? $element->{$name} : null;
+        $fields = [];
+        foreach ($element->xpath('./*') ?: [] as $child) {
+            $fields[$child->getName()] ??= $child;
         }
 
-        foreach ($this->children($element, $name) as $child) {
-            return $child;
+        return $fields;
+    }
+
+    /**
+     * Use a native namespace view only when every map element shares its URI.
+     */
+    private function uniformMapNamespace(\SimpleXMLElement $element): ?string
+    {
+        foreach ($element->getNamespaces() as $namespace) {
+            $element->registerXPathNamespace('_smithy_map', $namespace);
+            if ($element->xpath('self::_smithy_map:*') !== []
+                && $element->xpath(
+                    '(.//*[not(self::_smithy_map:*)])[1]'
+                ) === []
+            ) {
+                return $namespace;
+            }
         }
 
         return null;
+    }
+
+    /**
+     * Decode map keys and values from one traversal per prefixed entry.
+     *
+     * @param list<\SimpleXMLElement> $entries
+     *
+     * @return array<string, mixed>
+     */
+    private function readPrefixedMapEntries(
+        array $entries,
+        XmlSchemaExtension $info
+    ): array
+    {
+        $mapValue = $info->mapValueSchema;
+        $format = $mapValue?->type === ShapeType::Timestamp->value
+            ? ($this->honorTimestampFormatTrait
+                ? $info->mapValueTimestampFormat
+                : null
+            ) ?? $this->settings->defaultTimestampFormat
+            : null;
+        $result = [];
+        foreach ($entries as $entry) {
+            $fields = $this->indexedChildren($entry);
+            $keyElement = $fields[$info->mapKeyName] ?? null;
+            if ($keyElement === null) {
+                continue;
+            }
+            $key = (string) $keyElement;
+            $valueElement = $fields[$info->mapValueName] ?? null;
+            $result[$key] = $valueElement !== null
+                ? ($format !== null
+                    ? $format->parse((string) $valueElement)
+                    : $this->readValueFromElement($valueElement, $mapValue)
+                )
+                : null;
+        }
+
+        return $result;
     }
 
     /** Read a scalar or nested value from an element. */

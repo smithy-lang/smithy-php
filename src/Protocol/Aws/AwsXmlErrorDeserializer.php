@@ -60,6 +60,38 @@ class AwsXmlErrorDeserializer extends AbstractAwsErrorDeserializer
             \libxml_use_internal_errors($useInternalErrors);
         }
 
+        $hasNamespacePrefixes = \str_contains($body, 'xmlns:')
+            || \str_contains($body, 'xml:')
+            || \str_contains($body, "\0")
+            || !\str_starts_with(\ltrim($body), '<');
+        if (!$hasNamespacePrefixes) {
+            $error = $xml;
+            if (isset($xml->Error)) {
+                $error = $xml->Error;
+            } elseif (isset($xml->Errors->Error)) {
+                $error = $xml->Errors->Error;
+            }
+            $bodyRequestId = (string) (
+                $xml->RequestId
+                ?? $xml->RequestID
+                ?? $error->RequestId
+                ?? $error->RequestID
+                ?? ''
+            );
+            if ($bodyRequestId !== '') {
+                $requestId = $bodyRequestId;
+            }
+
+            return [
+                'discriminator' => (string) ($error->Code ?? 'Unknown'),
+                'message' => (string) ($error->Message ?? ''),
+                'body' => $error === $xml
+                    ? $body
+                    : ($error->asXML() ?: $body),
+                'requestId' => $requestId !== '' ? $requestId : null
+            ];
+        }
+
         $errors = $xml->xpath(
             './*[local-name()="Error"]'
             . ' | ./*[local-name()="Errors"]/*[local-name()="Error"]'

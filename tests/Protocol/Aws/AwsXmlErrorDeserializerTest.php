@@ -122,6 +122,35 @@ XML];
     <RequestId>body-request-id</RequestId>
 </ErrorResponse>
 XML];
+        yield 'ordinary envelope' => [
+            '<ErrorResponse><Error><Code>UnmodeledError</Code>'
+            . '<Message>Bad input</Message></Error>'
+            . '<RequestId>body-request-id</RequestId></ErrorResponse>'
+        ];
+        yield 'ordinary errors wrapper' => [
+            '<Response><Errors><Error><Code>UnmodeledError</Code>'
+            . '<Message>Bad input</Message>'
+            . '<RequestID>body-request-id</RequestID>'
+            . '</Error></Errors></Response>'
+        ];
+        yield 'ordinary root error' => [
+            '<?xml version="1.0"?><Error><Code>UnmodeledError</Code>'
+            . '<Message>Bad input</Message>'
+            . '<RequestId>body-request-id</RequestId></Error>'
+        ];
+        yield 'prefix text in message' => [
+            '<Error><Code>UnmodeledError</Code>'
+            . '<Message>Bad input</Message>'
+            . '<Detail><![CDATA[xmlns:a="urn:test"]]></Detail>'
+            . '<RequestID>body-request-id</RequestID></Error>'
+        ];
+        $xml = '<?xml version="1.0" encoding="UTF-16"?>'
+            . '<a:Error xmlns:a="urn:test"><a:Code>UnmodeledError</a:Code>'
+            . '<a:Message>Bad input</a:Message>'
+            . '<a:RequestId>body-request-id</a:RequestId></a:Error>';
+        yield 'UTF-16 prefixed root' => [
+            "\xff\xfe" . \implode("\0", \str_split($xml)) . "\0"
+        ];
     }
 
     public function testPreservesStreamReadFailure(): void

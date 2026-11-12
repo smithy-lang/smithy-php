@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace Smithy\Tests\Codec\Xml;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Smithy\Core\Serde\Schema;
 use Smithy\Core\Shape\ShapeType;
@@ -150,6 +151,67 @@ XML);
         self::assertSame('kid', $output->child->value);
         self::assertSame('count', $output->choice->tag());
         self::assertSame(2, $output->choice->value());
+    }
+
+    #[DataProvider('mapNamespaceScopes')]
+    public function testDeserializesLargeMapsAcrossNamespaceScopes(
+        string $declarations,
+        string $entryTemplate
+    ): void
+    {
+        $entries = '';
+        $scores = [];
+        $milestones = [];
+        for ($i = 0; $i < 64; $i++) {
+            $key = 'key' . $i;
+            $entries .= \sprintf($entryTemplate, $key, $i);
+            $scores[$key] = $i;
+            $milestones[$key] = (float) $i;
+        }
+        $xml = '<a:SampleStruct ' . $declarations . '>'
+            . '<a:scores>' . $entries . '</a:scores>'
+            . '<a:milestones>' . $entries . '</a:milestones>'
+            . '</a:SampleStruct>';
+        $schema = XmlSampleStructFixture::schema();
+        $members = \array_fill(0, $schema->getMemberCount(), null);
+        $this->createDeserializer($xml)->deserialize($schema, $members);
+        $output = XmlSampleStructFixture::fromMembers($members);
+
+        self::assertSame($scores, $output->scores);
+        self::assertSame($milestones, $output->milestones);
+    }
+
+    /**
+     * @return iterable<string, array{string, string}>
+     */
+    public static function mapNamespaceScopes(): iterable
+    {
+        yield 'one namespace' => [
+            'xmlns:a="urn:test"',
+            '<a:entry><a:key>%s</a:key><a:value>%d</a:value></a:entry>'
+        ];
+        yield 'aliases share a URI' => [
+            'xmlns:a="urn:test" xmlns:b="urn:test"',
+            '<b:entry><a:key>%s</a:key><b:value>%d</b:value></b:entry>'
+        ];
+        yield 'mixed namespaces' => [
+            'xmlns:a="urn:test" xmlns:b="urn:other"',
+            '<a:entry><b:key>%s</b:key><a:value>%d</a:value></a:entry>'
+        ];
+        yield 'prefix rebound on entry' => [
+            'xmlns:a="urn:test"',
+            '<a:entry xmlns:a="urn:child"><a:key>%s</a:key>'
+            . '<a:value>%d</a:value></a:entry>'
+        ];
+        yield 'default namespace cleared' => [
+            'xmlns="urn:test" xmlns:a="urn:test"',
+            '<entry xmlns=""><key>%s</key><value>%d</value></entry>'
+        ];
+        yield 'first duplicate local name wins' => [
+            'xmlns:a="urn:test" xmlns:b="urn:other"',
+            '<a:entry><b:key>%s</b:key><a:key>ignored</a:key>'
+            . '<b:value>%d</b:value><a:value>999</a:value></a:entry>'
+        ];
     }
 
     public function testDeserializesKnownRootUnionVariant(): void
