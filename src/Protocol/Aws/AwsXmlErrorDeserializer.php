@@ -60,105 +60,34 @@ class AwsXmlErrorDeserializer extends AbstractAwsErrorDeserializer
             \libxml_use_internal_errors($useInternalErrors);
         }
 
-        $hasNamespacePrefixes = \str_contains($body, 'xmlns:')
-            || \str_contains($body, 'xml:')
-            || \str_contains($body, "\0")
-            || !\str_starts_with(\ltrim($body), '<');
-        if (!$hasNamespacePrefixes) {
-            $error = $xml;
-            if (isset($xml->Error)) {
-                $error = $xml->Error;
-            } elseif (isset($xml->Errors->Error)) {
-                $error = $xml->Errors->Error;
-            }
-            $bodyRequestId = (string) (
-                $xml->RequestId
-                ?? $xml->RequestID
-                ?? $error->RequestId
-                ?? $error->RequestID
-                ?? ''
-            );
-            if ($bodyRequestId !== '') {
-                $requestId = $bodyRequestId;
-            }
-
-            return [
-                'discriminator' => (string) ($error->Code ?? 'Unknown'),
-                'message' => (string) ($error->Message ?? ''),
-                'body' => $error === $xml
-                    ? $body
-                    : ($error->asXML() ?: $body),
-                'requestId' => $requestId !== '' ? $requestId : null
-            ];
+        $error = $xml;
+        if (isset($xml->Error)) {
+            $error = $xml->Error;
+        } elseif (isset($xml->Errors->Error)) {
+            $error = $xml->Errors->Error;
         }
 
-        $errors = $xml->xpath(
-            './*[local-name()="Error"]'
-            . ' | ./*[local-name()="Errors"]/*[local-name()="Error"]'
+        $errorBody = $error->asXML();
+        if ($errorBody === false) {
+            $errorBody = $body;
+        }
+
+        $bodyRequestId = (string) (
+            $xml->RequestId
+            ?? $xml->RequestID
+            ?? $error->RequestId
+            ?? $error->RequestID
+            ?? ''
         );
-        $error = $errors[0] ?? $xml;
-        $bodyRequestId = self::childText($xml, 'RequestId')
-            ?? self::childText($xml, 'RequestID')
-            ?? self::childText($error, 'RequestId')
-            ?? self::childText($error, 'RequestID');
-        if ($bodyRequestId !== null && $bodyRequestId !== '') {
+        if ($bodyRequestId !== '') {
             $requestId = $bodyRequestId;
         }
 
         return [
-            'discriminator' => self::childText($error, 'Code') ?? 'Unknown',
-            'message' => self::childText($error, 'Message') ?? '',
-            'body' => $error === $xml ? $body : self::errorBody($error, $body),
+            'discriminator' => (string) ($error->Code ?? 'Unknown'),
+            'message' => (string) ($error->Message ?? ''),
+            'body' => $errorBody,
             'requestId' => $requestId !== '' ? $requestId : null
         ];
-    }
-
-    private static function childText(
-        \SimpleXMLElement $element,
-        string $name
-    ): ?string
-    {
-        $children = $element->xpath('./*[local-name()="' . $name . '"]');
-
-        return isset($children[0]) ? (string) $children[0] : null;
-    }
-
-    /**
-     * Preserve inherited namespace declarations on the selected error root.
-     */
-    private static function errorBody(
-        \SimpleXMLElement $error,
-        string $originalBody
-    ): string
-    {
-        $body = $error->asXML();
-        if ($body === false) {
-            return $originalBody;
-        }
-
-        $declared = $error->getDocNamespaces(false, false);
-        $declarations = '';
-        foreach ($error->getNamespaces(true) as $prefix => $namespace) {
-            if (\array_key_exists($prefix, $declared)) {
-                continue;
-            }
-            $name = $prefix === '' ? 'xmlns' : 'xmlns:' . $prefix;
-            $value = \htmlspecialchars(
-                $namespace,
-                ENT_QUOTES | ENT_XML1,
-                'UTF-8'
-            );
-            $declarations .= ' ' . $name . '="' . $value . '"';
-        }
-
-        if ($declarations === '') {
-            return $body;
-        }
-
-        $nameEnd = 1 + \strcspn($body, " \t\r\n/>", 1);
-
-        return \substr($body, 0, $nameEnd)
-            . $declarations
-            . \substr($body, $nameEnd);
     }
 }

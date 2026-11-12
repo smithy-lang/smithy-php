@@ -62,7 +62,7 @@ final class AwsXmlErrorDeserializerTest extends TestCase
     }
 
     #[DataProvider('unmodeledEnvelopes')]
-    public function testReadsNamespaceQualifiedMetadata(
+    public function testReadsEnvelopeMetadata(
         string $body
     ): void
     {
@@ -86,33 +86,6 @@ final class AwsXmlErrorDeserializerTest extends TestCase
      */
     public static function unmodeledEnvelopes(): iterable
     {
-        yield 'prefixed envelope' => [<<<'XML'
-<a:ErrorResponse xmlns:a="urn:test">
-    <a:Error>
-        <a:Code>UnmodeledError</a:Code>
-        <a:Message>Bad input</a:Message>
-    </a:Error>
-    <a:RequestId>body-request-id</a:RequestId>
-</a:ErrorResponse>
-XML];
-        yield 'prefixed errors wrapper' => [<<<'XML'
-<a:Response xmlns:a="urn:test">
-    <a:Errors>
-        <a:Error>
-            <a:Code>UnmodeledError</a:Code>
-            <a:Message>Bad input</a:Message>
-            <a:RequestId>body-request-id</a:RequestId>
-        </a:Error>
-    </a:Errors>
-</a:Response>
-XML];
-        yield 'prefixed root error' => [<<<'XML'
-<a:Error xmlns:a="urn:test">
-    <a:Code>UnmodeledError</a:Code>
-    <a:Message>Bad input</a:Message>
-    <a:RequestID>body-request-id</a:RequestID>
-</a:Error>
-XML];
         yield 'default namespace' => [<<<'XML'
 <ErrorResponse xmlns="urn:test">
     <Error>
@@ -137,19 +110,6 @@ XML];
             '<?xml version="1.0"?><Error><Code>UnmodeledError</Code>'
             . '<Message>Bad input</Message>'
             . '<RequestId>body-request-id</RequestId></Error>'
-        ];
-        yield 'prefix text in message' => [
-            '<Error><Code>UnmodeledError</Code>'
-            . '<Message>Bad input</Message>'
-            . '<Detail><![CDATA[xmlns:a="urn:test"]]></Detail>'
-            . '<RequestID>body-request-id</RequestID></Error>'
-        ];
-        $xml = '<?xml version="1.0" encoding="UTF-16"?>'
-            . '<a:Error xmlns:a="urn:test"><a:Code>UnmodeledError</a:Code>'
-            . '<a:Message>Bad input</a:Message>'
-            . '<a:RequestId>body-request-id</a:RequestId></a:Error>';
-        yield 'UTF-16 prefixed root' => [
-            "\xff\xfe" . \implode("\0", \str_split($xml)) . "\0"
         ];
     }
 

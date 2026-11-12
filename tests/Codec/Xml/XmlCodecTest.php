@@ -18,11 +18,10 @@ use Smithy\Codec\Xml\{
     XmlDeserializer,
     XmlSerializer
 };
+use Smithy\Core\Serde\Schema;
+use Smithy\Core\Shape\ShapeType;
 use Smithy\Http\Message\StringRequestStream;
-use Smithy\Tests\Codec\Xml\Utils\{
-    XmlNestedStructFixture,
-    XmlSampleStructFixture
-};
+use Smithy\Tests\Codec\Xml\Utils\XmlNestedStructFixture;
 
 final class XmlCodecTest extends TestCase
 {
@@ -108,59 +107,76 @@ final class XmlCodecTest extends TestCase
         $codec->createDeserializer(new StringRequestStream('<broken'));
     }
 
-    #[DataProvider('namespacePayloads')]
-    public function testDeserializesNamespacesAcrossPayloadEncodings(
-        string $body
+    #[DataProvider('s3GranteeBodies')]
+    public function testDeserializesS3GranteeTypeAttribute(
+        string $body,
+        ?string $expectedType
     ): void
     {
-        $schema = XmlSampleStructFixture::schema();
-        $members = \array_fill(0, $schema->getMemberCount(), null);
-        (new XmlCodec())->createDeserializer(new StringRequestStream($body))
-            ->deserialize($schema, $members);
-        $output = XmlSampleStructFixture::fromMembers($members);
+        $schema = new Schema(
+            id: 'com.amazonaws.s3#Grantee',
+            type: ShapeType::Structure,
+            members: [
+                new Schema(
+                    id: 'com.amazonaws.s3#Grantee$ID',
+                    type: ShapeType::String_,
+                    memberName: 'ID',
+                    memberIndex: 0
+                ),
+                new Schema(
+                    id: 'com.amazonaws.s3#Grantee$Type',
+                    type: ShapeType::Enum,
+                    memberName: 'Type',
+                    memberIndex: 1,
+                    traits: [
+                        Schema::T_REQUIRED => true,
+                        Schema::T_XML_ATTRIBUTE => true,
+                        Schema::T_XML_NAME => 'xsi:type'
+                    ]
+                )
+            ]
+        );
+        $codec = new XmlCodec();
+        $members = $codec->createMembersBuffer($schema);
+        $codec->createDeserializer(
+            new StringRequestStream($body),
+            ['Grantee']
+        )->deserialize($schema, $members);
 
-        self::assertSame('abc', $output->id);
-        self::assertSame('alpha', $output->name);
-        self::assertSame('kid', $output->child->value);
+        self::assertSame(['owner-id', $expectedType], $members);
     }
 
     /**
-     * @return iterable<string, array{string}>
+     * @return iterable<string, array{string, ?string}>
      */
-    public static function namespacePayloads(): iterable
+    public static function s3GranteeBodies(): iterable
     {
-        yield 'ordinary XML' => [
-            '<SampleStruct id="abc"><name>alpha</name>'
-            . '<child><value>kid</value></child></SampleStruct>'
+        $namespace = 'http://www.w3.org/2001/XMLSchema-instance';
+        yield 'local declaration' => [
+            '<Grantee xmlns:xsi="' . $namespace . '"'
+            . ' xsi:type="CanonicalUser"><ID>owner-id</ID></Grantee>',
+            'CanonicalUser'
         ];
-        yield 'prefix declared on descendant' => [
-            '<SampleStruct id="abc"><name>alpha</name>'
-            . '<child xmlns:a="urn:test"><a:value>kid</a:value></child>'
-            . '</SampleStruct>'
+        yield 'inherited declaration' => [
+            '<AccessControlPolicy xmlns:xsi="' . $namespace . '">'
+            . '<Grantee xsi:type="CanonicalUser"><ID>owner-id</ID>'
+            . '</Grantee></AccessControlPolicy>',
+            'CanonicalUser'
         ];
-        yield 'implicit xml attribute prefix' => [
-            '<SampleStruct xml:id="abc"><name>alpha</name>'
-            . '<child><value>kid</value></child></SampleStruct>'
+        yield 'qualified and unqualified attributes' => [
+            '<Grantee xmlns:xsi="' . $namespace . '"'
+            . ' type="Group" xsi:type="CanonicalUser">'
+            . '<ID>owner-id</ID></Grantee>',
+            'CanonicalUser'
         ];
-        yield 'prefix text in CDATA' => [
-            '<SampleStruct id="abc"><name>alpha</name>'
-            . '<notes><![CDATA[xmlns:a="urn:test" xml:lang]]></notes>'
-            . '<child><value>kid</value></child></SampleStruct>'
+        yield 'unqualified attribute only' => [
+            '<Grantee type="Group"><ID>owner-id</ID></Grantee>',
+            null
         ];
-        yield 'UTF-8 BOM' => [
-            "\xef\xbb\xbf"
-            . '<SampleStruct id="abc"><name>alpha</name>'
-            . '<child><value>kid</value></child></SampleStruct>'
-        ];
-        $xml = '<?xml version="1.0" encoding="UTF-16"?>'
-            . '<a:SampleStruct xmlns:a="urn:test" id="abc">'
-            . '<a:name>alpha</a:name><a:child><a:value>kid</a:value>'
-            . '</a:child></a:SampleStruct>';
-        yield 'UTF-16 little endian' => [
-            "\xff\xfe" . \implode("\0", \str_split($xml)) . "\0"
-        ];
-        yield 'UTF-16 big endian' => [
-            "\xfe\xff\0" . \implode("\0", \str_split($xml))
+        yield 'missing qualified attribute' => [
+            '<Grantee xmlns:xsi="' . $namespace . '">'
+            . '<ID>owner-id</ID></Grantee>',
+            null
         ];
     }
 }

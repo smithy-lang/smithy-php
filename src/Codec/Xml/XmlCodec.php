@@ -66,9 +66,8 @@ final class XmlCodec extends AbstractCodec
     {
         $useInternalErrors = \libxml_use_internal_errors(true);
         try {
-            $body = $source->getContents();
             $xml = new \SimpleXMLElement(
-                $body,
+                $source->getContents(),
                 LIBXML_NOBLANKS | LIBXML_NONET | LIBXML_COMPACT
             );
         } catch (\Exception $e) {
@@ -100,17 +99,7 @@ final class XmlCodec extends AbstractCodec
             }
         }
 
-        // False positives only select the namespace-aware traversal.
-        $hasNamespacePrefixes = \str_contains($body, 'xmlns:')
-            || \str_contains($body, 'xml:')
-            || \str_contains($body, "\0")
-            || !\str_starts_with(\ltrim($body), '<');
-
-        return new XmlDeserializer(
-            $xml,
-            $this->settings,
-            $hasNamespacePrefixes
-        );
+        return new XmlDeserializer($xml, $this->settings);
     }
 
     /**
