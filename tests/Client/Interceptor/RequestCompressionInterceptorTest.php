@@ -14,14 +14,12 @@ use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\RequestInterface;
 use Smithy\Async\RevoltEventLoop;
 use Smithy\Client\ClientConfig;
-use Smithy\Client\Endpoint\{
-    Endpoint,
-    StaticEndpointResolver
-};
+use Smithy\Client\Endpoint\StaticEndpointResolver;
 use Smithy\Client\Interceptor\{
     RequestCompressionInterceptor,
     RequestContext
 };
+use Smithy\Core\Endpoint\Endpoint;
 use Smithy\Core\Serde\Schema;
 use Smithy\Core\Shape\OperationInterface;
 use Smithy\Core\Shape\ShapeType;

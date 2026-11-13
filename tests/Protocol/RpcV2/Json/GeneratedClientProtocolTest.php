@@ -15,10 +15,8 @@ use Smithy\Client\Auth\{
     NoAuthScheme,
     StaticAuthSchemeResolver
 };
-use Smithy\Client\Endpoint\{
-    Endpoint,
-    StaticEndpointResolver
-};
+use Smithy\Client\Endpoint\StaticEndpointResolver;
+use Smithy\Core\Endpoint\Endpoint;
 use Smithy\Core\Exception\ApiException;
 use Smithy\Core\Serde\SerializableStructInterface;
 use Smithy\Core\Shape\OperationInterface;

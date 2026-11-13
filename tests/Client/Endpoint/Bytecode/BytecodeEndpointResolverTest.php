@@ -13,7 +13,6 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Smithy\Client\ClientConfig;
-use Smithy\Client\Endpoint\Endpoint;
 use Smithy\Client\Endpoint\EndpointResolverInterface;
 use Smithy\Client\Endpoint\Bytecode\{
     Bytecode,
@@ -22,6 +21,7 @@ use Smithy\Client\Endpoint\Bytecode\{
     StdFunctions
 };
 use Smithy\Client\Endpoint\EndpointResolverParams;
+use Smithy\Core\Endpoint\Endpoint;
 use Smithy\Core\Serde\{
     DynamicTraitValue,
     Schema,

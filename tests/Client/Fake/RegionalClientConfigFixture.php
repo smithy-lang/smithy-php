@@ -19,7 +19,7 @@ use Smithy\Client\Interceptor\InterceptorChain;
 use Smithy\Client\Plugin\PluginState;
 use Smithy\Client\Protocol\ProtocolResolverInterface;
 use Smithy\Client\Retry\RetryStrategyInterface;
-use Smithy\Client\Transport\TransportInterface;
+use Smithy\Core\Transport\TransportInterface;
 use Smithy\Core\Shape\ServiceInterface;
 use Smithy\Protocol\ProtocolInterface;
 

@@ -7,7 +7,7 @@
 
 declare(strict_types=1);
 
-namespace Smithy\Client\Transport;
+namespace Smithy\Core\Transport;
 
 /**
  * Apply transport-specific behavior to one client request.

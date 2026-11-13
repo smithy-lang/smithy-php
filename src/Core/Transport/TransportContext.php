@@ -7,9 +7,8 @@
 
 declare(strict_types=1);
 
-namespace Smithy\Client\Transport;
+namespace Smithy\Core\Transport;
 
-use Smithy\Client\ClientConfig;
 use Smithy\Core\Shape\OperationInterface;
 
 /**
@@ -19,7 +18,6 @@ final readonly class TransportContext
 {
     public function __construct(
         public OperationInterface $operation,
-        public ClientConfig $config,
         public ?TransportOptionsInterface $options = null
     ) {}
 }

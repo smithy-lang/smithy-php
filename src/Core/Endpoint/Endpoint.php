@@ -7,7 +7,7 @@
 
 declare(strict_types=1);
 
-namespace Smithy\Client\Endpoint;
+namespace Smithy\Core\Endpoint;
 
 /**
  * A resolved endpoint for an operation.

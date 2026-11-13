@@ -10,10 +10,8 @@ declare(strict_types=1);
 namespace Smithy\Examples\PetStore\Example;
 
 use Smithy\Client\ClientConfig;
-use Smithy\Client\Endpoint\{
-    Endpoint,
-    StaticEndpointResolver
-};
+use Smithy\Client\Endpoint\StaticEndpointResolver;
+use Smithy\Core\Endpoint\Endpoint;
 use Smithy\Examples\PetStore\PetStoreClient;
 use Smithy\Http\Client\{
     CurlClient,

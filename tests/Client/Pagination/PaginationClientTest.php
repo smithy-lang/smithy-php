@@ -16,10 +16,10 @@ use Smithy\Client\{
     Dynamic\DynamicClient,
     RequestOverrideConfig
 };
-use Smithy\Client\Endpoint\Endpoint;
 use Smithy\Client\Endpoint\StaticEndpointResolver;
 use Smithy\Client\Pagination\PageSizePaginatedRequestInterface;
 use Smithy\Client\Pagination\PaginatedRequestInterface;
+use Smithy\Core\Endpoint\Endpoint;
 use Smithy\Core\Serde\SerializableStructInterface;
 use Smithy\Core\Shape\Document\StructDocument;
 use Smithy\Http\Message\Response;

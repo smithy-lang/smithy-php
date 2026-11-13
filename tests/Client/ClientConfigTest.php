@@ -18,16 +18,14 @@ use Smithy\Client\Auth\{
     StaticAuthSchemeResolver
 };
 use Smithy\Client\ClientConfig;
-use Smithy\Client\Endpoint\{
-    Endpoint,
-    StaticEndpointResolver
-};
+use Smithy\Client\Endpoint\StaticEndpointResolver;
 use Smithy\Client\Interceptor\IdempotencyTokenInterceptor;
 use Smithy\Client\Protocol\ProtocolResolver;
 use Smithy\Client\Retry\{
     NoRetryStrategy,
     RetryStrategyInterface
 };
+use Smithy\Core\Endpoint\Endpoint;
 use Smithy\Core\Serde\Schema;
 use Smithy\Core\Shape\{
     ServiceInterface,

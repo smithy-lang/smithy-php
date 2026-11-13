@@ -21,7 +21,7 @@ use Smithy\Client\Endpoint\Bytecode\{
     RulesFunctionInterface,
     StdFunctions
 };
-use Smithy\Client\Endpoint\Endpoint;
+use Smithy\Core\Endpoint\Endpoint;
 use Smithy\Tests\Client\Endpoint\Bytecode\Fixture\{
     EndpointResolutionTraceFixture,
     OpcodeHandlerFixture

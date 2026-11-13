@@ -14,17 +14,15 @@ use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\RequestInterface;
 use Smithy\Async\RevoltEventLoop;
 use Smithy\Client\ClientConfig;
-use Smithy\Client\Endpoint\{
-    Endpoint,
-    StaticEndpointResolver
-};
+use Smithy\Client\Endpoint\StaticEndpointResolver;
 use Smithy\Client\Interceptor\{
     HttpChecksumInterceptor,
     InterceptorChain,
     RequestCompressionInterceptor,
     RequestContext
 };
-use Smithy\Client\Transport\TransportRequestInterface;
+use Smithy\Core\Endpoint\Endpoint;
+use Smithy\Core\Transport\TransportRequestInterface;
 use Smithy\Core\Serde\Schema;
 use Smithy\Core\Shape\OperationInterface;
 use Smithy\Core\Shape\ShapeType;

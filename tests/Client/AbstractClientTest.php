@@ -16,10 +16,7 @@ use Smithy\Client\{
     ClientConfig,
     RequestOverrideConfig
 };
-use Smithy\Client\Endpoint\{
-    Endpoint,
-    StaticEndpointResolver
-};
+use Smithy\Client\Endpoint\StaticEndpointResolver;
 use Smithy\Client\Interceptor\{
     AbstractInterceptor,
     CallContext,
@@ -37,6 +34,7 @@ use Smithy\Client\Plugin\{
     PluginInterface
 };
 use Smithy\Client\Protocol\ProtocolResolver;
+use Smithy\Core\Endpoint\Endpoint;
 use Smithy\Core\Serde\{
     Schema,
     SerializableStructInterface

@@ -7,17 +7,16 @@
 
 declare(strict_types=1);
 
-namespace Smithy\Client\Endpoint;
+namespace Smithy\Core\Endpoint;
 
 /**
  * Carry an auth scheme override attached to a resolved {@see Endpoint}.
  *
  * Endpoint rulesets can augment or replace the auth scheme selected before
  * endpoint resolution. This is deprecated compatibility behavior; new
- * services should select schemes through an
- * {@see \Smithy\Client\Auth\AuthSchemeResolverInterface}. The scheme ID is
- * the canonical Smithy shape ID used by
- * {@see \Smithy\Client\Auth\AuthSchemeInterface::getSchemeId()}.
+ * services should select schemes through the client's auth scheme
+ * resolver. The scheme ID is the canonical Smithy shape ID of the auth
+ * scheme, such as `aws.auth#sigv4`.
  */
 final class EndpointAuthScheme
 {

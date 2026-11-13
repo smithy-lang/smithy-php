@@ -12,12 +12,10 @@ namespace Smithy\Tests\Client\Plugin;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Smithy\Client\ClientConfig;
-use Smithy\Client\Endpoint\{
-    Endpoint,
-    StaticEndpointResolver
-};
+use Smithy\Client\Endpoint\StaticEndpointResolver;
 use Smithy\Client\Interceptor\HttpChecksumInterceptor;
 use Smithy\Client\Plugin\HttpChecksumPlugin;
+use Smithy\Core\Endpoint\Endpoint;
 use Smithy\Tests\Client\Fake\FakeProtocol;
 use Smithy\Tests\Utils\Http\MockHttpClient;
 

@@ -13,7 +13,7 @@ use Psr\Http\Message\ResponseInterface;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Smithy\Codec\Json\JsonCodec;
-use Smithy\Client\Endpoint\Endpoint;
+use Smithy\Core\Endpoint\Endpoint;
 use Smithy\Http\Message\HttpTransportRequest;
 use Smithy\Protocol\AbstractHttpBindingProtocol;
 use Smithy\Protocol\HttpErrorDeserializer;
