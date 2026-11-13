@@ -213,4 +213,91 @@ final class RevoltEventLoopTest extends TestCase
 
         $this->assertTrue($ran);
     }
+
+    public function testDeferAcceptsInternalFunctionCallable(): void
+    {
+        $loop = new RevoltEventLoop();
+        $ran = false;
+
+        // An internal function rejects the callback ID Revolt passes.
+        $loop->suspend(
+            static function (callable $resume) use ($loop, &$ran): void {
+                $loop->defer('gc_collect_cycles');
+                $loop->defer(
+                    static function () use (&$ran, $resume): void {
+                        $ran = true;
+                        $resume(null);
+                    }
+                );
+            }
+        );
+
+        $this->assertTrue($ran);
+    }
+
+    public function testDeferDoesNotPassCallbackIdToTypedParameter(): void
+    {
+        $loop = new RevoltEventLoop();
+        $args = null;
+
+        $loop->suspend(
+            static function (callable $resume) use ($loop, &$args): void {
+                $loop->defer(
+                    static function (
+                        ?\stdClass $context = null
+                    ) use (&$args, $resume): void {
+                        $args = \func_get_args();
+                        $resume(null);
+                    }
+                );
+            }
+        );
+
+        $this->assertSame([], $args);
+    }
+
+    public function testScheduleDoesNotPassCallbackIdToTypedParameter(): void
+    {
+        $loop = new RevoltEventLoop();
+        $args = null;
+
+        $loop->suspend(
+            static function (callable $resume) use ($loop, &$args): void {
+                $loop->schedule(
+                    0.001,
+                    static function (
+                        ?\stdClass $context = null
+                    ) use (&$args, $resume): void {
+                        $args = \func_get_args();
+                        $resume(null);
+                    }
+                );
+            }
+        );
+
+        $this->assertSame([], $args);
+    }
+
+    public function testDeferAndScheduleInvokeZeroParameterClosureWithNoArguments(): void
+    {
+        $loop = new RevoltEventLoop();
+        $args = [];
+
+        $loop->suspend(
+            static function (callable $resume) use ($loop, &$args): void {
+                $loop->defer(static function () use (&$args): void {
+                    $args['defer'] = \func_get_args();
+                });
+                $loop->schedule(
+                    0.001,
+                    static function () use (&$args, $resume): void {
+                        $args['schedule'] = \func_get_args();
+                        $resume(null);
+                    }
+                );
+            }
+        );
+
+        $this->assertSame(['defer' => [], 'schedule' => []], $args);
+    }
 }

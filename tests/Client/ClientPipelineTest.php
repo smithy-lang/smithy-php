@@ -15,7 +15,10 @@ use PHPUnit\Framework\Attributes\{
 };
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\RequestInterface;
-use Smithy\Async\Async;
+use Smithy\Async\{
+    Async,
+    EventLoopInterface
+};
 use Smithy\Client\{
     ClientConfig,
     ClientPipeline,
@@ -98,6 +101,19 @@ use Smithy\Tests\Utils\Http\MockHttpClient;
 #[CoversClass(ClientPipeline::class)]
 final class ClientPipelineTest extends TestCase
 {
+    private EventLoopInterface $previousEventLoop;
+
+    protected function setUp(): void
+    {
+        $this->previousEventLoop = Async::eventLoop();
+    }
+
+    protected function tearDown(): void
+    {
+        // Restore the global loop so a fake loop never leaks into later tests.
+        Async::configure($this->previousEventLoop);
+    }
+
     public function testHappyPathReturnsOutputFromProtocol(): void
     {
         [$pipeline, $http] = $this->buildPipeline();
