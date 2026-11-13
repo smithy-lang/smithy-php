@@ -58,6 +58,17 @@ $cases = [
                 preserveExistingMemberOrder: false
             )
     ],
+    'rest-json' => [
+        'model' => $root . '/tools/codegen-output/models/rest-json.json',
+        'settings' => static fn(string $outputDir): CodegenSettings =>
+            new CodegenSettings(
+                namespace: 'Smithy\\ProtocolTests\\RestJson',
+                outputDir: $outputDir,
+                organization: 'categorized',
+                preserveExistingMemberOrder: false,
+                baseServiceException: AwsProtocolException::class
+            )
+    ],
     'rest-xml' => [
         'model' => $root . '/tools/codegen-output/models/rest-xml.json',
         'settings' => static fn(string $outputDir): CodegenSettings =>
