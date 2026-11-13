@@ -89,7 +89,7 @@ The transport-neutral connection layer contains:
 RequestContext
     |
     v
-CacheKey (scheme + host + port + proxy)
+RequestContext key (scheme + host + port + proxy)
     |
     v
 ConnectionManagerInterface
@@ -105,7 +105,7 @@ ExchangeInterface
 ```
 
 The active Curl implementation maps one `CurlConnection` to one libcurl easy
-handle. A `CurlExchange` leases that handle for one request.
+handle. The leased `CurlConnection` is also the exchange for one request.
 
 Libcurl owns physical sockets. More than one easy handle can use the same
 HTTP/2 socket through the shared multi handle. Pool and active counts therefore
@@ -263,8 +263,8 @@ percent and upload throughput by 28.04 percent. Peak RSS increased by
 increased memory and tail latency. `maxIdlePerHost` matches the default
 admission limit so a single hot route can retain its warm easy handles.
 `maxIdleTotal` remains 100. Workloads with different latency or memory
-constraints can provide `ConnectionManagerConfiguration` through
-`HttpClientConfiguration`. See [Connection Limit
+constraints can provide `ConnectionManagerConfiguration` to
+`CurlConnectionManager`. See [Connection Limit
 Selection][http-testing-validation].
 
 ## Configuration Validation

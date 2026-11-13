@@ -43,10 +43,9 @@ use Smithy\Http\Message\{
     AsyncRequestStream,
     Request,
     ResourceRequestStream,
-    Stream,
     StreamingResponseStream,
     ResponseInterface,
-    StringRequestStream
+    StringResponseStream
 };
 use Smithy\Tests\Http\Client\Curl\Utils\{
     FailingCleanupAsyncRequestStreamFixture,
@@ -1413,9 +1412,9 @@ final class CurlClientTest extends TestCase
             $server->stop();
         }
 
-        $key = (string) RequestContext::fromUri(
+        $key = RequestContext::fromUri(
             $activeRequest->getUri()
-        )->cacheKey();
+        )->key;
         $this->assertSame(0, $manager->activeCount($key));
     }
 
@@ -1744,9 +1743,9 @@ final class CurlClientTest extends TestCase
             $server->stop();
         }
 
-        $key = (string) RequestContext::fromUri(
+        $key = RequestContext::fromUri(
             $request->getUri()
-        )->cacheKey();
+        )->key;
         $this->assertSame(0, $manager->activeCount($key));
     }
 
@@ -1842,9 +1841,9 @@ final class CurlClientTest extends TestCase
                 $server->endpoint() . '/upload'
             );
             $requests[$name] = $request;
-            $keys[$name] = (string) RequestContext::fromUri(
+            $keys[$name] = RequestContext::fromUri(
                 $request->getUri()
-            )->cacheKey();
+            )->key;
             $options = new HttpRequestOptions(
                 timeout: 2.0,
                     maxBufferedResponseBytes: 0,
@@ -2250,9 +2249,9 @@ final class CurlClientTest extends TestCase
             responseBufferSize: 16 * 1024,
             readTimeout: 2.0
         );
-        $key = (string) RequestContext::fromUri(
+        $key = RequestContext::fromUri(
             $request->getUri()
-        )->cacheKey();
+        )->key;
 
         try {
             $response = $client->sendRequest($request, $options);
@@ -2386,9 +2385,9 @@ final class CurlClientTest extends TestCase
             $server->stop();
         }
 
-        $key = (string) RequestContext::fromUri(
+        $key = RequestContext::fromUri(
             $request->getUri()
-        )->cacheKey();
+        )->key;
         $this->assertSame(0, $manager->activeCount($key));
         $this->assertNotNull($trailers);
 
@@ -2416,9 +2415,9 @@ final class CurlClientTest extends TestCase
                     timeout: 2.0,
                     maxBufferedResponseBytes: 0                )
             );
-            $key = (string) RequestContext::fromUri(
+            $key = RequestContext::fromUri(
                 $request->getUri()
-            )->cacheKey();
+            )->key;
 
             $this->assertSame(1, $manager->activeCount($key));
 
@@ -2449,9 +2448,9 @@ final class CurlClientTest extends TestCase
                     maxBufferedResponseBytes: 0                )
             );
             $body = $response->getBody();
-            $key = (string) RequestContext::fromUri(
+            $key = RequestContext::fromUri(
                 $request->getUri()
-            )->cacheKey();
+            )->key;
 
             unset($response);
 
@@ -2874,7 +2873,7 @@ final class CurlClientTest extends TestCase
         }
 
         $body = $responses[0]->getBody();
-        $this->assertInstanceOf(Stream::class, $body);
+        $this->assertInstanceOf(StringResponseStream::class, $body);
         $this->assertSame(1024 * 1024, $body->getSize());
         $this->assertSame(
             \hash(
@@ -2907,7 +2906,7 @@ final class CurlClientTest extends TestCase
         }
 
         $body = $responses[0]->getBody();
-        $this->assertInstanceOf(Stream::class, $body);
+        $this->assertInstanceOf(StringResponseStream::class, $body);
         $this->assertSame(768 * 1024, $body->getSize());
         $this->assertSame(
             \hash(

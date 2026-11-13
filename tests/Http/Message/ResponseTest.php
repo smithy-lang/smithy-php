@@ -13,9 +13,14 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ResponseInterface as PsrResponseInterface;
 use Psr\Http\Message\StreamInterface;
+use Smithy\Async\RevoltEventLoop;
+use Smithy\Http\Message\Request;
+use Smithy\Http\Message\RequestStreamInterface;
 use Smithy\Http\Message\Response;
 use Smithy\Http\Message\ResponseInterface;
 use Smithy\Http\Message\ResponseTrailers;
+use Smithy\Http\Message\StreamingResponseStream;
+use Smithy\Http\Message\StringResponseStream;
 
 #[CoversClass(Response::class)]
 final class ResponseTest extends TestCase
@@ -169,6 +174,67 @@ final class ResponseTest extends TestCase
         $response = new Response(body: $body);
 
         $response->discardBody();
+    }
+
+    public function testWithBodyKeepsStreamingBodyForDiscard(): void
+    {
+        $closeCalls = 0;
+        $body = new StreamingResponseStream(
+            new RevoltEventLoop(),
+            8,
+            static function (): void {},
+            static function () use (&$closeCalls): void {
+                ++$closeCalls;
+            }
+        );
+        $body->append('abc');
+        $body->end();
+        $response = (new Response())->withBody($body);
+
+        $response->discardBody();
+
+        $this->assertSame($body, $response->getBody());
+        $this->assertSame(0, $closeCalls);
+    }
+
+    public function testBuildsStringBodiesWithoutCopyingIntoMemoryStream(): void
+    {
+        $response = new Response(body: 'payload');
+
+        $this->assertInstanceOf(
+            StringResponseStream::class,
+            $response->getBody()
+        );
+        $this->assertSame('payload', $response->getBody()->getContents());
+        $this->assertSame(
+            StringResponseStream::empty(),
+            (new Response())->getBody()
+        );
+    }
+
+    public function testForwardsPartiallyReadStringBodyFromCurrentOffset(): void
+    {
+        $response = new Response(body: 'abcdef');
+        $response->getBody()->read(2);
+
+        $body = (new Request('PUT', 'http://localhost/'))
+            ->withBody($response->getBody())
+            ->getBody();
+
+        $this->assertInstanceOf(RequestStreamInterface::class, $body);
+        $this->assertSame(4, $body->length());
+        $this->assertSame('cdef', $body->getContents());
+        $body->rewindForRetry();
+        $this->assertSame('cdef', $body->getContents());
+    }
+
+    public function testSharesEmptyCompletedTrailers(): void
+    {
+        $this->assertSame(
+            (new Response())->getTrailers(),
+            (new Response(204))->getTrailers()
+        );
+        $this->assertTrue((new Response())->getTrailers()->isComplete());
     }
 
     public function testRejectsInvalidStatusDuringConstruction(): void

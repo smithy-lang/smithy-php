@@ -73,6 +73,16 @@ final class StringRequestStreamTest extends TestCase
         $stream->seek(0, 99);
     }
 
+    public function testRejectsNegativeReadLength(): void
+    {
+        $stream = new StringRequestStream('abcdef');
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Read length must be non-negative.');
+
+        $stream->read(-1);
+    }
+
     public function testRejectsSeekOutsideContent(): void
     {
         $stream = new StringRequestStream('abcdef');
@@ -133,5 +143,20 @@ final class StringRequestStreamTest extends TestCase
         $this->assertSame($first, $second);
         $this->assertSame(0, $first->length());
         $this->assertTrue($first->eof());
+    }
+
+    public function testEmptyInstanceKeepsNoStateAcrossUses(): void
+    {
+        $empty = StringRequestStream::empty();
+        $this->assertTrue($empty->fullyConsumed());
+
+        $empty->read(1);
+        $empty->getContents();
+        $empty->seek(0);
+        $empty->rewindForRetry();
+
+        $this->assertFalse(StringRequestStream::empty()->started());
+        $this->assertTrue(StringRequestStream::empty()->fullyConsumed());
+        $this->assertSame(0, StringRequestStream::empty()->tell());
     }
 }

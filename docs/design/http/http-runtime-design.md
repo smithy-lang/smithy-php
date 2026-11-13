@@ -75,7 +75,7 @@ CurlConnectionManager                       EventLoopInterface
         +--> concurrency waiters                  +--> PHP fibers
         |
         v
-CurlConnection -> CurlExchange -> cURL easy handle
+CurlConnection (exchange) -> cURL easy handle
         |
         v
 shared CurlMultiHandle
@@ -145,7 +145,6 @@ Configuration is split by ownership:
 | `HttpRequestOptions` | One request, or client defaults for every request |
 | `ConnectConfiguration` | TCP, TLS, and HTTP version behavior for connections |
 | `ConnectionManagerConfiguration` | Concurrency, acquisition, and idle retention |
-| `HttpClientConfiguration` | SDK-facing bag that groups the three configuration types |
 
 Per-request settings do not mutate connection settings. Pooled handles receive
 connection settings again after `curl_reset()`.

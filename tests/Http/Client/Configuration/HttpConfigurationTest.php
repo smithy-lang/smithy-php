@@ -17,7 +17,6 @@ use Smithy\Http\Client\Configuration\{
     ConnectionManagerConfiguration,
     HTTP2Configuration,
     HTTPVersionPolicy,
-    HttpClientConfiguration,
     TLSConfiguration
 };
 
@@ -25,7 +24,6 @@ use Smithy\Http\Client\Configuration\{
 #[CoversClass(ConnectionManagerConfiguration::class)]
 #[CoversClass(HTTP2Configuration::class)]
 #[CoversClass(HTTPVersionPolicy::class)]
-#[CoversClass(HttpClientConfiguration::class)]
 #[CoversClass(TLSConfiguration::class)]
 final class HttpConfigurationTest extends TestCase
 {

@@ -25,7 +25,7 @@ final class RequestContextTest extends TestCase
         self::assertSame(443, $context->port);
         self::assertSame(
             'https://example.com:443',
-            (string) $context->cacheKey()
+            $context->key
         );
     }
 

@@ -13,6 +13,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\{
     RequestInterface,
+    ResponseInterface,
     StreamInterface
 };
 use Smithy\Client\ClientInterface;
@@ -34,7 +35,10 @@ use Smithy\Core\Shape\{
 use Smithy\Core\Shape\Utils\ArrayShapeSerializer;
 use Smithy\Http\Message\Response;
 use Smithy\Tests\Protocol\ProtocolTestLoader;
-use Smithy\Tests\Utils\Http\MockHttpClient;
+use Smithy\Tests\Utils\Http\{
+    GenericPsrResponse,
+    MockHttpClient
+};
 
 /**
  * Run the official Rest JSON fixtures through a client projection.
@@ -94,6 +98,41 @@ abstract class RestJsonClientProtocolTestCase extends TestCase
         array $inputParams
     ): void
     {
+        $this->assertResponseDeserialization(
+            $operationId,
+            $test,
+            $inputParams,
+            false
+        );
+    }
+
+    #[DataProvider('responseCases')]
+    final public function testResponseDeserializationFromGenericPsrResponse(
+        string $operationId,
+        array $test,
+        array $inputParams
+    ): void
+    {
+        $this->assertResponseDeserialization(
+            $operationId,
+            $test,
+            $inputParams,
+            true
+        );
+    }
+
+    private function assertResponseDeserialization(
+        string $operationId,
+        array $test,
+        array $inputParams,
+        bool $genericPsrResponse
+    ): void
+    {
+        $response = self::response(
+            $test['code'],
+            $test['headers'] ?? [],
+            self::decodeBody($test['body'] ?? null)
+        );
         $http = new MockHttpClient();
         $client = $this->createClient(
             $http,
@@ -110,11 +149,9 @@ abstract class RestJsonClientProtocolTestCase extends TestCase
             $http,
             $operation,
             $this->createInput($operation, $inputParams),
-            self::response(
-                $test['code'],
-                $test['headers'] ?? [],
-                self::decodeBody($test['body'] ?? null)
-            )
+            $genericPsrResponse
+                ? new GenericPsrResponse($response)
+                : $response
         );
 
         self::assertSame(
@@ -511,7 +548,7 @@ abstract class RestJsonClientProtocolTestCase extends TestCase
         MockHttpClient $http,
         OperationInterface $operation,
         SerializableStructInterface $input,
-        Response $response
+        ResponseInterface $response
     ): SerializableStructInterface
     {
         $http->reset()->queueResponse($response);
