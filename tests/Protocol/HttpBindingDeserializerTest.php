@@ -265,6 +265,54 @@ final class HttpBindingDeserializerTest extends TestCase
         );
     }
 
+    public function testDeserializesReferencedStructurePayloadMember(): void
+    {
+        $targetSchema = new Schema(
+            id: 'smithy.test#ReferencedPayload',
+            type: ShapeType::Structure,
+            members: [
+                new Schema(
+                    id: 'smithy.api#String',
+                    type: ShapeType::String_,
+                    memberName: 'greeting',
+                    memberIndex: 0
+                )
+            ]
+        );
+        $schema = new Schema(
+            id: 'smithy.test#ReferencedPayloadResponse',
+            type: ShapeType::Structure,
+            members: [
+                new Schema(
+                    id: 'smithy.test#ReferencedPayload',
+                    type: ShapeType::Structure,
+                    memberName: 'payload',
+                    memberIndex: 0,
+                    traits: [Schema::T_HTTP_PAYLOAD => true],
+                    target: $targetSchema
+                )
+            ]
+        );
+        $members = [null];
+        $bindingInfo = $schema->getExtension(
+            HttpStructBindingExtensionProvider::key()
+        );
+        $deserializer = new HttpBindingDeserializer(
+            new JsonCodec(),
+            $bindingInfo,
+            ['content-length' => ['Content-Length', ['17']]],
+            new StringRequestStream('{"greeting":"hi"}')
+        );
+
+        $deserializer->deserialize($schema, $members);
+
+        self::assertInstanceOf(StructDocument::class, $members[0]);
+        self::assertSame(
+            'hi',
+            $members[0]->getMemberValue($targetSchema->getMember('greeting'))
+        );
+    }
+
     public function testDocumentPayloadRetainsModeledSchema(): void
     {
         $payloadSchema = new Schema(

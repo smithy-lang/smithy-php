@@ -22,8 +22,7 @@ final class HttpOperationBindingExtensionTest extends TestCase
             method: 'GET',
             path: '/items/{id}',
             pathSegments: [['/items/', null, false], [null, 0, false]],
-            pathQueryString: 'fixed=yes',
-            httpResponseCode: 204
+            pathQueryString: 'fixed=yes'
         );
 
         self::assertSame('GET', $extension->method);
@@ -33,6 +32,5 @@ final class HttpOperationBindingExtensionTest extends TestCase
             $extension->pathSegments
         );
         self::assertSame('fixed=yes', $extension->pathQueryString);
-        self::assertSame(204, $extension->httpResponseCode);
     }
 }

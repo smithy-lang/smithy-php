@@ -12,6 +12,7 @@ namespace Smithy\Tests\Codec;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Smithy\Codec\AbstractCodec;
+use Smithy\Codec\Xml\XmlCodec;
 use Smithy\Core\Serde\Schema;
 use Smithy\Core\Shape\ShapeType;
 use Smithy\Tests\Codec\Utils\CodecFixture;
@@ -57,5 +58,15 @@ final class AbstractCodecTest extends TestCase
             [null, null],
             (new CodecFixture())->createMembersBuffer($schema)
         );
+    }
+
+    public function testDefaultAcquireCreatesFreshSerializer(): void
+    {
+        $codec = new XmlCodec();
+
+        $first = $codec->acquireSerializer();
+        $codec->releaseSerializer($first);
+
+        self::assertNotSame($first, $codec->acquireSerializer());
     }
 }
