@@ -40,6 +40,11 @@ enum TimestampFormat: int
     public const FMT_HTTP_DATE = 'D, d M Y H:i:s \G\M\T';
 
     /**
+     * Maximum day-epoch memo entries per format before the memo resets.
+     */
+    private const DAY_MEMO_LIMIT = 4096;
+
+    /**
      * Format `$value` (epoch seconds) into the wire string for this format.
      *
      * The {@see EpochSeconds} arm is first: a Smithy timestamp member typed as `int` skips
@@ -79,9 +84,24 @@ enum TimestampFormat: int
                 // Canonical 20-byte UTC form: "2024-01-15T10:30:00Z".
                 if ($len === 20) {
                     static $isoDays = [];
-                    return ($isoDays[\substr($value, 0, 10)]
-                            ??= self::monthStartIso()[\substr($value, 0, 7)]
-                                + ((int) \substr($value, 8, 2) - 1) * 86400)
+                    $key = \substr($value, 0, 10);
+                    $day = $isoDays[$key] ?? null;
+                    if ($day === null) {
+                        $month = self::monthStartIso()[\substr($value, 0, 7)]
+                            ?? null;
+                        if ($month === null) {
+                            return self::parseWithStrtotime($value, $this);
+                        }
+
+                        if (\count($isoDays) >= self::DAY_MEMO_LIMIT) {
+                            $isoDays = [];
+                        }
+
+                        $day = $isoDays[$key] = $month
+                            + ((int) \substr($value, 8, 2) - 1) * 86400;
+                    }
+
+                    return $day
                         + (int) \substr($value, 11, 2) * 3600
                         + (int) \substr($value, 14, 2) * 60
                         + (int) \substr($value, 17, 2);
@@ -89,8 +109,12 @@ enum TimestampFormat: int
                 // Fractional seconds with Z: "2024-01-15T10:30:00.123Z"
                 if ($value[$len - 1] === 'Z') {
                     $dotPos = \strpos($value, '.', 17);
-                    if ($dotPos !== false) {
-                        return self::monthStartIso()[\substr($value, 0, 7)]
+                    $month = $dotPos === false
+                        ? null
+                        : (self::monthStartIso()[\substr($value, 0, 7)]
+                            ?? null);
+                    if ($month !== null) {
+                        return $month
                             + ((int) \substr($value, 8, 2) - 1) * 86400
                             + (int) \substr($value, 11, 2) * 3600
                             + (int) \substr($value, 14, 2) * 60
@@ -111,11 +135,26 @@ enum TimestampFormat: int
 
             case 2:
                 // "Thu, 15 Jan 2024 10:30:00 GMT". Day-epoch memo keyed on
+                // the "15 Jan 2024" slice.
                 static $hdDays = [];
+                $key = \substr($value, 5, 11);
+                $day = $hdDays[$key] ?? null;
+                if ($day === null) {
+                    $month = self::monthStartHd()[\substr($value, 8, 8)]
+                        ?? null;
+                    if ($month === null) {
+                        return self::parseWithStrtotime($value, $this);
+                    }
 
-                return ($hdDays[\substr($value, 5, 11)]
-                        ??= self::monthStartHd()[\substr($value, 8, 8)]
-                            + ((int) \substr($value, 5, 2) - 1) * 86400)
+                    if (\count($hdDays) >= self::DAY_MEMO_LIMIT) {
+                        $hdDays = [];
+                    }
+
+                    $day = $hdDays[$key] = $month
+                        + ((int) \substr($value, 5, 2) - 1) * 86400;
+                }
+
+                return $day
                     + (int) \substr($value, 17, 2) * 3600
                     + (int) \substr($value, 20, 2) * 60
                     + (int) \substr($value, 23, 2);
@@ -204,7 +243,7 @@ enum TimestampFormat: int
      */
     private static function buildMonthTable(string $keyFmt): array
     {
-        static $t = [];
+        $t = [];
         for ($y = 1970; $y <= 2199; $y++) {
             for ($m = 1; $m <= 12; $m++) {
                 $yy = $y - (int) ($m <= 2);

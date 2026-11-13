@@ -136,6 +136,68 @@ final class TimestampFormatTest extends TestCase
         TimestampFormat::DateTime->parse('not-a-timestamp');
     }
 
+    #[DataProvider('datesOutsideMonthTable')]
+    public function testParseFallsBackOutsideMonthTableRange(
+        TimestampFormat $format,
+        string $value,
+        float $expected
+    ): void
+    {
+        $this->assertEqualsWithDelta(
+            $expected,
+            (float) $format->parse($value),
+            0.001
+        );
+    }
+
+    /**
+     * @return array<string, array{TimestampFormat, string, float}>
+     */
+    public static function datesOutsideMonthTable(): array
+    {
+        return [
+            'date-time before 1970' => [
+                TimestampFormat::DateTime,
+                '1960-01-02T00:00:00Z',
+                -315532800.0
+            ],
+            // The strtotime() fallback keeps whole seconds only.
+            'fractional date-time before 1970' => [
+                TimestampFormat::DateTime,
+                '1960-01-02T00:00:00.5Z',
+                -315532800.0
+            ],
+            'http-date after 2199' => [
+                TimestampFormat::HttpDate,
+                'Mon, 01 Jan 2300 00:00:00 GMT',
+                10413792000.0
+            ],
+            'http-date before 1970' => [
+                TimestampFormat::HttpDate,
+                'Sat, 02 Jan 1960 00:00:00 GMT',
+                -315532800.0
+            ]
+        ];
+    }
+
+    public function testParseMatchesAcrossFormatsAtMonthTableBounds(): void
+    {
+        $this->assertSame(
+            0.0,
+            (float) TimestampFormat::DateTime->parse('1970-01-01T00:00:00Z')
+        );
+        $this->assertSame(
+            7258118399.0,
+            (float) TimestampFormat::DateTime->parse('2199-12-31T23:59:59Z')
+        );
+        $this->assertSame(
+            7258118399.0,
+            (float) TimestampFormat::HttpDate->parse(
+                'Tue, 31 Dec 2199 23:59:59 GMT'
+            )
+        );
+    }
+
     #[DataProvider('traitStringMappings')]
     public function testFromTraitStringResolvesKnownTraitValues(
         ?string $trait,
