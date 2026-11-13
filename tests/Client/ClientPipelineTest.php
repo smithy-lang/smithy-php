@@ -945,6 +945,68 @@ final class ClientPipelineTest extends TestCase
         );
     }
 
+    public function testFailedEndpointIdentityDoesNotKeepModeledIdentity(): void
+    {
+        $modeledIdentity = new class implements IdentityInterface {
+            public function getExpirationTime(): ?float
+            {
+                return null;
+            }
+        };
+        $modeledResolver = $this->createMock(
+            IdentityResolverInterface::class
+        );
+        $modeledResolver->method('resolveIdentity')->willReturn(
+            IdentityResult::success($modeledIdentity)
+        );
+        $observer = new class extends AbstractInterceptor {
+            public ?OutputContext $attempt = null;
+
+            public function readAfterAttempt(
+                OutputContext $ctx,
+                ?\Throwable $error
+            ): void
+            {
+                $this->attempt ??= $ctx;
+            }
+        };
+        $pipeline = new ClientPipeline(new ClientConfig(
+            protocol: new FakeProtocol(),
+            transport: new \Smithy\Http\Client\HttpClientTransport(
+                (new MockHttpClient())->willReturn('body')
+            ),
+            endpointResolver: new StaticEndpointResolver(new Endpoint(
+                'https://example.test',
+                authSchemes: [
+                    new EndpointAuthScheme('smithy.test#endpoint')
+                ]
+            )),
+            interceptors: new InterceptorChain($observer),
+            supportedAuthSchemes: [
+                new TestAuthSchemeFixture(
+                    'smithy.test#modeled',
+                    $modeledResolver
+                ),
+                $this->missingAuthScheme(
+                    'smithy.test#endpoint',
+                    'endpoint identity failed'
+                )
+            ],
+            authSchemeResolver: new StaticAuthSchemeResolver([
+                'smithy.test#modeled'
+            ])
+        ));
+
+        try {
+            $pipeline->execute(FakeOperation::instance(), new FakeInput());
+            $this->fail('Expected identity resolution to fail.');
+        } catch (IdentityNotFoundException) {
+        }
+
+        $this->assertNotNull($observer->attempt);
+        $this->assertNull($observer->attempt->identity);
+    }
+
     public function testIdentityMissDoesNotFallBackToAnotherScheme(): void
     {
         $seen = (object) ['selectedScheme' => null];

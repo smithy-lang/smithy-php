@@ -22,7 +22,6 @@ use Smithy\Client\Interceptor\RequestContext;
 use Smithy\Client\Interceptor\ResponseContext;
 use Smithy\Client\Retry\RetryRequestFlagResolverInterface;
 use Smithy\Client\Retry\TokenAcquisitionFailedException;
-use Smithy\Core\Endpoint\Endpoint;
 use Smithy\Core\Transport\{
     TransportContext,
     TransportRequestInterface,
@@ -348,6 +347,8 @@ final class ClientPipeline
                 $preference
             );
         if ($authScheme->scheme !== $resolvedAuthScheme->scheme) {
+            // A failure below must not leave the modeled identity in place.
+            $identity = null;
             $identityResolver = $authScheme
                 ->scheme
                 ->getIdentityResolver($config);

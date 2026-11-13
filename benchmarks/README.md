@@ -189,9 +189,9 @@ client installs. `interceptor` installs only a pass-through plugin and
 interceptor to measure dispatch.
 
 <!-- client-benchmark-results:start -->
-Recorded: 2026-11-01T22:25:30+00:00
+Recorded: 2026-11-13T23:45:49+00:00
 
-- Revision: `155d9b7`
+- Revision: `35f5eee`
 - PHP: `8.2.35 (cli)`
 - OS: `Darwin 25.6.0 arm64`
 - Instance: `Apple M1 Pro`
@@ -202,10 +202,13 @@ Recorded: 2026-11-01T22:25:30+00:00
 
 | Case | n | Mean | p50 | p90 | p95 | p99 | Std dev | Ops/CPU s |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| `rpcv2Cbor_ClientPipeline_default_S` | 5,000 | 24.924 µs | 24.375 µs | 25.125 µs | 25.792 µs | 44.250 µs | 7.737 µs | 40,156 |
-| `rpcv2Cbor_ClientPipeline_default_M` | 5,000 | 38.371 µs | 36.792 µs | 39.458 µs | 42.333 µs | 75.875 µs | 8.272 µs | 26,153 |
-| `rpcv2Cbor_ClientPipeline_default_L` | 5,000 | 66.652 µs | 64.292 µs | 69.416 µs | 72.792 µs | 107.167 µs | 8.638 µs | 15,033 |
-| `rpcv2Cbor_ClientPipeline_interceptor_S` | 5,000 | 28.228 µs | 27.167 µs | 28.000 µs | 29.875 µs | 60.791 µs | 10.307 µs | 35,573 |
-| `rpcv2Cbor_ClientPipeline_interceptor_M` | 5,000 | 43.180 µs | 41.125 µs | 44.250 µs | 50.500 µs | 91.292 µs | 11.315 µs | 23,277 |
-| `rpcv2Cbor_ClientPipeline_interceptor_L` | 5,000 | 73.380 µs | 70.375 µs | 76.334 µs | 86.750 µs | 165.583 µs | 17.711 µs | 13,704 |
+| `rpcv2Cbor_ClientPipeline_bare_S` | 5,000 | 30.076 µs | 24.125 µs | 27.208 µs | 35.208 µs | 165.542 µs | 51.127 µs | 36,403 |
+| `rpcv2Cbor_ClientPipeline_bare_M` | 5,000 | 43.466 µs | 38.084 µs | 42.041 µs | 55.667 µs | 175.583 µs | 30.651 µs | 23,890 |
+| `rpcv2Cbor_ClientPipeline_bare_L` | 5,000 | 91.134 µs | 68.250 µs | 116.667 µs | 220.042 µs | 496.791 µs | 103.752 µs | 12,277 |
+| `rpcv2Cbor_ClientPipeline_builtin_S` | 5,000 | 27.846 µs | 24.000 µs | 26.333 µs | 37.041 µs | 126.958 µs | 22.420 µs | 37,616 |
+| `rpcv2Cbor_ClientPipeline_builtin_M` | 5,000 | 43.617 µs | 38.041 µs | 42.292 µs | 66.333 µs | 171.334 µs | 27.385 µs | 23,954 |
+| `rpcv2Cbor_ClientPipeline_builtin_L` | 5,000 | 77.729 µs | 68.333 µs | 81.458 µs | 118.459 µs | 269.291 µs | 40.822 µs | 13,359 |
+| `rpcv2Cbor_ClientPipeline_interceptor_S` | 5,000 | 45.340 µs | 27.000 µs | 62.541 µs | 120.459 µs | 392.584 µs | 85.577 µs | 28,877 |
+| `rpcv2Cbor_ClientPipeline_interceptor_M` | 5,000 | 53.164 µs | 40.333 µs | 51.458 µs | 103.875 µs | 316.584 µs | 72.591 µs | 21,019 |
+| `rpcv2Cbor_ClientPipeline_interceptor_L` | 5,000 | 102.598 µs | 71.542 µs | 117.250 µs | 235.250 µs | 613.833 µs | 173.196 µs | 11,640 |
 <!-- client-benchmark-results:end -->

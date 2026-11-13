@@ -43,10 +43,22 @@ final class ProtocolResolver implements ProtocolResolverInterface
 
     /**
      * Return the shared resolver for protocols included with the runtime.
+     *
+     * Protocols cache per-operation state, so share this resolver only among
+     * clients with a fixed set of operations. Use {@see createDefaults()} for
+     * clients that create operations at runtime.
      */
     public static function defaults(): self
     {
-        return self::$defaults ??= new self([
+        return self::$defaults ??= self::createDefaults();
+    }
+
+    /**
+     * Create a resolver with new instances of the included protocols.
+     */
+    public static function createDefaults(): self
+    {
+        return new self([
             RpcV2CborProtocol::ID => new RpcV2CborProtocol(),
             RpcV2JsonProtocol::ID => new RpcV2JsonProtocol()
         ]);

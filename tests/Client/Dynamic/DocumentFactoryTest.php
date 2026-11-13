@@ -128,6 +128,29 @@ final class DocumentFactoryTest extends TestCase
         self::assertSame('child', $this->memberValue($next, 'value'));
     }
 
+    public function testDeepInvalidChildReportsFullPathQuickly(): void
+    {
+        $schema = $this->converter()->getSchema('example#Node');
+        $input = ['value' => 1];
+        for ($i = 0; $i < 30; $i++) {
+            $input = ['value' => 'ok', 'next' => $input];
+        }
+
+        $start = \microtime(true);
+        try {
+            (new DocumentFactory())->createStruct($schema, $input);
+            $this->fail('Expected invalid input to be rejected.');
+        } catch (InvalidShapeValueException $e) {
+            $this->assertStringContainsString(
+                '$' . \str_repeat('.next', 30) . '.value',
+                $e->getMessage()
+            );
+        }
+
+        // Exponential retries would take minutes at this depth.
+        $this->assertLessThan(2.0, \microtime(true) - $start);
+    }
+
     public function testCreatesEmptyUnitInputFromNull(): void
     {
         $schema = $this->converter()->getSchema('smithy.api#Unit');

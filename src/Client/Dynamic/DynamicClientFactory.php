@@ -100,7 +100,9 @@ final class DynamicClientFactory
             endpointAuthSchemeIds: $endpointAuthSchemeIds,
             protocolPreference: $protocolPreference
         ));
-        $protocolResolver = ProtocolResolver::defaults()->merge(
+        // Dynamic operations have unique identities, so protocol caches must
+        // not outlive the client.
+        $protocolResolver = ProtocolResolver::createDefaults()->merge(
             $runtime->getProtocolResolver()
         );
         $supportedAuthSchemes = $runtime->getAuthSchemes();

@@ -45,6 +45,12 @@ final class DocumentFactory
     private const INPUT_TRAIT = 'smithy.api#input';
 
     /**
+     * Whether nested coercion builds child paths eagerly during an error
+     * retry. Coercion is synchronous, so one flag per factory is safe.
+     */
+    private bool $buildPaths = false;
+
+    /**
      * Create a schema-backed document.
      *
      * @throws InvalidShapeValueException When the value is incompatible.
@@ -719,6 +725,9 @@ final class DocumentFactory
     /**
      * Coerce a nested value, building its path only when coercion fails.
      *
+     * Only the outermost failing child retries, with paths built eagerly, so
+     * the error path stays linear in nesting depth.
+     *
      * @param int|string $key List index, map key, or member name.
      * @param bool $isMember Whether `$key` is a structure member name.
      */
@@ -730,16 +739,29 @@ final class DocumentFactory
         bool $isMember = false
     ): mixed
     {
-        try {
-            return $this->coerce($schema, $value, $path);
-        } catch (InvalidShapeValueException) {
-            // Coercion is deterministic, so this call fails again with the
-            // child's path in the message.
+        if ($this->buildPaths) {
             return $this->coerce(
                 $schema,
                 $value,
                 self::childPath($path, $key, $isMember)
             );
+        }
+
+        try {
+            return $this->coerce($schema, $value, $path);
+        } catch (InvalidShapeValueException) {
+            // Coercion is deterministic, so the retry fails again with the
+            // child's path in the message.
+            $this->buildPaths = true;
+            try {
+                return $this->coerce(
+                    $schema,
+                    $value,
+                    self::childPath($path, $key, $isMember)
+                );
+            } finally {
+                $this->buildPaths = false;
+            }
         }
     }
 
