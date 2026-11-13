@@ -16,7 +16,7 @@ use Smithy\Client\Interceptor\{
     RequestContext,
     ResponseContext
 };
-use Smithy\Client\Transport\{
+use Smithy\Core\Transport\{
     TransportRequestInterface,
     TransportResponseInterface
 };

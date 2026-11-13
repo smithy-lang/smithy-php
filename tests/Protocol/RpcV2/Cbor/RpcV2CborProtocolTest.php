@@ -13,7 +13,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Smithy\Codec\Cbor\CborCodec;
-use Smithy\Client\Endpoint\Endpoint;
+use Smithy\Core\Endpoint\Endpoint;
 use Smithy\Core\Exception\ApiException;
 use Smithy\Core\Serde\Schema;
 use Smithy\Core\Shape\Document\StructDocument;

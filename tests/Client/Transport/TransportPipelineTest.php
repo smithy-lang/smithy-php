@@ -16,10 +16,7 @@ use Smithy\Client\{
     ClientPipeline,
     RequestOverrideConfig
 };
-use Smithy\Client\Endpoint\{
-    Endpoint,
-    StaticEndpointResolver
-};
+use Smithy\Client\Endpoint\StaticEndpointResolver;
 use Smithy\Client\Interceptor\{
     AbstractInterceptor,
     InterceptorChain,
@@ -31,7 +28,8 @@ use Smithy\Client\Retry\{
     RetryState,
     RetryStrategyInterface
 };
-use Smithy\Client\Transport\{
+use Smithy\Core\Endpoint\Endpoint;
+use Smithy\Core\Transport\{
     MessageExchangeInterface,
     TransportContext,
     TransportInterface,

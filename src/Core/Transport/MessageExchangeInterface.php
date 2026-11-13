@@ -7,7 +7,7 @@
 
 declare(strict_types=1);
 
-namespace Smithy\Client\Transport;
+namespace Smithy\Core\Transport;
 
 /**
  * Identifies the request and response types shared by a protocol and transport.

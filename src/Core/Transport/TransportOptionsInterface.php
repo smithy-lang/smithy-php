@@ -7,9 +7,9 @@
 
 declare(strict_types=1);
 
-namespace Smithy\Client\Transport;
+namespace Smithy\Core\Transport;
 
 /**
- * Marker for a request accepted by a client transport.
+ * Marker for transport-specific request options.
  */
-interface TransportRequestInterface {}
+interface TransportOptionsInterface {}

@@ -25,14 +25,12 @@ use Smithy\Client\{
     ClientConfig,
     ClientInterface
 };
-use Smithy\Client\Endpoint\{
-    Endpoint,
-    StaticEndpointResolver
-};
+use Smithy\Client\Endpoint\StaticEndpointResolver;
 use Smithy\Client\Plugin\{
     PluginCollection,
     PluginInterface
 };
+use Smithy\Core\Endpoint\Endpoint;
 use Smithy\Core\Serde\SerializableStructInterface;
 use Smithy\Core\Shape\Utils\ArrayShapeSerializer;
 use Smithy\Http\Message\Response;

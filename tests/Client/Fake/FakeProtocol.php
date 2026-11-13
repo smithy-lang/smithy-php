@@ -12,8 +12,8 @@ namespace Smithy\Tests\Client\Fake;
 use Psr\Http\Message\{
     StreamInterface
 };
-use Smithy\Client\Endpoint\Endpoint;
-use Smithy\Client\Transport\{
+use Smithy\Core\Endpoint\Endpoint;
+use Smithy\Core\Transport\{
     MessageExchangeInterface,
     TransportRequestInterface,
     TransportResponseInterface

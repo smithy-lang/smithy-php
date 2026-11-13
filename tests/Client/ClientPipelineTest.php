@@ -35,8 +35,6 @@ use Smithy\Client\Auth\{
     StaticAuthSchemeResolver
 };
 use Smithy\Client\Endpoint\{
-    Endpoint,
-    EndpointAuthScheme,
     EndpointResolverInterface,
     EndpointResolverParams,
     StaticEndpointResolver
@@ -55,7 +53,11 @@ use Smithy\Client\Retry\{
     RetryStrategyInterface,
     TokenAcquisitionFailedException
 };
-use Smithy\Client\Transport\{
+use Smithy\Core\Endpoint\{
+    Endpoint,
+    EndpointAuthScheme
+};
+use Smithy\Core\Transport\{
     TransportRequestInterface,
     TransportResponseInterface
 };

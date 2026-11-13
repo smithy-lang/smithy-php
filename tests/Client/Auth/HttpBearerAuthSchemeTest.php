@@ -18,10 +18,8 @@ use Smithy\Client\Auth\{
     StaticTokenProvider
 };
 use Smithy\Client\ClientConfig;
-use Smithy\Client\Endpoint\{
-    Endpoint,
-    StaticEndpointResolver
-};
+use Smithy\Client\Endpoint\StaticEndpointResolver;
+use Smithy\Core\Endpoint\Endpoint;
 use Smithy\Tests\Client\Fake\FakeProtocol;
 use Smithy\Tests\Utils\Http\MockHttpClient;
 

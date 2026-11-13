@@ -7,7 +7,7 @@
 
 declare(strict_types=1);
 
-namespace Smithy\Client\Transport;
+namespace Smithy\Core\Transport;
 
 /**
  * Sends protocol messages without constraining orchestration to HTTP.

@@ -22,10 +22,10 @@ use Smithy\Client\Auth\{
     StaticAuthSchemeResolver
 };
 use Smithy\Client\ClientConfig;
-use Smithy\Client\Endpoint\{
+use Smithy\Client\Endpoint\StaticEndpointResolver;
+use Smithy\Core\Endpoint\{
     Endpoint,
-    EndpointAuthScheme,
-    StaticEndpointResolver
+    EndpointAuthScheme
 };
 use Smithy\Core\Shape\OperationInterface;
 use Smithy\Tests\Client\Fake\{

@@ -10,7 +10,7 @@ declare(strict_types=1);
 namespace Smithy\Tests\Client\Endpoint\Bytecode\Fixture;
 
 use Smithy\Client\Endpoint\Bytecode\EndpointResolutionTraceInterface;
-use Smithy\Client\Endpoint\Endpoint;
+use Smithy\Core\Endpoint\Endpoint;
 
 final class EndpointResolutionTraceFixture implements
     EndpointResolutionTraceInterface

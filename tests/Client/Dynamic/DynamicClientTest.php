@@ -20,7 +20,6 @@ use Smithy\Client\{
     RequestOverrideConfig
 };
 use Smithy\Client\Endpoint\{
-    Endpoint,
     EndpointResolverParams,
     StaticEndpointResolver
 };
@@ -38,6 +37,7 @@ use Smithy\Client\Waiter\{
     WaiterFailureException
 };
 use Smithy\Codec\Cbor\CborCodec;
+use Smithy\Core\Endpoint\Endpoint;
 use Smithy\Core\Exception\ApiException;
 use Smithy\Core\Model\SmithyModel;
 use Smithy\Core\Serde\SerializableStructInterface;

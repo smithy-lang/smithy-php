@@ -12,14 +12,12 @@ namespace Smithy\Tests\Client\Waiter;
 use PHPUnit\Framework\TestCase;
 use Smithy\Codec\Cbor\CborCodec;
 use Smithy\Client\RequestOverrideConfig;
-use Smithy\Client\Endpoint\{
-    Endpoint,
-    StaticEndpointResolver
-};
+use Smithy\Client\Endpoint\StaticEndpointResolver;
 use Smithy\Client\Waiter\{
     WaiterConfig,
     WaiterFailureException
 };
+use Smithy\Core\Endpoint\Endpoint;
 use Smithy\Core\Serde\SerializableStructInterface;
 use Smithy\Http\Message\Response;
 use Smithy\Tests\Client\Waiter\Generated\Waiter\Input\GetThingInput;
