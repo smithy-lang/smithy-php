@@ -11,6 +11,7 @@ namespace Smithy\Tests\Http\Client;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Client\NetworkExceptionInterface;
 use Psr\Http\Client\RequestExceptionInterface;
@@ -32,7 +33,10 @@ use Smithy\Http\Client\Configuration\{
     TLSConfiguration
 };
 use Smithy\Http\Client\Connection\RequestContext;
-use Smithy\Http\Client\Curl\CurlConnectionManager;
+use Smithy\Http\Client\Curl\{
+    ContentDecodingStrategy,
+    CurlConnectionManager
+};
 use Smithy\Http\Client\Exception\{
     ConnectionAcquireTimeoutException,
     HttpException,
@@ -2325,7 +2329,7 @@ final class CurlClientTest extends TestCase
 
     public function testDiscardPreservesDecodedBodyLimit(): void
     {
-        $this->requireZlib();
+        $this->requireNativeContentDecoding();
         $server = LocalServerFixture::start(
             responseMode: 'slow-gzip-response'
         );
@@ -2567,7 +2571,7 @@ final class CurlClientTest extends TestCase
 
     public function testDecodesBufferedGzipResponse(): void
     {
-        $this->requireZlib();
+        $this->requireNativeContentDecoding();
         $server = LocalServerFixture::start(responseMode: 'gzip-response');
         $expected = \str_repeat('decoded-body-', 1024);
 
@@ -2589,7 +2593,7 @@ final class CurlClientTest extends TestCase
 
     public function testDecodesStreamedDeflateResponse(): void
     {
-        $this->requireZlib();
+        $this->requireNativeContentDecoding();
         $server = LocalServerFixture::start(responseMode: 'deflate-response');
         $expected = \str_repeat('decoded-body-', 1024);
 
@@ -2613,7 +2617,7 @@ final class CurlClientTest extends TestCase
 
     public function testDecodesChunkedGzipResponse(): void
     {
-        $this->requireZlib();
+        $this->requireNativeContentDecoding();
         $server = LocalServerFixture::start(
             responseMode: 'chunked-gzip-response'
         );
@@ -2631,7 +2635,7 @@ final class CurlClientTest extends TestCase
 
     public function testHonorsCustomAcceptEncodingWhileDecoding(): void
     {
-        $this->requireZlib();
+        $this->requireNativeContentDecoding();
         $server = LocalServerFixture::start(responseMode: 'gzip-response');
         $expected = \str_repeat('decoded-body-', 1024);
 
@@ -2649,6 +2653,113 @@ final class CurlClientTest extends TestCase
         $this->assertSame($expected, (string) $response->getBody());
         $this->assertSame(
             ['gzip'],
+            $capture['headers']['accept-encoding']
+        );
+    }
+
+    public function testForcesIdentityWhenBoundedDecodingIsUnavailable(): void
+    {
+        $this->requireIdentityOnlyContentDecoding();
+        $server = LocalServerFixture::start();
+
+        try {
+            $response = $this->sendRequest(
+                $server,
+                null,
+                ['Accept-Encoding' => 'gzip']
+            );
+            $capture = $server->capture();
+        } finally {
+            $server->stop();
+        }
+
+        $this->assertSame('OK', (string) $response->getBody());
+        $this->assertSame(
+            ['identity'],
+            $capture['headers']['accept-encoding']
+        );
+    }
+
+    public function testAllowsHeadLengthAboveLimitWhenDecodingIsDisabled(): void
+    {
+        $server = LocalServerFixture::start(
+            responseMode: 'large-head-response'
+        );
+
+        try {
+            $responses = Async::all(
+                static fn() => (new CurlClient())->sendRequest(
+                    new Request('HEAD', $server->endpoint()),
+                    new HttpRequestOptions(
+                        decodeContent: false,
+                        maxResponseBodyBytes: 1
+                    )
+                )
+            );
+        } finally {
+            $server->stop();
+        }
+
+        $this->assertSame(200, $responses[0]->getStatusCode());
+        $this->assertSame('', (string) $responses[0]->getBody());
+    }
+
+    public function testAllowsHeadLengthAboveLimitWithIdentityFallback(): void
+    {
+        $this->requireIdentityOnlyContentDecoding();
+        $server = LocalServerFixture::start(
+            responseMode: 'large-head-response'
+        );
+
+        try {
+            $responses = Async::all(
+                static fn() => (new CurlClient())->sendRequest(
+                    new Request(
+                        'HEAD',
+                        $server->endpoint(),
+                        ['Accept-Encoding' => 'gzip']
+                    ),
+                    new HttpRequestOptions(maxResponseBodyBytes: 1)
+                )
+            );
+            $capture = $server->capture();
+        } finally {
+            $server->stop();
+        }
+
+        $this->assertSame(200, $responses[0]->getStatusCode());
+        $this->assertSame('', (string) $responses[0]->getBody());
+        $this->assertSame(
+            ['identity'],
+            $capture['headers']['accept-encoding']
+        );
+    }
+
+    public function testRejectsEncodedResponseWhenBoundedDecodingIsUnavailable(): void
+    {
+        $this->requireZlib();
+        $this->requireIdentityOnlyContentDecoding();
+        $server = LocalServerFixture::start(responseMode: 'gzip-response');
+
+        try {
+            $this->sendRequest(
+                $server,
+                null,
+                ['Accept-Encoding' => 'gzip']
+            );
+            $this->fail('Expected the encoded response to be rejected.');
+        } catch (HttpException $error) {
+            $this->assertStringContainsString(
+                'bounded content decoding is unavailable',
+                $error->getMessage()
+            );
+            $capture = $server->capture();
+        } finally {
+            $server->stop();
+        }
+
+        $this->assertSame(
+            ['identity'],
             $capture['headers']['accept-encoding']
         );
     }
@@ -2740,11 +2851,13 @@ final class CurlClientTest extends TestCase
         );
     }
 
-    public function testAllowsResponseAtDecodedBodyLimit(): void
+    public function testAllowsCompressedResponseAtDecodedBodyLimit(): void
     {
-        $this->requireZlib();
-        $server = LocalServerFixture::start(responseMode: 'gzip-response');
-        $expected = \str_repeat('decoded-body-', 1024);
+        $this->requireNativeContentDecoding();
+        $server = LocalServerFixture::start(
+            responseMode: 'tiny-gzip-response'
+        );
+        $expected = 'decoded';
 
         try {
             $response = $this->sendRequest(
@@ -2762,9 +2875,93 @@ final class CurlClientTest extends TestCase
         $this->assertSame($expected, (string) $response->getBody());
     }
 
+    public function testLimitsDecompressedResponseBodyByDefault(): void
+    {
+        $this->requireNativeContentDecoding();
+        $server = LocalServerFixture::start(
+            responseMode: 'gzip-bomb-response'
+        );
+
+        try {
+            $response = $this->sendRequest($server, null);
+
+            $this->expectException(HttpException::class);
+            $this->expectExceptionMessage(
+                'maximum size of 10485760 bytes'
+            );
+            $response->getBody()->getContents();
+        } finally {
+            $server->stop();
+        }
+    }
+
+    public function testLimitsCompressedResetContentResponseByDefault(): void
+    {
+        $this->requireNativeContentDecoding();
+        $server = LocalServerFixture::start(
+            responseMode: 'gzip-205-bomb-response'
+        );
+
+        try {
+            $this->expectException(HttpException::class);
+            $this->expectExceptionMessage(
+                'maximum size of 10485760 bytes'
+            );
+            $this->sendRequest($server, null);
+        } finally {
+            $server->stop();
+        }
+    }
+
+    #[RunInSeparateProcess]
+    public function testNativeLimitBoundsCompressedResponseMemory(): void
+    {
+        if (!\function_exists('getrusage')) {
+            self::markTestSkipped(
+                'Native response memory measurement is unavailable.'
+            );
+        }
+        $this->requireNativeContentDecoding();
+        $client = new CurlClient();
+        $options = new HttpRequestOptions(timeout: 5.0);
+        $rssScale = \PHP_OS_FAMILY === 'Darwin' ? 1 : 1024;
+        $baseline = (int) (
+            \getrusage()['ru_maxrss'] ?? 0
+        ) * $rssScale;
+        $server = LocalServerFixture::start(
+            responseMode: 'gzip-205-memory-bomb-response'
+        );
+
+        try {
+            $this->sendRequest(
+                $server,
+                null,
+                client: $client,
+                options: $options
+            );
+            $this->fail('Expected the response body limit to fail.');
+        } catch (HttpException $error) {
+            $this->assertStringContainsString(
+                'maximum size of 10485760 bytes',
+                $error->getMessage()
+            );
+        } finally {
+            $server->stop();
+        }
+
+        $peak = (int) (
+            \getrusage()['ru_maxrss'] ?? 0
+        ) * $rssScale;
+        $this->assertLessThan(
+            64 * 1024 * 1024,
+            $peak - $baseline,
+            'Native response decoding exceeded the expected RSS budget.'
+        );
+    }
+
     public function testDecodedBodyLimitFailsStreamAndTrailers(): void
     {
-        $this->requireZlib();
+        $this->requireNativeContentDecoding();
         $server = LocalServerFixture::start(
             responseMode: 'slow-gzip-response'
         );
@@ -3312,6 +3509,27 @@ final class CurlClientTest extends TestCase
         new HttpRequestOptions(maxResponseBodyBytes: -1);
     }
 
+    public function testDefaultsMaximumDecompressedResponseBodySize(): void
+    {
+        $this->assertSame(
+            10 * 1024 * 1024,
+            (new HttpRequestOptions())
+                ->maxDecompressedResponseBodyBytes
+        );
+    }
+
+    public function testRejectsNegativeMaximumDecompressedResponseBodySize(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage(
+            'Maximum decompressed response body size must be non-negative'
+        );
+
+        new HttpRequestOptions(
+            maxDecompressedResponseBodyBytes: -1
+        );
+    }
+
     public function testRejectsNegativeAutomaticResponseBufferLimit(): void
     {
         $this->expectException(\InvalidArgumentException::class);
@@ -3530,6 +3748,37 @@ final class CurlClientTest extends TestCase
     {
         if (!\extension_loaded('openssl')) {
             self::markTestSkipped('The OpenSSL extension is required.');
+        }
+    }
+
+    private function requireNativeContentDecoding(): void
+    {
+        $this->requireZlib();
+
+        $versionNumber = (int) (
+            \curl_version()['version_number'] ?? 0
+        );
+        if ($versionNumber
+            < ContentDecodingStrategy::MIN_BOUNDED_CURL_VERSION
+        ) {
+            self::markTestSkipped(
+                'Native bounded content decoding requires libcurl 8.20.0.'
+            );
+        }
+    }
+
+    private function requireIdentityOnlyContentDecoding(): void
+    {
+        $versionNumber = (int) (
+            \curl_version()['version_number'] ?? 0
+        );
+        if ($versionNumber
+            >= ContentDecodingStrategy::MIN_BOUNDED_CURL_VERSION
+        ) {
+            self::markTestSkipped(
+                'Identity-only content decoding requires libcurl below '
+                    . '8.20.0.'
+            );
         }
     }
 

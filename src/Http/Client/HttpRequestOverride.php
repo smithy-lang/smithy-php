@@ -193,6 +193,11 @@ final readonly class HttpRequestOverride implements
                 $options,
                 'buffered_download_buffer_size',
                 $defaults->bufferedDownloadBufferSize
+            ),
+            maxDecompressedResponseBodyBytes: self::intOption(
+                $options,
+                'max_decompressed_response_body_bytes',
+                $defaults->maxDecompressedResponseBodyBytes
             )
         );
     }
@@ -269,7 +274,8 @@ final readonly class HttpRequestOverride implements
             'read_timeout' => true,
             'max_response_body_bytes' => true,
             'upload_buffer_size' => true,
-            'buffered_download_buffer_size' => true
+            'buffered_download_buffer_size' => true,
+            'max_decompressed_response_body_bytes' => true
         ];
 
         foreach ($options as $name => $_) {

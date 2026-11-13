@@ -47,16 +47,20 @@ final class CurlResponseState
     private ?\WeakReference $bodyReference = null;
     private readonly ResponseTrailers $trailers;
     private bool $proxyConnectResponseIgnored = false;
+    private bool $contentEncoded = false;
 
     public function __construct(
         ?StreamingResponseStream $body,
-        private readonly bool $decodeContent = true,
+        private readonly ContentDecodingStrategy $contentDecoding =
+            ContentDecodingStrategy::Curl,
         private readonly int $maxResponseBodyBytes = 0,
         private readonly bool $responseBodyAllowed = true,
         private readonly ?\Closure $onReadTimeoutStarted = null,
         private readonly int $maxBufferedResponseBytes =
             1024 * 1024,
-        private readonly bool $ignoreProxyConnectResponse = false
+        private readonly bool $ignoreProxyConnectResponse = false,
+        private readonly int $maxDecompressedResponseBodyBytes =
+            10 * 1024 * 1024
     )
     {
         $this->ownedBody = $body;
@@ -115,6 +119,12 @@ final class CurlResponseState
             return false;
         }
 
+        if ($this->contentEncoded
+            && $this->contentDecoding->decodesContent()
+        ) {
+            return true;
+        }
+
         $contentLength = $this->responseContentLength();
 
         return $contentLength === null
@@ -143,6 +153,15 @@ final class CurlResponseState
     public function requiresWriteCallback(): bool
     {
         return $this->isStreaming() || $this->buffersResponseBody();
+    }
+
+    /**
+     * Determine whether encoded transfer progress tracks read activity.
+     */
+    public function requiresDownloadProgressTracking(): bool
+    {
+        return $this->contentDecoding->decodesContent()
+            && (!$this->headersComplete || $this->contentEncoded);
     }
 
     /**
@@ -267,6 +286,7 @@ final class CurlResponseState
             $this->protocolVersion = $this->currentProtocolVersion;
             $this->reason = $this->currentReason;
             $this->headers = $this->currentHeaders;
+            $this->validateContentDecoding();
             $this->normalizeDecodedHeaders();
             $this->headersComplete = true;
             $this->acceptBody = true;
@@ -302,7 +322,7 @@ final class CurlResponseState
     }
 
     /**
-     * Consume one decoded response body chunk.
+     * Consume one response body callback chunk.
      */
     public function consumeBody(string $chunk): int
     {
@@ -315,37 +335,67 @@ final class CurlResponseState
             return 0;
         }
 
-        if ($this->maxResponseBodyBytes > 0
-            && $length
-                > $this->maxResponseBodyBytes
-                    - $this->receivedBodyBytes
+        return $this->consumeDecodedBody($chunk)
+            ? $length
+            : ($this->bodyWriteError === null
+                ? CURL_WRITEFUNC_PAUSE
+                : 0);
+    }
+
+    /**
+     * Get the active limit for bytes delivered by cURL.
+     */
+    public function bodyLimit(): int
+    {
+        $limit = $this->maxResponseBodyBytes;
+        if ($this->contentEncoded
+            && $this->contentDecoding->decodesContent()
+            && $this->maxDecompressedResponseBodyBytes > 0
+            && (
+                $limit === 0
+                || $this->maxDecompressedResponseBodyBytes < $limit
+            )
         ) {
-            $this->bodyWriteError = new \LengthException(
-                'HTTP response body exceeded the maximum size of '
-                    . "{$this->maxResponseBodyBytes} bytes."
-            );
+            $limit = $this->maxDecompressedResponseBodyBytes;
+        }
 
+        return $limit;
+    }
+
+    /**
+     * Get the native cURL guard for encoded and decoded response bytes.
+     *
+     * cURL applies one ceiling to both encoded transfer bytes and decoded
+     * output. The content-decompression limit therefore provides the native
+     * safety bound for body-bearing responses, while bodyLimit() remains the
+     * logical response limit.
+     */
+    public function curlBodyLimit(): int
+    {
+        if (!$this->responseBodyAllowed) {
             return 0;
         }
 
-        $body = $this->body();
-        if ($body !== null) {
-            if (!$body->append($chunk)) {
-                $this->paused = true;
-                $this->pausedChunkLength = $length;
-
-                return CURL_WRITEFUNC_PAUSE;
-            }
-        } elseif ($this->buffersResponseBody()) {
-            $this->bufferedBody .= $chunk;
-        } else {
-            return 0;
+        if ($this->contentEncoded
+            && $this->contentDecoding->decodesContent()
+            && $this->statusAllowsResponseBody()
+            && $this->maxDecompressedResponseBodyBytes > 0
+        ) {
+            return $this->maxDecompressedResponseBodyBytes;
         }
 
-        $this->receivedBodyBytes += $length;
-        $this->recordReadActivity();
+        return $this->bodyLimit();
+    }
 
-        return $length;
+    /**
+     * Create a consistent response size failure.
+     */
+    public function bodyLimitException(): \LengthException
+    {
+        return new \LengthException(
+            'HTTP response body exceeded the maximum size of '
+                . "{$this->bodyLimit()} bytes."
+        );
     }
 
     /**
@@ -385,6 +435,41 @@ final class CurlResponseState
     }
 
     /**
+     * Store or deliver one decoded response body chunk.
+     */
+    private function consumeDecodedBody(string $chunk): bool
+    {
+        $length = \strlen($chunk);
+        $limit = $this->bodyLimit();
+        if ($limit > 0
+            && $length > $limit - $this->receivedBodyBytes
+        ) {
+            $this->bodyWriteError = $this->bodyLimitException();
+
+            return false;
+        }
+
+        $body = $this->body();
+        if ($body !== null) {
+            if (!$body->append($chunk)) {
+                $this->paused = true;
+                $this->pausedChunkLength = $length;
+
+                return false;
+            }
+        } elseif ($this->buffersResponseBody()) {
+            $this->bufferedBody .= $chunk;
+        } else {
+            return false;
+        }
+
+        $this->receivedBodyBytes += $length;
+        $this->recordReadActivity();
+
+        return true;
+    }
+
+    /**
      * Append one field while preserving its first observed casing.
      *
      * @param array<string, list<string>> $headers
@@ -415,10 +500,10 @@ final class CurlResponseState
      */
     private function normalizeDecodedHeaders(): void
     {
-        if (!$this->decodeContent
+        if (!$this->contentDecoding->decodesContent()
             || !$this->responseBodyAllowed
             || !$this->statusAllowsResponseBody()
-            || !$this->hasNonIdentityContentEncoding()
+            || !$this->contentEncoded
         ) {
             return;
         }
@@ -441,10 +526,73 @@ final class CurlResponseState
     }
 
     /**
-     * Determine whether the response declares a decoded content coding.
+     * Validate response decoding from final representation headers.
      */
-    private function hasNonIdentityContentEncoding(): bool
+    private function validateContentDecoding(): void
     {
+        if (!$this->responseBodyAllowed
+            || (
+                !$this->statusAllowsResponseBody()
+                && $this->status !== 205
+            )
+        ) {
+            return;
+        }
+
+        $this->validateTransferCodings();
+        $codings = $this->responseContentCodings();
+        if ($codings === []) {
+            return;
+        }
+
+        $this->contentEncoded = true;
+        $strategy = $this->contentDecoding;
+        if ($strategy === ContentDecodingStrategy::Disabled) {
+            return;
+        }
+
+        if ($strategy === ContentDecodingStrategy::IdentityOnly) {
+            throw new \RuntimeException(
+                'The HTTP response uses content encoding, but bounded '
+                    . 'content decoding is unavailable.'
+            );
+        }
+    }
+
+    /**
+     * Reject transfer codings that cURL would decode before body limits apply.
+     */
+    private function validateTransferCodings(): void
+    {
+        foreach ($this->headers as $name => $values) {
+            if (\strcasecmp($name, 'Transfer-Encoding') !== 0) {
+                continue;
+            }
+
+            foreach ($values as $value) {
+                foreach (\explode(',', $value) as $coding) {
+                    $coding = \strtolower(\trim($coding));
+                    if ($coding !== ''
+                        && $coding !== 'identity'
+                        && $coding !== 'chunked'
+                    ) {
+                        throw new \RuntimeException(
+                            "HTTP transfer coding {$coding} is not supported."
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Get non-identity response content codings in application order.
+     *
+     * @return list<string>
+     */
+    private function responseContentCodings(): array
+    {
+        $codings = [];
         foreach ($this->headers as $name => $values) {
             if (\strcasecmp($name, 'Content-Encoding') !== 0) {
                 continue;
@@ -452,20 +600,15 @@ final class CurlResponseState
 
             foreach ($values as $value) {
                 foreach (\explode(',', $value) as $coding) {
-                    $coding = \trim($coding);
-                    if ($coding !== ''
-                        && \strcasecmp(
-                            $coding,
-                            'identity'
-                        ) !== 0
-                    ) {
-                        return true;
+                    $coding = \strtolower(\trim($coding));
+                    if ($coding !== '' && $coding !== 'identity') {
+                        $codings[] = $coding;
                     }
                 }
             }
         }
 
-        return false;
+        return $codings;
     }
 
     /**

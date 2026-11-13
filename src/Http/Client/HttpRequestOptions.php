@@ -64,7 +64,13 @@ final class HttpRequestOptions implements TransportOptionsInterface
         public readonly int $uploadBufferSize = 128 * 1024,
 
         /** Preferred buffer size for buffered response downloads. */
-        public readonly int $bufferedDownloadBufferSize = 256 * 1024
+        public readonly int $bufferedDownloadBufferSize = 256 * 1024,
+
+        /**
+         * Maximum bytes after content decompression. 0 = no limit.
+         */
+        public readonly int $maxDecompressedResponseBodyBytes =
+            10 * 1024 * 1024
     )
     {
         if (!\is_finite($timeout)
@@ -116,6 +122,13 @@ final class HttpRequestOptions implements TransportOptionsInterface
         if ($maxResponseBodyBytes < 0) {
             throw new \InvalidArgumentException(
                 'Maximum response body size must be non-negative.'
+            );
+        }
+
+        if ($maxDecompressedResponseBodyBytes < 0) {
+            throw new \InvalidArgumentException(
+                'Maximum decompressed response body size must be '
+                    . 'non-negative.'
             );
         }
     }
