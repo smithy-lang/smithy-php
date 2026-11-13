@@ -1,8 +1,8 @@
 # Serialization and Deserialization
 
-**Status:** Current as of September 30, 2026
+**Status:** Current as of November 12, 2026
 
-**Packages:** `smithy-php`, `aws-sdk-php`
+**Package:** `smithy-php`
 
 ## Summary
 
@@ -162,9 +162,8 @@ All protocols implement `ProtocolInterface`.
 | EC2 Query | EC2 form conventions and XML response wrappers | Form URL encoded and XML |
 | RPC v2 CBOR | Smithy RPC v2 request target and headers | CBOR |
 
-AWS JSON, AWS Rest JSON, AWS Rest XML, the Smithy RPC v2 protocols, and generic
-HTTP binding components live in `smithy-php`. The AWS Query and EC2 Query
-protocol classes and their XML error envelopes live in `aws-sdk-php`.
+AWS JSON, AWS Rest JSON, AWS Rest XML, AWS Query, EC2 Query, the Smithy RPC v2
+protocols, and generic HTTP binding components live in `smithy-php`.
 
 [Protocol Design](../protocol/protocol-design.md) records request and response behavior.
 
@@ -192,12 +191,10 @@ framing, missing required headers, or invalid response status behavior.
 
 ## Validation
 
-Smithy tests cover generated and dynamic AWS JSON, Rest JSON, and Rest XML
-clients, the RPC v2 protocols, codec behavior, HTTP bindings, schema
-extensions, generated shape contracts, and dynamic-client serde behavior.
-
-The AWS SDK protocol suite covers generated and dynamic clients across AWS
-Query and EC2 Query.
+Smithy tests cover generated and dynamic AWS JSON, Rest JSON, Rest XML, AWS
+Query, and EC2 Query clients, the RPC v2 protocols, codec behavior, HTTP
+bindings, schema extensions, generated shape contracts, and dynamic-client
+serde behavior.
 
 ## Related Documents
 

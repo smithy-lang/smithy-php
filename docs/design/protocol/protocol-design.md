@@ -1,8 +1,8 @@
 # Protocol Design
 
-**Status:** Current as of November 11, 2026
+**Status:** Current as of November 12, 2026
 
-**Packages:** `smithy-php`, `aws-sdk-php`
+**Package:** `smithy-php`
 
 ## Summary
 
@@ -70,8 +70,7 @@ service are available through `ClientConfig`.
 | HTTP network transfer | HTTP client through `HttpClientTransport` |
 
 `smithy-php` provides generic HTTP binding components, the RPC v2 protocols,
-AWS JSON, AWS Rest JSON, and AWS Rest XML. `aws-sdk-php` provides the AWS Query
-and EC2 Query protocol variants and their XML error envelopes.
+AWS JSON, AWS Rest JSON, AWS Rest XML, AWS Query, and EC2 Query.
 
 ## HTTP Binding Protocols
 
@@ -187,7 +186,7 @@ wrapper before hydrating the output.
 
 ## EC2 Query
 
-`Ec2QueryProtocol` uses the query base with EC2-specific form settings:
+`Ec2QueryProtocol` extends the query base with EC2-specific form settings:
 
 - capitalized resolved wire names
 - flattened lists
@@ -247,10 +246,9 @@ contracts.
 
 ## Validation
 
-Smithy tests cover AWS JSON, Rest JSON, Rest XML, the RPC v2 protocols,
-directional HTTP bindings, header validation, error deserialization, relative
-endpoint binding, and URI construction. AWS SDK protocol suites cover AWS
-Query and EC2 Query generated and dynamic paths.
+Smithy tests cover AWS JSON, Rest JSON, Rest XML, AWS Query, EC2 Query, the
+RPC v2 protocols, directional HTTP bindings, header validation, error
+deserialization, relative endpoint binding, and URI construction.
 
 ## Related Documents
 
