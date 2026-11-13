@@ -12,8 +12,7 @@ namespace Smithy\Tests\Codec\Xml\Utils;
 use Smithy\Core\Serde\{
     Schema,
     SerializableStructInterface,
-    ShapeSerializerInterface,
-    TimestampFormat
+    ShapeSerializerInterface
 };
 use Smithy\Core\Shape\ShapeType;
 use Smithy\Core\Shape\{
@@ -354,12 +353,7 @@ final class XmlSampleStructFixture implements SerializableStructInterface
             $serializer->serializeBlob($members[6], $this->data, 6);
         }
         if ($this->created !== null) {
-            $serializer->serializeTimestamp(
-                $members[7],
-                $this->created,
-                7,
-                TimestampFormat::EpochSeconds
-            );
+            $serializer->serializeTimestamp($members[7], $this->created, 7);
         }
         if ($this->bigInteger !== null) {
             $serializer->serializeBigInteger(

@@ -87,11 +87,11 @@ final class CborSchemaExtensionTest extends TestCase
                 $info->orderedMemberSchemas[1]->memberName
             ]
         );
-        self::assertCount(2, $info->orderedMemberNameHashes);
-        self::assertNotSame(
-            $info->orderedMemberNameHashes[0],
-            $info->orderedMemberNameHashes[1]
+        self::assertSame(
+            ['name' => 0, 'age' => 1],
+            $info->memberSlotByName
         );
+        self::assertSame(4, $info->maxMemberNameLength);
     }
 
     public function testListSchemasCarryFastPathMetadata(): void

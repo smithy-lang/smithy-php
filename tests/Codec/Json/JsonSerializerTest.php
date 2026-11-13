@@ -9,7 +9,10 @@ declare(strict_types=1);
 
 namespace Smithy\Tests\Codec\Json;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use Smithy\Codec\Exception\SerializationException;
+use Smithy\Core\Shape\Exception\InvalidShapeValueException;
 use Smithy\Core\Serde\{
     Schema,
     TimestampFormat
@@ -24,7 +27,11 @@ use Smithy\Codec\Json\{
     JsonCodecSettings,
     JsonSerializer
 };
-use Smithy\Tests\Codec\Json\Fixture\JsonRecursiveUnionFixture;
+use Smithy\Tests\Codec\Json\Fixture\{
+    JsonBigNumberStructFixture,
+    JsonRecursiveUnionFixture,
+    SampleStruct
+};
 
 final class JsonSerializerTest extends TestCase
 {
@@ -286,6 +293,71 @@ final class JsonSerializerTest extends TestCase
         );
     }
 
+    public function testTopLevelUnionWithBigNumberAndNestedStructUnwrapsPlaceholders(): void
+    {
+        $union = new Schema(
+            id: 'smithy.test#BigNumberUnion',
+            type: ShapeType::Union,
+            members: [
+                new Schema(
+                    id: 'smithy.test#BigNumberUnion$outer',
+                    type: ShapeType::Structure,
+                    targetClass: JsonBigNumberStructFixture::class,
+                    memberName: 'outer',
+                    memberIndex: 0
+                )
+            ]
+        );
+        $value = new class (
+            new JsonBigNumberStructFixture('2.5', new SampleStruct(name: 'x'))
+        ) implements \Smithy\Core\Shape\UnionInterface {
+            public function __construct(private readonly object $v) {}
+            public function getSchema(): Schema { return JsonBigNumberStructFixture::schema(); }
+            public function serialize(\Smithy\Core\Serde\ShapeSerializerInterface $s, int $idx): void {}
+            public function getMemberIndex(): int { return 0; }
+            public function tag(): string { return 'outer'; }
+            public function value(): mixed { return $this->v; }
+        };
+
+        $serializer = new JsonSerializer();
+        $serializer->serializeUnion($union, $value, 0);
+
+        self::assertSame(
+            '{"outer":{"big":2.5,"inner":{"name":"x"}}}',
+            $serializer->flush()
+        );
+    }
+
+    public function testTopLevelListOfStructsWithBigNumberAndNestedStructUnwrapsPlaceholders(): void
+    {
+        $list = new Schema(
+            id: 'smithy.test#BigNumberStructList',
+            type: ShapeType::List_,
+            listMember: JsonBigNumberStructFixture::schema()
+        );
+
+        $serializer = new JsonSerializer();
+        $serializer->serializeList(
+            $list,
+            [new JsonBigNumberStructFixture('2.5', new SampleStruct(name: 'x'))],
+            0
+        );
+
+        self::assertSame(
+            '[{"big":2.5,"inner":{"name":"x"}}]',
+            $serializer->flush()
+        );
+    }
+
+    public function testTopLevelStructWithBigNumberAndNestedStructUnwrapsPlaceholders(): void
+    {
+        $serializer = new JsonSerializer();
+        (new JsonBigNumberStructFixture('2.5', new SampleStruct(name: 'x')))
+            ->serialize($serializer, 0);
+
+        self::assertSame('{"big":2.5,"inner":{"name":"x"}}', $serializer->flush());
+    }
+
     public function testSerializesRecursiveUnionUsingCanonicalTargetSchema(): void
     {
         $unionReference = new Schema(
@@ -454,5 +526,157 @@ final class JsonSerializerTest extends TestCase
         $serializer->endStruct();
 
         self::assertSame('{"createdAt":100}', $serializer->flush());
+    }
+
+    public function testStringMatchingLivePlaceholderIsRejected(): void
+    {
+        $big = new Schema(
+            id: 'smithy.test#Event$big',
+            type: ShapeType::BigInteger,
+            memberName: 'big',
+            memberIndex: 0
+        );
+        $name = new Schema(
+            id: 'smithy.test#Event$name',
+            type: ShapeType::String_,
+            memberName: 'name',
+            memberIndex: 1
+        );
+        $schema = new Schema(
+            id: 'smithy.test#Event',
+            type: ShapeType::Structure,
+            members: [$big, $name]
+        );
+        $serializer = new JsonSerializer();
+        $prefix = $this->livePrefix($serializer, $big);
+
+        $serializer->beginStruct($schema, 0);
+        $serializer->serializeBigInteger($big, new BigInteger('7'), 0);
+        $serializer->serializeString($name, $prefix . '42', 1);
+        $serializer->endStruct();
+
+        $this->expectException(SerializationException::class);
+        $serializer->flush();
+    }
+
+    public function testMapKeyMatchingLivePlaceholderIsRejected(): void
+    {
+        $big = new Schema(
+            id: 'smithy.test#Event$big',
+            type: ShapeType::BigInteger,
+            memberName: 'big',
+            memberIndex: 0
+        );
+        $map = new Schema(
+            id: 'smithy.test#Event$m',
+            type: ShapeType::Map,
+            memberName: 'm',
+            memberIndex: 1,
+            mapKey: new Schema(id: 'smithy.api#String', type: ShapeType::String_),
+            mapValue: new Schema(id: 'smithy.api#String', type: ShapeType::String_)
+        );
+        $schema = new Schema(
+            id: 'smithy.test#Event',
+            type: ShapeType::Structure,
+            members: [$big, $map]
+        );
+        $serializer = new JsonSerializer();
+        $prefix = $this->livePrefix($serializer, $big);
+
+        $serializer->beginStruct($schema, 0);
+        $serializer->serializeBigInteger($big, new BigInteger('7'), 0);
+        $serializer->serializeMap($map, [$prefix . '42' => 'v'], 1);
+        $serializer->endStruct();
+
+        $this->expectException(SerializationException::class);
+        $serializer->flush();
+    }
+
+    /**
+     * @return array<string, array{0: ShapeType, 1: string}>
+     */
+    public static function invalidBigNumberProvider(): array
+    {
+        return [
+            'plus sign' => [ShapeType::BigInteger, '+5'],
+            'leading space' => [ShapeType::BigInteger, ' 5'],
+            'text' => [ShapeType::BigInteger, 'abc'],
+            'trailing newline' => [ShapeType::BigInteger, "1\n"],
+            'INF' => [ShapeType::BigDecimal, 'INF'],
+            'NAN' => [ShapeType::BigDecimal, 'NAN'],
+            'trailing dot' => [ShapeType::BigDecimal, '1.'],
+            'leading dot' => [ShapeType::BigDecimal, '.5'],
+            'decimal trailing newline' => [ShapeType::BigDecimal, "1\n"],
+        ];
+    }
+
+    #[DataProvider('invalidBigNumberProvider')]
+    public function testInvalidRawBigNumberThrowsBeforePlaceholderIsEmitted(
+        ShapeType $type,
+        string $value
+    ): void {
+        $list = new Schema(
+            id: 'smithy.test#Event$bl',
+            type: ShapeType::List_,
+            memberName: 'bl',
+            memberIndex: 0,
+            listMember: new Schema(id: 'smithy.test#Num', type: $type)
+        );
+        $schema = new Schema(
+            id: 'smithy.test#Event',
+            type: ShapeType::Structure,
+            members: [$list]
+        );
+        $serializer = new JsonSerializer();
+        $serializer->beginStruct($schema, 0);
+
+        try {
+            $serializer->serializeList($list, [$value], 0);
+            self::fail('Expected SerializationException.');
+        } catch (SerializationException $e) {
+            self::assertStringNotContainsString('__SMITHY_BIGNUM_', $e->getMessage());
+        }
+    }
+
+    public function testBigDecimalWithTrailingNewlineIsRejectedAtConstruction(): void
+    {
+        $this->expectException(InvalidShapeValueException::class);
+        new BigDecimal("1\n");
+    }
+
+    public function testSerializeListWithoutMemberSchemaKeepsNulls(): void
+    {
+        $serializer = new JsonSerializer();
+        $serializer->serializeList(
+            new Schema(id: 'smithy.test#Untyped', type: ShapeType::List_),
+            ['a', null, 'b'],
+            0
+        );
+
+        self::assertSame('["a",null,"b"]', $serializer->flush());
+    }
+
+    public function testSerializeMapWithoutValueSchemaKeepsNulls(): void
+    {
+        $serializer = new JsonSerializer();
+        $serializer->serializeMap(
+            new Schema(id: 'smithy.test#Untyped', type: ShapeType::Map),
+            ['a' => 'x', 'b' => null],
+            0
+        );
+
+        self::assertSame('{"a":"x","b":null}', $serializer->flush());
+    }
+
+    /**
+     * Write one big number so the per-process prefix exists, then read it.
+     */
+    private function livePrefix(JsonSerializer $serializer, Schema $big): string
+    {
+        $serializer->serializeBigInteger($big, new BigInteger('1'), 0);
+        $serializer->flush();
+
+        return (new \ReflectionProperty(JsonSerializer::class, 'bigNumberPrefix'))
+            ->getValue();
     }
 }

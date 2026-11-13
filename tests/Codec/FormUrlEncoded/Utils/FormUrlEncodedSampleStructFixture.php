@@ -12,8 +12,7 @@ namespace Smithy\Tests\Codec\FormUrlEncoded\Utils;
 use Smithy\Core\Serde\{
     Schema,
     SerializableStructInterface,
-    ShapeSerializerInterface,
-    TimestampFormat
+    ShapeSerializerInterface
 };
 use Smithy\Core\Shape\ShapeType;
 use Smithy\Core\Shape\{
@@ -267,12 +266,7 @@ final class FormUrlEncodedSampleStructFixture
             $serializer->serializeString($members[2], $this->notes, 2);
         }
         if ($this->created !== null) {
-            $serializer->serializeTimestamp(
-                $members[3],
-                $this->created,
-                3,
-                TimestampFormat::HttpDate
-            );
+            $serializer->serializeTimestamp($members[3], $this->created, 3);
         }
         if ($this->active !== null) {
             $serializer->serializeBoolean($members[4], $this->active, 4);
