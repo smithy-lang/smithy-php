@@ -70,8 +70,8 @@ service are available through `ClientConfig`.
 | HTTP network transfer | HTTP client through `HttpClientTransport` |
 
 `smithy-php` provides generic HTTP binding components, the RPC v2 protocols,
-AWS Rest JSON, and AWS Rest XML. `aws-sdk-php` provides the remaining AWS
-protocol variants and error envelopes.
+AWS JSON, AWS Rest JSON, and AWS Rest XML. `aws-sdk-php` provides the AWS Query
+and EC2 Query protocol variants and their XML error envelopes.
 
 ## HTTP Binding Protocols
 
@@ -157,10 +157,11 @@ The client config can supply the service's default XML namespace.
 
 ## AWS JSON
 
-`AwsJson1_0Protocol` and `AwsJson1_1Protocol` extend
+`Smithy\Protocol\Aws\AwsJson1_0Protocol` and
+`Smithy\Protocol\Aws\AwsJson1_1Protocol` extend
 `AbstractAwsJsonProtocol`.
 
-Both protocols:
+AWS JSON protocols:
 
 - send `POST /`
 - use `X-Amz-Target` for operation dispatch
@@ -169,12 +170,12 @@ Both protocols:
 - identify errors from AWS JSON error envelopes
 - ignore `@jsonName`
 
-The content type distinguishes the versions:
+`AwsJsonErrorDeserializer` extends `AbstractAwsErrorDeserializer` directly
+and uses `JsonErrorEnvelopeParser`. It resolves the error type from the
+`X-Amzn-Errortype` header, then the body `__type`, then the body `code`.
 
-| Protocol | Content type |
-|---|---|
-| AWS JSON 1.0 | `application/x-amz-json-1.0` |
-| AWS JSON 1.1 | `application/x-amz-json-1.1` |
+AWS JSON 1.0 uses the `application/x-amz-json-1.0` content type. AWS JSON 1.1
+uses the `application/x-amz-json-1.1` content type.
 
 ## AWS Query
 
@@ -246,10 +247,10 @@ contracts.
 
 ## Validation
 
-Smithy tests cover the RPC v2 protocols, Rest JSON, Rest XML, directional HTTP
-bindings, header validation, error deserialization, relative endpoint binding,
-and URI construction. AWS SDK protocol suites cover AWS Query, EC2 Query, and
-AWS JSON generated and dynamic paths.
+Smithy tests cover AWS JSON, Rest JSON, Rest XML, the RPC v2 protocols,
+directional HTTP bindings, header validation, error deserialization, relative
+endpoint binding, and URI construction. AWS SDK protocol suites cover AWS
+Query and EC2 Query generated and dynamic paths.
 
 ## Related Documents
 
