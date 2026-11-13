@@ -12,13 +12,11 @@ namespace Smithy\Tests\Core\Serde;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Smithy\Core\Serde\{
-    DynamicTraitValue,
     Schema,
     SchemaTraitRegistry
 };
 
 #[CoversClass(SchemaTraitRegistry::class)]
-#[CoversClass(DynamicTraitValue::class)]
 final class SchemaTraitRegistryTest extends TestCase
 {
     public function testMaterializesBuiltInAndUnknownTraits(): void
@@ -38,14 +36,12 @@ final class SchemaTraitRegistryTest extends TestCase
             $traits['byId']['smithy.waiters#waitable']
         );
 
-        $first = $traits['byId']['example#first'];
-        self::assertInstanceOf(DynamicTraitValue::class, $first);
-        self::assertSame('example#first', $first->id);
-        self::assertSame(['value' => 1], $first->value);
-
-        $second = $traits['byId']['example#second'];
-        self::assertInstanceOf(DynamicTraitValue::class, $second);
-        self::assertSame('two', $second->value);
+        self::assertSame(
+            ['value' => 1],
+            $traits['byId']['example#first']
+        );
+        self::assertSame('two', $traits['byId']['example#second']);
+        self::assertArrayNotHasKey('example#first', $traits['dense']);
     }
 
     public function testSupportsCustomMaterializersAndDenseKeys(): void

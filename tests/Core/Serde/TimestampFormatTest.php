@@ -136,6 +136,33 @@ final class TimestampFormatTest extends TestCase
         TimestampFormat::DateTime->parse('not-a-timestamp');
     }
 
+    #[DataProvider('emptyStringParseFormats')]
+    public function testParseThrowsOnEmptyString(
+        TimestampFormat $format
+    ): void
+    {
+        // date_create_immutable('') returns the current time rather than
+        // false, so an empty wire value would silently parse to "now".
+        // The fallback must reject it like the old strtotime('') did.
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage(
+            "Invalid {$format->name} timestamp ''."
+        );
+
+        $format->parse('');
+    }
+
+    /**
+     * @return array<string, array{TimestampFormat}>
+     */
+    public static function emptyStringParseFormats(): array
+    {
+        return [
+            'date-time' => [TimestampFormat::DateTime],
+            'http-date' => [TimestampFormat::HttpDate]
+        ];
+    }
+
     #[DataProvider('datesOutsideMonthTable')]
     public function testParseFallsBackOutsideMonthTableRange(
         TimestampFormat $format,
@@ -161,11 +188,22 @@ final class TimestampFormatTest extends TestCase
                 '1960-01-02T00:00:00Z',
                 -315532800.0
             ],
-            // The strtotime() fallback keeps whole seconds only.
+            // The date_create fallback keeps fractional seconds even for
+            // dates before 1970, where U/u arithmetic would be off by one.
             'fractional date-time before 1970' => [
                 TimestampFormat::DateTime,
                 '1960-01-02T00:00:00.5Z',
-                -315532800.0
+                -315532799.5
+            ],
+            'fractional date-time after 2199' => [
+                TimestampFormat::DateTime,
+                '2300-01-01T00:00:00.25Z',
+                10413792000.25
+            ],
+            'fractional date-time with offset' => [
+                TimestampFormat::DateTime,
+                '1960-01-02T00:00:00.5+00:00',
+                -315532799.5
             ],
             'http-date after 2199' => [
                 TimestampFormat::HttpDate,

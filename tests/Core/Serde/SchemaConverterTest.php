@@ -14,7 +14,6 @@ use PHPUnit\Framework\TestCase;
 use Smithy\Codec\Json\JsonCodec;
 use Smithy\Core\Model\SmithyModel;
 use Smithy\Core\Serde\{
-    DynamicTraitValue,
     Schema,
     SchemaConverter,
     SchemaReference
@@ -86,9 +85,7 @@ final class SchemaConverterTest extends TestCase
         self::assertNotNull($name);
         self::assertSame(ShapeType::String_->value, $name->type);
         self::assertTrue($name->hasTrait(Schema::T_SENSITIVE));
-        self::assertFalse(
-            $name->hasDirectTrait(Schema::T_SENSITIVE)
-        );
+        self::assertNull($name->getDirectTrait(Schema::T_SENSITIVE));
         self::assertSame(
             'displayName',
             $name->getDirectTrait(Schema::T_JSON_NAME)
@@ -98,16 +95,18 @@ final class SchemaConverterTest extends TestCase
             $name->resolveTarget()
         );
 
-        $custom = $name->getTraitById('example#customTrait');
-        self::assertInstanceOf(DynamicTraitValue::class, $custom);
-        self::assertSame('member', $custom->value);
         self::assertSame(
-            $custom,
+            'member',
+            $name->getTraitById('example#customTrait')
+        );
+        self::assertSame(
+            'member',
             $name->getDirectTraitById('example#customTrait')
         );
-        $pattern = $name->getTraitById('smithy.api#pattern');
-        self::assertInstanceOf(DynamicTraitValue::class, $pattern);
-        self::assertSame('^[a-z]+$', $pattern->value);
+        self::assertSame(
+            '^[a-z]+$',
+            $name->getTraitById('smithy.api#pattern')
+        );
         self::assertNull(
             $name->getDirectTraitById('smithy.api#pattern')
         );
@@ -174,11 +173,11 @@ final class SchemaConverterTest extends TestCase
         );
         self::assertSame(
             ['team' => 'sprockets'],
-            $operation->getTraitById('example#tagging')->value
+            $operation->getTraitById('example#tagging')
         );
         self::assertSame(
             'platform',
-            $operation->getTraitById('example#owner')->value
+            $operation->getTraitById('example#owner')
         );
 
         $service = $converter->getSchema('example#Service');

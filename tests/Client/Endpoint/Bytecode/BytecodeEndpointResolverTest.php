@@ -22,7 +22,6 @@ use Smithy\Client\Endpoint\Bytecode\{
 };
 use Smithy\Core\Endpoint\Endpoint;
 use Smithy\Core\Serde\{
-    DynamicTraitValue,
     Schema,
     SerializableStructInterface
 };
@@ -62,10 +61,7 @@ final class BytecodeEndpointResolverTest extends TestCase
     public function testResolvesInputMemberContext(): void
     {
         $inputSchema = $this->inputSchema([
-            self::CONTEXT_PARAM_TRAIT => new DynamicTraitValue(
-                self::CONTEXT_PARAM_TRAIT,
-                ['name' => 'Host']
-            )
+            self::CONTEXT_PARAM_TRAIT => ['name' => 'Host']
         ]);
         $operation = $this->operation($inputSchema);
         $input = StructDocument::fromMembers(
@@ -88,10 +84,7 @@ final class BytecodeEndpointResolverTest extends TestCase
             $inputSchema,
             [
                 self::OPERATION_CONTEXT_PARAMS_TRAIT =>
-                    new DynamicTraitValue(
-                        self::OPERATION_CONTEXT_PARAMS_TRAIT,
-                        ['Host' => ['path' => 'host']]
-                    )
+                    ['Host' => ['path' => 'host']]
             ]
         );
         $input = StructDocument::fromMembers(

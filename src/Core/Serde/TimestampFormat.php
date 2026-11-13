@@ -90,7 +90,7 @@ enum TimestampFormat: int
                         $month = self::monthStartIso()[\substr($value, 0, 7)]
                             ?? null;
                         if ($month === null) {
-                            return self::parseWithStrtotime($value, $this);
+                            return self::parseWithDateTime($value, $this);
                         }
 
                         if (\count($isoDays) >= self::DAY_MEMO_LIMIT) {
@@ -107,7 +107,7 @@ enum TimestampFormat: int
                         + (int) \substr($value, 17, 2);
                 }
                 // Fractional seconds with Z: "2024-01-15T10:30:00.123Z"
-                if ($value[$len - 1] === 'Z') {
+                if ($len > 0 && $value[$len - 1] === 'Z') {
                     $dotPos = \strpos($value, '.', 17);
                     $month = $dotPos === false
                         ? null
@@ -129,9 +129,9 @@ enum TimestampFormat: int
                             );
                     }
                 }
-                // Offset variants: strtotime is fast on numeric offsets
-                // (it is only slow on trailing-Z strings: 11.4us vs ~0.7us).
-                return self::parseWithStrtotime($value, $this);
+                // Offset variants and out-of-range dates: the date_create
+                // fallback preserves fractional seconds across the full range.
+                return self::parseWithDateTime($value, $this);
 
             case 2:
                 // "Thu, 15 Jan 2024 10:30:00 GMT". Day-epoch memo keyed on
@@ -143,7 +143,7 @@ enum TimestampFormat: int
                     $month = self::monthStartHd()[\substr($value, 8, 8)]
                         ?? null;
                     if ($month === null) {
-                        return self::parseWithStrtotime($value, $this);
+                        return self::parseWithDateTime($value, $this);
                     }
 
                     if (\count($hdDays) >= self::DAY_MEMO_LIMIT) {
@@ -162,22 +162,31 @@ enum TimestampFormat: int
     }
 
     /**
-     * Parse a timestamp string with `strtotime()` and throw on failure.
+     * Parse a timestamp string outside the fast-path month table and throw on failure.
+     *
+     * Uses `date_create_immutable()` so fractional seconds survive for dates outside the
+     * 1970-2199 range (the fast paths cover in-range fractional values). `getTimestamp()` gives
+     * whole seconds across the full range, and `format('u')` adds the microsecond fraction back.
+     * `format('U.u')` is not used: for pre-1970 dates `U` rounds down while `u` is always
+     * positive, so it would yield e.g. `-315532800.5` instead of `-315532799.5`.
      *
      * @param string $value Wire timestamp string.
      * @param self $format Expected timestamp format.
      *
-     * @return int Parsed Unix timestamp.
-     * @throws \InvalidArgumentException When `strtotime()` cannot parse `$value`.
+     * @return float Parsed epoch seconds, including any fractional component.
+     * @throws \InvalidArgumentException When the value cannot be parsed in this format.
      */
-    private static function parseWithStrtotime(
+    private static function parseWithDateTime(
         string $value,
         self $format
-    ): int
+    ): float
     {
-        $parsed = \strtotime($value);
+        // date_create_immutable('') returns the current time rather than
+        // false, so an empty value would silently parse to "now". Reject it
+        // up front and let the false path throw.
+        $parsed = $value === '' ? false : \date_create_immutable($value);
         if ($parsed !== false) {
-            return $parsed;
+            return $parsed->getTimestamp() + (int) $parsed->format('u') / 1e6;
         }
 
         throw new \InvalidArgumentException(
