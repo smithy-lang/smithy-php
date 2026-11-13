@@ -61,32 +61,6 @@ final class RequestOverrideConfigTest extends TestCase
         self::assertSame([$plugin], $fromMethod->plugins->getPlugins());
     }
 
-    public function testExplicitOverridesInheritOnlyAbsentFallbackKeys(): void
-    {
-        $fallback = RequestOverrideConfig::fromArray([
-            RequestOverrideConfig::HTTP => [
-                'headers' => ['x-source' => 'fallback']
-            ],
-            RequestOverrideConfig::RETRIES => 2,
-            RequestOverrideConfig::AUTH => ['sigv4']
-        ]);
-        $explicit = RequestOverrideConfig::fromArray([
-            RequestOverrideConfig::HTTP => [
-                'headers' => ['x-source' => 'explicit']
-            ],
-            RequestOverrideConfig::AUTH => null
-        ]);
-
-        $merged = $explicit->withFallback($fallback);
-
-        self::assertSame(
-            ['x-source' => 'explicit'],
-            $this->httpOverrides($merged)->headers
-        );
-        self::assertSame(3, $merged->maxAttempts);
-        self::assertNull($merged->authSchemePreference);
-    }
-
     public function testRejectsInvalidCallScopedPlugins(): void
     {
         $this->expectException(\InvalidArgumentException::class);

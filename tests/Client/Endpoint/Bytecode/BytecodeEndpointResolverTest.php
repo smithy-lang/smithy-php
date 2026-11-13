@@ -20,7 +20,6 @@ use Smithy\Client\Endpoint\Bytecode\{
     Compiler\BddCompiler,
     StdFunctions
 };
-use Smithy\Client\Endpoint\EndpointResolverParams;
 use Smithy\Core\Endpoint\Endpoint;
 use Smithy\Core\Serde\{
     DynamicTraitValue,
@@ -76,7 +75,7 @@ final class BytecodeEndpointResolverTest extends TestCase
         $resolver = $this->resolver();
 
         $endpoint = $resolver->resolveEndpoint(
-            $this->params($resolver, $operation, $input)
+            ...$this->params($resolver, $operation, $input)
         );
 
         self::assertSame('https://input.example', $endpoint->url);
@@ -102,7 +101,7 @@ final class BytecodeEndpointResolverTest extends TestCase
         $resolver = $this->resolver();
 
         $endpoint = $resolver->resolveEndpoint(
-            $this->params($resolver, $operation, $input)
+            ...$this->params($resolver, $operation, $input)
         );
 
         self::assertSame('https://path.example', $endpoint->url);
@@ -128,7 +127,7 @@ final class BytecodeEndpointResolverTest extends TestCase
         $resolver = $this->resolver();
 
         $endpoint = $resolver->resolveEndpoint(
-            $this->params($resolver, $operation, $input)
+            ...$this->params($resolver, $operation, $input)
         );
 
         self::assertSame('https://input.example', $endpoint->url);
@@ -155,7 +154,7 @@ final class BytecodeEndpointResolverTest extends TestCase
         $resolver = $this->resolver();
 
         $endpoint = $resolver->resolveEndpoint(
-            $this->params($resolver, $operation, $input)
+            ...$this->params($resolver, $operation, $input)
         );
 
         self::assertSame('https://operation.example', $endpoint->url);
@@ -181,7 +180,7 @@ final class BytecodeEndpointResolverTest extends TestCase
         ]);
 
         $endpoint = $resolver->resolveEndpoint(
-            $this->params($resolver, $operation, $input)
+            ...$this->params($resolver, $operation, $input)
         );
 
         self::assertSame('https://operation.example', $endpoint->url);
@@ -200,7 +199,7 @@ final class BytecodeEndpointResolverTest extends TestCase
         ]);
 
         $endpoint = $resolver->resolveEndpoint(
-            $this->params(
+            ...$this->params(
                 $resolver,
                 $operation,
                 $input,
@@ -229,7 +228,7 @@ final class BytecodeEndpointResolverTest extends TestCase
         $resolver = $this->resolver();
 
         $endpoint = $resolver->resolveEndpoint(
-            $this->params(
+            ...$this->params(
                 $resolver,
                 $operation,
                 $input,
@@ -253,7 +252,7 @@ final class BytecodeEndpointResolverTest extends TestCase
         $resolver = $this->resolver();
 
         $endpoint = $resolver->resolveEndpoint(
-            $this->params($resolver, $operation, $input)
+            ...$this->params($resolver, $operation, $input)
         );
 
         self::assertSame('https://default.example', $endpoint->url);
@@ -278,7 +277,7 @@ final class BytecodeEndpointResolverTest extends TestCase
         );
 
         $resolver->resolveEndpoint(
-            $this->params($resolver, $operation, $input)
+            ...$this->params($resolver, $operation, $input)
         );
     }
 
@@ -309,7 +308,7 @@ final class BytecodeEndpointResolverTest extends TestCase
         );
 
         $resolver->resolveEndpoint(
-            $this->params($resolver, $operation, $input)
+            ...$this->params($resolver, $operation, $input)
         );
     }
 
@@ -324,7 +323,7 @@ final class BytecodeEndpointResolverTest extends TestCase
         $resolver = $this->resolver();
 
         $endpoint = $resolver->resolveEndpoint(
-            $this->params(
+            ...$this->params(
                 $resolver,
                 $operation,
                 $input,
@@ -351,7 +350,7 @@ final class BytecodeEndpointResolverTest extends TestCase
         );
 
         $resolver->resolveEndpoint(
-            $this->params(
+            ...$this->params(
                 $resolver,
                 $operation,
                 $input,
@@ -376,8 +375,8 @@ final class BytecodeEndpointResolverTest extends TestCase
             ['Host' => 'cached.example']
         );
 
-        $first = $resolver->resolveEndpoint($params);
-        $second = $resolver->resolveEndpoint($params);
+        $first = $resolver->resolveEndpoint(...$params);
+        $second = $resolver->resolveEndpoint(...$params);
 
         self::assertSame($first, $second);
     }
@@ -393,7 +392,7 @@ final class BytecodeEndpointResolverTest extends TestCase
         $resolver = $this->resolver(cacheSize: 2);
 
         $first = $resolver->resolveEndpoint(
-            $this->params(
+            ...$this->params(
                 $resolver,
                 $operation,
                 $input,
@@ -401,7 +400,7 @@ final class BytecodeEndpointResolverTest extends TestCase
             )
         );
         $resolver->resolveEndpoint(
-            $this->params(
+            ...$this->params(
                 $resolver,
                 $operation,
                 $input,
@@ -409,7 +408,7 @@ final class BytecodeEndpointResolverTest extends TestCase
             )
         );
         $resolver->resolveEndpoint(
-            $this->params(
+            ...$this->params(
                 $resolver,
                 $operation,
                 $input,
@@ -417,7 +416,7 @@ final class BytecodeEndpointResolverTest extends TestCase
             )
         );
         $resolvedAgain = $resolver->resolveEndpoint(
-            $this->params(
+            ...$this->params(
                 $resolver,
                 $operation,
                 $input,
@@ -442,8 +441,8 @@ final class BytecodeEndpointResolverTest extends TestCase
         );
         $params = $this->sharedCacheParams(['Region' => 'us-east-1']);
 
-        $firstEndpoint = $first->resolveEndpoint($params);
-        $secondEndpoint = $second->resolveEndpoint($params);
+        $firstEndpoint = $first->resolveEndpoint(...$params);
+        $secondEndpoint = $second->resolveEndpoint(...$params);
 
         self::assertSame($firstEndpoint, $secondEndpoint);
         self::assertSame(1, $this->countSharedCacheEntries());
@@ -459,8 +458,8 @@ final class BytecodeEndpointResolverTest extends TestCase
             $sink
         );
 
-        $first = $resolver->resolveEndpoint($params);
-        $second = $resolver->resolveEndpoint($params);
+        $first = $resolver->resolveEndpoint(...$params);
+        $second = $resolver->resolveEndpoint(...$params);
 
         self::assertSame($first, $second);
         self::assertSame(2, $sink->calls);
@@ -477,15 +476,15 @@ final class BytecodeEndpointResolverTest extends TestCase
         $resolver = new BytecodeEndpointResolver($bytecode);
         $sink = new EndpointResolutionTraceSinkFixture();
         $cached = $resolver->resolveEndpoint(
-            $this->sharedCacheParams(['Region' => 'us-east-1'])
+            ...$this->sharedCacheParams(['Region' => 'us-east-1'])
         );
         $params = $this->sharedCacheParams(
             ['Region' => 'us-east-1'],
             $sink
         );
 
-        $first = $resolver->resolveEndpoint($params);
-        $second = $resolver->resolveEndpoint($params);
+        $first = $resolver->resolveEndpoint(...$params);
+        $second = $resolver->resolveEndpoint(...$params);
 
         self::assertNotSame($cached, $first);
         self::assertNotSame($first, $second);
@@ -515,7 +514,7 @@ final class BytecodeEndpointResolverTest extends TestCase
             'Endpoint resolution trace sink must implement '
         );
 
-        $resolver->resolveEndpoint($params);
+        $resolver->resolveEndpoint(...$params);
     }
 
     public function testDifferentStaticContextsAreCacheIsolated(): void
@@ -531,8 +530,8 @@ final class BytecodeEndpointResolverTest extends TestCase
         );
         $params = $this->sharedCacheParams(['Region' => 'us-east-1']);
 
-        $first->resolveEndpoint($params);
-        $second->resolveEndpoint($params);
+        $first->resolveEndpoint(...$params);
+        $second->resolveEndpoint(...$params);
 
         self::assertSame(2, $this->countSharedCacheEntries());
     }
@@ -547,8 +546,8 @@ final class BytecodeEndpointResolverTest extends TestCase
         );
         $params = $this->sharedCacheParams(['Region' => 'us-east-1']);
 
-        $first->resolveEndpoint($params);
-        $second->resolveEndpoint($params);
+        $first->resolveEndpoint(...$params);
+        $second->resolveEndpoint(...$params);
 
         self::assertSame(2, $this->countSharedCacheEntries());
     }
@@ -580,7 +579,7 @@ final class BytecodeEndpointResolverTest extends TestCase
         ]);
 
         $endpoint = $resolver->resolveEndpoint(
-            $this->sharedCacheParams(['Region' => 'us-east-1'])
+            ...$this->sharedCacheParams(['Region' => 'us-east-1'])
         );
 
         self::assertSame('https://example.com', $endpoint->url);
@@ -595,7 +594,7 @@ final class BytecodeEndpointResolverTest extends TestCase
         );
 
         $resolver->resolveEndpoint(
-            $this->sharedCacheParams(['Region' => 'us-east-1'])
+            ...$this->sharedCacheParams(['Region' => 'us-east-1'])
         );
 
         self::assertSame(0, $this->countSharedCacheEntries());
@@ -608,8 +607,8 @@ final class BytecodeEndpointResolverTest extends TestCase
         $disabled = new BytecodeEndpointResolver($bytecode, cacheSize: 0);
         $params = $this->sharedCacheParams(['Region' => 'us-east-1']);
 
-        $cached = $enabled->resolveEndpoint($params);
-        $resolved = $disabled->resolveEndpoint($params);
+        $cached = $enabled->resolveEndpoint(...$params);
+        $resolved = $disabled->resolveEndpoint(...$params);
 
         self::assertNotSame($cached, $resolved);
         self::assertSame('https://example.com', $resolved->url);
@@ -634,7 +633,7 @@ final class BytecodeEndpointResolverTest extends TestCase
         );
 
         $endpoint = $resolver->resolveEndpoint(
-            $this->sharedCacheParams(['Region' => 'us-east-1'])
+            ...$this->sharedCacheParams(['Region' => 'us-east-1'])
         );
 
         self::assertCount(1, $endpoint->authSchemes);
@@ -666,8 +665,8 @@ final class BytecodeEndpointResolverTest extends TestCase
         );
         $params = $this->sharedCacheParams(['Region' => 'us-east-1']);
 
-        $firstEndpoint = $first->resolveEndpoint($params);
-        $secondEndpoint = $second->resolveEndpoint($params);
+        $firstEndpoint = $first->resolveEndpoint(...$params);
+        $secondEndpoint = $second->resolveEndpoint(...$params);
 
         self::assertNotSame($firstEndpoint, $secondEndpoint);
         self::assertSame(
@@ -693,8 +692,8 @@ final class BytecodeEndpointResolverTest extends TestCase
         );
         $params = $this->sharedCacheParams(['Region' => 'us-east-1']);
 
-        $firstEndpoint = $first->resolveEndpoint($params);
-        $secondEndpoint = $second->resolveEndpoint($params);
+        $firstEndpoint = $first->resolveEndpoint(...$params);
+        $secondEndpoint = $second->resolveEndpoint(...$params);
 
         self::assertNotSame($firstEndpoint, $secondEndpoint);
         self::assertSame(2, $this->countSharedCacheEntries());
@@ -713,8 +712,8 @@ final class BytecodeEndpointResolverTest extends TestCase
         );
         $params = $this->sharedCacheParams(['Region' => 'us-east-1']);
 
-        $firstEndpoint = $first->resolveEndpoint($params);
-        $secondEndpoint = $second->resolveEndpoint($params);
+        $firstEndpoint = $first->resolveEndpoint(...$params);
+        $secondEndpoint = $second->resolveEndpoint(...$params);
 
         self::assertNotSame($firstEndpoint, $secondEndpoint);
         self::assertSame(2, $this->countSharedCacheEntries());
@@ -728,7 +727,7 @@ final class BytecodeEndpointResolverTest extends TestCase
         );
         foreach (['one', 'two', 'three', 'four'] as $region) {
             $large->resolveEndpoint(
-                $this->sharedCacheParams(['Region' => $region])
+                ...$this->sharedCacheParams(['Region' => $region])
             );
         }
         self::assertSame(4, $this->countSharedCacheEntries());
@@ -738,7 +737,7 @@ final class BytecodeEndpointResolverTest extends TestCase
             cacheSize: 2
         );
         $small->resolveEndpoint(
-            $this->sharedCacheParams(['Region' => 'five'])
+            ...$this->sharedCacheParams(['Region' => 'five'])
         );
 
         self::assertSame(2, $this->countSharedCacheEntries());
@@ -963,11 +962,13 @@ final class BytecodeEndpointResolverTest extends TestCase
 
     /**
      * @param array<string, mixed> $parameters
+     *
+     * @return array{OperationInterface, SerializableStructInterface, ClientConfig}
      */
     private function sharedCacheParams(
         array $parameters,
         mixed $traceSink = null
-    ): EndpointResolverParams
+    ): array
     {
         $operation = $this->createStub(OperationInterface::class);
         $operation->method('getRuntimeIdentity')->willReturn(
@@ -981,16 +982,16 @@ final class BytecodeEndpointResolverTest extends TestCase
         );
 
         $context = [
-            EndpointResolverParams::CONTEXT_PARAMETERS => $parameters
+            EndpointResolverInterface::CONTEXT_PARAMETERS => $parameters
         ];
         if ($traceSink !== null) {
-            $context[EndpointResolverParams::CONTEXT_TRACE_SINK] = $traceSink;
+            $context[EndpointResolverInterface::CONTEXT_TRACE_SINK] = $traceSink;
         }
 
-        return new EndpointResolverParams(
-            operation: $operation,
-            input: $this->createStub(SerializableStructInterface::class),
-            config: new ClientConfig(
+        return [
+            $operation,
+            $this->createStub(SerializableStructInterface::class),
+            new ClientConfig(
                 protocol: new FakeProtocol(),
                 transport: new \Smithy\Http\Client\HttpClientTransport(
                     $this->createStub(HttpClientInterface::class)
@@ -1000,7 +1001,7 @@ final class BytecodeEndpointResolverTest extends TestCase
                 ),
                 context: $context
             )
-        );
+        ];
     }
 
     private function countSharedCacheEntries(): int
@@ -1013,27 +1014,30 @@ final class BytecodeEndpointResolverTest extends TestCase
         return \count($cache);
     }
 
+    /**
+     * @return array{OperationInterface, SerializableStructInterface, ClientConfig}
+     */
     private function params(
         BytecodeEndpointResolver $resolver,
         OperationInterface $operation,
         SerializableStructInterface $input,
         mixed $endpointParameters = []
-    ): EndpointResolverParams
+    ): array
     {
-        return new EndpointResolverParams(
-            operation: $operation,
-            input: $input,
-            config: new ClientConfig(
+        return [
+            $operation,
+            $input,
+            new ClientConfig(
                 protocol: new FakeProtocol(),
                 transport: new \Smithy\Http\Client\HttpClientTransport(
                     $this->createStub(HttpClientInterface::class)
                 ),
                 endpointResolver: $resolver,
                 context: [
-                    EndpointResolverParams::CONTEXT_PARAMETERS =>
+                    EndpointResolverInterface::CONTEXT_PARAMETERS =>
                         $endpointParameters
                 ]
             )
-        );
+        ];
     }
 }

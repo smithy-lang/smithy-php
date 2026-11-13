@@ -20,11 +20,13 @@ use Smithy\Client\Endpoint\StaticEndpointResolver;
 use Smithy\Client\Interceptor\{
     AbstractInterceptor,
     CallContext,
+    HttpChecksumInterceptor,
     IdempotencyTokenInterceptor,
     InputContext,
     InterceptorChain,
     InterceptorInterface,
     OutputContext,
+    RequestCompressionInterceptor,
     RequestContext,
     ResponseContext
 };
@@ -34,6 +36,7 @@ use Smithy\Core\Transport\{
     TransportResponseInterface
 };
 use Smithy\Core\Serde\SerializableStructInterface;
+use Smithy\Core\Shape\OperationInterface;
 use Smithy\Http\Message\{
     HttpTransportRequest,
     HttpTransportResponse
@@ -179,6 +182,50 @@ final class InterceptorChainTest extends TestCase
         self::assertTrue((new InterceptorChain())->isEmpty());
         self::assertFalse(
             (new InterceptorChain(new RecordingInterceptor()))->isEmpty()
+        );
+    }
+
+    public function testForOperationDropsInterceptorsThatDoNotApply(): void
+    {
+        $skipped = new class extends AbstractInterceptor {
+            public function appliesTo(OperationInterface $operation): bool
+            {
+                return false;
+            }
+        };
+        $chain = new InterceptorChain(new RecordingInterceptor(), $skipped);
+
+        $filtered = $chain->forOperation(FakeOperation::instance());
+
+        self::assertNotSame($chain, $filtered);
+        self::assertTrue($filtered->contains(RecordingInterceptor::class));
+        self::assertFalse($filtered->contains($skipped::class));
+        self::assertSame(
+            $filtered,
+            $chain->forOperation(FakeOperation::instance())
+        );
+    }
+
+    public function testForOperationKeepsChainWhenAllInterceptorsApply(): void
+    {
+        $chain = new InterceptorChain(new RecordingInterceptor());
+
+        self::assertSame(
+            $chain,
+            $chain->forOperation(FakeOperation::instance())
+        );
+    }
+
+    public function testForOperationDropsBuiltInsWithoutMatchingTraits(): void
+    {
+        $chain = new InterceptorChain(
+            new IdempotencyTokenInterceptor(),
+            new RequestCompressionInterceptor(),
+            new HttpChecksumInterceptor()
+        );
+
+        self::assertTrue(
+            $chain->forOperation(FakeOperation::instance())->isEmpty()
         );
     }
 

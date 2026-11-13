@@ -403,6 +403,16 @@ final class HttpChecksumInterceptorTest extends TestCase
         self::fail('Expected request body buffering to fail.');
     }
 
+    public function testAppliesOnlyToChecksumRequiredOperations(): void
+    {
+        $interceptor = new HttpChecksumInterceptor();
+
+        self::assertTrue($interceptor->appliesTo($this->operation([
+            Schema::T_HTTP_CHECKSUM_REQUIRED => true
+        ])));
+        self::assertFalse($interceptor->appliesTo($this->operation()));
+    }
+
     /**
      * @param array<int, mixed> $traits
      */

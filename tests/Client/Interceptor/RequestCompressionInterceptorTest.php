@@ -509,6 +509,25 @@ final class RequestCompressionInterceptorTest extends TestCase
         self::fail('Expected request body compression setup to fail.');
     }
 
+    public function testAppliesOnlyToEnabledCompressionOperations(): void
+    {
+        $operation = $this->operation([
+            Schema::T_REQUEST_COMPRESSION => ['gzip']
+        ]);
+
+        self::assertTrue(
+            (new RequestCompressionInterceptor())->appliesTo($operation)
+        );
+        self::assertFalse(
+            (new RequestCompressionInterceptor(disabled: true))
+                ->appliesTo($operation)
+        );
+        self::assertFalse(
+            (new RequestCompressionInterceptor())
+                ->appliesTo($this->operation())
+        );
+    }
+
     public function testSkipsCompressionWhenDisabled(): void
     {
         $interceptor = new RequestCompressionInterceptor(

@@ -19,13 +19,14 @@ use Smithy\Protocol\{
 /**
  * Resolve modeled protocols in deterministic preference order.
  */
-final readonly class ProtocolResolver implements ProtocolResolverInterface
+final class ProtocolResolver implements ProtocolResolverInterface
 {
-    /** @var array<string, ProtocolInterface> */
-    private array $protocols;
+    private static ?self $defaults = null;
 
+    /** @var array<string, ProtocolInterface> */
+    private readonly array $protocols;
     /** @var list<string> */
-    private array $preference;
+    private readonly array $preference;
 
     /**
      * @param array<string, ProtocolInterface> $protocols
@@ -41,11 +42,11 @@ final readonly class ProtocolResolver implements ProtocolResolverInterface
     }
 
     /**
-     * Return the protocols included with the generic runtime.
+     * Return the shared resolver for protocols included with the runtime.
      */
     public static function defaults(): self
     {
-        return new self([
+        return self::$defaults ??= new self([
             RpcV2CborProtocol::ID => new RpcV2CborProtocol(),
             RpcV2JsonProtocol::ID => new RpcV2JsonProtocol()
         ]);

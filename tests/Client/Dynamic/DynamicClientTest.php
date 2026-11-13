@@ -20,7 +20,6 @@ use Smithy\Client\{
     RequestOverrideConfig
 };
 use Smithy\Client\Endpoint\{
-    EndpointResolverParams,
     StaticEndpointResolver
 };
 use Smithy\Client\Interceptor\{
@@ -937,11 +936,9 @@ final class DynamicClientTest extends TestCase
         $input = $operation->createInputFromValue(['message' => 'hello']);
 
         $endpoint = $client->getConfig()->endpointResolver->resolveEndpoint(
-            new EndpointResolverParams(
-                $operation,
-                $input,
-                $client->getConfig()
-            )
+            $operation,
+            $input,
+            $client->getConfig()
         );
 
         self::assertCount(1, $endpoint->authSchemes);

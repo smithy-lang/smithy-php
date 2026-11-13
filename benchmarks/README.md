@@ -91,8 +91,9 @@ Raw result files are written to `build/benchmarks/results/`. Set
   HTTP response. They include endpoint resolution, anonymous auth selection,
   serialization, deserialization, transport dispatch, and optional interceptor
   dispatch, but do not include signing, retries, socket I/O, or TLS.
-- The `default` client case disables all plugins and measures the
-  interceptor-free pipeline. The `interceptor` case enables only the
+- The `bare` client case disables all plugins and measures the
+  interceptor-free pipeline. The `builtin` case keeps the built-in plugins
+  a default client installs. The `interceptor` case enables only the
   pass-through benchmark interceptor.
 - Runtime code generation is not enabled.
 - Each case receives a smoke validation before measurement. Serialization
@@ -183,8 +184,9 @@ Recorded: 2026-11-04T15:27:32+00:00
 
 ### Generated client pipeline
 
-`default` uses the interceptor-free generated-client fast path. `interceptor`
-installs only a pass-through plugin and interceptor to measure dispatch.
+`bare` disables all plugins. `builtin` keeps the built-in plugins a default
+client installs. `interceptor` installs only a pass-through plugin and
+interceptor to measure dispatch.
 
 <!-- client-benchmark-results:start -->
 Recorded: 2026-11-01T22:25:30+00:00

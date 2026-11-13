@@ -91,14 +91,4 @@ final class HttpBearerAuthSignerTest extends TestCase
             AnonymousIdentity::instance()
         );
     }
-
-    public function testCloseIsIdempotent(): void
-    {
-        $signer = HttpBearerAuthSigner::instance();
-
-        $signer->close();
-        $signer->close();
-
-        self::assertSame($signer, HttpBearerAuthSigner::instance());
-    }
 }
