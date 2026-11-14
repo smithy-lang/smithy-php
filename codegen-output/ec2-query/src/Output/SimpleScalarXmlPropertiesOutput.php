@@ -13,7 +13,6 @@ use Smithy\Core\Serde\Schema;
 use Smithy\Core\Serde\SerializableStructInterface;
 use Smithy\Core\Serde\ShapeSerializerInterface;
 use Smithy\Core\Shape\FromMembersTrait;
-use Smithy\Core\Shape\ShapeType;
 use Smithy\ProtocolTests\Ec2Query\Schemas;
 
 final class SimpleScalarXmlPropertiesOutput implements SerializableStructInterface
@@ -145,6 +144,28 @@ final class SimpleScalarXmlPropertiesOutput implements SerializableStructInterfa
             9 => $this->doubleValue,
             default => null,
         };
+    }
+
+    /**
+     * Return a copy with one member replaced.
+     */
+    public function withMemberValue(Schema $member, mixed $value): static
+    {
+        $members = [
+            $this->stringValue,
+            $this->emptyStringValue,
+            $this->trueBooleanValue,
+            $this->falseBooleanValue,
+            $this->byteValue,
+            $this->shortValue,
+            $this->integerValue,
+            $this->longValue,
+            $this->floatValue,
+            $this->doubleValue
+        ];
+        $members[$member->memberIndex] = $value;
+
+        return new self(...$members);
     }
 
 }

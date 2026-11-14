@@ -14,7 +14,6 @@ use Smithy\Core\Serde\Schema;
 use Smithy\Core\Serde\SerializableStructInterface;
 use Smithy\Core\Serde\ShapeSerializerInterface;
 use Smithy\Core\Shape\FromMembersTrait;
-use Smithy\Core\Shape\ShapeType;
 use Smithy\ProtocolTests\RestXml\Schemas;
 use Smithy\ProtocolTests\RestXml\Shape\ComplexNestedErrorData;
 
@@ -103,6 +102,21 @@ final class ComplexErrorException extends RestXmlException implements Serializab
             2 => $this->nested,
             default => null,
         };
+    }
+
+    /**
+     * Return a copy with one member replaced.
+     */
+    public function withMemberValue(Schema $member, mixed $value): static
+    {
+        $members = [
+            $this->header,
+            $this->topLevel,
+            $this->nested
+        ];
+        $members[$member->memberIndex] = $value;
+
+        return new self(...$members);
     }
 
 }

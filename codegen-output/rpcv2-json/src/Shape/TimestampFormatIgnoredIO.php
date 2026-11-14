@@ -13,7 +13,6 @@ use Smithy\Core\Serde\Schema;
 use Smithy\Core\Serde\SerializableStructInterface;
 use Smithy\Core\Serde\ShapeSerializerInterface;
 use Smithy\Core\Shape\FromMembersTrait;
-use Smithy\Core\Shape\ShapeType;
 use Smithy\ProtocolTests\RpcV2Json\Schemas;
 
 final class TimestampFormatIgnoredIO implements SerializableStructInterface
@@ -103,6 +102,22 @@ final class TimestampFormatIgnoredIO implements SerializableStructInterface
             3 => $this->normal,
             default => null,
         };
+    }
+
+    /**
+     * Return a copy with one member replaced.
+     */
+    public function withMemberValue(Schema $member, mixed $value): static
+    {
+        $members = [
+            $this->dateTime,
+            $this->httpDate,
+            $this->epochSeconds,
+            $this->normal
+        ];
+        $members[$member->memberIndex] = $value;
+
+        return new self(...$members);
     }
 
 }

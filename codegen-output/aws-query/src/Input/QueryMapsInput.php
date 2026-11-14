@@ -13,7 +13,6 @@ use Smithy\Core\Serde\Schema;
 use Smithy\Core\Serde\SerializableStructInterface;
 use Smithy\Core\Serde\ShapeSerializerInterface;
 use Smithy\Core\Shape\FromMembersTrait;
-use Smithy\Core\Shape\ShapeType;
 use Smithy\ProtocolTests\AwsQuery\Schemas;
 use Smithy\ProtocolTests\AwsQuery\Shape\NestedStructWithMap;
 
@@ -141,6 +140,26 @@ final class QueryMapsInput implements SerializableStructInterface
             7 => $this->nestedStructWithMap,
             default => null,
         };
+    }
+
+    /**
+     * Return a copy with one member replaced.
+     */
+    public function withMemberValue(Schema $member, mixed $value): static
+    {
+        $members = [
+            $this->mapArg,
+            $this->renamedMapArg,
+            $this->complexMapArg,
+            $this->mapWithXmlMemberName,
+            $this->flattenedMap,
+            $this->flattenedMapWithXmlName,
+            $this->mapOfLists,
+            $this->nestedStructWithMap
+        ];
+        $members[$member->memberIndex] = $value;
+
+        return new self(...$members);
     }
 
 }

@@ -14,7 +14,6 @@ use Smithy\Core\Serde\Schema;
 use Smithy\Core\Serde\SerializableStructInterface;
 use Smithy\Core\Serde\ShapeSerializerInterface;
 use Smithy\Core\Shape\FromMembersTrait;
-use Smithy\Core\Shape\ShapeType;
 use Smithy\ProtocolTests\AwsJson1_1\Schemas;
 use Smithy\ProtocolTests\AwsJson1_1\Shape\KitchenSink;
 
@@ -138,6 +137,25 @@ final class ErrorWithMembersException extends AwsJson1_1Exception implements Ser
             6 => $this->stringField,
             default => null,
         };
+    }
+
+    /**
+     * Return a copy with one member replaced.
+     */
+    public function withMemberValue(Schema $member, mixed $value): static
+    {
+        $members = [
+            $this->modeledCode,
+            $this->complexData,
+            $this->integerField,
+            $this->listField,
+            $this->mapField,
+            $this->modeledMessage,
+            $this->stringField
+        ];
+        $members[$member->memberIndex] = $value;
+
+        return new self(...$members);
     }
 
 }

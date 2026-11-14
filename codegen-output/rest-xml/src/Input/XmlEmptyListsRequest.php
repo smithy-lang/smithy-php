@@ -13,7 +13,6 @@ use Smithy\Core\Serde\Schema;
 use Smithy\Core\Serde\SerializableStructInterface;
 use Smithy\Core\Serde\ShapeSerializerInterface;
 use Smithy\Core\Shape\FromMembersTrait;
-use Smithy\Core\Shape\ShapeType;
 use Smithy\ProtocolTests\RestXml\Schemas;
 
 final class XmlEmptyListsRequest implements SerializableStructInterface
@@ -197,6 +196,33 @@ final class XmlEmptyListsRequest implements SerializableStructInterface
             14 => $this->flattenedStructureList,
             default => null,
         };
+    }
+
+    /**
+     * Return a copy with one member replaced.
+     */
+    public function withMemberValue(Schema $member, mixed $value): static
+    {
+        $members = [
+            $this->stringList,
+            $this->stringSet,
+            $this->integerList,
+            $this->booleanList,
+            $this->timestampList,
+            $this->enumList,
+            $this->intEnumList,
+            $this->nestedStringList,
+            $this->renamedListMembers,
+            $this->flattenedList,
+            $this->flattenedList2,
+            $this->flattenedListWithMemberNamespace,
+            $this->flattenedListWithNamespace,
+            $this->structureList,
+            $this->flattenedStructureList
+        ];
+        $members[$member->memberIndex] = $value;
+
+        return new self(...$members);
     }
 
 }

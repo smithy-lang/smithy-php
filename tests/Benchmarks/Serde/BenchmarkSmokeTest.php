@@ -86,7 +86,7 @@ final class BenchmarkSmokeTest extends TestCase
         )[0];
         $requestOperation = $this->operation($loader, $requestCase);
         $input = ArrayShapeSerializer::fromArray(
-            $requestOperation->getInputClass(),
+            $requestOperation::INPUT_CLASS,
             $requestCase['params']
         );
         $request = $protocol->serializeRequest(
@@ -115,7 +115,7 @@ final class BenchmarkSmokeTest extends TestCase
         );
 
         self::assertInstanceOf(
-            $responseOperation->getOutputClass(),
+            $responseOperation::OUTPUT_CLASS,
             $output
         );
 
@@ -214,7 +214,7 @@ final class BenchmarkSmokeTest extends TestCase
         )[0];
         $requestOperation = $this->operation($loader, $requestCase);
         $input = ArrayShapeSerializer::fromArray(
-            $requestOperation->getInputClass(),
+            $requestOperation::INPUT_CLASS,
             $requestCase['params']
         );
         $request = $protocol->serializeRequest(
@@ -251,7 +251,7 @@ final class BenchmarkSmokeTest extends TestCase
             ))
         );
         $expected = ArrayShapeSerializer::fromArray(
-            $responseOperation->getOutputClass(),
+            $responseOperation::OUTPUT_CLASS,
             $responseCase['params']
         );
 

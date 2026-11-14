@@ -13,7 +13,6 @@ use Smithy\Core\Serde\Schema;
 use Smithy\Core\Serde\SerializableStructInterface;
 use Smithy\Core\Serde\ShapeSerializerInterface;
 use Smithy\Core\Shape\FromMembersTrait;
-use Smithy\Core\Shape\ShapeType;
 use Smithy\ProtocolTests\Ec2Query\Schemas;
 
 final class QueryTimestampsInput implements SerializableStructInterface
@@ -96,6 +95,21 @@ final class QueryTimestampsInput implements SerializableStructInterface
             2 => $this->epochTarget,
             default => null,
         };
+    }
+
+    /**
+     * Return a copy with one member replaced.
+     */
+    public function withMemberValue(Schema $member, mixed $value): static
+    {
+        $members = [
+            $this->normalFormat,
+            $this->epochMember,
+            $this->epochTarget
+        ];
+        $members[$member->memberIndex] = $value;
+
+        return new self(...$members);
     }
 
 }

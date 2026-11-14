@@ -625,6 +625,45 @@ PHP);
         }
     }
 
+    public function testRejectsPathLabelWithoutInputMember(): void
+    {
+        $model = SmithyModel::fromJson(\json_encode([
+            'smithy' => '2.0',
+            'shapes' => [
+                'smithy.example#GetThing' => [
+                    'type' => 'operation',
+                    'input' => ['target' => 'smithy.example#GetThingInput'],
+                    'traits' => [
+                        'smithy.api#http' => [
+                            'method' => 'GET',
+                            'uri' => '/{missing}',
+                            'code' => 200
+                        ]
+                    ]
+                ],
+                'smithy.example#GetThingInput' => [
+                    'type' => 'structure',
+                    'members' => []
+                ]
+            ]
+        ], JSON_THROW_ON_ERROR));
+        $settings = new CodegenSettings(
+            namespace: 'Smithy\\Example',
+            outputDir: '/tmp/out',
+            organization: 'flat'
+        );
+        $generator = new OperationGenerator(
+            $model,
+            new PhpSymbolProvider($model, $settings),
+            $settings
+        );
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Path label {missing}');
+
+        $generator->generate('smithy.example#GetThing');
+    }
+
     public function testGeneratesServiceIdentityForRpcV2Cbor(): void
     {
         $model = $this->createRequestTargetModel([

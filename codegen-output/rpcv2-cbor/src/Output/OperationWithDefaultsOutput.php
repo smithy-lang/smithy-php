@@ -13,7 +13,6 @@ use Smithy\Core\Serde\Schema;
 use Smithy\Core\Serde\SerializableStructInterface;
 use Smithy\Core\Serde\ShapeSerializerInterface;
 use Smithy\Core\Shape\FromMembersTrait;
-use Smithy\Core\Shape\ShapeType;
 use Smithy\ProtocolTests\RpcV2Cbor\Schemas;
 use Smithy\ProtocolTests\RpcV2Cbor\Shape\TestEnum;
 use Smithy\ProtocolTests\RpcV2Cbor\Shape\TestIntEnum;
@@ -290,6 +289,41 @@ final class OperationWithDefaultsOutput implements SerializableStructInterface
             22 => $this->zeroDouble,
             default => null,
         };
+    }
+
+    /**
+     * Return a copy with one member replaced.
+     */
+    public function withMemberValue(Schema $member, mixed $value): static
+    {
+        $members = [
+            $this->defaultString,
+            $this->defaultBoolean,
+            $this->defaultList,
+            $this->defaultTimestamp,
+            $this->defaultBlob,
+            $this->defaultByte,
+            $this->defaultShort,
+            $this->defaultInteger,
+            $this->defaultLong,
+            $this->defaultFloat,
+            $this->defaultDouble,
+            $this->defaultMap,
+            $this->defaultEnum,
+            $this->defaultIntEnum,
+            $this->emptyString,
+            $this->falseBoolean,
+            $this->emptyBlob,
+            $this->zeroByte,
+            $this->zeroShort,
+            $this->zeroInteger,
+            $this->zeroLong,
+            $this->zeroFloat,
+            $this->zeroDouble
+        ];
+        $members[$member->memberIndex] = $value;
+
+        return new self(...$members);
     }
 
 }

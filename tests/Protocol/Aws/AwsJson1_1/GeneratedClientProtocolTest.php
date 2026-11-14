@@ -163,7 +163,7 @@ final class GeneratedClientProtocolTest extends AwsJson1_1ClientProtocolTestCase
         array $params
     ): SerializableStructInterface
     {
-        $inputClass = $operation->getInputClass();
+        $inputClass = $operation::INPUT_CLASS;
 
         try {
             return ArrayShapeSerializer::fromArray($inputClass, $params);

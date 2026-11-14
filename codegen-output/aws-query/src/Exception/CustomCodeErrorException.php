@@ -14,7 +14,6 @@ use Smithy\Core\Serde\Schema;
 use Smithy\Core\Serde\SerializableStructInterface;
 use Smithy\Core\Serde\ShapeSerializerInterface;
 use Smithy\Core\Shape\FromMembersTrait;
-use Smithy\Core\Shape\ShapeType;
 use Smithy\ProtocolTests\AwsQuery\Schemas;
 
 final class CustomCodeErrorException extends AwsQueryException implements SerializableStructInterface
@@ -88,6 +87,19 @@ final class CustomCodeErrorException extends AwsQueryException implements Serial
             0 => $this->modeledMessage,
             default => null,
         };
+    }
+
+    /**
+     * Return a copy with one member replaced.
+     */
+    public function withMemberValue(Schema $member, mixed $value): static
+    {
+        $members = [
+            $this->modeledMessage
+        ];
+        $members[$member->memberIndex] = $value;
+
+        return new self(...$members);
     }
 
 }

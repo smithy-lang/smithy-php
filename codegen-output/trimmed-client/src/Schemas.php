@@ -62,8 +62,8 @@ final class Schemas
             id: 'smithy.example#GetPetOutput',
             type: ShapeType::Structure,
             members: [
-                new Schema(id: 'smithy.example#GetPetOutput$pet', type: ShapeType::Structure, memberName: 'pet', memberIndex: 0, members: [new Schema(id: 'smithy.example#Pet$name', type: ShapeType::String_, memberName: 'name', memberIndex: 0), new Schema(id: 'smithy.example#Pet$details', type: ShapeType::Structure, memberName: 'details', memberIndex: 1, targetClass: PetDetails::class)], targetClass: Pet::class),
-                new Schema(id: 'smithy.example#GetPetOutput$marker', type: ShapeType::Union, memberName: 'marker', memberIndex: 1, members: [new Schema(id: 'smithy.example#UnitUnion$none', type: ShapeType::Structure, memberName: 'none', memberIndex: 0, targetClass: Unit::class)], targetClass: UnitUnion::class)
+                new Schema(id: 'smithy.example#GetPetOutput$pet', type: ShapeType::Structure, memberName: 'pet', memberIndex: 0, members: self::pet()->getMembers(), targetClass: Pet::class),
+                new Schema(id: 'smithy.example#GetPetOutput$marker', type: ShapeType::Union, memberName: 'marker', memberIndex: 1, members: self::unitUnion()->getMembers(), targetClass: UnitUnion::class)
             ],
             targetClass: GetPetOutput::class
         );
@@ -80,7 +80,7 @@ final class Schemas
             type: ShapeType::Structure,
             members: [
                 new Schema(id: 'smithy.example#Pet$name', type: ShapeType::String_, memberName: 'name', memberIndex: 0),
-                new Schema(id: 'smithy.example#Pet$details', type: ShapeType::Structure, memberName: 'details', memberIndex: 1, members: [new Schema(id: 'smithy.example#PetDetails$breed', type: ShapeType::String_, memberName: 'breed', memberIndex: 0)], targetClass: PetDetails::class)
+                new Schema(id: 'smithy.example#Pet$details', type: ShapeType::Structure, memberName: 'details', memberIndex: 1, members: self::petDetails()->getMembers(), targetClass: PetDetails::class)
             ],
             targetClass: Pet::class
         );
@@ -150,4 +150,15 @@ final class Schemas
         );
     }
 
+}
+
+/**
+ * Shared list and map member schemas for this service, keyed by member ID.
+ *
+ * Held here rather than on Schemas so no generated shape property can collide with it.
+ */
+final class SchemasMembers
+{
+    /** @var array<string, Schema> */
+    public static array $shared = [];
 }

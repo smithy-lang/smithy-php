@@ -13,7 +13,6 @@ use Smithy\Core\Serde\Schema;
 use Smithy\Core\Serde\SerializableStructInterface;
 use Smithy\Core\Serde\ShapeSerializerInterface;
 use Smithy\Core\Shape\FromMembersTrait;
-use Smithy\Core\Shape\ShapeType;
 use Smithy\ProtocolTests\AwsJson1_1\Schemas;
 
 final class KitchenSink implements SerializableStructInterface
@@ -269,6 +268,44 @@ final class KitchenSink implements SerializableStructInterface
             25 => $this->unixTimestamp,
             default => null,
         };
+    }
+
+    /**
+     * Return a copy with one member replaced.
+     */
+    public function withMemberValue(Schema $member, mixed $value): static
+    {
+        $members = [
+            $this->blob,
+            $this->boolean,
+            $this->double,
+            $this->emptyStruct,
+            $this->float,
+            $this->httpdateTimestamp,
+            $this->integer,
+            $this->iso8601Timestamp,
+            $this->jsonValue,
+            $this->listOfLists,
+            $this->listOfMapsOfStrings,
+            $this->listOfStrings,
+            $this->listOfStructs,
+            $this->long,
+            $this->mapOfListsOfStrings,
+            $this->mapOfMaps,
+            $this->mapOfStrings,
+            $this->mapOfStructs,
+            $this->recursiveList,
+            $this->recursiveMap,
+            $this->recursiveStruct,
+            $this->simpleStruct,
+            $this->string,
+            $this->structWithJsonName,
+            $this->timestamp,
+            $this->unixTimestamp
+        ];
+        $members[$member->memberIndex] = $value;
+
+        return new self(...$members);
     }
 
 }

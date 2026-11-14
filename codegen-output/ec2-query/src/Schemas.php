@@ -100,7 +100,7 @@ final class Schemas
             type: ShapeType::Structure,
             members: [
                 new Schema(id: 'aws.protocoltests.ec2#ComplexError$TopLevel', type: ShapeType::String_, memberName: 'TopLevel', memberIndex: 0),
-                new Schema(id: 'aws.protocoltests.ec2#ComplexError$Nested', type: ShapeType::Structure, memberName: 'Nested', memberIndex: 1, members: [new Schema(id: 'aws.protocoltests.ec2#ComplexNestedErrorData$Foo', type: ShapeType::String_, memberName: 'Foo', memberIndex: 0)], targetClass: ComplexNestedErrorData::class)
+                new Schema(id: 'aws.protocoltests.ec2#ComplexError$Nested', type: ShapeType::Structure, memberName: 'Nested', memberIndex: 1, members: self::complexNestedErrorData()->getMembers(), targetClass: ComplexNestedErrorData::class)
             ], traits: [23 => 'client'],
             targetClass: ComplexErrorException::class
         );
@@ -258,7 +258,7 @@ final class Schemas
             id: 'aws.protocoltests.ec2#NestedStructWithList',
             type: ShapeType::Structure,
             members: [
-                new Schema(id: 'aws.protocoltests.ec2#NestedStructWithList$ListArg', type: ShapeType::List_, memberName: 'ListArg', memberIndex: 0, listMember: new Schema(id: 'aws.protocoltests.shared#StringList$member', type: ShapeType::String_, memberName: 'member', memberIndex: 0))
+                new Schema(id: 'aws.protocoltests.ec2#NestedStructWithList$ListArg', type: ShapeType::List_, memberName: 'ListArg', memberIndex: 0, listMember: SchemasMembers::$shared['aws.protocoltests.shared#StringList$member'] ??= new Schema(id: 'aws.protocoltests.shared#StringList$member', type: ShapeType::String_, memberName: 'member', memberIndex: 0))
             ],
             targetClass: NestedStructWithList::class
         );
@@ -274,7 +274,7 @@ final class Schemas
             id: 'aws.protocoltests.ec2#NestedStructuresInput',
             type: ShapeType::Structure,
             members: [
-                new Schema(id: 'aws.protocoltests.ec2#NestedStructuresInput$Nested', type: ShapeType::Structure, memberName: 'Nested', memberIndex: 0, members: [new Schema(id: 'aws.protocoltests.ec2#StructArg$StringArg', type: ShapeType::String_, memberName: 'StringArg', memberIndex: 0), new Schema(id: 'aws.protocoltests.ec2#StructArg$OtherArg', type: ShapeType::Boolean, memberName: 'OtherArg', memberIndex: 1), new Schema(id: 'aws.protocoltests.ec2#StructArg$RecursiveArg', type: ShapeType::Structure, memberName: 'RecursiveArg', memberIndex: 2, targetClass: StructArg::class)], targetClass: StructArg::class)
+                new Schema(id: 'aws.protocoltests.ec2#NestedStructuresInput$Nested', type: ShapeType::Structure, memberName: 'Nested', memberIndex: 0, members: self::structArg()->getMembers(), targetClass: StructArg::class)
             ],
             targetClass: NestedStructuresInput::class
         );
@@ -338,11 +338,11 @@ final class Schemas
             id: 'aws.protocoltests.ec2#QueryListsInput',
             type: ShapeType::Structure,
             members: [
-                new Schema(id: 'aws.protocoltests.ec2#QueryListsInput$ListArg', type: ShapeType::List_, memberName: 'ListArg', memberIndex: 0, listMember: new Schema(id: 'aws.protocoltests.shared#StringList$member', type: ShapeType::String_, memberName: 'member', memberIndex: 0)),
-                new Schema(id: 'aws.protocoltests.ec2#QueryListsInput$ComplexListArg', type: ShapeType::List_, memberName: 'ComplexListArg', memberIndex: 1, listMember: new Schema(id: 'aws.protocoltests.shared#GreetingList$member', type: ShapeType::Structure, memberName: 'member', memberIndex: 0, members: [new Schema(id: 'aws.protocoltests.shared#GreetingStruct$hi', type: ShapeType::String_, memberName: 'hi', memberIndex: 0)], targetClass: GreetingStruct::class)),
-                new Schema(id: 'aws.protocoltests.ec2#QueryListsInput$ListArgWithXmlNameMember', type: ShapeType::List_, memberName: 'ListArgWithXmlNameMember', memberIndex: 2, listMember: new Schema(id: 'aws.protocoltests.ec2#ListWithXmlName$member', type: ShapeType::String_, memberName: 'member', memberIndex: 0, traits: [0 => 'item'])),
-                new Schema(id: 'aws.protocoltests.ec2#QueryListsInput$ListArgWithXmlName', type: ShapeType::List_, memberName: 'ListArgWithXmlName', memberIndex: 3, listMember: new Schema(id: 'aws.protocoltests.ec2#ListWithXmlName$member', type: ShapeType::String_, memberName: 'member', memberIndex: 0, traits: [0 => 'item']), traits: [0 => 'Hi']),
-                new Schema(id: 'aws.protocoltests.ec2#QueryListsInput$NestedWithList', type: ShapeType::Structure, memberName: 'NestedWithList', memberIndex: 4, members: [new Schema(id: 'aws.protocoltests.ec2#NestedStructWithList$ListArg', type: ShapeType::List_, memberName: 'ListArg', memberIndex: 0, listMember: new Schema(id: 'aws.protocoltests.shared#StringList$member', type: ShapeType::String_, memberName: 'member', memberIndex: 0))], targetClass: NestedStructWithList::class)
+                new Schema(id: 'aws.protocoltests.ec2#QueryListsInput$ListArg', type: ShapeType::List_, memberName: 'ListArg', memberIndex: 0, listMember: SchemasMembers::$shared['aws.protocoltests.shared#StringList$member'] ??= new Schema(id: 'aws.protocoltests.shared#StringList$member', type: ShapeType::String_, memberName: 'member', memberIndex: 0)),
+                new Schema(id: 'aws.protocoltests.ec2#QueryListsInput$ComplexListArg', type: ShapeType::List_, memberName: 'ComplexListArg', memberIndex: 1, listMember: SchemasMembers::$shared['aws.protocoltests.shared#GreetingList$member'] ??= new Schema(id: 'aws.protocoltests.shared#GreetingList$member', type: ShapeType::Structure, memberName: 'member', memberIndex: 0, members: self::greetingStruct()->getMembers(), targetClass: GreetingStruct::class)),
+                new Schema(id: 'aws.protocoltests.ec2#QueryListsInput$ListArgWithXmlNameMember', type: ShapeType::List_, memberName: 'ListArgWithXmlNameMember', memberIndex: 2, listMember: SchemasMembers::$shared['aws.protocoltests.ec2#ListWithXmlName$member'] ??= new Schema(id: 'aws.protocoltests.ec2#ListWithXmlName$member', type: ShapeType::String_, memberName: 'member', memberIndex: 0, traits: [0 => 'item'])),
+                new Schema(id: 'aws.protocoltests.ec2#QueryListsInput$ListArgWithXmlName', type: ShapeType::List_, memberName: 'ListArgWithXmlName', memberIndex: 3, listMember: SchemasMembers::$shared['aws.protocoltests.ec2#ListWithXmlName$member'] ??= new Schema(id: 'aws.protocoltests.ec2#ListWithXmlName$member', type: ShapeType::String_, memberName: 'member', memberIndex: 0, traits: [0 => 'item']), traits: [0 => 'Hi']),
+                new Schema(id: 'aws.protocoltests.ec2#QueryListsInput$NestedWithList', type: ShapeType::Structure, memberName: 'NestedWithList', memberIndex: 4, members: self::nestedStructWithList()->getMembers(), targetClass: NestedStructWithList::class)
             ],
             targetClass: QueryListsInput::class
         );
@@ -534,9 +534,9 @@ final class Schemas
                 new Schema(id: 'aws.protocoltests.ec2#XmlEnumsOutput$fooEnum1', type: ShapeType::Enum, memberName: 'fooEnum1', memberIndex: 0, targetClass: FooEnum::class),
                 new Schema(id: 'aws.protocoltests.ec2#XmlEnumsOutput$fooEnum2', type: ShapeType::Enum, memberName: 'fooEnum2', memberIndex: 1, targetClass: FooEnum::class),
                 new Schema(id: 'aws.protocoltests.ec2#XmlEnumsOutput$fooEnum3', type: ShapeType::Enum, memberName: 'fooEnum3', memberIndex: 2, targetClass: FooEnum::class),
-                new Schema(id: 'aws.protocoltests.ec2#XmlEnumsOutput$fooEnumList', type: ShapeType::List_, memberName: 'fooEnumList', memberIndex: 3, listMember: new Schema(id: 'aws.protocoltests.shared#FooEnumList$member', type: ShapeType::Enum, memberName: 'member', memberIndex: 0, targetClass: FooEnum::class)),
-                new Schema(id: 'aws.protocoltests.ec2#XmlEnumsOutput$fooEnumSet', type: ShapeType::List_, memberName: 'fooEnumSet', memberIndex: 4, listMember: new Schema(id: 'aws.protocoltests.shared#FooEnumSet$member', type: ShapeType::Enum, memberName: 'member', memberIndex: 0, targetClass: FooEnum::class)),
-                new Schema(id: 'aws.protocoltests.ec2#XmlEnumsOutput$fooEnumMap', type: ShapeType::Map, memberName: 'fooEnumMap', memberIndex: 5, mapKey: new Schema(id: 'aws.protocoltests.shared#FooEnumMap$key', type: ShapeType::String_, memberName: 'key', memberIndex: 0), mapValue: new Schema(id: 'aws.protocoltests.shared#FooEnumMap$value', type: ShapeType::Enum, memberName: 'value', memberIndex: 1, targetClass: FooEnum::class))
+                new Schema(id: 'aws.protocoltests.ec2#XmlEnumsOutput$fooEnumList', type: ShapeType::List_, memberName: 'fooEnumList', memberIndex: 3, listMember: SchemasMembers::$shared['aws.protocoltests.shared#FooEnumList$member'] ??= new Schema(id: 'aws.protocoltests.shared#FooEnumList$member', type: ShapeType::Enum, memberName: 'member', memberIndex: 0, targetClass: FooEnum::class)),
+                new Schema(id: 'aws.protocoltests.ec2#XmlEnumsOutput$fooEnumSet', type: ShapeType::List_, memberName: 'fooEnumSet', memberIndex: 4, listMember: SchemasMembers::$shared['aws.protocoltests.shared#FooEnumSet$member'] ??= new Schema(id: 'aws.protocoltests.shared#FooEnumSet$member', type: ShapeType::Enum, memberName: 'member', memberIndex: 0, targetClass: FooEnum::class)),
+                new Schema(id: 'aws.protocoltests.ec2#XmlEnumsOutput$fooEnumMap', type: ShapeType::Map, memberName: 'fooEnumMap', memberIndex: 5, mapKey: SchemasMembers::$shared['aws.protocoltests.shared#FooEnumMap$key'] ??= new Schema(id: 'aws.protocoltests.shared#FooEnumMap$key', type: ShapeType::String_, memberName: 'key', memberIndex: 0), mapValue: SchemasMembers::$shared['aws.protocoltests.shared#FooEnumMap$value'] ??= new Schema(id: 'aws.protocoltests.shared#FooEnumMap$value', type: ShapeType::Enum, memberName: 'value', memberIndex: 1, targetClass: FooEnum::class))
             ],
             targetClass: XmlEnumsOutput::class
         );
@@ -555,9 +555,9 @@ final class Schemas
                 new Schema(id: 'aws.protocoltests.ec2#XmlIntEnumsOutput$intEnum1', type: ShapeType::IntEnum, memberName: 'intEnum1', memberIndex: 0, targetClass: IntegerEnum::class),
                 new Schema(id: 'aws.protocoltests.ec2#XmlIntEnumsOutput$intEnum2', type: ShapeType::IntEnum, memberName: 'intEnum2', memberIndex: 1, targetClass: IntegerEnum::class),
                 new Schema(id: 'aws.protocoltests.ec2#XmlIntEnumsOutput$intEnum3', type: ShapeType::IntEnum, memberName: 'intEnum3', memberIndex: 2, targetClass: IntegerEnum::class),
-                new Schema(id: 'aws.protocoltests.ec2#XmlIntEnumsOutput$intEnumList', type: ShapeType::List_, memberName: 'intEnumList', memberIndex: 3, listMember: new Schema(id: 'aws.protocoltests.shared#IntegerEnumList$member', type: ShapeType::IntEnum, memberName: 'member', memberIndex: 0, targetClass: IntegerEnum::class)),
-                new Schema(id: 'aws.protocoltests.ec2#XmlIntEnumsOutput$intEnumSet', type: ShapeType::List_, memberName: 'intEnumSet', memberIndex: 4, listMember: new Schema(id: 'aws.protocoltests.shared#IntegerEnumSet$member', type: ShapeType::IntEnum, memberName: 'member', memberIndex: 0, targetClass: IntegerEnum::class)),
-                new Schema(id: 'aws.protocoltests.ec2#XmlIntEnumsOutput$intEnumMap', type: ShapeType::Map, memberName: 'intEnumMap', memberIndex: 5, mapKey: new Schema(id: 'aws.protocoltests.shared#IntegerEnumMap$key', type: ShapeType::String_, memberName: 'key', memberIndex: 0), mapValue: new Schema(id: 'aws.protocoltests.shared#IntegerEnumMap$value', type: ShapeType::IntEnum, memberName: 'value', memberIndex: 1, targetClass: IntegerEnum::class))
+                new Schema(id: 'aws.protocoltests.ec2#XmlIntEnumsOutput$intEnumList', type: ShapeType::List_, memberName: 'intEnumList', memberIndex: 3, listMember: SchemasMembers::$shared['aws.protocoltests.shared#IntegerEnumList$member'] ??= new Schema(id: 'aws.protocoltests.shared#IntegerEnumList$member', type: ShapeType::IntEnum, memberName: 'member', memberIndex: 0, targetClass: IntegerEnum::class)),
+                new Schema(id: 'aws.protocoltests.ec2#XmlIntEnumsOutput$intEnumSet', type: ShapeType::List_, memberName: 'intEnumSet', memberIndex: 4, listMember: SchemasMembers::$shared['aws.protocoltests.shared#IntegerEnumSet$member'] ??= new Schema(id: 'aws.protocoltests.shared#IntegerEnumSet$member', type: ShapeType::IntEnum, memberName: 'member', memberIndex: 0, targetClass: IntegerEnum::class)),
+                new Schema(id: 'aws.protocoltests.ec2#XmlIntEnumsOutput$intEnumMap', type: ShapeType::Map, memberName: 'intEnumMap', memberIndex: 5, mapKey: SchemasMembers::$shared['aws.protocoltests.shared#IntegerEnumMap$key'] ??= new Schema(id: 'aws.protocoltests.shared#IntegerEnumMap$key', type: ShapeType::String_, memberName: 'key', memberIndex: 0), mapValue: SchemasMembers::$shared['aws.protocoltests.shared#IntegerEnumMap$value'] ??= new Schema(id: 'aws.protocoltests.shared#IntegerEnumMap$value', type: ShapeType::IntEnum, memberName: 'value', memberIndex: 1, targetClass: IntegerEnum::class))
             ],
             targetClass: XmlIntEnumsOutput::class
         );
@@ -573,20 +573,20 @@ final class Schemas
             id: 'aws.protocoltests.ec2#XmlListsOutput',
             type: ShapeType::Structure,
             members: [
-                new Schema(id: 'aws.protocoltests.ec2#XmlListsOutput$stringList', type: ShapeType::List_, memberName: 'stringList', memberIndex: 0, listMember: new Schema(id: 'aws.protocoltests.shared#StringList$member', type: ShapeType::String_, memberName: 'member', memberIndex: 0)),
-                new Schema(id: 'aws.protocoltests.ec2#XmlListsOutput$stringSet', type: ShapeType::List_, memberName: 'stringSet', memberIndex: 1, listMember: new Schema(id: 'aws.protocoltests.shared#StringSet$member', type: ShapeType::String_, memberName: 'member', memberIndex: 0)),
-                new Schema(id: 'aws.protocoltests.ec2#XmlListsOutput$integerList', type: ShapeType::List_, memberName: 'integerList', memberIndex: 2, listMember: new Schema(id: 'aws.protocoltests.shared#IntegerList$member', type: ShapeType::Integer, memberName: 'member', memberIndex: 0)),
-                new Schema(id: 'aws.protocoltests.ec2#XmlListsOutput$booleanList', type: ShapeType::List_, memberName: 'booleanList', memberIndex: 3, listMember: new Schema(id: 'aws.protocoltests.shared#BooleanList$member', type: ShapeType::Boolean, memberName: 'member', memberIndex: 0)),
-                new Schema(id: 'aws.protocoltests.ec2#XmlListsOutput$timestampList', type: ShapeType::List_, memberName: 'timestampList', memberIndex: 4, listMember: new Schema(id: 'aws.protocoltests.shared#TimestampList$member', type: ShapeType::Timestamp, memberName: 'member', memberIndex: 0)),
-                new Schema(id: 'aws.protocoltests.ec2#XmlListsOutput$enumList', type: ShapeType::List_, memberName: 'enumList', memberIndex: 5, listMember: new Schema(id: 'aws.protocoltests.shared#FooEnumList$member', type: ShapeType::Enum, memberName: 'member', memberIndex: 0, targetClass: FooEnum::class)),
-                new Schema(id: 'aws.protocoltests.ec2#XmlListsOutput$intEnumList', type: ShapeType::List_, memberName: 'intEnumList', memberIndex: 6, listMember: new Schema(id: 'aws.protocoltests.shared#IntegerEnumList$member', type: ShapeType::IntEnum, memberName: 'member', memberIndex: 0, targetClass: IntegerEnum::class)),
-                new Schema(id: 'aws.protocoltests.ec2#XmlListsOutput$nestedStringList', type: ShapeType::List_, memberName: 'nestedStringList', memberIndex: 7, listMember: new Schema(id: 'aws.protocoltests.shared#NestedStringList$member', type: ShapeType::List_, memberName: 'member', memberIndex: 0, listMember: new Schema(id: 'aws.protocoltests.shared#StringList$member', type: ShapeType::String_, memberName: 'member', memberIndex: 0))),
-                new Schema(id: 'aws.protocoltests.ec2#XmlListsOutput$renamedListMembers', type: ShapeType::List_, memberName: 'renamedListMembers', memberIndex: 8, listMember: new Schema(id: 'aws.protocoltests.ec2#RenamedListMembers$member', type: ShapeType::String_, memberName: 'member', memberIndex: 0, traits: [0 => 'item']), traits: [0 => 'renamed']),
-                new Schema(id: 'aws.protocoltests.ec2#XmlListsOutput$flattenedList', type: ShapeType::List_, memberName: 'flattenedList', memberIndex: 9, listMember: new Schema(id: 'aws.protocoltests.ec2#RenamedListMembers$member', type: ShapeType::String_, memberName: 'member', memberIndex: 0, traits: [0 => 'item']), traits: [3 => true]),
-                new Schema(id: 'aws.protocoltests.ec2#XmlListsOutput$flattenedList2', type: ShapeType::List_, memberName: 'flattenedList2', memberIndex: 10, listMember: new Schema(id: 'aws.protocoltests.ec2#RenamedListMembers$member', type: ShapeType::String_, memberName: 'member', memberIndex: 0, traits: [0 => 'item']), traits: [0 => 'customName', 3 => true]),
-                new Schema(id: 'aws.protocoltests.ec2#XmlListsOutput$flattenedListWithMemberNamespace', type: ShapeType::List_, memberName: 'flattenedListWithMemberNamespace', memberIndex: 11, listMember: new Schema(id: 'aws.protocoltests.ec2#ListWithMemberNamespace$member', type: ShapeType::String_, memberName: 'member', memberIndex: 0, traits: [1 => ['uri' => 'https://xml-member.example.com']]), traits: [1 => ['uri' => 'https://xml-list.example.com'], 3 => true]),
-                new Schema(id: 'aws.protocoltests.ec2#XmlListsOutput$flattenedListWithNamespace', type: ShapeType::List_, memberName: 'flattenedListWithNamespace', memberIndex: 12, listMember: new Schema(id: 'aws.protocoltests.ec2#ListWithNamespace$member', type: ShapeType::String_, memberName: 'member', memberIndex: 0), traits: [1 => ['uri' => 'https://xml-list.example.com'], 3 => true]),
-                new Schema(id: 'aws.protocoltests.ec2#XmlListsOutput$structureList', type: ShapeType::List_, memberName: 'structureList', memberIndex: 13, listMember: new Schema(id: 'aws.protocoltests.ec2#StructureList$member', type: ShapeType::Structure, memberName: 'member', memberIndex: 0, members: [new Schema(id: 'aws.protocoltests.ec2#StructureListMember$a', type: ShapeType::String_, memberName: 'a', memberIndex: 0, traits: [0 => 'value']), new Schema(id: 'aws.protocoltests.ec2#StructureListMember$b', type: ShapeType::String_, memberName: 'b', memberIndex: 1, traits: [0 => 'other'])], traits: [0 => 'item'], targetClass: StructureListMember::class), traits: [0 => 'myStructureList'])
+                new Schema(id: 'aws.protocoltests.ec2#XmlListsOutput$stringList', type: ShapeType::List_, memberName: 'stringList', memberIndex: 0, listMember: SchemasMembers::$shared['aws.protocoltests.shared#StringList$member'] ??= new Schema(id: 'aws.protocoltests.shared#StringList$member', type: ShapeType::String_, memberName: 'member', memberIndex: 0)),
+                new Schema(id: 'aws.protocoltests.ec2#XmlListsOutput$stringSet', type: ShapeType::List_, memberName: 'stringSet', memberIndex: 1, listMember: SchemasMembers::$shared['aws.protocoltests.shared#StringSet$member'] ??= new Schema(id: 'aws.protocoltests.shared#StringSet$member', type: ShapeType::String_, memberName: 'member', memberIndex: 0)),
+                new Schema(id: 'aws.protocoltests.ec2#XmlListsOutput$integerList', type: ShapeType::List_, memberName: 'integerList', memberIndex: 2, listMember: SchemasMembers::$shared['aws.protocoltests.shared#IntegerList$member'] ??= new Schema(id: 'aws.protocoltests.shared#IntegerList$member', type: ShapeType::Integer, memberName: 'member', memberIndex: 0)),
+                new Schema(id: 'aws.protocoltests.ec2#XmlListsOutput$booleanList', type: ShapeType::List_, memberName: 'booleanList', memberIndex: 3, listMember: SchemasMembers::$shared['aws.protocoltests.shared#BooleanList$member'] ??= new Schema(id: 'aws.protocoltests.shared#BooleanList$member', type: ShapeType::Boolean, memberName: 'member', memberIndex: 0)),
+                new Schema(id: 'aws.protocoltests.ec2#XmlListsOutput$timestampList', type: ShapeType::List_, memberName: 'timestampList', memberIndex: 4, listMember: SchemasMembers::$shared['aws.protocoltests.shared#TimestampList$member'] ??= new Schema(id: 'aws.protocoltests.shared#TimestampList$member', type: ShapeType::Timestamp, memberName: 'member', memberIndex: 0)),
+                new Schema(id: 'aws.protocoltests.ec2#XmlListsOutput$enumList', type: ShapeType::List_, memberName: 'enumList', memberIndex: 5, listMember: SchemasMembers::$shared['aws.protocoltests.shared#FooEnumList$member'] ??= new Schema(id: 'aws.protocoltests.shared#FooEnumList$member', type: ShapeType::Enum, memberName: 'member', memberIndex: 0, targetClass: FooEnum::class)),
+                new Schema(id: 'aws.protocoltests.ec2#XmlListsOutput$intEnumList', type: ShapeType::List_, memberName: 'intEnumList', memberIndex: 6, listMember: SchemasMembers::$shared['aws.protocoltests.shared#IntegerEnumList$member'] ??= new Schema(id: 'aws.protocoltests.shared#IntegerEnumList$member', type: ShapeType::IntEnum, memberName: 'member', memberIndex: 0, targetClass: IntegerEnum::class)),
+                new Schema(id: 'aws.protocoltests.ec2#XmlListsOutput$nestedStringList', type: ShapeType::List_, memberName: 'nestedStringList', memberIndex: 7, listMember: SchemasMembers::$shared['aws.protocoltests.shared#NestedStringList$member'] ??= new Schema(id: 'aws.protocoltests.shared#NestedStringList$member', type: ShapeType::List_, memberName: 'member', memberIndex: 0, listMember: SchemasMembers::$shared['aws.protocoltests.shared#StringList$member'] ??= new Schema(id: 'aws.protocoltests.shared#StringList$member', type: ShapeType::String_, memberName: 'member', memberIndex: 0))),
+                new Schema(id: 'aws.protocoltests.ec2#XmlListsOutput$renamedListMembers', type: ShapeType::List_, memberName: 'renamedListMembers', memberIndex: 8, listMember: SchemasMembers::$shared['aws.protocoltests.ec2#RenamedListMembers$member'] ??= new Schema(id: 'aws.protocoltests.ec2#RenamedListMembers$member', type: ShapeType::String_, memberName: 'member', memberIndex: 0, traits: [0 => 'item']), traits: [0 => 'renamed']),
+                new Schema(id: 'aws.protocoltests.ec2#XmlListsOutput$flattenedList', type: ShapeType::List_, memberName: 'flattenedList', memberIndex: 9, listMember: SchemasMembers::$shared['aws.protocoltests.ec2#RenamedListMembers$member'] ??= new Schema(id: 'aws.protocoltests.ec2#RenamedListMembers$member', type: ShapeType::String_, memberName: 'member', memberIndex: 0, traits: [0 => 'item']), traits: [3 => true]),
+                new Schema(id: 'aws.protocoltests.ec2#XmlListsOutput$flattenedList2', type: ShapeType::List_, memberName: 'flattenedList2', memberIndex: 10, listMember: SchemasMembers::$shared['aws.protocoltests.ec2#RenamedListMembers$member'] ??= new Schema(id: 'aws.protocoltests.ec2#RenamedListMembers$member', type: ShapeType::String_, memberName: 'member', memberIndex: 0, traits: [0 => 'item']), traits: [0 => 'customName', 3 => true]),
+                new Schema(id: 'aws.protocoltests.ec2#XmlListsOutput$flattenedListWithMemberNamespace', type: ShapeType::List_, memberName: 'flattenedListWithMemberNamespace', memberIndex: 11, listMember: SchemasMembers::$shared['aws.protocoltests.ec2#ListWithMemberNamespace$member'] ??= new Schema(id: 'aws.protocoltests.ec2#ListWithMemberNamespace$member', type: ShapeType::String_, memberName: 'member', memberIndex: 0, traits: [1 => ['uri' => 'https://xml-member.example.com']]), traits: [1 => ['uri' => 'https://xml-list.example.com'], 3 => true]),
+                new Schema(id: 'aws.protocoltests.ec2#XmlListsOutput$flattenedListWithNamespace', type: ShapeType::List_, memberName: 'flattenedListWithNamespace', memberIndex: 12, listMember: SchemasMembers::$shared['aws.protocoltests.ec2#ListWithNamespace$member'] ??= new Schema(id: 'aws.protocoltests.ec2#ListWithNamespace$member', type: ShapeType::String_, memberName: 'member', memberIndex: 0), traits: [1 => ['uri' => 'https://xml-list.example.com'], 3 => true]),
+                new Schema(id: 'aws.protocoltests.ec2#XmlListsOutput$structureList', type: ShapeType::List_, memberName: 'structureList', memberIndex: 13, listMember: SchemasMembers::$shared['aws.protocoltests.ec2#StructureList$member'] ??= new Schema(id: 'aws.protocoltests.ec2#StructureList$member', type: ShapeType::Structure, memberName: 'member', memberIndex: 0, members: self::structureListMember()->getMembers(), traits: [0 => 'item'], targetClass: StructureListMember::class), traits: [0 => 'myStructureList'])
             ],
             targetClass: XmlListsOutput::class
         );
@@ -603,7 +603,7 @@ final class Schemas
             type: ShapeType::Structure,
             members: [
                 new Schema(id: 'aws.protocoltests.ec2#XmlNamespaceNested$foo', type: ShapeType::String_, memberName: 'foo', memberIndex: 0, traits: [1 => ['uri' => 'http://baz.com', 'prefix' => 'baz']]),
-                new Schema(id: 'aws.protocoltests.ec2#XmlNamespaceNested$values', type: ShapeType::List_, memberName: 'values', memberIndex: 1, listMember: new Schema(id: 'aws.protocoltests.ec2#XmlNamespacedList$member', type: ShapeType::String_, memberName: 'member', memberIndex: 0, traits: [1 => ['uri' => 'http://bux.com']]), traits: [1 => ['uri' => 'http://qux.com']])
+                new Schema(id: 'aws.protocoltests.ec2#XmlNamespaceNested$values', type: ShapeType::List_, memberName: 'values', memberIndex: 1, listMember: SchemasMembers::$shared['aws.protocoltests.ec2#XmlNamespacedList$member'] ??= new Schema(id: 'aws.protocoltests.ec2#XmlNamespacedList$member', type: ShapeType::String_, memberName: 'member', memberIndex: 0, traits: [1 => ['uri' => 'http://bux.com']]), traits: [1 => ['uri' => 'http://qux.com']])
             ], traits: [1 => ['uri' => 'http://foo.com']],
             targetClass: XmlNamespaceNested::class
         );
@@ -619,7 +619,7 @@ final class Schemas
             id: 'aws.protocoltests.ec2#XmlNamespacesOutput',
             type: ShapeType::Structure,
             members: [
-                new Schema(id: 'aws.protocoltests.ec2#XmlNamespacesOutput$nested', type: ShapeType::Structure, memberName: 'nested', memberIndex: 0, members: [new Schema(id: 'aws.protocoltests.ec2#XmlNamespaceNested$foo', type: ShapeType::String_, memberName: 'foo', memberIndex: 0, traits: [1 => ['uri' => 'http://baz.com', 'prefix' => 'baz']]), new Schema(id: 'aws.protocoltests.ec2#XmlNamespaceNested$values', type: ShapeType::List_, memberName: 'values', memberIndex: 1, listMember: new Schema(id: 'aws.protocoltests.ec2#XmlNamespacedList$member', type: ShapeType::String_, memberName: 'member', memberIndex: 0, traits: [1 => ['uri' => 'http://bux.com']]), traits: [1 => ['uri' => 'http://qux.com']])], traits: [1 => ['uri' => 'http://foo.com']], targetClass: XmlNamespaceNested::class)
+                new Schema(id: 'aws.protocoltests.ec2#XmlNamespacesOutput$nested', type: ShapeType::Structure, memberName: 'nested', memberIndex: 0, members: self::xmlNamespaceNested()->getMembers(), traits: [1 => ['uri' => 'http://foo.com']], targetClass: XmlNamespaceNested::class)
             ], traits: [1 => ['uri' => 'http://foo.com']],
             targetClass: XmlNamespacesOutput::class
         );
@@ -689,4 +689,15 @@ final class Schemas
         );
     }
 
+}
+
+/**
+ * Shared list and map member schemas for this service, keyed by member ID.
+ *
+ * Held here rather than on Schemas so no generated shape property can collide with it.
+ */
+final class SchemasMembers
+{
+    /** @var array<string, Schema> */
+    public static array $shared = [];
 }
