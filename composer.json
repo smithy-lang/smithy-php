@@ -4,6 +4,12 @@
     "type": "library",
     "license": "Apache-2.0",
     "require": {
+        "ext-ctype": "*",
+        "ext-filter": "*",
+        "ext-libxml": "*",
+        "ext-simplexml": "*",
+        "ext-tokenizer": "*",
+        "ext-xmlwriter": "*",
         "mtdowling/jmespath.php": "^2.9.1",
         "php": ">=8.2",
         "psr/http-client": "^1.0",
@@ -14,7 +20,17 @@
         "phpunit/phpunit": "^11.0",
         "phpstan/phpstan": "^2.3"
     },
+    "replace": {
+        "smithy/async": "self.version",
+        "smithy/client": "self.version",
+        "smithy/codec": "self.version",
+        "smithy/codegen": "self.version",
+        "smithy/core": "self.version",
+        "smithy/http": "self.version",
+        "smithy/protocol": "self.version"
+    },
     "suggest": {
+        "ext-curl": "Required by smithy/http's cURL transport.",
         "ext-zlib": "Enables gzip request compression."
     },
     "autoload": {
