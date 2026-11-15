@@ -5,7 +5,6 @@
     "license": "Apache-2.0",
     "require": {
         "ext-ctype": "*",
-        "ext-curl": "*",
         "ext-filter": "*",
         "ext-libxml": "*",
         "ext-simplexml": "*",
@@ -31,6 +30,7 @@
         "smithy/protocol": "self.version"
     },
     "suggest": {
+        "ext-curl": "Required by smithy/http's cURL transport.",
         "ext-zlib": "Enables gzip request compression."
     },
     "autoload": {
