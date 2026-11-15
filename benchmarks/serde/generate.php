@@ -64,6 +64,30 @@ $cases = [
     'rpcv2-json' => [
         'model' => __DIR__ . '/model/rpcv2-json.json',
         'namespace' => 'Smithy\\Benchmarks\\RpcV2Json'
+    ],
+    'aws-json-1-0' => [
+        'model' => __DIR__ . '/model/aws-json-1-0.json',
+        'namespace' => 'Smithy\\Benchmarks\\AwsJson10'
+    ],
+    'aws-json-1-1' => [
+        'model' => __DIR__ . '/model/aws-json-1-1.json',
+        'namespace' => 'Smithy\\Benchmarks\\AwsJson11'
+    ],
+    'aws-query' => [
+        'model' => __DIR__ . '/model/aws-query.json',
+        'namespace' => 'Smithy\\Benchmarks\\AwsQuery'
+    ],
+    'ec2-query' => [
+        'model' => __DIR__ . '/model/ec2-query.json',
+        'namespace' => 'Smithy\\Benchmarks\\Ec2Query'
+    ],
+    'rest-json' => [
+        'model' => __DIR__ . '/model/rest-json.json',
+        'namespace' => 'Smithy\\Benchmarks\\RestJson'
+    ],
+    'rest-xml' => [
+        'model' => __DIR__ . '/model/rest-xml.json',
+        'namespace' => 'Smithy\\Benchmarks\\RestXml'
     ]
 ];
 

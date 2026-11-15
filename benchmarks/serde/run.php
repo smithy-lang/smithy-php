@@ -12,6 +12,7 @@ use Smithy\Benchmarks\Serde\Support\BenchmarkCaseRepository;
 use Smithy\Benchmarks\Serde\Support\BenchmarkEnvironment;
 use Smithy\Benchmarks\Serde\Support\BenchmarkRunner;
 use Smithy\Benchmarks\Serde\Support\BenchmarkValueComparator;
+use Smithy\Benchmarks\Serde\Support\BenchmarkWireComparator;
 use Smithy\Benchmarks\Serde\Support\GeneratedCodeLoader;
 use Smithy\Benchmarks\Serde\Support\ResultWriter;
 use Smithy\Codec\AbstractCodec;
@@ -30,6 +31,14 @@ use Smithy\Http\Message\{
     HttpTransportRequest,
     HttpTransportResponse,
     Response
+};
+use Smithy\Protocol\Aws\{
+    AwsJson1_0Protocol,
+    AwsJson1_1Protocol,
+    AwsQueryProtocol,
+    Ec2QueryProtocol,
+    RestJsonProtocol,
+    RestXmlProtocol
 };
 use Smithy\Protocol\ProtocolInterface;
 use Smithy\Protocol\RpcV2\{
@@ -57,7 +66,9 @@ if (isset($options['help'])) {
 Usage: php benchmarks/serde/run.php [options]
 
 Options:
-  --protocol=VALUE       all, rpcv2-cbor, or rpcv2-json (default: all)
+  --protocol=VALUE       all, rpcv2-cbor, rpcv2-json, aws-json-1-0,
+                         aws-json-1-1, aws-query, ec2-query, rest-json,
+                         or rest-xml (default: all)
   --filter=TEXT          Run case IDs containing TEXT
   --direction=VALUE      all, serialize, or deserialize (default: all)
   --warmup=N             Warmup calls per case (default: 500)
@@ -81,6 +92,7 @@ $jsonCodec = new JsonCodec(new JsonCodecSettings(
     honorTimestampFormatTrait: false,
     useStringForArbitraryPrecision: true
 ));
+$serviceVersion = '1999-12-31';
 $protocols = [
     'rpcv2-cbor' => [
         'label' => 'RPC v2 CBOR',
@@ -89,11 +101,11 @@ $protocols = [
         'directory' => $root
             . '/build/benchmarks/serde/rpcv2-cbor/src',
         'protocolId' => RpcV2CborProtocol::ID,
-        'casePrefix' => 'rpcv2Cbor',
         'header' => 'rpc-v2-cbor',
         'contentType' => 'application/cbor',
         'emptyBody' => "\xa0",
         'base64Body' => true,
+        'validation' => 'roundTrip',
         'protocol' => new RpcV2CborProtocol(),
         'codec' => new CborCodec()
     ],
@@ -104,14 +116,62 @@ $protocols = [
         'directory' => $root
             . '/build/benchmarks/serde/rpcv2-json/src',
         'protocolId' => RpcV2JsonProtocol::ID,
-        'casePrefix' => 'rpcv2Json',
         'header' => 'rpc-v2-json',
         'contentType' => 'application/json',
         'emptyBody' => '{}',
         'base64Body' => false,
+        'validation' => 'roundTrip',
         'protocol' => new RpcV2JsonProtocol(),
         'codec' => $jsonCodec
-    ]
+    ],
+    'aws-json-1-0' => awsConfig(
+        $root,
+        'AWS JSON 1.0',
+        'aws-json-1-0',
+        'AwsJson10',
+        AwsJson1_0Protocol::ID,
+        new AwsJson1_0Protocol()
+    ),
+    'aws-json-1-1' => awsConfig(
+        $root,
+        'AWS JSON 1.1',
+        'aws-json-1-1',
+        'AwsJson11',
+        AwsJson1_1Protocol::ID,
+        new AwsJson1_1Protocol()
+    ),
+    'aws-query' => awsConfig(
+        $root,
+        'AWS Query',
+        'aws-query',
+        'AwsQuery',
+        AwsQueryProtocol::ID,
+        new AwsQueryProtocol($serviceVersion)
+    ),
+    'ec2-query' => awsConfig(
+        $root,
+        'EC2 Query',
+        'ec2-query',
+        'Ec2Query',
+        Ec2QueryProtocol::ID,
+        new Ec2QueryProtocol($serviceVersion)
+    ),
+    'rest-json' => awsConfig(
+        $root,
+        'REST JSON',
+        'rest-json',
+        'RestJson',
+        RestJsonProtocol::ID,
+        new RestJsonProtocol()
+    ),
+    'rest-xml' => awsConfig(
+        $root,
+        'REST XML',
+        'rest-xml',
+        'RestXml',
+        RestXmlProtocol::ID,
+        new RestXmlProtocol()
+    )
 ];
 
 $protocolSelection = (string) ($options['protocol'] ?? 'all');
@@ -120,7 +180,8 @@ if ($protocolSelection !== 'all'
 ) {
     \fwrite(
         STDERR,
-        "--protocol must be all, rpcv2-cbor, or rpcv2-json.\n"
+        '--protocol must be all or one of: '
+            . \implode(', ', \array_keys($protocols)) . ".\n"
     );
 
     exit(2);
@@ -165,7 +226,7 @@ $runner = new BenchmarkRunner(
 $results = [];
 $caseCount = 0;
 
-\fwrite(STDOUT, "Smithy PHP RPC v2 serde benchmark\n");
+\fwrite(STDOUT, "Smithy PHP serde benchmark\n");
 \fwrite(STDOUT, "PHP " . PHP_VERSION . ' on ' . \php_uname() . "\n");
 
 foreach ($protocols as $name => $config) {
@@ -184,8 +245,7 @@ foreach ($protocols as $name => $config) {
 
     $repository = new BenchmarkCaseRepository(
         $config['model'],
-        $config['protocolId'],
-        $config['casePrefix']
+        $config['protocolId']
     );
     $loader = new GeneratedCodeLoader(
         $config['namespace'],
@@ -214,14 +274,23 @@ foreach ($protocols as $name => $config) {
                 );
             }
 
-            validateSerialization(
-                $config['protocol'],
-                $config['codec'],
-                $config['header'],
-                $operation,
-                $input,
-                $case
-            );
+            if ($config['validation'] === 'wire') {
+                validateWireSerialization(
+                    $config['protocol'],
+                    $operation,
+                    $input,
+                    $case
+                );
+            } else {
+                validateSerialization(
+                    $config['protocol'],
+                    $config['codec'],
+                    $config['header'],
+                    $operation,
+                    $input,
+                    $case
+                );
+            }
             $caseCount++;
             if ($validateOnly) {
                 printValidated('serialize', $case['id']);
@@ -251,8 +320,12 @@ foreach ($protocols as $name => $config) {
                 $config['emptyBody']
             );
             $headers = $case['headers'] ?? [];
-            $headers['Smithy-Protocol'] = $config['header'];
-            $headers['Content-Type'] = $config['contentType'];
+            if ($config['header'] !== null) {
+                $headers['Smithy-Protocol'] = $config['header'];
+            }
+            if ($config['contentType'] !== null) {
+                $headers['Content-Type'] = $config['contentType'];
+            }
             $response = new HttpTransportResponse(
                 new Response(
                     status: (int) ($case['code'] ?? 200),
@@ -330,6 +403,37 @@ if ($updateReadme) {
 }
 
 /**
+ * Build the configuration for an AWS protocol benchmark. The fixtures carry
+ * their own headers, so no protocol header or content type is forced.
+ *
+ * @return array<string, mixed>
+ */
+function awsConfig(
+    string $root,
+    string $label,
+    string $name,
+    string $namespace,
+    string $protocolId,
+    ProtocolInterface $protocol
+): array
+{
+    return [
+        'label' => $label,
+        'model' => "{$root}/benchmarks/serde/model/{$name}.json",
+        'namespace' => "Smithy\\Benchmarks\\{$namespace}",
+        'directory' => "{$root}/build/benchmarks/serde/{$name}/src",
+        'protocolId' => $protocolId,
+        'header' => null,
+        'contentType' => null,
+        'emptyBody' => '',
+        'base64Body' => false,
+        'validation' => 'wire',
+        'protocol' => $protocol,
+        'codec' => null
+    ];
+}
+
+/**
  * @param array<string, mixed> $case
  */
 function resolveOperation(
@@ -385,6 +489,57 @@ function validateSerialization(
     )) {
         throw new \RuntimeException(
             "Serialized request did not round-trip for {$case['id']}."
+        );
+    }
+}
+
+/**
+ * Check the HTTP request against the fixture. HTTP-binding and AWS RPC
+ * protocols build the method, path, query, headers, and body differently, so
+ * the body is compared with the fixture instead of decoded into the input.
+ *
+ * @param array<string, mixed> $case
+ */
+function validateWireSerialization(
+    ProtocolInterface $protocol,
+    OperationInterface $operation,
+    SerializableStructInterface $input,
+    array $case
+): void
+{
+    $httpRequest = HttpTransportRequest::expect(
+        $protocol->serializeRequest($operation, $input)
+    )->request;
+    $actualQuery = \array_filter(
+        \explode('&', $httpRequest->getUri()->getQuery())
+    );
+    $expectedQuery = $case['queryParams'] ?? [];
+    \sort($actualQuery);
+    \sort($expectedQuery);
+    if ($httpRequest->getMethod() !== $case['method']
+        || $httpRequest->getUri()->getPath() !== $case['uri']
+        || $actualQuery !== $expectedQuery
+    ) {
+        throw new \RuntimeException(
+            "Invalid serialized request metadata for {$case['id']}."
+        );
+    }
+    foreach ($case['headers'] ?? [] as $name => $value) {
+        if ($httpRequest->getHeaderLine($name) !== $value) {
+            throw new \RuntimeException(
+                "Invalid serialized {$name} header for {$case['id']}."
+            );
+        }
+    }
+
+    $httpRequest->getBody()->rewind();
+    if (!BenchmarkWireComparator::equivalent(
+        $case['bodyMediaType'] ?? '',
+        $case['body'] ?? '',
+        (string) $httpRequest->getBody()
+    )) {
+        throw new \RuntimeException(
+            "Serialized request body mismatch for {$case['id']}."
         );
     }
 }

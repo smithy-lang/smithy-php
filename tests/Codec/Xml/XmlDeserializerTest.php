@@ -11,7 +11,11 @@ namespace Smithy\Tests\Codec\Xml;
 
 use PHPUnit\Framework\TestCase;
 use Smithy\Core\Serde\Schema;
-use Smithy\Core\Shape\ShapeType;
+use Smithy\Core\Shape\{
+    BigDecimal,
+    BigInteger,
+    ShapeType
+};
 use Smithy\Core\Shape\Document\{
     StructDocument,
     UnionDocument
@@ -142,6 +146,44 @@ final class XmlDeserializerTest extends TestCase
         self::assertInstanceOf(XmlSampleUnionFixture::class, $members[0]);
         self::assertSame('mystery', $members[0]->tag());
         self::assertSame('zzz', $members[0]->value());
+    }
+
+    public function testDeserializesArbitraryPrecisionMembers(): void
+    {
+        $schema = new Schema(
+            id: 'smithy.test#Numbers',
+            type: ShapeType::Structure,
+            members: [
+                new Schema(
+                    id: 'smithy.test#Numbers$big',
+                    type: ShapeType::BigInteger,
+                    memberName: 'big',
+                    memberIndex: 0
+                ),
+                new Schema(
+                    id: 'smithy.test#Numbers$precise',
+                    type: ShapeType::BigDecimal,
+                    memberName: 'precise',
+                    memberIndex: 1
+                )
+            ]
+        );
+        $deserializer = $this->createDeserializer(
+            '<Numbers><big>123456789012345678901</big>'
+            . '<precise>1234567890.123456789</precise></Numbers>'
+        );
+        $members = [null, null];
+
+        $deserializer->deserialize($schema, $members);
+
+        self::assertEquals(
+            new BigInteger('123456789012345678901'),
+            $members[0]
+        );
+        self::assertEquals(
+            new BigDecimal('1234567890.123456789'),
+            $members[1]
+        );
     }
 
     public function testDeserializerCreatesDocumentsForRuntimeShapes(): void

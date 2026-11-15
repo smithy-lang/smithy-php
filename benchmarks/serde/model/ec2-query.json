@@ -1,0 +1,883 @@
+{
+    "smithy": "2.0",
+    "shapes": {
+        "com.amazonaws.sdk.benchmark#Ec2QueryDataPlane": {
+            "type": "service",
+            "version": "1999-12-31",
+            "operations": [
+                {
+                    "target": "com.amazonaws.sdk.benchmark#WideTypes"
+                }
+            ],
+            "resources": [],
+            "traits": {
+                "aws.api#service": {
+                    "sdkId": "Ec2QueryDataPlane"
+                },
+                "aws.auth#sigv4": {
+                    "name": "ec2querydataplane"
+                },
+                "smithy.api#title": "Smithy EC2 Query Data Plane",
+                "aws.protocols#ec2Query": {}
+            }
+        },
+        "com.amazonaws.sdk.benchmark#WideTypes": {
+            "type": "operation",
+            "input": {
+                "target": "com.amazonaws.sdk.benchmark#WideTypesInput"
+            },
+            "output": {
+                "target": "com.amazonaws.sdk.benchmark#WideTypesOutput"
+            },
+            "traits": {
+                "smithy.api#documentation": "A wide, heterogeneous structure used to isolate schema and type dispatch\noverhead in serialization and deserialization.\n",
+                "smithy.test#httpRequestTests": [
+                    {
+                        "id": "ec2Query_WideTypesRequest_S",
+                        "protocol": "aws.protocols#ec2Query",
+                        "method": "POST",
+                        "uri": "/",
+                        "headers": {
+                            "Content-Type": "application/x-www-form-urlencoded"
+                        },
+                        "body": "Action=WideTypes&Version=1999-12-31&Label=alpha&Query=query-alpha&RequestHeader=header-alpha&StringA=alpha&IntegerA=101&LongA=10000000001&BooleanA=true&DoubleA=101.125&FloatA=101.25&ByteA=11&ShortA=1001&BigIntegerA=123456789012345678901&BigDecimalA=1234567890.123456789&BlobA=YmxvYi1hbHBoYQ%3D%3D&TimestampA=2026-08-15T01%3A02%3A03Z&ModeA=ALPHA&StringsA.1=alpha-1&StringsA.2=alpha-2&StringsA.3=alpha-3&NestedA.Label=nested-alpha&NestedA.Count=11&NestedA.Active=true&NestedA.Ratio=1.125&ChoiceA.Text=choice-alpha",
+                        "bodyMediaType": "application/x-www-form-urlencoded",
+                        "params": {
+                            "label": "alpha",
+                            "query": "query-alpha",
+                            "requestHeader": "header-alpha",
+                            "stringA": "alpha",
+                            "integerA": 101,
+                            "longA": 10000000001,
+                            "booleanA": true,
+                            "doubleA": 101.125,
+                            "floatA": 101.25,
+                            "byteA": 11,
+                            "shortA": 1001,
+                            "bigIntegerA": 123456789012345678901,
+                            "bigDecimalA": 1234567890.123456789,
+                            "blobA": "blob-alpha",
+                            "timestampA": 1786755723,
+                            "modeA": "ALPHA",
+                            "stringsA": [
+                                "alpha-1",
+                                "alpha-2",
+                                "alpha-3"
+                            ],
+                            "nestedA": {
+                                "label": "nested-alpha",
+                                "count": 11,
+                                "active": true,
+                                "ratio": 1.125
+                            },
+                            "choiceA": {
+                                "text": "choice-alpha"
+                            }
+                        },
+                        "tags": [
+                            "serde-benchmark"
+                        ]
+                    },
+                    {
+                        "id": "ec2Query_WideTypesRequest_M",
+                        "protocol": "aws.protocols#ec2Query",
+                        "method": "POST",
+                        "uri": "/",
+                        "headers": {
+                            "Content-Type": "application/x-www-form-urlencoded"
+                        },
+                        "body": "Action=WideTypes&Version=1999-12-31&Label=alpha&Query=query-alpha&RequestHeader=header-alpha&StringA=alpha&IntegerA=101&LongA=10000000001&BooleanA=true&DoubleA=101.125&FloatA=101.25&ByteA=11&ShortA=1001&BigIntegerA=123456789012345678901&BigDecimalA=1234567890.123456789&BlobA=YmxvYi1hbHBoYQ%3D%3D&TimestampA=2026-08-15T01%3A02%3A03Z&ModeA=ALPHA&StringsA.1=alpha-1&StringsA.2=alpha-2&StringsA.3=alpha-3&NestedA.Label=nested-alpha&NestedA.Count=11&NestedA.Active=true&NestedA.Ratio=1.125&ChoiceA.Text=choice-alpha&StringB=bravo&IntegerB=202&LongB=20000000002&BooleanB=false&DoubleB=202.125&FloatB=202.25&ByteB=22&ShortB=2002&BigIntegerB=223456789012345678902&BigDecimalB=2234567890.223456789&BlobB=YmxvYi1icmF2bw%3D%3D&TimestampB=2026-08-15T02%3A03%3A04Z&ModeB=BRAVO&StringsB.1=bravo-1&StringsB.2=bravo-2&StringsB.3=bravo-3&NestedB.Label=nested-bravo&NestedB.Count=22&NestedB.Active=false&NestedB.Ratio=2.125&ChoiceB.Number=202",
+                        "bodyMediaType": "application/x-www-form-urlencoded",
+                        "params": {
+                            "label": "alpha",
+                            "query": "query-alpha",
+                            "requestHeader": "header-alpha",
+                            "stringA": "alpha",
+                            "integerA": 101,
+                            "longA": 10000000001,
+                            "booleanA": true,
+                            "doubleA": 101.125,
+                            "floatA": 101.25,
+                            "byteA": 11,
+                            "shortA": 1001,
+                            "bigIntegerA": 123456789012345678901,
+                            "bigDecimalA": 1234567890.123456789,
+                            "blobA": "blob-alpha",
+                            "timestampA": 1786755723,
+                            "modeA": "ALPHA",
+                            "stringsA": [
+                                "alpha-1",
+                                "alpha-2",
+                                "alpha-3"
+                            ],
+                            "nestedA": {
+                                "label": "nested-alpha",
+                                "count": 11,
+                                "active": true,
+                                "ratio": 1.125
+                            },
+                            "choiceA": {
+                                "text": "choice-alpha"
+                            },
+                            "stringB": "bravo",
+                            "integerB": 202,
+                            "longB": 20000000002,
+                            "booleanB": false,
+                            "doubleB": 202.125,
+                            "floatB": 202.25,
+                            "byteB": 22,
+                            "shortB": 2002,
+                            "bigIntegerB": 223456789012345678902,
+                            "bigDecimalB": 2234567890.223456789,
+                            "blobB": "blob-bravo",
+                            "timestampB": 1786759384,
+                            "modeB": "BRAVO",
+                            "stringsB": [
+                                "bravo-1",
+                                "bravo-2",
+                                "bravo-3"
+                            ],
+                            "nestedB": {
+                                "label": "nested-bravo",
+                                "count": 22,
+                                "active": false,
+                                "ratio": 2.125
+                            },
+                            "choiceB": {
+                                "number": 202
+                            }
+                        },
+                        "tags": [
+                            "serde-benchmark"
+                        ]
+                    },
+                    {
+                        "id": "ec2Query_WideTypesRequest_L",
+                        "protocol": "aws.protocols#ec2Query",
+                        "method": "POST",
+                        "uri": "/",
+                        "headers": {
+                            "Content-Type": "application/x-www-form-urlencoded"
+                        },
+                        "body": "Action=WideTypes&Version=1999-12-31&Label=alpha&Query=query-alpha&RequestHeader=header-alpha&StringA=alpha&IntegerA=101&LongA=10000000001&BooleanA=true&DoubleA=101.125&FloatA=101.25&ByteA=11&ShortA=1001&BigIntegerA=123456789012345678901&BigDecimalA=1234567890.123456789&BlobA=YmxvYi1hbHBoYQ%3D%3D&TimestampA=2026-08-15T01%3A02%3A03Z&ModeA=ALPHA&StringsA.1=alpha-1&StringsA.2=alpha-2&StringsA.3=alpha-3&NestedA.Label=nested-alpha&NestedA.Count=11&NestedA.Active=true&NestedA.Ratio=1.125&ChoiceA.Text=choice-alpha&StringB=bravo&IntegerB=202&LongB=20000000002&BooleanB=false&DoubleB=202.125&FloatB=202.25&ByteB=22&ShortB=2002&BigIntegerB=223456789012345678902&BigDecimalB=2234567890.223456789&BlobB=YmxvYi1icmF2bw%3D%3D&TimestampB=2026-08-15T02%3A03%3A04Z&ModeB=BRAVO&StringsB.1=bravo-1&StringsB.2=bravo-2&StringsB.3=bravo-3&NestedB.Label=nested-bravo&NestedB.Count=22&NestedB.Active=false&NestedB.Ratio=2.125&ChoiceB.Number=202&StringC=charlie&IntegerC=303&LongC=30000000003&BooleanC=true&DoubleC=303.125&FloatC=303.25&ByteC=33&ShortC=3003&BigIntegerC=323456789012345678903&BigDecimalC=3234567890.323456789&BlobC=YmxvYi1jaGFybGll&TimestampC=2026-08-15T03%3A04%3A05Z&ModeC=CHARLIE&StringsC.1=charlie-1&StringsC.2=charlie-2&StringsC.3=charlie-3&NestedC.Label=nested-charlie&NestedC.Count=33&NestedC.Active=true&NestedC.Ratio=3.125&ChoiceC.Nested.Label=choice-charlie&ChoiceC.Nested.Count=303&ChoiceC.Nested.Active=false&ChoiceC.Nested.Ratio=30.125&StringD=delta&IntegerD=404&LongD=40000000004&BooleanD=false&DoubleD=404.125&FloatD=404.25&ByteD=44&ShortD=4004&BigIntegerD=423456789012345678904&BigDecimalD=4234567890.423456789&BlobD=YmxvYi1kZWx0YQ%3D%3D&TimestampD=2026-08-15T04%3A05%3A06Z&ModeD=DELTA&StringsD.1=delta-1&StringsD.2=delta-2&StringsD.3=delta-3&NestedD.Label=nested-delta&NestedD.Count=44&NestedD.Active=false&NestedD.Ratio=4.125&ChoiceD.Text=choice-delta",
+                        "bodyMediaType": "application/x-www-form-urlencoded",
+                        "params": {
+                            "label": "alpha",
+                            "query": "query-alpha",
+                            "requestHeader": "header-alpha",
+                            "stringA": "alpha",
+                            "integerA": 101,
+                            "longA": 10000000001,
+                            "booleanA": true,
+                            "doubleA": 101.125,
+                            "floatA": 101.25,
+                            "byteA": 11,
+                            "shortA": 1001,
+                            "bigIntegerA": 123456789012345678901,
+                            "bigDecimalA": 1234567890.123456789,
+                            "blobA": "blob-alpha",
+                            "timestampA": 1786755723,
+                            "modeA": "ALPHA",
+                            "stringsA": [
+                                "alpha-1",
+                                "alpha-2",
+                                "alpha-3"
+                            ],
+                            "nestedA": {
+                                "label": "nested-alpha",
+                                "count": 11,
+                                "active": true,
+                                "ratio": 1.125
+                            },
+                            "choiceA": {
+                                "text": "choice-alpha"
+                            },
+                            "stringB": "bravo",
+                            "integerB": 202,
+                            "longB": 20000000002,
+                            "booleanB": false,
+                            "doubleB": 202.125,
+                            "floatB": 202.25,
+                            "byteB": 22,
+                            "shortB": 2002,
+                            "bigIntegerB": 223456789012345678902,
+                            "bigDecimalB": 2234567890.223456789,
+                            "blobB": "blob-bravo",
+                            "timestampB": 1786759384,
+                            "modeB": "BRAVO",
+                            "stringsB": [
+                                "bravo-1",
+                                "bravo-2",
+                                "bravo-3"
+                            ],
+                            "nestedB": {
+                                "label": "nested-bravo",
+                                "count": 22,
+                                "active": false,
+                                "ratio": 2.125
+                            },
+                            "choiceB": {
+                                "number": 202
+                            },
+                            "stringC": "charlie",
+                            "integerC": 303,
+                            "longC": 30000000003,
+                            "booleanC": true,
+                            "doubleC": 303.125,
+                            "floatC": 303.25,
+                            "byteC": 33,
+                            "shortC": 3003,
+                            "bigIntegerC": 323456789012345678903,
+                            "bigDecimalC": 3234567890.323456789,
+                            "blobC": "blob-charlie",
+                            "timestampC": 1786763045,
+                            "modeC": "CHARLIE",
+                            "stringsC": [
+                                "charlie-1",
+                                "charlie-2",
+                                "charlie-3"
+                            ],
+                            "nestedC": {
+                                "label": "nested-charlie",
+                                "count": 33,
+                                "active": true,
+                                "ratio": 3.125
+                            },
+                            "choiceC": {
+                                "nested": {
+                                    "label": "choice-charlie",
+                                    "count": 303,
+                                    "active": false,
+                                    "ratio": 30.125
+                                }
+                            },
+                            "stringD": "delta",
+                            "integerD": 404,
+                            "longD": 40000000004,
+                            "booleanD": false,
+                            "doubleD": 404.125,
+                            "floatD": 404.25,
+                            "byteD": 44,
+                            "shortD": 4004,
+                            "bigIntegerD": 423456789012345678904,
+                            "bigDecimalD": 4234567890.423456789,
+                            "blobD": "blob-delta",
+                            "timestampD": 1786766706,
+                            "modeD": "DELTA",
+                            "stringsD": [
+                                "delta-1",
+                                "delta-2",
+                                "delta-3"
+                            ],
+                            "nestedD": {
+                                "label": "nested-delta",
+                                "count": 44,
+                                "active": false,
+                                "ratio": 4.125
+                            },
+                            "choiceD": {
+                                "text": "choice-delta"
+                            }
+                        },
+                        "tags": [
+                            "serde-benchmark"
+                        ]
+                    }
+                ],
+                "smithy.test#httpResponseTests": [
+                    {
+                        "id": "ec2Query_WideTypesResponse_S",
+                        "protocol": "aws.protocols#ec2Query",
+                        "headers": {
+                            "Content-Type": "text/xml"
+                        },
+                        "code": 200,
+                        "body": "<WideTypesResponse><responseHeader>header-alpha</responseHeader><stringA>alpha</stringA><integerA>101</integerA><longA>10000000001</longA><booleanA>true</booleanA><doubleA>101.125</doubleA><floatA>101.25</floatA><byteA>11</byteA><shortA>1001</shortA><bigIntegerA>123456789012345678901</bigIntegerA><bigDecimalA>1234567890.123456789</bigDecimalA><blobA>YmxvYi1hbHBoYQ==</blobA><timestampA>2026-08-15T01:02:03Z</timestampA><modeA>ALPHA</modeA><stringsA><member>alpha-1</member><member>alpha-2</member><member>alpha-3</member></stringsA><nestedA><label>nested-alpha</label><count>11</count><active>true</active><ratio>1.125</ratio></nestedA><choiceA><text>choice-alpha</text></choiceA><requestId>req-1</requestId></WideTypesResponse>",
+                        "bodyMediaType": "text/xml",
+                        "params": {
+                            "responseHeader": "header-alpha",
+                            "stringA": "alpha",
+                            "integerA": 101,
+                            "longA": 10000000001,
+                            "booleanA": true,
+                            "doubleA": 101.125,
+                            "floatA": 101.25,
+                            "byteA": 11,
+                            "shortA": 1001,
+                            "bigIntegerA": 123456789012345678901,
+                            "bigDecimalA": 1234567890.123456789,
+                            "blobA": "blob-alpha",
+                            "timestampA": 1786755723,
+                            "modeA": "ALPHA",
+                            "stringsA": [
+                                "alpha-1",
+                                "alpha-2",
+                                "alpha-3"
+                            ],
+                            "nestedA": {
+                                "label": "nested-alpha",
+                                "count": 11,
+                                "active": true,
+                                "ratio": 1.125
+                            },
+                            "choiceA": {
+                                "text": "choice-alpha"
+                            }
+                        },
+                        "tags": [
+                            "serde-benchmark"
+                        ]
+                    },
+                    {
+                        "id": "ec2Query_WideTypesResponse_M",
+                        "protocol": "aws.protocols#ec2Query",
+                        "headers": {
+                            "Content-Type": "text/xml"
+                        },
+                        "code": 200,
+                        "body": "<WideTypesResponse><responseHeader>header-alpha</responseHeader><stringA>alpha</stringA><integerA>101</integerA><longA>10000000001</longA><booleanA>true</booleanA><doubleA>101.125</doubleA><floatA>101.25</floatA><byteA>11</byteA><shortA>1001</shortA><bigIntegerA>123456789012345678901</bigIntegerA><bigDecimalA>1234567890.123456789</bigDecimalA><blobA>YmxvYi1hbHBoYQ==</blobA><timestampA>2026-08-15T01:02:03Z</timestampA><modeA>ALPHA</modeA><stringsA><member>alpha-1</member><member>alpha-2</member><member>alpha-3</member></stringsA><nestedA><label>nested-alpha</label><count>11</count><active>true</active><ratio>1.125</ratio></nestedA><choiceA><text>choice-alpha</text></choiceA><stringB>bravo</stringB><integerB>202</integerB><longB>20000000002</longB><booleanB>false</booleanB><doubleB>202.125</doubleB><floatB>202.25</floatB><byteB>22</byteB><shortB>2002</shortB><bigIntegerB>223456789012345678902</bigIntegerB><bigDecimalB>2234567890.223456789</bigDecimalB><blobB>YmxvYi1icmF2bw==</blobB><timestampB>2026-08-15T02:03:04Z</timestampB><modeB>BRAVO</modeB><stringsB><member>bravo-1</member><member>bravo-2</member><member>bravo-3</member></stringsB><nestedB><label>nested-bravo</label><count>22</count><active>false</active><ratio>2.125</ratio></nestedB><choiceB><number>202</number></choiceB><requestId>req-1</requestId></WideTypesResponse>",
+                        "bodyMediaType": "text/xml",
+                        "params": {
+                            "responseHeader": "header-alpha",
+                            "stringA": "alpha",
+                            "integerA": 101,
+                            "longA": 10000000001,
+                            "booleanA": true,
+                            "doubleA": 101.125,
+                            "floatA": 101.25,
+                            "byteA": 11,
+                            "shortA": 1001,
+                            "bigIntegerA": 123456789012345678901,
+                            "bigDecimalA": 1234567890.123456789,
+                            "blobA": "blob-alpha",
+                            "timestampA": 1786755723,
+                            "modeA": "ALPHA",
+                            "stringsA": [
+                                "alpha-1",
+                                "alpha-2",
+                                "alpha-3"
+                            ],
+                            "nestedA": {
+                                "label": "nested-alpha",
+                                "count": 11,
+                                "active": true,
+                                "ratio": 1.125
+                            },
+                            "choiceA": {
+                                "text": "choice-alpha"
+                            },
+                            "stringB": "bravo",
+                            "integerB": 202,
+                            "longB": 20000000002,
+                            "booleanB": false,
+                            "doubleB": 202.125,
+                            "floatB": 202.25,
+                            "byteB": 22,
+                            "shortB": 2002,
+                            "bigIntegerB": 223456789012345678902,
+                            "bigDecimalB": 2234567890.223456789,
+                            "blobB": "blob-bravo",
+                            "timestampB": 1786759384,
+                            "modeB": "BRAVO",
+                            "stringsB": [
+                                "bravo-1",
+                                "bravo-2",
+                                "bravo-3"
+                            ],
+                            "nestedB": {
+                                "label": "nested-bravo",
+                                "count": 22,
+                                "active": false,
+                                "ratio": 2.125
+                            },
+                            "choiceB": {
+                                "number": 202
+                            }
+                        },
+                        "tags": [
+                            "serde-benchmark"
+                        ]
+                    },
+                    {
+                        "id": "ec2Query_WideTypesResponse_L",
+                        "protocol": "aws.protocols#ec2Query",
+                        "headers": {
+                            "Content-Type": "text/xml"
+                        },
+                        "code": 200,
+                        "body": "<WideTypesResponse><responseHeader>header-alpha</responseHeader><stringA>alpha</stringA><integerA>101</integerA><longA>10000000001</longA><booleanA>true</booleanA><doubleA>101.125</doubleA><floatA>101.25</floatA><byteA>11</byteA><shortA>1001</shortA><bigIntegerA>123456789012345678901</bigIntegerA><bigDecimalA>1234567890.123456789</bigDecimalA><blobA>YmxvYi1hbHBoYQ==</blobA><timestampA>2026-08-15T01:02:03Z</timestampA><modeA>ALPHA</modeA><stringsA><member>alpha-1</member><member>alpha-2</member><member>alpha-3</member></stringsA><nestedA><label>nested-alpha</label><count>11</count><active>true</active><ratio>1.125</ratio></nestedA><choiceA><text>choice-alpha</text></choiceA><stringB>bravo</stringB><integerB>202</integerB><longB>20000000002</longB><booleanB>false</booleanB><doubleB>202.125</doubleB><floatB>202.25</floatB><byteB>22</byteB><shortB>2002</shortB><bigIntegerB>223456789012345678902</bigIntegerB><bigDecimalB>2234567890.223456789</bigDecimalB><blobB>YmxvYi1icmF2bw==</blobB><timestampB>2026-08-15T02:03:04Z</timestampB><modeB>BRAVO</modeB><stringsB><member>bravo-1</member><member>bravo-2</member><member>bravo-3</member></stringsB><nestedB><label>nested-bravo</label><count>22</count><active>false</active><ratio>2.125</ratio></nestedB><choiceB><number>202</number></choiceB><stringC>charlie</stringC><integerC>303</integerC><longC>30000000003</longC><booleanC>true</booleanC><doubleC>303.125</doubleC><floatC>303.25</floatC><byteC>33</byteC><shortC>3003</shortC><bigIntegerC>323456789012345678903</bigIntegerC><bigDecimalC>3234567890.323456789</bigDecimalC><blobC>YmxvYi1jaGFybGll</blobC><timestampC>2026-08-15T03:04:05Z</timestampC><modeC>CHARLIE</modeC><stringsC><member>charlie-1</member><member>charlie-2</member><member>charlie-3</member></stringsC><nestedC><label>nested-charlie</label><count>33</count><active>true</active><ratio>3.125</ratio></nestedC><choiceC><nested><label>choice-charlie</label><count>303</count><active>false</active><ratio>30.125</ratio></nested></choiceC><stringD>delta</stringD><integerD>404</integerD><longD>40000000004</longD><booleanD>false</booleanD><doubleD>404.125</doubleD><floatD>404.25</floatD><byteD>44</byteD><shortD>4004</shortD><bigIntegerD>423456789012345678904</bigIntegerD><bigDecimalD>4234567890.423456789</bigDecimalD><blobD>YmxvYi1kZWx0YQ==</blobD><timestampD>2026-08-15T04:05:06Z</timestampD><modeD>DELTA</modeD><stringsD><member>delta-1</member><member>delta-2</member><member>delta-3</member></stringsD><nestedD><label>nested-delta</label><count>44</count><active>false</active><ratio>4.125</ratio></nestedD><choiceD><text>choice-delta</text></choiceD><requestId>req-1</requestId></WideTypesResponse>",
+                        "bodyMediaType": "text/xml",
+                        "params": {
+                            "responseHeader": "header-alpha",
+                            "stringA": "alpha",
+                            "integerA": 101,
+                            "longA": 10000000001,
+                            "booleanA": true,
+                            "doubleA": 101.125,
+                            "floatA": 101.25,
+                            "byteA": 11,
+                            "shortA": 1001,
+                            "bigIntegerA": 123456789012345678901,
+                            "bigDecimalA": 1234567890.123456789,
+                            "blobA": "blob-alpha",
+                            "timestampA": 1786755723,
+                            "modeA": "ALPHA",
+                            "stringsA": [
+                                "alpha-1",
+                                "alpha-2",
+                                "alpha-3"
+                            ],
+                            "nestedA": {
+                                "label": "nested-alpha",
+                                "count": 11,
+                                "active": true,
+                                "ratio": 1.125
+                            },
+                            "choiceA": {
+                                "text": "choice-alpha"
+                            },
+                            "stringB": "bravo",
+                            "integerB": 202,
+                            "longB": 20000000002,
+                            "booleanB": false,
+                            "doubleB": 202.125,
+                            "floatB": 202.25,
+                            "byteB": 22,
+                            "shortB": 2002,
+                            "bigIntegerB": 223456789012345678902,
+                            "bigDecimalB": 2234567890.223456789,
+                            "blobB": "blob-bravo",
+                            "timestampB": 1786759384,
+                            "modeB": "BRAVO",
+                            "stringsB": [
+                                "bravo-1",
+                                "bravo-2",
+                                "bravo-3"
+                            ],
+                            "nestedB": {
+                                "label": "nested-bravo",
+                                "count": 22,
+                                "active": false,
+                                "ratio": 2.125
+                            },
+                            "choiceB": {
+                                "number": 202
+                            },
+                            "stringC": "charlie",
+                            "integerC": 303,
+                            "longC": 30000000003,
+                            "booleanC": true,
+                            "doubleC": 303.125,
+                            "floatC": 303.25,
+                            "byteC": 33,
+                            "shortC": 3003,
+                            "bigIntegerC": 323456789012345678903,
+                            "bigDecimalC": 3234567890.323456789,
+                            "blobC": "blob-charlie",
+                            "timestampC": 1786763045,
+                            "modeC": "CHARLIE",
+                            "stringsC": [
+                                "charlie-1",
+                                "charlie-2",
+                                "charlie-3"
+                            ],
+                            "nestedC": {
+                                "label": "nested-charlie",
+                                "count": 33,
+                                "active": true,
+                                "ratio": 3.125
+                            },
+                            "choiceC": {
+                                "nested": {
+                                    "label": "choice-charlie",
+                                    "count": 303,
+                                    "active": false,
+                                    "ratio": 30.125
+                                }
+                            },
+                            "stringD": "delta",
+                            "integerD": 404,
+                            "longD": 40000000004,
+                            "booleanD": false,
+                            "doubleD": 404.125,
+                            "floatD": 404.25,
+                            "byteD": 44,
+                            "shortD": 4004,
+                            "bigIntegerD": 423456789012345678904,
+                            "bigDecimalD": 4234567890.423456789,
+                            "blobD": "blob-delta",
+                            "timestampD": 1786766706,
+                            "modeD": "DELTA",
+                            "stringsD": [
+                                "delta-1",
+                                "delta-2",
+                                "delta-3"
+                            ],
+                            "nestedD": {
+                                "label": "nested-delta",
+                                "count": 44,
+                                "active": false,
+                                "ratio": 4.125
+                            },
+                            "choiceD": {
+                                "text": "choice-delta"
+                            }
+                        },
+                        "tags": [
+                            "serde-benchmark"
+                        ]
+                    }
+                ]
+            }
+        },
+        "com.amazonaws.sdk.benchmark#WideTypesChoice": {
+            "type": "union",
+            "members": {
+                "text": {
+                    "target": "smithy.api#String"
+                },
+                "number": {
+                    "target": "smithy.api#Integer"
+                },
+                "nested": {
+                    "target": "com.amazonaws.sdk.benchmark#WideTypesNested"
+                }
+            }
+        },
+        "com.amazonaws.sdk.benchmark#WideTypesInput": {
+            "type": "structure",
+            "mixins": [
+                {
+                    "target": "com.amazonaws.sdk.benchmark#WideTypesMembers"
+                }
+            ],
+            "members": {
+                "label": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#required": []
+                    }
+                },
+                "query": {
+                    "target": "smithy.api#String"
+                },
+                "requestHeader": {
+                    "target": "smithy.api#String"
+                }
+            }
+        },
+        "com.amazonaws.sdk.benchmark#WideTypesMembers": {
+            "type": "structure",
+            "members": {
+                "stringA": {
+                    "target": "smithy.api#String",
+                    "traits": {
+                        "smithy.api#required": []
+                    }
+                },
+                "integerA": {
+                    "target": "smithy.api#Integer",
+                    "traits": {
+                        "smithy.api#required": []
+                    }
+                },
+                "longA": {
+                    "target": "smithy.api#Long",
+                    "traits": {
+                        "smithy.api#required": []
+                    }
+                },
+                "booleanA": {
+                    "target": "smithy.api#Boolean",
+                    "traits": {
+                        "smithy.api#required": []
+                    }
+                },
+                "doubleA": {
+                    "target": "smithy.api#Double",
+                    "traits": {
+                        "smithy.api#required": []
+                    }
+                },
+                "floatA": {
+                    "target": "smithy.api#Float",
+                    "traits": {
+                        "smithy.api#required": []
+                    }
+                },
+                "byteA": {
+                    "target": "smithy.api#Byte",
+                    "traits": {
+                        "smithy.api#required": []
+                    }
+                },
+                "shortA": {
+                    "target": "smithy.api#Short",
+                    "traits": {
+                        "smithy.api#required": []
+                    }
+                },
+                "bigIntegerA": {
+                    "target": "smithy.api#BigInteger",
+                    "traits": {
+                        "smithy.api#required": []
+                    }
+                },
+                "bigDecimalA": {
+                    "target": "smithy.api#BigDecimal",
+                    "traits": {
+                        "smithy.api#required": []
+                    }
+                },
+                "blobA": {
+                    "target": "smithy.api#Blob",
+                    "traits": {
+                        "smithy.api#required": []
+                    }
+                },
+                "timestampA": {
+                    "target": "smithy.api#Timestamp",
+                    "traits": {
+                        "smithy.api#required": []
+                    }
+                },
+                "modeA": {
+                    "target": "com.amazonaws.sdk.benchmark#WideTypesMode",
+                    "traits": {
+                        "smithy.api#required": []
+                    }
+                },
+                "stringsA": {
+                    "target": "com.amazonaws.sdk.benchmark#WideTypesStringList",
+                    "traits": {
+                        "smithy.api#required": []
+                    }
+                },
+                "nestedA": {
+                    "target": "com.amazonaws.sdk.benchmark#WideTypesNested",
+                    "traits": {
+                        "smithy.api#required": []
+                    }
+                },
+                "choiceA": {
+                    "target": "com.amazonaws.sdk.benchmark#WideTypesChoice",
+                    "traits": {
+                        "smithy.api#required": []
+                    }
+                },
+                "stringB": {
+                    "target": "smithy.api#String"
+                },
+                "integerB": {
+                    "target": "smithy.api#Integer"
+                },
+                "longB": {
+                    "target": "smithy.api#Long"
+                },
+                "booleanB": {
+                    "target": "smithy.api#Boolean"
+                },
+                "doubleB": {
+                    "target": "smithy.api#Double"
+                },
+                "floatB": {
+                    "target": "smithy.api#Float"
+                },
+                "byteB": {
+                    "target": "smithy.api#Byte"
+                },
+                "shortB": {
+                    "target": "smithy.api#Short"
+                },
+                "bigIntegerB": {
+                    "target": "smithy.api#BigInteger"
+                },
+                "bigDecimalB": {
+                    "target": "smithy.api#BigDecimal"
+                },
+                "blobB": {
+                    "target": "smithy.api#Blob"
+                },
+                "timestampB": {
+                    "target": "smithy.api#Timestamp"
+                },
+                "modeB": {
+                    "target": "com.amazonaws.sdk.benchmark#WideTypesMode"
+                },
+                "stringsB": {
+                    "target": "com.amazonaws.sdk.benchmark#WideTypesStringList"
+                },
+                "nestedB": {
+                    "target": "com.amazonaws.sdk.benchmark#WideTypesNested"
+                },
+                "choiceB": {
+                    "target": "com.amazonaws.sdk.benchmark#WideTypesChoice"
+                },
+                "stringC": {
+                    "target": "smithy.api#String"
+                },
+                "integerC": {
+                    "target": "smithy.api#Integer"
+                },
+                "longC": {
+                    "target": "smithy.api#Long"
+                },
+                "booleanC": {
+                    "target": "smithy.api#Boolean"
+                },
+                "doubleC": {
+                    "target": "smithy.api#Double"
+                },
+                "floatC": {
+                    "target": "smithy.api#Float"
+                },
+                "byteC": {
+                    "target": "smithy.api#Byte"
+                },
+                "shortC": {
+                    "target": "smithy.api#Short"
+                },
+                "bigIntegerC": {
+                    "target": "smithy.api#BigInteger"
+                },
+                "bigDecimalC": {
+                    "target": "smithy.api#BigDecimal"
+                },
+                "blobC": {
+                    "target": "smithy.api#Blob"
+                },
+                "timestampC": {
+                    "target": "smithy.api#Timestamp"
+                },
+                "modeC": {
+                    "target": "com.amazonaws.sdk.benchmark#WideTypesMode"
+                },
+                "stringsC": {
+                    "target": "com.amazonaws.sdk.benchmark#WideTypesStringList"
+                },
+                "nestedC": {
+                    "target": "com.amazonaws.sdk.benchmark#WideTypesNested"
+                },
+                "choiceC": {
+                    "target": "com.amazonaws.sdk.benchmark#WideTypesChoice"
+                },
+                "stringD": {
+                    "target": "smithy.api#String"
+                },
+                "integerD": {
+                    "target": "smithy.api#Integer"
+                },
+                "longD": {
+                    "target": "smithy.api#Long"
+                },
+                "booleanD": {
+                    "target": "smithy.api#Boolean"
+                },
+                "doubleD": {
+                    "target": "smithy.api#Double"
+                },
+                "floatD": {
+                    "target": "smithy.api#Float"
+                },
+                "byteD": {
+                    "target": "smithy.api#Byte"
+                },
+                "shortD": {
+                    "target": "smithy.api#Short"
+                },
+                "bigIntegerD": {
+                    "target": "smithy.api#BigInteger"
+                },
+                "bigDecimalD": {
+                    "target": "smithy.api#BigDecimal"
+                },
+                "blobD": {
+                    "target": "smithy.api#Blob"
+                },
+                "timestampD": {
+                    "target": "smithy.api#Timestamp"
+                },
+                "modeD": {
+                    "target": "com.amazonaws.sdk.benchmark#WideTypesMode"
+                },
+                "stringsD": {
+                    "target": "com.amazonaws.sdk.benchmark#WideTypesStringList"
+                },
+                "nestedD": {
+                    "target": "com.amazonaws.sdk.benchmark#WideTypesNested"
+                },
+                "choiceD": {
+                    "target": "com.amazonaws.sdk.benchmark#WideTypesChoice"
+                }
+            },
+            "traits": {
+                "smithy.api#mixin": []
+            }
+        },
+        "com.amazonaws.sdk.benchmark#WideTypesMode": {
+            "type": "enum",
+            "members": {
+                "ALPHA": {
+                    "target": "smithy.api#Unit",
+                    "traits": {
+                        "smithy.api#enumValue": "ALPHA"
+                    }
+                },
+                "BRAVO": {
+                    "target": "smithy.api#Unit",
+                    "traits": {
+                        "smithy.api#enumValue": "BRAVO"
+                    }
+                },
+                "CHARLIE": {
+                    "target": "smithy.api#Unit",
+                    "traits": {
+                        "smithy.api#enumValue": "CHARLIE"
+                    }
+                },
+                "DELTA": {
+                    "target": "smithy.api#Unit",
+                    "traits": {
+                        "smithy.api#enumValue": "DELTA"
+                    }
+                }
+            }
+        },
+        "com.amazonaws.sdk.benchmark#WideTypesNested": {
+            "type": "structure",
+            "members": {
+                "label": {
+                    "target": "smithy.api#String"
+                },
+                "count": {
+                    "target": "smithy.api#Integer"
+                },
+                "active": {
+                    "target": "smithy.api#Boolean"
+                },
+                "ratio": {
+                    "target": "smithy.api#Double"
+                }
+            }
+        },
+        "com.amazonaws.sdk.benchmark#WideTypesOutput": {
+            "type": "structure",
+            "mixins": [
+                {
+                    "target": "com.amazonaws.sdk.benchmark#WideTypesMembers"
+                }
+            ],
+            "members": {
+                "responseHeader": {
+                    "target": "smithy.api#String"
+                }
+            }
+        },
+        "com.amazonaws.sdk.benchmark#WideTypesStringList": {
+            "type": "list",
+            "member": {
+                "target": "smithy.api#String"
+            }
+        }
+    }
+}
