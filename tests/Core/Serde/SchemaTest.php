@@ -21,7 +21,7 @@ use Smithy\Tests\Core\Serde\Utils\SchemaTestTargetFixture;
  * `Schema` is the load-bearing runtime type: every codec, every generated shape, and every hot-path
  * dispatch reads from it. The BC contract on the class docblock, properties
  * `$id`/`$type`/`$memberName`/`$memberIndex`/ `$targetClass`, plus `getMember*`, `hasTrait`,
- * `getTrait`, `getWireName`, `isRequired`, `resolveTarget`, `withMembers`, is what the tests below
+ * `getTrait`, `isRequired`, `resolveTarget`, `withMembers`, is what the tests below
  * pin. Extension slot behavior is separately covered by {@see SchemaExtensionTest} and is
  * intentionally out of scope here.
  */
@@ -270,6 +270,20 @@ final class SchemaTest extends TestCase
         );
     }
 
+    public function testHasTraitByIdDetectsPresentNullUnknownTrait(): void
+    {
+        // An unknown trait stores its raw value, which can be null.
+        // hasTraitById must report it present rather than absent.
+        $schema = new Schema(
+            id: 'example#Shape',
+            type: ShapeType::String_,
+            traitsById: ['example#unknownTrait' => null]
+        );
+
+        $this->assertTrue($schema->hasTraitById('example#unknownTrait'));
+        $this->assertNull($schema->getTraitById('example#unknownTrait'));
+    }
+
     public function testReadsSyntheticErrorsByShapeId(): void
     {
         $errors = ['NotFound' => 'example#NotFound'];
@@ -311,7 +325,7 @@ final class SchemaTest extends TestCase
         );
 
         $this->assertTrue($member->hasTrait(Schema::T_SENSITIVE));
-        $this->assertFalse($member->hasDirectTrait(Schema::T_SENSITIVE));
+        $this->assertNull($member->getDirectTrait(Schema::T_SENSITIVE));
         $this->assertSame(
             'Value',
             $member->getDirectTrait(Schema::T_JSON_NAME)
@@ -319,15 +333,9 @@ final class SchemaTest extends TestCase
         $this->assertNull(
             $member->getDirectTraitById('smithy.api#sensitive')
         );
-        $this->assertFalse(
-            $member->hasDirectTraitById('smithy.api#sensitive')
-        );
-        $this->assertTrue(
-            $member->hasDirectTraitById('smithy.api#jsonName')
-        );
         $this->assertSame(
-            ['smithy.api#jsonName' => 'Value'],
-            $member->getDirectTraitsById()
+            'Value',
+            $member->getDirectTraitById('smithy.api#jsonName')
         );
     }
 
@@ -349,45 +357,6 @@ final class SchemaTest extends TestCase
 
         $this->assertTrue($required->isRequired());
         $this->assertFalse($optional->isRequired());
-    }
-
-    public function testWireNamePrefersJsonNameOverMemberName(): void
-    {
-        $member = new Schema(
-            id: 'com.example#S$foo',
-            type: ShapeType::String_,
-            memberName: 'foo',
-            memberIndex: 0,
-            traits: [Schema::T_JSON_NAME => 'Foo']
-        );
-
-        $this->assertSame('Foo', $member->getWireName());
-    }
-
-    public function testWireNameFallsBackToMemberNameWithoutJsonName(): void
-    {
-        $member = new Schema(
-            id: 'com.example#S$foo',
-            type: ShapeType::String_,
-            memberName: 'foo',
-            memberIndex: 0
-        );
-
-        $this->assertSame('foo', $member->getWireName());
-    }
-
-    public function testWireNameReturnsEmptyStringForRootSchemaWithNoJsonName(): void
-    {
-        // A root shape has no memberName, without an @jsonName trait,
-        // `getWireName()` returns '' rather than raising. Codecs are
-        // responsible for never asking a root schema for a wire name,
-        // but the guard is still worth pinning.
-        $root = new Schema(
-            id: 'com.example#Root',
-            type: ShapeType::Structure
-        );
-
-        $this->assertSame('', $root->getWireName());
     }
 
     public function testResolveTargetReturnsSelfForFullyPopulatedSchema(): void
@@ -515,10 +484,7 @@ final class SchemaTest extends TestCase
         // Traits are copied through, filtering the body must not
         // silently drop @required/@sensitive/etc.
         $this->assertSame([Schema::T_REQUIRED => true], $filtered->getTraits());
-        $this->assertSame(
-            [Schema::T_SENSITIVE => true],
-            $filtered->getDirectTraits()
-        );
+        $this->assertTrue($filtered->getDirectTrait(Schema::T_SENSITIVE));
         $this->assertSame(
             'effective',
             $filtered->getTraitById('example#trait')

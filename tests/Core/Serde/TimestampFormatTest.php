@@ -136,6 +136,106 @@ final class TimestampFormatTest extends TestCase
         TimestampFormat::DateTime->parse('not-a-timestamp');
     }
 
+    #[DataProvider('emptyStringParseFormats')]
+    public function testParseThrowsOnEmptyString(
+        TimestampFormat $format
+    ): void
+    {
+        // date_create_immutable('') returns the current time rather than
+        // false, so an empty wire value would silently parse to "now".
+        // The fallback must reject it like the old strtotime('') did.
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage(
+            "Invalid {$format->name} timestamp ''."
+        );
+
+        $format->parse('');
+    }
+
+    /**
+     * @return array<string, array{TimestampFormat}>
+     */
+    public static function emptyStringParseFormats(): array
+    {
+        return [
+            'date-time' => [TimestampFormat::DateTime],
+            'http-date' => [TimestampFormat::HttpDate]
+        ];
+    }
+
+    #[DataProvider('datesOutsideMonthTable')]
+    public function testParseFallsBackOutsideMonthTableRange(
+        TimestampFormat $format,
+        string $value,
+        float $expected
+    ): void
+    {
+        $this->assertEqualsWithDelta(
+            $expected,
+            (float) $format->parse($value),
+            0.001
+        );
+    }
+
+    /**
+     * @return array<string, array{TimestampFormat, string, float}>
+     */
+    public static function datesOutsideMonthTable(): array
+    {
+        return [
+            'date-time before 1970' => [
+                TimestampFormat::DateTime,
+                '1960-01-02T00:00:00Z',
+                -315532800.0
+            ],
+            // The date_create fallback keeps fractional seconds even for
+            // dates before 1970, where U/u arithmetic would be off by one.
+            'fractional date-time before 1970' => [
+                TimestampFormat::DateTime,
+                '1960-01-02T00:00:00.5Z',
+                -315532799.5
+            ],
+            'fractional date-time after 2199' => [
+                TimestampFormat::DateTime,
+                '2300-01-01T00:00:00.25Z',
+                10413792000.25
+            ],
+            'fractional date-time with offset' => [
+                TimestampFormat::DateTime,
+                '1960-01-02T00:00:00.5+00:00',
+                -315532799.5
+            ],
+            'http-date after 2199' => [
+                TimestampFormat::HttpDate,
+                'Mon, 01 Jan 2300 00:00:00 GMT',
+                10413792000.0
+            ],
+            'http-date before 1970' => [
+                TimestampFormat::HttpDate,
+                'Sat, 02 Jan 1960 00:00:00 GMT',
+                -315532800.0
+            ]
+        ];
+    }
+
+    public function testParseMatchesAcrossFormatsAtMonthTableBounds(): void
+    {
+        $this->assertSame(
+            0.0,
+            (float) TimestampFormat::DateTime->parse('1970-01-01T00:00:00Z')
+        );
+        $this->assertSame(
+            7258118399.0,
+            (float) TimestampFormat::DateTime->parse('2199-12-31T23:59:59Z')
+        );
+        $this->assertSame(
+            7258118399.0,
+            (float) TimestampFormat::HttpDate->parse(
+                'Tue, 31 Dec 2199 23:59:59 GMT'
+            )
+        );
+    }
+
     #[DataProvider('traitStringMappings')]
     public function testFromTraitStringResolvesKnownTraitValues(
         ?string $trait,

@@ -148,8 +148,8 @@ Examples include:
 
 Dense keys keep protocol and codec trait access on integer array offsets.
 
-Every trait is also retained by shape ID. An unregistered trait becomes a
-`DynamicTraitValue` containing its ID and raw value. Provider runtimes may
+Every trait is also retained by shape ID. An unregistered trait keeps its raw
+node value. Provider runtimes may
 register a materializer and an optional dense schema key.
 
 `AwsDynamicClient` uses this extension point for AWS traits such as
