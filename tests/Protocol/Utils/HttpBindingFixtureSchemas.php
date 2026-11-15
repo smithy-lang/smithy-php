@@ -469,10 +469,7 @@ final class HttpBindingFixtureSchemas
                         ['/things/', null, false],
                         [null, 2, false]
                     ],
-                    'pathQueryPairs' => [
-                        ['fixed', 'true'],
-                        ['flag']
-                    ],
+                    'pathQueryString' => 'fixed=true&flag',
                     'code' => 206
                 ]
             ]

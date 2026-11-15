@@ -15,6 +15,7 @@ use Smithy\Codec\Json\{
     JsonDeserializer,
     JsonSerializer
 };
+use Smithy\Codec\Xml\XmlCodec;
 use Smithy\Http\Message\StringRequestStream;
 use Smithy\Tests\Codec\Json\Fixture\SampleStruct;
 
@@ -57,6 +58,18 @@ final class JsonCodecTest extends TestCase
 
         (new SampleStruct(name: 'beta'))->serialize($second, 0);
         self::assertSame('{"name":"beta"}', $second->flush());
+    }
+
+    public function testReleaseIgnoresForeignSerializer(): void
+    {
+        $codec = new JsonCodec();
+
+        $codec->releaseSerializer((new XmlCodec())->createSerializer());
+
+        self::assertInstanceOf(
+            JsonSerializer::class,
+            $codec->acquireSerializer()
+        );
     }
 
     public function testCreateDeserializerReturnsJsonDeserializer(): void

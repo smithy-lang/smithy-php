@@ -43,40 +43,40 @@ final class HttpStructBindingExtensionProviderTest extends TestCase
         self::assertInstanceOf(HttpStructBindingExtension::class, $extension);
         self::assertSame(
             HttpStructBindingExtension::ROUTE_HEADER,
-            $extension->memberRoutes[0]
+            $extension->writeInfo[0][0]
         );
         self::assertSame(
             HttpStructBindingExtension::ROUTE_QUERY,
-            $extension->memberRoutes[1]
+            $extension->writeInfo[1][0]
         );
         self::assertSame(
             HttpStructBindingExtension::ROUTE_LABEL,
-            $extension->memberRoutes[2]
+            $extension->writeInfo[2][0]
         );
         self::assertSame(
             HttpStructBindingExtension::ROUTE_PREFIX_HEADERS,
-            $extension->memberRoutes[3]
+            $extension->writeInfo[3][0]
         );
         self::assertSame(
             HttpStructBindingExtension::ROUTE_QUERY_PARAMS,
-            $extension->memberRoutes[4]
+            $extension->writeInfo[4][0]
         );
         self::assertSame(
             HttpStructBindingExtension::ROUTE_BODY_MEMBER,
-            $extension->memberRoutes[5]
+            $extension->writeInfo[5][0]
         );
         self::assertSame(
-            HttpStructBindingExtension::ROUTE_RESPONSE_CODE,
-            $extension->memberRoutes[6]
+            HttpStructBindingExtension::ROUTE_BODY_MEMBER,
+            $extension->writeInfo[6][0]
         );
         self::assertSame([5, 6], $extension->bodyMemberIndices);
         self::assertSame(
             [1, 2, 4, 5],
             $extension->responseBodyMemberIndices
         );
-        self::assertSame('x-test', $extension->headerMembers[0]);
+        self::assertSame('x-test', $extension->writeInfo[0][1]);
         self::assertSame(['x-test' => true], $extension->headerWireNames);
-        self::assertSame('mode', $extension->queryMembers[1]);
+        self::assertSame('mode', $extension->writeInfo[1][1]);
         self::assertSame(['mode' => true], $extension->httpQueryNames);
         self::assertSame(2, $extension->requestTimestampKinds[0]);
         self::assertSame(1, $extension->requestTimestampKinds[2]);

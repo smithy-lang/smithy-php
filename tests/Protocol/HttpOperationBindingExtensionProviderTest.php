@@ -45,7 +45,6 @@ final class HttpOperationBindingExtensionProviderTest extends TestCase
         self::assertSame('/', $extension->path);
         self::assertNull($extension->pathSegments);
         self::assertNull($extension->pathQueryString);
-        self::assertNull($extension->httpResponseCode);
     }
 
     public function testBuildsExtensionFromHttpTrait(): void
@@ -67,7 +66,6 @@ final class HttpOperationBindingExtensionProviderTest extends TestCase
             'fixed=true&flag',
             $extension->pathQueryString
         );
-        self::assertSame(206, $extension->httpResponseCode);
         self::assertSame(
             HttpBindingOperationFixture::class,
             $operation->getRuntimeIdentity()

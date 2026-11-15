@@ -21,11 +21,9 @@ final class HttpStructBindingExtensionTest extends TestCase
     {
         $schema = HttpBindingFixtureSchemas::request();
         $extension = new HttpStructBindingExtension(
-            memberRoutes: [0 => HttpStructBindingExtension::ROUTE_HEADER],
             writeInfo: [
                 0 => [HttpStructBindingExtension::ROUTE_HEADER, 'x-test']
             ],
-            headerMembers: [0 => 'x-test'],
             headerWireNames: ['x-test' => true],
             bodyMemberIndices: [1],
             bodySchema: $schema,
@@ -36,10 +34,9 @@ final class HttpStructBindingExtensionTest extends TestCase
         );
 
         self::assertSame(
-            HttpStructBindingExtension::ROUTE_HEADER,
-            $extension->memberRoutes[0]
+            [HttpStructBindingExtension::ROUTE_HEADER, 'x-test'],
+            $extension->writeInfo[0]
         );
-        self::assertSame('x-test', $extension->headerMembers[0]);
         self::assertSame(
             ['x-test' => true],
             $extension->headerWireNames

@@ -142,9 +142,6 @@ structure:
 | Metadata | Use |
 |---|---|
 | `writeInfo` | Fused request route and target by member index |
-| `headerMembers` | Request header names |
-| `queryMembers` | Encoded query names |
-| `prefixHeaderMembers` | Prefix-header names |
 | `bodySchema` | Request document members |
 | `payloadSchema` | Request or response payload |
 | `responseHeaders` | Response header decode entries |
