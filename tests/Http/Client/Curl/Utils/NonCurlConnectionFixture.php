@@ -13,7 +13,6 @@ use Smithy\Http\Client\Connection\{
     ConnectionHealthStatus,
     ConnectionState,
     HttpConnectionInterface,
-    HttpVersion,
     RequestContext
 };
 
@@ -50,32 +49,14 @@ final class NonCurlConnectionFixture implements HttpConnectionInterface
     public function markUnhealthy(): void {}
 
     /** @inheritDoc */
-    public function httpVersion(): HttpVersion
-    {
-        return HttpVersion::HTTP_1_1;
-    }
-
-    /** @inheritDoc */
     public function requestContext(): RequestContext
     {
         return $this->requestContext;
     }
 
     /** @inheritDoc */
-    public function createdAt(): float
-    {
-        return 0.0;
-    }
-
-    /** @inheritDoc */
     public function lastUsedAt(): float
     {
         return 0.0;
-    }
-
-    /** @inheritDoc */
-    public function requestCount(): int
-    {
-        return 0;
     }
 }

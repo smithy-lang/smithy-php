@@ -61,7 +61,33 @@ final class CurlResponseStateTest extends TestCase
 
         $this->assertSame(200, $state->status);
         $this->assertSame(
-            ['Content-Type' => ['text/plain']],
+            ['content-type' => ['Content-Type', ['text/plain']]],
+            $state->headers
+        );
+    }
+
+    public function testRecordsInvalidFinalHeaderForResponseBuild(): void
+    {
+        $state = new CurlResponseState(null);
+
+        $state->consumeHeader("HTTP/1.1 100 Continue\r\n");
+        $state->consumeHeader("Bad Name: ignored\r\n");
+        $state->consumeHeader("\r\n");
+        $this->assertFalse(
+            $state->consumeHeader("HTTP/1.1 200 OK\r\n")
+        );
+        $this->assertNull($state->headerError);
+
+        $state->consumeHeader("Bad Name: value\r\n");
+        $state->consumeHeader("X-Valid: value\r\n");
+        $this->assertTrue($state->consumeHeader("\r\n"));
+
+        $this->assertInstanceOf(
+            \InvalidArgumentException::class,
+            $state->headerError
+        );
+        $this->assertSame(
+            ['x-valid' => ['X-Valid', ['value']]],
             $state->headers
         );
     }
@@ -77,7 +103,7 @@ final class CurlResponseStateTest extends TestCase
         $this->assertSame(302, $state->status);
         $this->assertSame('Found', $state->reason);
         $this->assertSame(
-            ['Location' => ['/next']],
+            ['location' => ['Location', ['/next']]],
             $state->headers
         );
     }
@@ -96,7 +122,10 @@ final class CurlResponseStateTest extends TestCase
         $state->consumeHeader("X-Final: value\r\n");
         $this->assertTrue($state->consumeHeader("\r\n"));
 
-        $this->assertSame(['X-Final' => ['value']], $state->headers);
+        $this->assertSame(
+            ['x-final' => ['X-Final', ['value']]],
+            $state->headers
+        );
         $this->assertSame('Connection established', $state->reason);
     }
 
@@ -112,7 +141,10 @@ final class CurlResponseStateTest extends TestCase
 
         $this->assertSame(200, $state->status);
         $this->assertSame('Connection established', $state->reason);
-        $this->assertSame(['X-Final' => ['value']], $state->headers);
+        $this->assertSame(
+            ['x-final' => ['X-Final', ['value']]],
+            $state->headers
+        );
     }
 
     public function testCollectsTrailersAfterFinalHeaders(): void
@@ -132,7 +164,7 @@ final class CurlResponseStateTest extends TestCase
         $state->completeTrailers();
 
         $this->assertSame(
-            ['X-Initial' => ['value']],
+            ['x-initial' => ['X-Initial', ['value']]],
             $state->headers
         );
         $this->assertSame(
@@ -185,7 +217,7 @@ final class CurlResponseStateTest extends TestCase
         $state->consumeHeader("\r\n");
 
         $this->assertSame(
-            ['X-Test' => ['value']],
+            ['x-test' => ['X-Test', ['value']]],
             $state->headers
         );
     }
@@ -201,8 +233,8 @@ final class CurlResponseStateTest extends TestCase
 
         $this->assertSame(
             [
-                'Content-Encoding' => ['gzip'],
-                'Content-Length' => ['10']
+                'content-encoding' => ['Content-Encoding', ['gzip']],
+                'content-length' => ['Content-Length', ['10']]
             ],
             $state->headers
         );
@@ -228,8 +260,8 @@ final class CurlResponseStateTest extends TestCase
         $notModified->consumeHeader("\r\n");
 
         $expected = [
-            'Content-Encoding' => ['gzip'],
-            'Content-Length' => ['10']
+            'content-encoding' => ['Content-Encoding', ['gzip']],
+            'content-length' => ['Content-Length', ['10']]
         ];
         $this->assertSame($expected, $head->headers);
         $this->assertSame($expected, $notModified->headers);

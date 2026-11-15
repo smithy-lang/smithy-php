@@ -14,8 +14,7 @@
 | `CurlConnectionManager` | Route permits, waiters, easy-handle pooling, and idle limits |
 | `FifoConnectionPool` | Per-route idle easy-handle storage and timeout pruning |
 | `CurlConnectionFactory` | New easy handles and connection-level options |
-| `CurlConnection` | Easy-handle ownership, health, route, and usage state |
-| `CurlExchange` | One leased easy handle for one active request |
+| `CurlConnection` | Easy-handle ownership, health, route, and usage state. Also the exchange for one active request |
 | `CurlTransferException` | Libcurl failure plus retry-relevant request state |
 
 `PendingRequest`, `UploadState`, and `CurlResponseState` hold mutable callback

@@ -114,7 +114,7 @@ final class CurlConnectionManagerTest extends TestCase
         $this->assertSame(['second', 'third'], $order);
         $this->assertSame(1, $maxActiveWorkers);
         $this->assertSame(0, $manager->activeCount(
-            (string) $context->cacheKey()
+            $context->key
         ));
     }
 
@@ -152,7 +152,7 @@ final class CurlConnectionManagerTest extends TestCase
 
         $this->assertTrue($acquired);
         $this->assertSame(0, $manager->activeCount(
-            (string) $context->cacheKey()
+            $context->key
         ));
     }
 
@@ -194,11 +194,11 @@ final class CurlConnectionManagerTest extends TestCase
 
         $this->assertSame(1, $eventLoop->scheduleCalls);
         $this->assertSame(1, $manager->activeCount(
-            (string) $context->cacheKey()
+            $context->key
         ));
         $manager->release($first);
         $this->assertSame(0, $manager->activeCount(
-            (string) $context->cacheKey()
+            $context->key
         ));
     }
 
@@ -268,12 +268,12 @@ final class CurlConnectionManagerTest extends TestCase
         }
 
         $this->assertSame(0, $manager->activeCount(
-            (string) $context->cacheKey()
+            $context->key
         ));
 
         $exchange = $manager->lease($context);
         $this->assertSame(1, $manager->activeCount(
-            (string) $context->cacheKey()
+            $context->key
         ));
         $manager->release($exchange);
     }
@@ -306,7 +306,7 @@ final class CurlConnectionManagerTest extends TestCase
 
         $this->assertSame(ConnectionState::CLOSED, $connection->state());
         $this->assertSame(0, $manager->activeCount(
-            (string) $context->cacheKey()
+            $context->key
         ));
     }
 
@@ -351,11 +351,11 @@ final class CurlConnectionManagerTest extends TestCase
 
         $this->assertTrue($cancelled);
         $this->assertSame(1, $manager->activeCount(
-            (string) $context->cacheKey()
+            $context->key
         ));
         $manager->release($first);
         $this->assertSame(0, $manager->activeCount(
-            (string) $context->cacheKey()
+            $context->key
         ));
     }
 
@@ -431,7 +431,7 @@ final class CurlConnectionManagerTest extends TestCase
         $manager->clear();
 
         $this->assertSame(1, $manager->activeCount(
-            (string) $context->cacheKey()
+            $context->key
         ));
 
         $timedOut = false;
@@ -448,7 +448,7 @@ final class CurlConnectionManagerTest extends TestCase
         $manager->release($first);
 
         $this->assertSame(0, $manager->activeCount(
-            (string) $context->cacheKey()
+            $context->key
         ));
         $this->assertSame(0, $manager->idleCount());
         $this->assertSame(ConnectionState::CLOSED, $connections[0]->state());

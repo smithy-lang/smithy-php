@@ -122,7 +122,7 @@ final class RequestOverrideConfigTest extends TestCase
 
         self::assertNotNull($resolved);
         self::assertSame(2.0, $resolved->timeout);
-        self::assertSame('http://proxy.example', $resolved->proxy);
+        self::assertNull($resolved->proxy);
         self::assertFalse($resolved->decodeContent);
         self::assertSame($trailers, $resolved->trailers);
         self::assertSame($cancellation, $resolved->cancellation);
@@ -137,7 +137,7 @@ final class RequestOverrideConfigTest extends TestCase
         );
     }
 
-    public function testIgnoresExplicitNullOverrides(): void
+    public function testExplicitNullClearsOnlyNullableOverrides(): void
     {
         $trailers = RequestTrailers::fromArray(['x-checksum' => 'value']);
         $cancellation = new Cancellation();
@@ -167,10 +167,10 @@ final class RequestOverrideConfigTest extends TestCase
 
         self::assertNotNull($resolved);
         self::assertSame(9.0, $resolved->timeout);
-        self::assertSame('http://proxy.example', $resolved->proxy);
+        self::assertNull($resolved->proxy);
         self::assertTrue($resolved->decodeContent);
-        self::assertSame($trailers, $resolved->trailers);
-        self::assertSame($cancellation, $resolved->cancellation);
+        self::assertNull($resolved->trailers);
+        self::assertNull($resolved->cancellation);
         self::assertSame(32768, $resolved->responseBufferSize);
         self::assertNull($overrides->maxAttempts);
         self::assertNull($overrides->authSchemePreference);
