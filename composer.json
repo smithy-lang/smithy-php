@@ -27,7 +27,8 @@
         "smithy/codegen": "self.version",
         "smithy/core": "self.version",
         "smithy/http": "self.version",
-        "smithy/protocol": "self.version"
+        "smithy/protocol": "self.version",
+        "smithy/protocol-aws": "self.version"
     },
     "suggest": {
         "ext-curl": "Required by smithy/http's cURL transport.",
@@ -40,6 +41,7 @@
             "Smithy\\Core\\": "src/Core/",
             "Smithy\\Client\\": "src/Client/",
             "Smithy\\Protocol\\": "src/Protocol/",
+            "Smithy\\Protocol\\Aws\\": "src/ProtocolAws/",
             "Smithy\\Http\\": "src/Http/",
             "Smithy\\Codec\\": "src/Codec/"
         }
