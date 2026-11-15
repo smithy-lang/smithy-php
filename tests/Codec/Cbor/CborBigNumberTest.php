@@ -98,4 +98,69 @@ final class CborBigNumberTest extends TestCase
         yield 'with carry' => ['199', '200'];
         yield 'all nines' => ['999', '1000'];
     }
+
+    public function testDecrementsDecimalString(): void
+    {
+        self::assertSame('199', CborBigNumber::decrement('200'));
+        self::assertSame('0', CborBigNumber::decrement('1'));
+    }
+
+    #[DataProvider('zeroProvider')]
+    public function testDecrementRejectsZero(string $digits): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+
+        CborBigNumber::decrement($digits);
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function zeroProvider(): iterable
+    {
+        yield 'zero' => ['0'];
+        yield 'zeros' => ['00'];
+    }
+
+    public function testConvertsDecimalStringToUnsignedBytes(): void
+    {
+        self::assertSame("\x00", CborBigNumber::toUnsignedBytes('0'));
+        self::assertSame(
+            \hex2bin('ffffffffffffffff'),
+            CborBigNumber::toUnsignedBytes('18446744073709551615')
+        );
+    }
+
+    #[DataProvider('subtractSmallProvider')]
+    public function testSubtractsSmallIntegerFromSignedDecimalString(
+        string $value,
+        int $delta,
+        string $expected
+    ): void
+    {
+        self::assertSame(
+            $expected,
+            CborBigNumber::subtractSmall($value, $delta)
+        );
+    }
+
+    /**
+     * @return iterable<string, array{string, int, string}>
+     */
+    public static function subtractSmallProvider(): iterable
+    {
+        yield 'zero delta' => ['12', 0, '12'];
+        yield 'zero value' => ['0', 3, '-3'];
+        yield 'positive result' => ['100', 1, '99'];
+        yield 'equal' => ['3', 3, '0'];
+        yield 'crosses zero' => ['2', 5, '-3'];
+        yield 'negative value' => ['-9', 2, '-11'];
+    }
+
+    public function testSubtractSmallRejectsNegativeDelta(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+
+        CborBigNumber::subtractSmall('5', -3);
+    }
 }

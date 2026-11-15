@@ -70,6 +70,63 @@ final class CborDeserializerTest extends TestCase
         }
     }
 
+    public function testDeserializesOutOfOrderLongMemberNames(): void
+    {
+        // scores, count, active: each misses the in-order hint.
+        $payload = 'a36673636f726573a1616101'
+            . '65636f756e7401'
+            . '66616374697665f5';
+        $members = [null, null, null, null, null];
+        $deserializer = new CborDeserializer(
+            new StringRequestStream(\hex2bin($payload))
+        );
+        $deserializer->deserialize(
+            CborDeserializerSampleStructFixture::schema(),
+            $members
+        );
+
+        self::assertSame([null, 1, true, null, ['a' => 1]], $members);
+    }
+
+    public function testSkipsOverlongUnknownMemberNameWithoutCopy(): void
+    {
+        $keyLength = 1 << 20;
+        $payload = "\xa2\x7a" . \pack('N', $keyLength)
+            . \str_repeat('k', $keyLength) . "\x01"
+            . \hex2bin('65636f756e7402');
+        $members = [null, null, null, null, null];
+        $deserializer = new CborDeserializer(
+            new StringRequestStream($payload)
+        );
+
+        \memory_reset_peak_usage();
+        $baseline = \memory_get_usage();
+        $deserializer->deserialize(
+            CborDeserializerSampleStructFixture::schema(),
+            $members
+        );
+
+        self::assertSame([null, 2, null, null, null], $members);
+        self::assertLessThan(
+            $keyLength,
+            \memory_get_peak_usage() - $baseline
+        );
+    }
+
+    public function testDeserializesStreamNotAtOffsetZero(): void
+    {
+        $stream = new StringRequestStream("XX\xa0");
+        $stream->seek(2);
+        $members = [null, null, null, null, null];
+
+        (new CborDeserializer($stream))->deserialize(
+            CborDeserializerSampleStructFixture::schema(),
+            $members
+        );
+
+        self::assertSame([null, null, null, null, null], $members);
+    }
+
     public function testDeserializesDefiniteAndIndefiniteSparseNulls(): void
     {
         $payloads = [
@@ -409,92 +466,6 @@ final class CborDeserializerTest extends TestCase
                 . \str_repeat("\xFF", 2)
                 . "\xFF"
         ];
-    }
-
-    public function testDecodesComparableValueWithTypeInformation(): void
-    {
-        $deserializer = new CborDeserializer(
-            new StringRequestStream(\hex2bin(
-                'a16864656661756c7473a16d64656661756c74537472696e67'
-                    . '63666f6f'
-            ))
-        );
-
-        self::assertSame(
-            [
-                'type' => 'map',
-                'value' => [
-                    [
-                        'key' => [
-                            'type' => 'text-string',
-                            'value' => 'defaults'
-                        ],
-                        'value' => [
-                            'type' => 'map',
-                            'value' => [
-                                [
-                                    'key' => [
-                                        'type' => 'text-string',
-                                        'value' => 'defaultString'
-                                    ],
-                                    'value' => [
-                                        'type' => 'text-string',
-                                        'value' => 'foo'
-                                    ]
-                                ]
-                            ]
-                        ]
-                    ]
-                ]
-            ],
-            $deserializer->decodeComparableValue()
-        );
-    }
-
-    public function testComparableValueRejectsExcessivelyNestedTags(): void
-    {
-        $deserializer = new CborDeserializer(
-            new StringRequestStream(
-                \str_repeat("\xC0", 129) . "\xF6"
-            )
-        );
-        $this->expectException(DeserializationException::class);
-
-        $deserializer->decodeComparableValue();
-    }
-
-    public function testComparableEpochTagPreservesInexactLargeInteger(): void
-    {
-        $exact = (new CborDeserializer(
-            new StringRequestStream(\hex2bin(
-                'c11b0020000000000000'
-            ))
-        ))->decodeComparableValue();
-        $inexact = (new CborDeserializer(
-            new StringRequestStream(\hex2bin(
-                'c11b0020000000000001'
-            ))
-        ))->decodeComparableValue();
-
-        self::assertSame('float', $exact['value']['type']);
-        self::assertSame('integer', $inexact['value']['type']);
-        self::assertNotSame($exact, $inexact);
-    }
-
-    public function testComparableEpochTagNormalizesExactIntegerAndFloat(): void
-    {
-        $integer = (new CborDeserializer(
-            new StringRequestStream(\hex2bin(
-                'c11b0020000000000000'
-            ))
-        ))->decodeComparableValue();
-        $float = (new CborDeserializer(
-            new StringRequestStream(\hex2bin(
-                'c1fb4340000000000000'
-            ))
-        ))->decodeComparableValue();
-
-        self::assertSame($integer, $float);
     }
 
     private static function bigIntegerSchema(): Schema

@@ -52,10 +52,6 @@ final class JsonSchemaExtensionTest extends TestCase
         $info = $schema->getExtension(JsonSchemaExtensionProvider::key());
 
         self::assertSame(
-            ['name' => 0, 'ageInYears' => 1],
-            $info->memberIndexByWireName
-        );
-        self::assertSame(
             [0 => 'name', 1 => 'ageInYears'],
             $info->wireNameByMemberIndex
         );
@@ -200,10 +196,6 @@ final class JsonSchemaExtensionTest extends TestCase
         /** @var JsonSchemaExtension $info */
         $info = $unionSchema->getExtension(JsonSchemaExtensionProvider::key());
 
-        self::assertSame(
-            ['str' => 0, 'number' => 1],
-            $info->memberIndexByWireName
-        );
         self::assertSame(
             [0 => 'str', 1 => 'number'],
             $info->wireNameByMemberIndex

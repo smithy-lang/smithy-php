@@ -19,7 +19,6 @@ final class FormUrlEncodedCodecSettingsTest extends TestCase
     {
         $settings = new FormUrlEncodedCodecSettings();
 
-        self::assertNull($settings->serviceNamespace);
         self::assertSame(
             TimestampFormat::EpochSeconds,
             $settings->defaultTimestampFormat
@@ -34,7 +33,6 @@ final class FormUrlEncodedCodecSettingsTest extends TestCase
     public function testOverrides(): void
     {
         $settings = new FormUrlEncodedCodecSettings(
-            serviceNamespace: 'smithy.test',
             defaultTimestampFormat: TimestampFormat::DateTime,
             honorXmlName: false,
             capitalizeResolvedWireNames: true,
@@ -43,7 +41,6 @@ final class FormUrlEncodedCodecSettingsTest extends TestCase
             honorTimestampFormatTrait: false
         );
 
-        self::assertSame('smithy.test', $settings->serviceNamespace);
         self::assertSame(
             TimestampFormat::DateTime,
             $settings->defaultTimestampFormat

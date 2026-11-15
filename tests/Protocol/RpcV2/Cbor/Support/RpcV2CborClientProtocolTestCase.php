@@ -16,7 +16,6 @@ use Psr\Http\Message\{
     StreamInterface
 };
 use Smithy\Client\ClientInterface;
-use Smithy\Codec\Cbor\CborDeserializer;
 use Smithy\Core\Serde\SerializableStructInterface;
 use Smithy\Core\Shape\Document\{
     AbstractDocument,
@@ -33,10 +32,8 @@ use Smithy\Core\Shape\{
     OperationInterface
 };
 use Smithy\Core\Shape\Utils\ArrayShapeSerializer;
-use Smithy\Http\Message\{
-    Response,
-    StringRequestStream
-};
+use Smithy\Http\Message\Response;
+use Smithy\Tests\Codec\Cbor\Utils\CborComparableDecoder;
 use Smithy\Tests\Protocol\ProtocolTestLoader;
 use Smithy\Tests\Utils\Http\MockHttpClient;
 
@@ -292,11 +289,7 @@ abstract class RpcV2CborClientProtocolTestCase extends TestCase
 
     private function decodeCbor(string $body): mixed
     {
-        $deserializer = new CborDeserializer(
-            new StringRequestStream($body)
-        );
-
-        return $deserializer->decodeComparableValue();
+        return CborComparableDecoder::decode($body);
     }
 
     private function normalize(mixed $value): mixed

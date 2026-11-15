@@ -22,7 +22,6 @@ final class AbstractCodecSettingsTest extends TestCase
     {
         $settings = new CodecSettingsFixture();
 
-        self::assertNull($settings->serviceNamespace);
         self::assertSame(
             TimestampFormat::EpochSeconds,
             $settings->defaultTimestampFormat
@@ -33,15 +32,10 @@ final class AbstractCodecSettingsTest extends TestCase
     public function testStoresConfiguredValues(): void
     {
         $settings = new CodecSettingsFixture(
-            serviceNamespace: 'smithy.example',
             defaultTimestampFormat: TimestampFormat::HttpDate,
             honorTimestampFormatTrait: false
         );
 
-        self::assertSame(
-            'smithy.example',
-            $settings->serviceNamespace
-        );
         self::assertSame(
             TimestampFormat::HttpDate,
             $settings->defaultTimestampFormat

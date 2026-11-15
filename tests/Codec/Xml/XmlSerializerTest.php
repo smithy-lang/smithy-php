@@ -11,10 +11,7 @@ namespace Smithy\Tests\Codec\Xml;
 
 use PHPUnit\Framework\TestCase;
 use Smithy\Codec\Exception\SerializationException;
-use Smithy\Core\Serde\{
-    Schema,
-    TimestampFormat
-};
+use Smithy\Core\Serde\Schema;
 use Smithy\Core\Shape\ShapeType;
 use Smithy\Core\Shape\{
     BigDecimal,
@@ -47,12 +44,7 @@ final class XmlSerializerTest extends TestCase
         $serializer->serializeBoolean($members[4], true, 4);
         $serializer->serializeFloat($members[5], INF, 5);
         $serializer->serializeBlob($members[6], "\x01\x02", 6);
-        $serializer->serializeTimestamp(
-            $members[7],
-            100.0,
-            7,
-            TimestampFormat::EpochSeconds
-        );
+        $serializer->serializeTimestamp($members[7], 100.0, 7);
         $serializer->serializeBigInteger(
             $members[8],
             new BigInteger('18446744073709551616'),
