@@ -95,6 +95,16 @@ final class IdempotencyTokenInterceptorTest extends TestCase
         self::assertSame($input, $output);
     }
 
+    public function testAppliesOnlyToOperationsWithTokenMember(): void
+    {
+        $interceptor = new IdempotencyTokenInterceptor();
+
+        self::assertTrue($interceptor->appliesTo(
+            IdempotentTestOperationFixture::instance()
+        ));
+        self::assertFalse($interceptor->appliesTo(FakeOperation::instance()));
+    }
+
     public function testGeneratesUuidWhenProviderIsAbsent(): void
     {
         $output = (new IdempotencyTokenInterceptor())

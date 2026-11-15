@@ -38,8 +38,5 @@ final class NullSignerTest extends TestCase
             HttpTransportRequest::expect($result->signedRequest)->request
         );
         self::assertSame('', $result->signature);
-
-        $signer->close();
-        $signer->close();
     }
 }

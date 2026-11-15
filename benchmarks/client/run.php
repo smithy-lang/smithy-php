@@ -121,11 +121,13 @@ $responseCases = casesBySize(
 );
 
 foreach ([
-    'default' => new PluginCollection(),
-    'interceptor' => new PluginCollection(
-        new PipelineBenchmarkPlugin()
-    ),
-] as $mode => $plugins) {
+    'bare' => [new PluginCollection(), false],
+    'builtin' => [new PluginCollection(), true],
+    'interceptor' => [
+        new PluginCollection(new PipelineBenchmarkPlugin()),
+        false
+    ]
+] as $mode => [$plugins, $builtinPlugins]) {
     foreach (['S', 'M', 'L'] as $size) {
         $id = "rpcv2Cbor_ClientPipeline_{$mode}_{$size}";
         if ($filter !== null && \stripos($id, $filter) === false) {
@@ -134,7 +136,7 @@ foreach ([
 
         $requestCase = $requestCases[$size];
         $responseCase = $responseCases[$size];
-        $client = createClient($responseCase, $plugins);
+        $client = createClient($responseCase, $plugins, $builtinPlugins);
         $input = ArrayShapeSerializer::fromArray(
             'Smithy\\Benchmarks\\RpcV2Cbor\\Input\\WideTypesInput',
             $requestCase['params']
@@ -237,7 +239,8 @@ function casesBySize(array $cases): array
  */
 function createClient(
     array $responseCase,
-    PluginCollection $plugins
+    PluginCollection $plugins,
+    bool $builtinPlugins
 ): ClientInterface {
     $body = \base64_decode((string) $responseCase['body'], true);
     if ($body === false) {
@@ -251,7 +254,7 @@ function createClient(
         headers: $headers,
         body: $body
     ));
-    $config = (new ClientConfig(
+    $config = new ClientConfig(
         protocol: new RpcV2CborProtocol(),
         transport: new \Smithy\Http\Client\HttpClientTransport(
             $httpClient
@@ -261,10 +264,13 @@ function createClient(
         ),
         supportedAuthSchemes: [NoAuthScheme::instance()],
         authSchemeResolver: StaticAuthSchemeResolver::noAuth()
-    ))->withPluginPredicate(
-        static fn(PluginInterface $plugin): bool =>
-            $plugin instanceof PipelineBenchmarkPlugin
     );
+    if (!$builtinPlugins) {
+        $config = $config->withPluginPredicate(
+            static fn(PluginInterface $plugin): bool =>
+                $plugin instanceof PipelineBenchmarkPlugin
+        );
+    }
 
     return new RpcV2CborClient($config, $plugins);
 }

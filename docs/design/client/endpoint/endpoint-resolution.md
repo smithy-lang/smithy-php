@@ -76,18 +76,14 @@ repeating shape serialization.
 interface EndpointResolverInterface
 {
     public function resolveEndpoint(
-        EndpointResolverParams $params
+        OperationInterface $operation,
+        SerializableStructInterface $input,
+        ClientConfig $config
     ): Endpoint;
 }
 ```
 
-`EndpointResolverParams` carries:
-
-- the `OperationInterface`
-- the operation input
-- the active `ClientConfig`
-
-`EndpointResolverParams::CONTEXT_PARAMETERS` names the
+`EndpointResolverInterface::CONTEXT_PARAMETERS` names the
 `ClientConfig::$context` entry used for client endpoint parameters:
 
 ```php
@@ -367,11 +363,11 @@ rules-engine property map is retained on the resulting `Endpoint`.
 
 Endpoint decision tracing is opt-in. Configure an
 `EndpointResolutionTraceSinkInterface` through
-`EndpointResolverParams::CONTEXT_TRACE_SINK`:
+`EndpointResolverInterface::CONTEXT_TRACE_SINK`:
 
 ```php
 $config = $config->withContext(
-    EndpointResolverParams::CONTEXT_TRACE_SINK,
+    EndpointResolverInterface::CONTEXT_TRACE_SINK,
     $traceSink
 );
 ```
@@ -572,7 +568,6 @@ handler.
 - `smithy-php/src/Client/Endpoint/Endpoint.php`
 - `smithy-php/src/Client/Endpoint/EndpointAuthScheme.php`
 - `smithy-php/src/Client/Endpoint/EndpointResolverInterface.php`
-- `smithy-php/src/Client/Endpoint/EndpointResolverParams.php`
 - `smithy-php/src/Client/Endpoint/StaticEndpointResolver.php`
 
 **Bytecode runtime**

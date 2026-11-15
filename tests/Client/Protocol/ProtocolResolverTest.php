@@ -49,6 +49,20 @@ final class ProtocolResolverTest extends TestCase
         self::assertInstanceOf(RpcV2JsonProtocol::class, $protocol);
     }
 
+    public function testCreateDefaultsReturnsNewProtocolInstances(): void
+    {
+        $service = new ProtocolServiceFixture([
+            RpcV2CborProtocol::ID => true
+        ]);
+        $shared = ProtocolResolver::defaults();
+
+        self::assertSame($shared, ProtocolResolver::defaults());
+        self::assertNotSame(
+            $shared->resolveProtocol($service),
+            ProtocolResolver::createDefaults()->resolveProtocol($service)
+        );
+    }
+
     public function testDefaultsRetainDeterministicRegistrationOrder(): void
     {
         $resolver = ProtocolResolver::defaults();

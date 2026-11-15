@@ -39,7 +39,6 @@ use Smithy\Client\Auth\{
 };
 use Smithy\Client\Endpoint\{
     EndpointResolverInterface,
-    EndpointResolverParams,
     StaticEndpointResolver
 };
 use Smithy\Client\Interceptor\{
@@ -166,6 +165,32 @@ final class ClientPipelineTest extends TestCase
             (string) $serializedRequest->getBody(),
             (string) $http->sentRequests[0]->getBody()
         );
+    }
+
+    public function testSkipsInterceptorsThatDoNotApplyToOperation(): void
+    {
+        $interceptor = new class extends AbstractInterceptor {
+            public function appliesTo(OperationInterface $operation): bool
+            {
+                return false;
+            }
+
+            public function readBeforeExecution(InputContext $ctx): void
+            {
+                throw new \LogicException('Hook must not run.');
+            }
+        };
+        [$pipeline, $http] = $this->buildPipeline(
+            interceptors: [$interceptor]
+        );
+
+        $out = $pipeline->execute(
+            FakeOperation::instance(),
+            new FakeInput('hello')
+        );
+
+        $this->assertSame('server-body', $out->value);
+        $this->assertSame(1, $http->sendCallCount);
     }
 
     public function testRequestOverridesReachTransportWithoutInterceptors(): void
@@ -754,6 +779,50 @@ final class ClientPipelineTest extends TestCase
         );
     }
 
+    public function testRequestPreferenceBypassesCachedAuthScheme(): void
+    {
+        $seen = (object) ['selectedScheme' => null];
+        $pipeline = new ClientPipeline(new ClientConfig(
+            protocol: new FakeProtocol(),
+            transport: new \Smithy\Http\Client\HttpClientTransport(
+                (new MockHttpClient())->willReturn('body')
+            ),
+            endpointResolver: new StaticEndpointResolver(
+                new Endpoint('https://example.test')
+            ),
+            supportedAuthSchemes: [
+                $this->recordingAuthScheme('aws.auth#sigv4', $seen),
+                $this->recordingAuthScheme(
+                    'smithy.api#httpBearerAuth',
+                    $seen
+                )
+            ],
+            authSchemeResolver: new StaticAuthSchemeResolver([
+                'aws.auth#sigv4',
+                'smithy.api#httpBearerAuth'
+            ])
+        ));
+        $override = RequestOverrideConfig::fromArray([
+            '@auth' => ['httpBearerAuth']
+        ]);
+        $selected = [];
+
+        foreach ([null, $override, null] as $overrides) {
+            $pipeline->execute(
+                FakeOperation::instance(),
+                new FakeInput(),
+                $overrides
+            );
+            $selected[] = $seen->selectedScheme;
+        }
+
+        $this->assertSame([
+            'aws.auth#sigv4',
+            'smithy.api#httpBearerAuth',
+            'aws.auth#sigv4'
+        ], $selected);
+    }
+
     public function testEndpointAuthRemainsAuthoritativeOverPreference(): void
     {
         $seen = (object) [
@@ -892,6 +961,68 @@ final class ClientPipelineTest extends TestCase
         );
     }
 
+    public function testFailedEndpointIdentityDoesNotKeepModeledIdentity(): void
+    {
+        $modeledIdentity = new class implements IdentityInterface {
+            public function getExpirationTime(): ?float
+            {
+                return null;
+            }
+        };
+        $modeledResolver = $this->createMock(
+            IdentityResolverInterface::class
+        );
+        $modeledResolver->method('resolveIdentity')->willReturn(
+            IdentityResult::success($modeledIdentity)
+        );
+        $observer = new class extends AbstractInterceptor {
+            public ?OutputContext $attempt = null;
+
+            public function readAfterAttempt(
+                OutputContext $ctx,
+                ?\Throwable $error
+            ): void
+            {
+                $this->attempt ??= $ctx;
+            }
+        };
+        $pipeline = new ClientPipeline(new ClientConfig(
+            protocol: new FakeProtocol(),
+            transport: new \Smithy\Http\Client\HttpClientTransport(
+                (new MockHttpClient())->willReturn('body')
+            ),
+            endpointResolver: new StaticEndpointResolver(new Endpoint(
+                'https://example.test',
+                authSchemes: [
+                    new EndpointAuthScheme('smithy.test#endpoint')
+                ]
+            )),
+            interceptors: new InterceptorChain($observer),
+            supportedAuthSchemes: [
+                new TestAuthSchemeFixture(
+                    'smithy.test#modeled',
+                    $modeledResolver
+                ),
+                $this->missingAuthScheme(
+                    'smithy.test#endpoint',
+                    'endpoint identity failed'
+                )
+            ],
+            authSchemeResolver: new StaticAuthSchemeResolver([
+                'smithy.test#modeled'
+            ])
+        ));
+
+        try {
+            $pipeline->execute(FakeOperation::instance(), new FakeInput());
+            $this->fail('Expected identity resolution to fail.');
+        } catch (IdentityNotFoundException) {
+        }
+
+        $this->assertNotNull($observer->attempt);
+        $this->assertNull($observer->attempt->identity);
+    }
+
     public function testIdentityMissDoesNotFallBackToAnotherScheme(): void
     {
         $seen = (object) ['selectedScheme' => null];
@@ -1003,7 +1134,7 @@ final class ClientPipelineTest extends TestCase
     }
 
     #[DataProvider('attemptScopedResolutionCases')]
-    public function testResolvesAuthAndEndpointForEveryAttempt(
+    public function testResolvesIdentityAndEndpointForEveryAttempt(
         bool $withInterceptors
     ): void
     {
@@ -1042,9 +1173,6 @@ final class ClientPipelineTest extends TestCase
                     return new SignerResult($request);
                 }
             );
-        $signer
-            ->expects($this->exactly(2))
-            ->method('close');
         $scheme = new TestAuthSchemeFixture(
             'smithy.test#auth',
             $identityResolver,
@@ -1054,7 +1182,7 @@ final class ClientPipelineTest extends TestCase
             AuthSchemeResolverInterface::class
         );
         $authResolver
-            ->expects($this->exactly(2))
+            ->expects($this->once())
             ->method('resolveAuthScheme')
             ->willReturnCallback(
                 static function () use (
@@ -1086,9 +1214,7 @@ final class ClientPipelineTest extends TestCase
             ->expects($this->exactly(2))
             ->method('resolveEndpoint')
             ->willReturnCallback(
-                static function (
-                    EndpointResolverParams $params
-                ) use (&$events, &$endpointCall): Endpoint
+                static function () use (&$events, &$endpointCall): Endpoint
                 {
                     $events[] = 'endpoint';
                     ++$endpointCall;
@@ -1169,7 +1295,6 @@ final class ClientPipelineTest extends TestCase
             'endpoint',
             'endpoint-auth',
             'sign',
-            'auth',
             'identity',
             'endpoint',
             'endpoint-auth',
@@ -1190,51 +1315,6 @@ final class ClientPipelineTest extends TestCase
             'without interceptors' => [false],
             'with interceptors' => [true]
         ];
-    }
-
-    public function testPreservesSigningFailureWhenCleanupFails(): void
-    {
-        $signingError = new \RuntimeException('signing failed');
-        $signer = $this->createMock(SignerInterface::class);
-        $signer
-            ->expects($this->once())
-            ->method('sign')
-            ->willThrowException($signingError);
-        $signer
-            ->expects($this->once())
-            ->method('close')
-            ->willThrowException(new \RuntimeException('cleanup failed'));
-        $pipeline = $this->pipelineWithSigner($signer);
-
-        try {
-            $pipeline->execute(FakeOperation::instance(), new FakeInput());
-            $this->fail('Expected signing to fail.');
-        } catch (\RuntimeException $error) {
-            $this->assertSame($signingError, $error);
-        }
-    }
-
-    public function testSurfacesCleanupFailureAfterSuccessfulSigning(): void
-    {
-        $signer = $this->createMock(SignerInterface::class);
-        $signer
-            ->expects($this->once())
-            ->method('sign')
-            ->willReturnCallback(
-                static fn(
-                    TransportRequestInterface $request
-                ): SignerResult => new SignerResult($request)
-            );
-        $signer
-            ->expects($this->once())
-            ->method('close')
-            ->willThrowException(new \RuntimeException('cleanup failed'));
-        $pipeline = $this->pipelineWithSigner($signer);
-
-        $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage('cleanup failed');
-
-        $pipeline->execute(FakeOperation::instance(), new FakeInput());
     }
 
     public function testRetriesStartFromRequestBeforeAttemptMutations(): void
@@ -2244,37 +2324,6 @@ final class ClientPipelineTest extends TestCase
             $identityProperties,
             $signerProperties
         );
-    }
-
-    private function pipelineWithSigner(
-        SignerInterface $signer
-    ): ClientPipeline
-    {
-        $identityResolver = $this->createStub(
-            IdentityResolverInterface::class
-        );
-        $identityResolver->method('resolveIdentity')->willReturn(
-            IdentityResult::success(AnonymousIdentity::instance())
-        );
-        $scheme = new TestAuthSchemeFixture(
-            'smithy.test#auth',
-            $identityResolver,
-            $signer
-        );
-
-        return new ClientPipeline(new ClientConfig(
-            protocol: new FakeProtocol(),
-            transport: new \Smithy\Http\Client\HttpClientTransport(
-                (new MockHttpClient())->willReturn('server-body')
-            ),
-            endpointResolver: new StaticEndpointResolver(
-                new Endpoint('https://example.test')
-            ),
-            supportedAuthSchemes: [$scheme],
-            authSchemeResolver: new StaticAuthSchemeResolver([
-                'smithy.test#auth'
-            ])
-        ));
     }
 
     private function missingAuthScheme(

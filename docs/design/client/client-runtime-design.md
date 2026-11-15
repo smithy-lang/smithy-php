@@ -59,16 +59,10 @@ paths enter the same pipeline through `OperationInterface` and
 | `ClientConfig` | Immutable runtime dependency graph, shared protocol resolution, and plugin state |
 | `RequestOverrideConfig` | Call-specific plugins, HTTP settings, headers, retries, and auth preference |
 | `ClientPipeline` | Execute one operation and its attempts |
-| `PreparedAttempt` | Carry the request, selected auth scheme, resolver, and identity prepared for transmission |
-| `AttemptResult` | Carry the final `OutputContext` and nullable error for one attempt |
 | `InterceptorChain` | Execute ordered call and lifecycle hooks |
 | `RetryStrategyInterface` | Own retry classification, quotas, delay, and strategy state |
 | `TransportInterface` | Send protocol messages and prepare transport state for retry |
 | `MessageExchangeInterface` | Declare the request and response envelope types shared by a protocol and transport |
-
-`PreparedAttempt` and `AttemptResult` are internal value objects. They replace
-positional arrays at the boundaries where multiple attempt values travel
-together.
 
 ## Client construction
 
@@ -261,19 +255,24 @@ semantics.
 
 ## Attempt preparation
 
-`prepareAttemptRequest()` returns `PreparedAttempt` containing:
+`prepareAttemptRequest()` returns the endpoint-bound request and writes these
+values to reference parameters:
 
-- the endpoint-bound request
 - the final `ResolvedAuthScheme`
 - the `IdentityResolverInterface` that produced the identity
 - the exact `IdentityInterface` used for signing
+
+The pipeline caches the modeled `ResolvedAuthScheme` per operation when the
+request sets no auth scheme preference override. Identity and endpoint
+resolution still run on every attempt.
 
 The selected identity and resolver are copied into `OutputContext`. Error
 classification interceptors can therefore invalidate the exact identity
 rejected by a service without guessing which resolver supplied it.
 
-Attempt execution returns `AttemptResult`. Completion hooks consume its output
-context and error before the retry strategy sees the final attempt failure.
+Attempt execution returns the attempt error and writes the attempt's
+`OutputContext` to a reference parameter. Completion hooks consume both before
+the retry strategy sees the final attempt failure.
 
 ## Authentication and signing
 
@@ -290,8 +289,7 @@ values. Unexpected resolver failures are exceptions. The pipeline unwraps the
 selected result before signing.
 
 Signing returns `SignerResult`, which contains the signed request and optional
-signature metadata. The signer is closed after every signing attempt, even
-when signing fails.
+signature metadata.
 
 See [Authentication Design](auth/auth-runtime-design.md).
 
@@ -380,7 +378,7 @@ observe validation failures.
 
 ## Completion and recovery
 
-`AttemptResult` enters:
+The attempt's output context and error enter:
 
 1. `modifyBeforeAttemptCompletion()`
 2. `readAfterAttempt()`
@@ -400,7 +398,12 @@ attempt as well as final attempt failures.
 ## No-interceptor fast path
 
 An empty interceptor chain uses a direct path without allocating lifecycle
-contexts or dispatching hooks. It preserves the same functional boundaries:
+contexts or dispatching hooks. The chain is first filtered per operation:
+`InterceptorChain::forOperation()` drops each `AbstractInterceptor` whose
+`appliesTo()` returns false. The built-in idempotency token, request
+compression, and checksum interceptors apply only to operations with the
+matching trait, so other operations take this path. It preserves the same
+functional boundaries:
 
 ```text
 resolve transport options

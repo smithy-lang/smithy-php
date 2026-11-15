@@ -250,10 +250,6 @@ signature. HTTP signers unwrap `HttpTransportRequest`, apply immutable PSR-7
 request transformations, and return an envelope containing the replacement
 request.
 
-The pipeline closes the signer after each signing attempt, including when
-signing fails. A cleanup failure is surfaced when signing succeeded. When both
-operations fail, the original signing failure remains authoritative.
-
 ### No auth
 
 `NoAuthScheme` uses `AnonymousIdentityResolver` and `NullSigner`.
