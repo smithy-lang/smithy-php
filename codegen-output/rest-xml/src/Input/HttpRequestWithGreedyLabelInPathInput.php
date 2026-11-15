@@ -13,7 +13,6 @@ use Smithy\Core\Serde\Schema;
 use Smithy\Core\Serde\SerializableStructInterface;
 use Smithy\Core\Serde\ShapeSerializerInterface;
 use Smithy\Core\Shape\FromMembersTrait;
-use Smithy\Core\Shape\ShapeType;
 use Smithy\ProtocolTests\RestXml\Schemas;
 
 final class HttpRequestWithGreedyLabelInPathInput implements SerializableStructInterface
@@ -89,6 +88,20 @@ final class HttpRequestWithGreedyLabelInPathInput implements SerializableStructI
             1 => $this->baz,
             default => null,
         };
+    }
+
+    /**
+     * Return a copy with one member replaced.
+     */
+    public function withMemberValue(Schema $member, mixed $value): static
+    {
+        $members = [
+            $this->foo,
+            $this->baz
+        ];
+        $members[$member->memberIndex] = $value;
+
+        return new self(...$members);
     }
 
 }

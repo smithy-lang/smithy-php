@@ -14,7 +14,6 @@ use Smithy\Core\Serde\Schema;
 use Smithy\Core\Serde\SerializableStructInterface;
 use Smithy\Core\Serde\ShapeSerializerInterface;
 use Smithy\Core\Shape\FromMembersTrait;
-use Smithy\Core\Shape\ShapeType;
 use Smithy\ProtocolTests\RestXml\Schemas;
 
 final class HttpPayloadTraitsInputOutput implements SerializableStructInterface
@@ -90,6 +89,20 @@ final class HttpPayloadTraitsInputOutput implements SerializableStructInterface
             1 => $this->blob,
             default => null,
         };
+    }
+
+    /**
+     * Return a copy with one member replaced.
+     */
+    public function withMemberValue(Schema $member, mixed $value): static
+    {
+        $members = [
+            $this->foo,
+            $this->blob
+        ];
+        $members[$member->memberIndex] = $value;
+
+        return new self(...$members);
     }
 
 }

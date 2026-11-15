@@ -726,19 +726,25 @@ final class SchemasGeneratorTest extends TestCase
             );
         }
         $this->assertStringContainsString(
-            "listMember: new Schema(id: 'smithy.example#ItemList\$member', "
+            "listMember: SchemasMembers::\$shared"
+                . "['smithy.example#ItemList\$member'] ??= "
+                . "new Schema(id: 'smithy.example#ItemList\$member', "
                 . "type: ShapeType::Structure, memberName: 'member', "
                 . "memberIndex: 0",
             $content
         );
         $this->assertStringContainsString(
-            "mapKey: new Schema(id: 'smithy.example#AttributeMap\$key', "
+            "mapKey: SchemasMembers::\$shared"
+                . "['smithy.example#AttributeMap\$key'] ??= "
+                . "new Schema(id: 'smithy.example#AttributeMap\$key', "
                 . "type: ShapeType::String_, memberName: 'key', "
                 . "memberIndex: 0",
             $content
         );
         $this->assertStringContainsString(
-            "mapValue: new Schema(id: 'smithy.example#AttributeMap\$value', "
+            "mapValue: SchemasMembers::\$shared"
+                . "['smithy.example#AttributeMap\$value'] ??= "
+                . "new Schema(id: 'smithy.example#AttributeMap\$value', "
                 . "type: ShapeType::String_, memberName: 'value', "
                 . "memberIndex: 1",
             $content
@@ -1238,5 +1244,262 @@ PHP);
             @\unlink($schemasPath);
             @\rmdir($outputDir);
         }
+    }
+
+    public function testSharesAcyclicMemberSchemasAndCopiesCyclicOnes(): void
+    {
+        $model = SmithyModel::fromJson(\json_encode([
+            'smithy' => '2.0',
+            'shapes' => [
+                'smithy.example#Container' => [
+                    'type' => 'structure',
+                    'members' => [
+                        'item' => ['target' => 'smithy.example#Item'],
+                        'items' => ['target' => 'smithy.example#ItemList'],
+                        'owner' => ['target' => 'smithy.example#Owner']
+                    ]
+                ],
+                'smithy.example#Other' => [
+                    'type' => 'structure',
+                    'members' => [
+                        'items' => ['target' => 'smithy.example#ItemList']
+                    ]
+                ],
+                'smithy.example#ItemList' => [
+                    'type' => 'list',
+                    'member' => ['target' => 'smithy.example#Item']
+                ],
+                'smithy.example#Item' => [
+                    'type' => 'structure',
+                    'members' => [
+                        'name' => ['target' => 'smithy.api#String']
+                    ]
+                ],
+                'smithy.example#Owner' => [
+                    'type' => 'structure',
+                    'members' => [
+                        'pet' => ['target' => 'smithy.example#Pet']
+                    ]
+                ],
+                'smithy.example#Pet' => [
+                    'type' => 'structure',
+                    'members' => [
+                        'owner' => ['target' => 'smithy.example#Owner']
+                    ]
+                ]
+            ]
+        ], JSON_THROW_ON_ERROR));
+        $namespace = 'Smithy\\Tests\\Generated\\SharedMemberSchemas';
+        $settings = new CodegenSettings(
+            namespace: $namespace,
+            outputDir: '/tmp/out',
+            organization: 'flat'
+        );
+        $generator = new SchemasGenerator(
+            $model,
+            new PhpSymbolProvider($model, $settings),
+            $settings
+        );
+        $content = $generator->generate([
+            'smithy.example#Container' => true,
+            'smithy.example#Other' => true,
+            'smithy.example#ItemList' => true,
+            'smithy.example#Item' => true,
+            'smithy.example#Owner' => true,
+            'smithy.example#Pet' => true
+        ])->content;
+        eval((string) \preg_replace(
+            '/^<\?php\s+(?:\/\*.*?\*\/\s+)?declare\(strict_types=1\);\s*/s',
+            '',
+            $content
+        ));
+        $schemas = $namespace . '\\Schemas';
+        $container = $schemas::container();
+        $name = $schemas::item()->getMember('name');
+
+        // Small acyclic targets (build count <= copy member count) share
+        // the canonical member schemas, so the shared instance is reused.
+        $this->assertSame(
+            $name,
+            $container->getMember('item')->getMember('name')
+        );
+        $this->assertSame(
+            $container->getMember('items')->listMember,
+            $schemas::other()->getMember('items')->listMember
+        );
+        $this->assertSame(
+            $name,
+            $container->getMember('items')->listMember->getMember('name')
+        );
+        // On a cycle, the cut point depends on the use site, so each site
+        // keeps its own copy (not shared).
+        $this->assertNotSame(
+            $schemas::pet()->getMember('owner'),
+            $schemas::owner()->getMember('pet')->getMember('owner')
+        );
+    }
+
+    /**
+     * Guards Major 2: a deep acyclic chain whose eager build count exceeds
+     * the container's member count falls back to a one-level copy instead
+     * of `self::method()->getMembers()`. That keeps a single operation's
+     * cold path from materializing the whole chain (base allocated one
+     * level; eager sharing would allocate every level).
+     */
+    public function testDeepAcyclicTargetFallsBackToOneLevelCopy(): void
+    {
+        $shapes = [
+            'ex#Op' => [
+                'type' => 'structure',
+                'members' => ['a' => ['target' => 'ex#L0']]
+            ]
+        ];
+        $depth = 6;
+        for ($i = 0; $i < $depth; $i++) {
+            $next = $i + 1 < $depth
+                ? 'ex#L' . ($i + 1)
+                : 'smithy.api#String';
+            $shapes["ex#L{$i}"] = [
+                'type' => 'structure',
+                'members' => [
+                    'n' => ['target' => $next],
+                    's' => ['target' => 'smithy.api#String']
+                ]
+            ];
+        }
+        $model = SmithyModel::fromJson(
+            \json_encode(['smithy' => '2.0', 'shapes' => $shapes]),
+        );
+        $namespace = 'Smithy\\Tests\\Generated\\DeepAcyclicFallback';
+        $settings = new CodegenSettings(
+            namespace: $namespace,
+            outputDir: '/tmp/out',
+            organization: 'flat'
+        );
+        $generator = new SchemasGenerator(
+            $model,
+            new PhpSymbolProvider($model, $settings),
+            $settings
+        );
+        $content = $generator->generate(
+            \array_fill_keys(\array_keys($shapes), true)
+        )->content;
+
+        // `Op` has one member targeting the deep chain `L0`. The chain's
+        // build count (6 roots) exceeds `Op`'s member count (1), so the
+        // member must be a one-level copy, not a shared `self::l0()` call.
+        $this->assertStringContainsString(
+            'public static function op(): Schema',
+            $content
+        );
+        eval((string) \preg_replace(
+            '/^<\?php\s+(?:\/\*.*?\*\/\s+)?declare\(strict_types=1\);\s*/s',
+            '',
+            $content
+        ));
+        $schemas = $namespace . '\\Schemas';
+
+        // The `a` member carries an inline copy of L0's members (one level),
+        // and its nested `n` member is a stub (targetClass only, no further
+        // inline members) - exactly the base one-level-copy shape.
+        $aMember = $schemas::op()->getMember('a');
+        $this->assertSame(2, $aMember->getMemberCount());
+        $nStub = $aMember->getMember('n');
+        $this->assertNotNull($nStub);
+        $this->assertSame(0, $nStub->getMemberCount());
+        $this->assertTrue($nStub->hasTarget());
+
+        // The copy is NOT the canonical L0 instance (sharing was skipped).
+        $this->assertNotSame($schemas::l0(), $aMember);
+    }
+
+    /**
+     * A shape literally named `collectionMembers` must not collide with the
+     * shared list/map member cache. Smithy allows a lower-case first letter,
+     * so `Schemas` emits `public static Schema $collectionMembers` for that
+     * shape. Holding the cache on a sibling class keeps the two apart; the
+     * generated file must load without a redeclare fatal.
+     */
+    public function testShapeNamedCollectionMembersDoesNotCollide(): void
+    {
+        $model = SmithyModel::fromJson(\json_encode([
+            'smithy' => '2.0',
+            'shapes' => [
+                'smithy.example#Container' => [
+                    'type' => 'structure',
+                    'members' => [
+                        // The colliding shape name.
+                        'held' => [
+                            'target' => 'smithy.example#collectionMembers'
+                        ],
+                        // A list so the shared-member cache is actually used.
+                        'tags' => ['target' => 'smithy.example#TagList']
+                    ]
+                ],
+                'smithy.example#collectionMembers' => [
+                    'type' => 'structure',
+                    'members' => [
+                        'name' => ['target' => 'smithy.api#String']
+                    ]
+                ],
+                'smithy.example#TagList' => [
+                    'type' => 'list',
+                    'member' => ['target' => 'smithy.api#String']
+                ]
+            ]
+        ], JSON_THROW_ON_ERROR));
+        $namespace = 'Smithy\\Tests\\Generated\\CollectionMembersCollision';
+        $settings = new CodegenSettings(
+            namespace: $namespace,
+            outputDir: '/tmp/out',
+            organization: 'flat'
+        );
+        $generator = new SchemasGenerator(
+            $model,
+            new PhpSymbolProvider($model, $settings),
+            $settings
+        );
+        $content = $generator->generate([
+            'smithy.example#Container' => true,
+            'smithy.example#collectionMembers' => true,
+            'smithy.example#TagList' => true
+        ])->content;
+
+        // The shape keeps its own property on Schemas.
+        $this->assertStringContainsString(
+            'public static Schema $collectionMembers;',
+            $content
+        );
+        // The shared cache lives on the sibling class, not on Schemas.
+        $this->assertStringContainsString(
+            'final class SchemasMembers',
+            $content
+        );
+        $this->assertStringContainsString(
+            'SchemasMembers::$shared',
+            $content
+        );
+        $this->assertStringNotContainsString(
+            'private static array $collectionMembers',
+            $content
+        );
+
+        // The generated file must load without a redeclare fatal.
+        eval((string) \preg_replace(
+            '/^<\?php\s+(?:\/\*.*?\*\/\s+)?declare\(strict_types=1\);\s*/s',
+            '',
+            $content
+        ));
+        $schemas = $namespace . '\\Schemas';
+        $this->assertSame(
+            ShapeType::Structure->value,
+            $schemas::collectionMembers()->type
+        );
+        // Building the container triggers the `??=` list-member cache on
+        // the sibling holder.
+        $schemas::container();
+        $this->assertNotEmpty(
+            ($namespace . '\\SchemasMembers')::$shared
+        );
     }
 }

@@ -18,7 +18,6 @@ final class FooEnum implements EnumInterface
 {
     public const SHAPE_ID = 'smithy.protocoltests.shared#FooEnum';
 
-    private static Schema $SCHEMA;
     private static array $known = [];
 
     public readonly string $value;
@@ -95,7 +94,7 @@ final class FooEnum implements EnumInterface
      */
     public static function schema(): Schema
     {
-        return self::$SCHEMA ??= Schemas::fooEnum();
+        return Schemas::fooEnum();
     }
 
     /**

@@ -13,7 +13,6 @@ use Smithy\Core\Serde\Schema;
 use Smithy\Core\Serde\SerializableStructInterface;
 use Smithy\Core\Serde\ShapeSerializerInterface;
 use Smithy\Core\Shape\FromMembersTrait;
-use Smithy\Core\Shape\ShapeType;
 use Smithy\ProtocolTests\RpcV2Json\Schemas;
 
 final class SimpleScalarStructure implements SerializableStructInterface
@@ -145,6 +144,28 @@ final class SimpleScalarStructure implements SerializableStructInterface
             9 => $this->blobValue,
             default => null,
         };
+    }
+
+    /**
+     * Return a copy with one member replaced.
+     */
+    public function withMemberValue(Schema $member, mixed $value): static
+    {
+        $members = [
+            $this->trueBooleanValue,
+            $this->falseBooleanValue,
+            $this->byteValue,
+            $this->doubleValue,
+            $this->floatValue,
+            $this->integerValue,
+            $this->longValue,
+            $this->shortValue,
+            $this->stringValue,
+            $this->blobValue
+        ];
+        $members[$member->memberIndex] = $value;
+
+        return new self(...$members);
     }
 
 }

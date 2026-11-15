@@ -13,7 +13,6 @@ use Smithy\Core\Serde\Schema;
 use Smithy\Core\Serde\SerializableStructInterface;
 use Smithy\Core\Serde\ShapeSerializerInterface;
 use Smithy\Core\Shape\FromMembersTrait;
-use Smithy\Core\Shape\ShapeType;
 use Smithy\ProtocolTests\AwsQuery\Schemas;
 use Smithy\ProtocolTests\AwsQuery\Shape\FooEnum;
 use Smithy\ProtocolTests\AwsQuery\Shape\IntegerEnum;
@@ -150,6 +149,27 @@ final class SimpleInputParamsInput implements SerializableStructInterface
             8 => $this->integerEnum ?? null,
             default => null,
         };
+    }
+
+    /**
+     * Return a copy with one member replaced.
+     */
+    public function withMemberValue(Schema $member, mixed $value): static
+    {
+        $members = [
+            $this->foo,
+            $this->bar,
+            $this->baz,
+            $this->bam,
+            $this->floatValue,
+            $this->boo,
+            $this->qux,
+            $this->fooEnum ?? null,
+            $this->integerEnum ?? null
+        ];
+        $members[$member->memberIndex] = $value;
+
+        return new self(...$members);
     }
 
 }

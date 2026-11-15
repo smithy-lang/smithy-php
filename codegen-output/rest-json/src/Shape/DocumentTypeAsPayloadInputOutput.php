@@ -14,7 +14,6 @@ use Smithy\Core\Serde\SerializableStructInterface;
 use Smithy\Core\Serde\ShapeSerializerInterface;
 use Smithy\Core\Shape\Document\DocumentInterface;
 use Smithy\Core\Shape\FromMembersTrait;
-use Smithy\Core\Shape\ShapeType;
 use Smithy\ProtocolTests\RestJson\Schemas;
 
 final class DocumentTypeAsPayloadInputOutput implements SerializableStructInterface
@@ -83,6 +82,19 @@ final class DocumentTypeAsPayloadInputOutput implements SerializableStructInterf
             0 => $this->documentValue,
             default => null,
         };
+    }
+
+    /**
+     * Return a copy with one member replaced.
+     */
+    public function withMemberValue(Schema $member, mixed $value): static
+    {
+        $members = [
+            $this->documentValue
+        ];
+        $members[$member->memberIndex] = $value;
+
+        return new self(...$members);
     }
 
 }

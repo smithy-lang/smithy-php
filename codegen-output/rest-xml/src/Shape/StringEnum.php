@@ -18,7 +18,6 @@ final class StringEnum implements EnumInterface
 {
     public const SHAPE_ID = 'aws.protocoltests.restxml#StringEnum';
 
-    private static Schema $SCHEMA;
     private static array $known = [];
 
     public readonly string $value;
@@ -71,7 +70,7 @@ final class StringEnum implements EnumInterface
      */
     public static function schema(): Schema
     {
-        return self::$SCHEMA ??= Schemas::stringEnum();
+        return Schemas::stringEnum();
     }
 
     /**

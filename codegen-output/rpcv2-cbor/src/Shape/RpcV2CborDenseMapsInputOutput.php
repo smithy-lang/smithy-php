@@ -13,7 +13,6 @@ use Smithy\Core\Serde\Schema;
 use Smithy\Core\Serde\SerializableStructInterface;
 use Smithy\Core\Serde\ShapeSerializerInterface;
 use Smithy\Core\Shape\FromMembersTrait;
-use Smithy\Core\Shape\ShapeType;
 use Smithy\ProtocolTests\RpcV2Cbor\Schemas;
 
 final class RpcV2CborDenseMapsInputOutput implements SerializableStructInterface
@@ -117,6 +116,23 @@ final class RpcV2CborDenseMapsInputOutput implements SerializableStructInterface
             4 => $this->denseSetMap,
             default => null,
         };
+    }
+
+    /**
+     * Return a copy with one member replaced.
+     */
+    public function withMemberValue(Schema $member, mixed $value): static
+    {
+        $members = [
+            $this->denseStructMap,
+            $this->denseNumberMap,
+            $this->denseBooleanMap,
+            $this->denseStringMap,
+            $this->denseSetMap
+        ];
+        $members[$member->memberIndex] = $value;
+
+        return new self(...$members);
     }
 
 }

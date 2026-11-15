@@ -14,7 +14,6 @@ use Smithy\Core\Serde\SerializableStructInterface;
 use Smithy\Core\Serde\ShapeSerializerInterface;
 use Smithy\Core\Shape\Document\DocumentInterface;
 use Smithy\Core\Shape\FromMembersTrait;
-use Smithy\Core\Shape\ShapeType;
 use Smithy\ProtocolTests\AwsJson1_1\Schemas;
 
 final class PutAndGetInlineDocumentsInputOutput implements SerializableStructInterface
@@ -83,6 +82,19 @@ final class PutAndGetInlineDocumentsInputOutput implements SerializableStructInt
             0 => $this->inlineDocument,
             default => null,
         };
+    }
+
+    /**
+     * Return a copy with one member replaced.
+     */
+    public function withMemberValue(Schema $member, mixed $value): static
+    {
+        $members = [
+            $this->inlineDocument
+        ];
+        $members[$member->memberIndex] = $value;
+
+        return new self(...$members);
     }
 
 }

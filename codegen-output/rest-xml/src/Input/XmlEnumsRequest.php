@@ -13,7 +13,6 @@ use Smithy\Core\Serde\Schema;
 use Smithy\Core\Serde\SerializableStructInterface;
 use Smithy\Core\Serde\ShapeSerializerInterface;
 use Smithy\Core\Shape\FromMembersTrait;
-use Smithy\Core\Shape\ShapeType;
 use Smithy\ProtocolTests\RestXml\Schemas;
 use Smithy\ProtocolTests\RestXml\Shape\FooEnum;
 
@@ -137,6 +136,24 @@ final class XmlEnumsRequest implements SerializableStructInterface
             5 => $this->fooEnumMap,
             default => null,
         };
+    }
+
+    /**
+     * Return a copy with one member replaced.
+     */
+    public function withMemberValue(Schema $member, mixed $value): static
+    {
+        $members = [
+            $this->fooEnum1 ?? null,
+            $this->fooEnum2 ?? null,
+            $this->fooEnum3 ?? null,
+            $this->fooEnumList,
+            $this->fooEnumSet,
+            $this->fooEnumMap
+        ];
+        $members[$member->memberIndex] = $value;
+
+        return new self(...$members);
     }
 
 }

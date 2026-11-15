@@ -18,7 +18,6 @@ final class IntegerEnum implements EnumInterface
 {
     public const SHAPE_ID = 'aws.protocoltests.shared#IntegerEnum';
 
-    private static Schema $SCHEMA;
     private static array $known = [];
 
     public readonly int $value;
@@ -83,7 +82,7 @@ final class IntegerEnum implements EnumInterface
      */
     public static function schema(): Schema
     {
-        return self::$SCHEMA ??= Schemas::integerEnum();
+        return Schemas::integerEnum();
     }
 
     /**

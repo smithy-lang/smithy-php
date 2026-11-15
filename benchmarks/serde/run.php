@@ -197,7 +197,7 @@ foreach ($protocols as $name => $config) {
     if ($direction === 'all' || $direction === 'serialize') {
         foreach ($repository->requests($filter) as $case) {
             $operation = resolveOperation($loader, $case);
-            $inputClass = $operation->getInputClass();
+            $inputClass = $operation::INPUT_CLASS;
             if ($inputClass === '') {
                 throw new \RuntimeException(
                     "No generated input class for {$case['id']}."
@@ -409,7 +409,7 @@ function validateDeserialization(
     array $case
 ): void
 {
-    $outputClass = $operation->getOutputClass();
+    $outputClass = $operation::OUTPUT_CLASS;
     if ($outputClass === '' || !$output instanceof $outputClass) {
         throw new \RuntimeException(
             "Unexpected output type for {$case['id']}."

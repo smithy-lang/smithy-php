@@ -13,7 +13,6 @@ use Smithy\Core\Serde\Schema;
 use Smithy\Core\Serde\SerializableStructInterface;
 use Smithy\Core\Serde\ShapeSerializerInterface;
 use Smithy\Core\Shape\FromMembersTrait;
-use Smithy\Core\Shape\ShapeType;
 use Smithy\ProtocolTests\RestJson\Schemas;
 
 final class JsonListsInputOutput implements SerializableStructInterface
@@ -149,6 +148,27 @@ final class JsonListsInputOutput implements SerializableStructInterface
             8 => $this->structureList,
             default => null,
         };
+    }
+
+    /**
+     * Return a copy with one member replaced.
+     */
+    public function withMemberValue(Schema $member, mixed $value): static
+    {
+        $members = [
+            $this->stringList,
+            $this->stringSet,
+            $this->integerList,
+            $this->booleanList,
+            $this->timestampList,
+            $this->enumList,
+            $this->intEnumList,
+            $this->nestedStringList,
+            $this->structureList
+        ];
+        $members[$member->memberIndex] = $value;
+
+        return new self(...$members);
     }
 
 }

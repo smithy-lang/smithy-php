@@ -18,7 +18,6 @@ final class TestIntEnum implements EnumInterface
 {
     public const SHAPE_ID = 'smithy.protocoltests.rpcv2Cbor#TestIntEnum';
 
-    private static Schema $SCHEMA;
     private static array $known = [];
 
     public readonly int $value;
@@ -77,7 +76,7 @@ final class TestIntEnum implements EnumInterface
      */
     public static function schema(): Schema
     {
-        return self::$SCHEMA ??= Schemas::testIntEnum();
+        return Schemas::testIntEnum();
     }
 
     /**

@@ -13,7 +13,6 @@ use Smithy\Core\Serde\Schema;
 use Smithy\Core\Serde\SerializableStructInterface;
 use Smithy\Core\Serde\ShapeSerializerInterface;
 use Smithy\Core\Shape\FromMembersTrait;
-use Smithy\Core\Shape\ShapeType;
 use Smithy\ProtocolTests\AwsJson1_1\Schemas;
 
 final class SimpleScalarPropertiesInputOutput implements SerializableStructInterface
@@ -89,6 +88,20 @@ final class SimpleScalarPropertiesInputOutput implements SerializableStructInter
             1 => $this->doubleValue,
             default => null,
         };
+    }
+
+    /**
+     * Return a copy with one member replaced.
+     */
+    public function withMemberValue(Schema $member, mixed $value): static
+    {
+        $members = [
+            $this->floatValue,
+            $this->doubleValue
+        ];
+        $members[$member->memberIndex] = $value;
+
+        return new self(...$members);
     }
 
 }

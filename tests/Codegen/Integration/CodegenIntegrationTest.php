@@ -309,8 +309,8 @@ final class CodegenIntegrationTest extends TestCase
         $operationClass = $namespace . '\\PingOperation';
         $operation = $operationClass::instance();
 
-        $this->assertSame($unitClass, $operation->getInputClass());
-        $this->assertSame($unitClass, $operation->getOutputClass());
+        $this->assertSame($unitClass, $operation::INPUT_CLASS);
+        $this->assertSame($unitClass, $operation::OUTPUT_CLASS);
         $this->assertInstanceOf(
             $unitClass,
             $operation->createInput([])

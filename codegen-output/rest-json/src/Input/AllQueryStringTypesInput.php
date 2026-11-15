@@ -13,7 +13,6 @@ use Smithy\Core\Serde\Schema;
 use Smithy\Core\Serde\SerializableStructInterface;
 use Smithy\Core\Serde\ShapeSerializerInterface;
 use Smithy\Core\Shape\FromMembersTrait;
-use Smithy\Core\Shape\ShapeType;
 use Smithy\ProtocolTests\RestJson\Schemas;
 use Smithy\ProtocolTests\RestJson\Shape\FooEnum;
 use Smithy\ProtocolTests\RestJson\Shape\IntegerEnum;
@@ -246,6 +245,39 @@ final class AllQueryStringTypesInput implements SerializableStructInterface
             20 => $this->queryParamsMapOfStringList,
             default => null,
         };
+    }
+
+    /**
+     * Return a copy with one member replaced.
+     */
+    public function withMemberValue(Schema $member, mixed $value): static
+    {
+        $members = [
+            $this->queryString,
+            $this->queryStringList,
+            $this->queryStringSet,
+            $this->queryByte,
+            $this->queryShort,
+            $this->queryInteger,
+            $this->queryIntegerList,
+            $this->queryIntegerSet,
+            $this->queryLong,
+            $this->queryFloat,
+            $this->queryDouble,
+            $this->queryDoubleList,
+            $this->queryBoolean,
+            $this->queryBooleanList,
+            $this->queryTimestamp,
+            $this->queryTimestampList,
+            $this->queryEnum ?? null,
+            $this->queryEnumList,
+            $this->queryIntegerEnum ?? null,
+            $this->queryIntegerEnumList,
+            $this->queryParamsMapOfStringList
+        ];
+        $members[$member->memberIndex] = $value;
+
+        return new self(...$members);
     }
 
 }

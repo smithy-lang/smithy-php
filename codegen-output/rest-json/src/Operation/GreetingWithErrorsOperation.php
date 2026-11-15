@@ -84,16 +84,6 @@ final class GreetingWithErrorsOperation implements OperationInterface
         return self::AUTH_SCHEMES;
     }
 
-    public function getInputClass(): string
-    {
-        return self::INPUT_CLASS;
-    }
-
-    public function getOutputClass(): string
-    {
-        return self::OUTPUT_CLASS;
-    }
-
     /**
      * Get the shape schema.
      */

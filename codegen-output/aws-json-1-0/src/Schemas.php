@@ -74,7 +74,7 @@ final class Schemas
             type: ShapeType::Structure,
             members: [
                 new Schema(id: 'aws.protocoltests.json10#ComplexError$TopLevel', type: ShapeType::String_, memberName: 'TopLevel', memberIndex: 0),
-                new Schema(id: 'aws.protocoltests.json10#ComplexError$Nested', type: ShapeType::Structure, memberName: 'Nested', memberIndex: 1, members: [new Schema(id: 'aws.protocoltests.json10#ComplexNestedErrorData$Foo', type: ShapeType::String_, memberName: 'Foo', memberIndex: 0, traits: [12 => 'Fooooo'])], targetClass: ComplexNestedErrorData::class)
+                new Schema(id: 'aws.protocoltests.json10#ComplexError$Nested', type: ShapeType::Structure, memberName: 'Nested', memberIndex: 1, members: self::complexNestedErrorData()->getMembers(), targetClass: ComplexNestedErrorData::class)
             ], traits: [23 => 'client'],
             targetClass: ComplexErrorException::class
         );
@@ -246,7 +246,7 @@ final class Schemas
             id: 'aws.protocoltests.json10#JsonUnionsInput',
             type: ShapeType::Structure,
             members: [
-                new Schema(id: 'aws.protocoltests.json10#JsonUnionsInput$contents', type: ShapeType::Union, memberName: 'contents', memberIndex: 0, members: [new Schema(id: 'aws.protocoltests.json10#MyUnion$stringValue', type: ShapeType::String_, memberName: 'stringValue', memberIndex: 0), new Schema(id: 'aws.protocoltests.json10#MyUnion$booleanValue', type: ShapeType::Boolean, memberName: 'booleanValue', memberIndex: 1), new Schema(id: 'aws.protocoltests.json10#MyUnion$numberValue', type: ShapeType::Integer, memberName: 'numberValue', memberIndex: 2), new Schema(id: 'aws.protocoltests.json10#MyUnion$blobValue', type: ShapeType::Blob, memberName: 'blobValue', memberIndex: 3), new Schema(id: 'aws.protocoltests.json10#MyUnion$timestampValue', type: ShapeType::Timestamp, memberName: 'timestampValue', memberIndex: 4), new Schema(id: 'aws.protocoltests.json10#MyUnion$enumValue', type: ShapeType::Enum, memberName: 'enumValue', memberIndex: 5, targetClass: FooEnum::class), new Schema(id: 'aws.protocoltests.json10#MyUnion$intEnumValue', type: ShapeType::IntEnum, memberName: 'intEnumValue', memberIndex: 6, targetClass: IntegerEnum::class), new Schema(id: 'aws.protocoltests.json10#MyUnion$listValue', type: ShapeType::List_, memberName: 'listValue', memberIndex: 7, listMember: new Schema(id: 'aws.protocoltests.shared#StringList$member', type: ShapeType::String_, memberName: 'member', memberIndex: 0)), new Schema(id: 'aws.protocoltests.json10#MyUnion$mapValue', type: ShapeType::Map, memberName: 'mapValue', memberIndex: 8, mapKey: new Schema(id: 'aws.protocoltests.shared#StringMap$key', type: ShapeType::String_, memberName: 'key', memberIndex: 0), mapValue: new Schema(id: 'aws.protocoltests.shared#StringMap$value', type: ShapeType::String_, memberName: 'value', memberIndex: 1)), new Schema(id: 'aws.protocoltests.json10#MyUnion$structureValue', type: ShapeType::Structure, memberName: 'structureValue', memberIndex: 9, targetClass: GreetingStruct::class)], targetClass: MyUnion::class)
+                new Schema(id: 'aws.protocoltests.json10#JsonUnionsInput$contents', type: ShapeType::Union, memberName: 'contents', memberIndex: 0, members: self::myUnion()->getMembers(), targetClass: MyUnion::class)
             ],
             targetClass: JsonUnionsInput::class
         );
@@ -262,7 +262,7 @@ final class Schemas
             id: 'aws.protocoltests.json10#JsonUnionsOutput',
             type: ShapeType::Structure,
             members: [
-                new Schema(id: 'aws.protocoltests.json10#JsonUnionsOutput$contents', type: ShapeType::Union, memberName: 'contents', memberIndex: 0, members: [new Schema(id: 'aws.protocoltests.json10#MyUnion$stringValue', type: ShapeType::String_, memberName: 'stringValue', memberIndex: 0), new Schema(id: 'aws.protocoltests.json10#MyUnion$booleanValue', type: ShapeType::Boolean, memberName: 'booleanValue', memberIndex: 1), new Schema(id: 'aws.protocoltests.json10#MyUnion$numberValue', type: ShapeType::Integer, memberName: 'numberValue', memberIndex: 2), new Schema(id: 'aws.protocoltests.json10#MyUnion$blobValue', type: ShapeType::Blob, memberName: 'blobValue', memberIndex: 3), new Schema(id: 'aws.protocoltests.json10#MyUnion$timestampValue', type: ShapeType::Timestamp, memberName: 'timestampValue', memberIndex: 4), new Schema(id: 'aws.protocoltests.json10#MyUnion$enumValue', type: ShapeType::Enum, memberName: 'enumValue', memberIndex: 5, targetClass: FooEnum::class), new Schema(id: 'aws.protocoltests.json10#MyUnion$intEnumValue', type: ShapeType::IntEnum, memberName: 'intEnumValue', memberIndex: 6, targetClass: IntegerEnum::class), new Schema(id: 'aws.protocoltests.json10#MyUnion$listValue', type: ShapeType::List_, memberName: 'listValue', memberIndex: 7, listMember: new Schema(id: 'aws.protocoltests.shared#StringList$member', type: ShapeType::String_, memberName: 'member', memberIndex: 0)), new Schema(id: 'aws.protocoltests.json10#MyUnion$mapValue', type: ShapeType::Map, memberName: 'mapValue', memberIndex: 8, mapKey: new Schema(id: 'aws.protocoltests.shared#StringMap$key', type: ShapeType::String_, memberName: 'key', memberIndex: 0), mapValue: new Schema(id: 'aws.protocoltests.shared#StringMap$value', type: ShapeType::String_, memberName: 'value', memberIndex: 1)), new Schema(id: 'aws.protocoltests.json10#MyUnion$structureValue', type: ShapeType::Structure, memberName: 'structureValue', memberIndex: 9, targetClass: GreetingStruct::class)], targetClass: MyUnion::class)
+                new Schema(id: 'aws.protocoltests.json10#JsonUnionsOutput$contents', type: ShapeType::Union, memberName: 'contents', memberIndex: 0, members: self::myUnion()->getMembers(), targetClass: MyUnion::class)
             ],
             targetClass: JsonUnionsOutput::class
         );
@@ -367,9 +367,9 @@ final class Schemas
                 new Schema(id: 'aws.protocoltests.json10#MyUnion$timestampValue', type: ShapeType::Timestamp, memberName: 'timestampValue', memberIndex: 4),
                 new Schema(id: 'aws.protocoltests.json10#MyUnion$enumValue', type: ShapeType::Enum, memberName: 'enumValue', memberIndex: 5, targetClass: FooEnum::class),
                 new Schema(id: 'aws.protocoltests.json10#MyUnion$intEnumValue', type: ShapeType::IntEnum, memberName: 'intEnumValue', memberIndex: 6, targetClass: IntegerEnum::class),
-                new Schema(id: 'aws.protocoltests.json10#MyUnion$listValue', type: ShapeType::List_, memberName: 'listValue', memberIndex: 7, listMember: new Schema(id: 'aws.protocoltests.shared#StringList$member', type: ShapeType::String_, memberName: 'member', memberIndex: 0)),
-                new Schema(id: 'aws.protocoltests.json10#MyUnion$mapValue', type: ShapeType::Map, memberName: 'mapValue', memberIndex: 8, mapKey: new Schema(id: 'aws.protocoltests.shared#StringMap$key', type: ShapeType::String_, memberName: 'key', memberIndex: 0), mapValue: new Schema(id: 'aws.protocoltests.shared#StringMap$value', type: ShapeType::String_, memberName: 'value', memberIndex: 1)),
-                new Schema(id: 'aws.protocoltests.json10#MyUnion$structureValue', type: ShapeType::Structure, memberName: 'structureValue', memberIndex: 9, members: [new Schema(id: 'aws.protocoltests.shared#GreetingStruct$hi', type: ShapeType::String_, memberName: 'hi', memberIndex: 0)], targetClass: GreetingStruct::class)
+                new Schema(id: 'aws.protocoltests.json10#MyUnion$listValue', type: ShapeType::List_, memberName: 'listValue', memberIndex: 7, listMember: SchemasMembers::$shared['aws.protocoltests.shared#StringList$member'] ??= new Schema(id: 'aws.protocoltests.shared#StringList$member', type: ShapeType::String_, memberName: 'member', memberIndex: 0)),
+                new Schema(id: 'aws.protocoltests.json10#MyUnion$mapValue', type: ShapeType::Map, memberName: 'mapValue', memberIndex: 8, mapKey: SchemasMembers::$shared['aws.protocoltests.shared#StringMap$key'] ??= new Schema(id: 'aws.protocoltests.shared#StringMap$key', type: ShapeType::String_, memberName: 'key', memberIndex: 0), mapValue: SchemasMembers::$shared['aws.protocoltests.shared#StringMap$value'] ??= new Schema(id: 'aws.protocoltests.shared#StringMap$value', type: ShapeType::String_, memberName: 'value', memberIndex: 1)),
+                new Schema(id: 'aws.protocoltests.json10#MyUnion$structureValue', type: ShapeType::Structure, memberName: 'structureValue', memberIndex: 9, members: self::greetingStruct()->getMembers(), targetClass: GreetingStruct::class)
             ],
             targetClass: MyUnion::class
         );
@@ -401,4 +401,15 @@ final class Schemas
         );
     }
 
+}
+
+/**
+ * Shared list and map member schemas for this service, keyed by member ID.
+ *
+ * Held here rather than on Schemas so no generated shape property can collide with it.
+ */
+final class SchemasMembers
+{
+    /** @var array<string, Schema> */
+    public static array $shared = [];
 }
