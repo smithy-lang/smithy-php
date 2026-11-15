@@ -194,6 +194,50 @@ final class AsyncTest extends TestCase
         $this->assertSame(0, $loop->runCalls);
     }
 
+    public function testMapReturnsEmptyArrayForEmptyCountable(): void
+    {
+        $loop = new RecordingEventLoopFixture();
+        Async::configure($loop);
+
+        $this->assertSame(
+            [],
+            Async::map(
+                new \ArrayIterator([]),
+                static fn(mixed $value): mixed => $value
+            )
+        );
+        $this->assertSame(0, $loop->runCalls);
+    }
+
+    public function testMapCapsWorkersAtItemCount(): void
+    {
+        $loop = new RecordingEventLoopFixture();
+        Async::configure($loop);
+
+        $results = Async::map(
+            new \ArrayIterator([1, 2, 3]),
+            static fn(int $value): int => $value * 2
+        );
+
+        $this->assertSame([2, 4, 6], $results);
+        $this->assertCount(3, $loop->receivedCallbacks);
+    }
+
+    public function testMapArrayPassesKeysAndKeepsInputOrder(): void
+    {
+        $loop = new RecordingEventLoopFixture();
+        Async::configure($loop);
+
+        $results = Async::map(
+            ['b' => 1, 'a' => 2],
+            static fn(int $value, string $key): string => $key . $value,
+            concurrency: 1
+        );
+
+        $this->assertSame(['b1', 'a2'], $results);
+        $this->assertCount(1, $loop->receivedCallbacks);
+    }
+
     public function testMapRejectsInvalidConcurrency(): void
     {
         $this->expectException(\InvalidArgumentException::class);
@@ -247,6 +291,14 @@ final class AsyncTest extends TestCase
         $this->assertSame(['first', 'second'], $results);
         $this->assertSame(1, $loop->runCalls);
         $this->assertCount(2, $loop->receivedCallbacks);
+    }
+
+    public function testEventLoopReturnsConfiguredLoop(): void
+    {
+        $loop = new RecordingEventLoopFixture();
+        Async::configure($loop);
+
+        $this->assertSame($loop, Async::eventLoop());
     }
 
     public function testDelayUsesConfiguredLoopForPositiveDelay(): void
