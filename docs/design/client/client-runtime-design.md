@@ -317,10 +317,17 @@ After a failed attempt:
 
 1. Completion interceptors produce the final attempt error.
 2. The request-level maximum-attempt limit is checked.
-3. `refresh()` decides whether retry is allowed and returns the delay.
-4. The transport prepares the transmitted request state for replay.
+3. The transport prepares the transmitted request state for replay. This runs
+   before `refresh()`, so a non-replayable request never spends retry tokens.
+4. `refresh()` decides whether retry is allowed and returns the delay.
 5. The delay runs through `Async::delay()`.
 6. The next attempt starts from the original retry baseline.
+
+The default strategy is `StandardRetryStrategy` (exponential backoff with
+jitter and a per-scope token bucket); `NoRetryStrategy` is the explicit
+opt-out. Classification and the package split between `Smithy\Client\Retry`
+(strategy) and `Smithy\Core\Retry` (the `RetryInfoInterface` / `RetrySafety`
+contracts) are described in the [Client Retry Design](retry/client-retry-design.md).
 
 `TokenAcquisitionFailedException` terminates retry. Its optional terminal delay
 is honored before the current attempt error is surfaced. `recordSuccess()` is
