@@ -44,6 +44,13 @@ jobs:
       - name: Check package manifests
         run: composer package-manifests:check
 
+      - name: Validate Composer manifests
+        run: |
+          composer validate --strict --no-check-lock
+          for manifest in src/*/composer.json; do
+            composer validate --strict "$manifest"
+          done
+
   codegen-output:
     name: Code generation output
     runs-on: ubuntu-latest

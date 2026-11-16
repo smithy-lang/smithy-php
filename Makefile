@@ -4,7 +4,7 @@ BENCHMARK_PHP ?= $(PHP) -d opcache.enable_cli=1 -d opcache.jit=tracing -d opcach
 
 .DEFAULT_GOAL := help
 
-.PHONY: help install autoload test lint static-analysis check codegen codegen-output codegen-output-check license-check package-manifests-check clean benchmark benchmark-generate benchmark-serde benchmark-client benchmark-update-results benchmark-clean
+.PHONY: help install autoload test lint static-analysis check codegen codegen-output codegen-output-check license-check package-manifests-check composer-validate clean benchmark benchmark-generate benchmark-serde benchmark-client benchmark-update-results benchmark-clean
 .NOTPARALLEL: check benchmark
 
 help: ## List available targets
@@ -32,6 +32,7 @@ check: ## Run checks used by CI
 	$(MAKE) codegen-output-check ARGS=
 	$(MAKE) license-check
 	$(MAKE) package-manifests-check
+	$(MAKE) composer-validate
 
 codegen: ## Run the code generator; pass options with ARGS
 	$(COMPOSER) codegen $(if $(ARGS),-- $(ARGS))
@@ -47,6 +48,12 @@ license-check: ## Check source license headers
 
 package-manifests-check: ## Check package manifests against the root composer.json
 	$(PHP) tools/package-manifests/check.php
+
+composer-validate: ## Validate the root and package manifests with Composer
+	$(COMPOSER) validate --strict --no-check-lock
+	@for manifest in src/*/composer.json; do \
+		$(COMPOSER) validate --strict "$$manifest" || exit 1; \
+	done
 
 clean: ## Remove generated build and test artifacts
 	rm -rf build .phpunit.cache
