@@ -252,9 +252,14 @@ final class ResultWriter
         return \implode("\n", $lines);
     }
 
+    /**
+     * Infer the direction from the smithy-java case naming: request cases
+     * are `*Request*` or `*Input*`, and the S3 PutObject cases name the
+     * operation only.
+     */
     private static function serdeDirection(string $id): string
     {
-        return \str_contains($id, 'Request')
+        return \preg_match('/Request|Input|_PutObject_/', $id) === 1
             ? 'serialize'
             : 'deserialize';
     }

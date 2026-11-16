@@ -1339,6 +1339,61 @@ PHP);
         );
     }
 
+    public function testKeepsMapMembersOnRecursiveMapCycle(): void
+    {
+        $model = SmithyModel::fromJson(\json_encode([
+            'smithy' => '2.0',
+            'shapes' => [
+                'smithy.example#Container' => [
+                    'type' => 'structure',
+                    'members' => [
+                        'entries' => ['target' => 'smithy.example#ValueMap']
+                    ]
+                ],
+                'smithy.example#ValueMap' => [
+                    'type' => 'map',
+                    'key' => ['target' => 'smithy.api#String'],
+                    'value' => ['target' => 'smithy.example#Value']
+                ],
+                'smithy.example#Value' => [
+                    'type' => 'union',
+                    'members' => [
+                        'S' => ['target' => 'smithy.api#String'],
+                        'M' => ['target' => 'smithy.example#ValueMap']
+                    ]
+                ]
+            ]
+        ], JSON_THROW_ON_ERROR));
+        $namespace = 'Smithy\\Tests\\Generated\\RecursiveMapSchemas';
+        $settings = new CodegenSettings(
+            namespace: $namespace,
+            outputDir: '/tmp/out',
+            organization: 'flat'
+        );
+        $content = (new SchemasGenerator(
+            $model,
+            new PhpSymbolProvider($model, $settings),
+            $settings
+        ))->generate([
+            'smithy.example#Container' => true,
+            'smithy.example#ValueMap' => true,
+            'smithy.example#Value' => true
+        ])->content;
+        eval((string) \preg_replace(
+            '/^<\?php\s+(?:\/\*.*?\*\/\s+)?declare\(strict_types=1\);\s*/s',
+            '',
+            $content
+        ));
+        $schemas = $namespace . '\\Schemas';
+
+        $nested = $schemas::container()->getMember('entries')
+            ->getMapValue()
+            ->getMember('M');
+
+        $this->assertNotNull($nested->getMapKey());
+        $this->assertNotNull($nested->getMapValue());
+    }
+
     /**
      * Guards Major 2: a deep acyclic chain whose eager build count exceeds
      * the container's member count falls back to a one-level copy instead

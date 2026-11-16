@@ -21,6 +21,7 @@ require_once __DIR__ . '/support/BenchmarkCaseRepository.php';
 require_once __DIR__ . '/support/BenchmarkEnvironment.php';
 require_once __DIR__ . '/support/BenchmarkRunner.php';
 require_once __DIR__ . '/support/BenchmarkValueComparator.php';
+require_once __DIR__ . '/support/BenchmarkWireComparator.php';
 require_once __DIR__ . '/support/GeneratedCodeLoader.php';
 require_once __DIR__ . '/support/FixedResponseHttpClient.php';
 require_once __DIR__ . '/support/PipelineBenchmarkPlugin.php';

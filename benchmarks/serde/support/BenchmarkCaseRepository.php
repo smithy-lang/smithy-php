@@ -17,38 +17,6 @@ final class BenchmarkCaseRepository
     public const PROTOCOL = 'smithy.protocols#rpcv2Cbor';
     public const TAG = 'serde-benchmark';
 
-    public const SERIALIZE_CASE_IDS = [
-        'rpcv2Cbor_WideTypesRequest_S',
-        'rpcv2Cbor_WideTypesRequest_M',
-        'rpcv2Cbor_WideTypesRequest_L',
-        'rpcv2Cbor_PutItemRequest_Baseline',
-        'rpcv2Cbor_PutItemRequest_ShallowMap_S',
-        'rpcv2Cbor_PutItemRequest_ShallowMap_M',
-        'rpcv2Cbor_PutItemRequest_ShallowMap_L',
-        'rpcv2Cbor_PutItemRequest_Nested_M',
-        'rpcv2Cbor_PutItemRequest_Nested_L',
-        'rpcv2Cbor_PutItemRequest_MixedItem_S',
-        'rpcv2Cbor_PutItemRequest_MixedItem_M',
-        'rpcv2Cbor_PutItemRequest_MixedItem_L',
-        'rpcv2Cbor_PutItemRequest_BinaryData_S',
-        'rpcv2Cbor_PutItemRequest_BinaryData_M',
-        'rpcv2Cbor_PutItemRequest_BinaryData_L'
-    ];
-
-    public const DESERIALIZE_CASE_IDS = [
-        'rpcv2Cbor_WideTypesResponse_S',
-        'rpcv2Cbor_WideTypesResponse_M',
-        'rpcv2Cbor_WideTypesResponse_L',
-        'rpcv2Cbor_GetItemOutput_Baseline',
-        'rpcv2Cbor_GetItemOutput_S',
-        'rpcv2Cbor_GetItemOutput_M',
-        'rpcv2Cbor_GetItemOutput_L',
-        'rpcv2Cbor_GetItemOutput_OutOfOrder',
-        'rpcv2Cbor_GetItemOutputBinary_S',
-        'rpcv2Cbor_GetItemOutputBinary_M',
-        'rpcv2Cbor_GetItemOutputBinary_L'
-    ];
-
     /** @var array<string, array<string, mixed>> */
     private array $requests = [];
 
@@ -57,8 +25,7 @@ final class BenchmarkCaseRepository
 
     public function __construct(
         string $modelPath,
-        private readonly string $protocol = self::PROTOCOL,
-        private readonly string $casePrefix = 'rpcv2Cbor'
+        private readonly string $protocol = self::PROTOCOL
     )
     {
         $json = \file_get_contents($modelPath);
@@ -70,8 +37,11 @@ final class BenchmarkCaseRepository
 
         $model = self::decodeModel($json);
         $this->indexCases($model['shapes'] ?? []);
-        $this->requireCases($this->serializeCaseIds(), $this->requests);
-        $this->requireCases($this->deserializeCaseIds(), $this->responses);
+        if ($this->requests === [] && $this->responses === []) {
+            throw new \RuntimeException(
+                "Benchmark model has no cases for {$protocol}: {$modelPath}"
+            );
+        }
     }
 
     /**
@@ -79,11 +49,7 @@ final class BenchmarkCaseRepository
      */
     public function requests(?string $filter = null): array
     {
-        return $this->orderedCases(
-            $this->serializeCaseIds(),
-            $this->requests,
-            $filter
-        );
+        return $this->filtered($this->requests, $filter);
     }
 
     /**
@@ -91,11 +57,7 @@ final class BenchmarkCaseRepository
      */
     public function responses(?string $filter = null): array
     {
-        return $this->orderedCases(
-            $this->deserializeCaseIds(),
-            $this->responses,
-            $filter
-        );
+        return $this->filtered($this->responses, $filter);
     }
 
     /**
@@ -153,17 +115,16 @@ final class BenchmarkCaseRepository
     }
 
     /**
+     * Index the benchmark cases in the order the service declares its
+     * operations, so results follow the model instead of a hard-coded list.
+     *
      * @param array<string, array<string, mixed>> $shapes
      */
     private function indexCases(array $shapes): void
     {
-        foreach ($shapes as $shapeId => $shape) {
-            if (($shape['type'] ?? null) !== 'operation') {
-                continue;
-            }
-
+        foreach ($this->operationShapeIds($shapes) as $shapeId) {
             $operation = self::shapeName($shapeId);
-            $traits = $shape['traits'] ?? [];
+            $traits = $shapes[$shapeId]['traits'] ?? [];
             foreach ($traits['smithy.test#httpRequestTests'] ?? [] as $case) {
                 if ($this->isBenchmarkCase($case)) {
                     $case['operation'] = $operation;
@@ -180,6 +141,26 @@ final class BenchmarkCaseRepository
     }
 
     /**
+     * @param array<string, array<string, mixed>> $shapes
+     *
+     * @return list<string>
+     */
+    private function operationShapeIds(array $shapes): array
+    {
+        $ids = [];
+        foreach ($shapes as $shape) {
+            if (($shape['type'] ?? null) !== 'service') {
+                continue;
+            }
+            foreach ($shape['operations'] ?? [] as $operation) {
+                $ids[] = $operation['target'];
+            }
+        }
+
+        return $ids;
+    }
+
+    /**
      * @param array<string, mixed> $case
      */
     private function isBenchmarkCase(array $case): bool
@@ -190,80 +171,20 @@ final class BenchmarkCaseRepository
     }
 
     /**
-     * @param list<string> $ids
      * @param array<string, array<string, mixed>> $indexed
      *
      * @return list<array<string, mixed>>
      */
-    private function orderedCases(
-        array $ids,
-        array $indexed,
-        ?string $filter
-    ): array
+    private function filtered(array $indexed, ?string $filter): array
     {
         $cases = [];
-        foreach ($ids as $id) {
-            if ($filter !== null
-                && \stripos($id, $filter) === false
-            ) {
-                continue;
+        foreach ($indexed as $id => $case) {
+            if ($filter === null || \stripos($id, $filter) !== false) {
+                $cases[] = $case;
             }
-            $cases[] = $indexed[$id];
         }
 
         return $cases;
-    }
-
-    /**
-     * @param list<string> $ids
-     * @param array<string, array<string, mixed>> $indexed
-     */
-    private function requireCases(array $ids, array $indexed): void
-    {
-        foreach ($ids as $id) {
-            if (!isset($indexed[$id])) {
-                throw new \RuntimeException(
-                    "Benchmark case is missing from the model: {$id}"
-                );
-            }
-        }
-    }
-
-    /**
-     * @return list<string>
-     */
-    private function serializeCaseIds(): array
-    {
-        return $this->caseIds(self::SERIALIZE_CASE_IDS);
-    }
-
-    /**
-     * @return list<string>
-     */
-    private function deserializeCaseIds(): array
-    {
-        return $this->caseIds(self::DESERIALIZE_CASE_IDS);
-    }
-
-    /**
-     * @param list<string> $cborIds
-     *
-     * @return list<string>
-     */
-    private function caseIds(array $cborIds): array
-    {
-        if ($this->casePrefix === 'rpcv2Cbor') {
-            return $cborIds;
-        }
-
-        return \array_map(
-            fn(string $id): string => \str_replace(
-                'rpcv2Cbor',
-                $this->casePrefix,
-                $id
-            ),
-            $cborIds
-        );
     }
 
     private static function shapeName(string $shapeId): string

@@ -204,8 +204,7 @@ final class BenchmarkSmokeTest extends TestCase
         $loader->register();
         $repository = new BenchmarkCaseRepository(
             $modelPath,
-            RpcV2JsonProtocol::ID,
-            'rpcv2Json'
+            RpcV2JsonProtocol::ID
         );
         $protocol = new RpcV2JsonProtocol();
 

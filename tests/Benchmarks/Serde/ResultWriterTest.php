@@ -68,6 +68,35 @@ MARKDOWN
         );
     }
 
+    public function testClassifiesSmithyJavaCaseNamesByDirection(): void
+    {
+        $results = $this->results();
+        $results['serde_benchmarks'] = \array_map(
+            fn(string $id): array => ['id' => $id]
+                + $this->results()['serde_benchmarks'][0],
+            [
+                'restJson_PutObject_S',
+                'restJson_GetObject_S',
+                'awsJson10_GetItemInput_Baseline',
+                'awsJson10_GetItemOutput_S',
+                'awsQuery_PutMetricDataRequest_S',
+                'awsQuery_GetMetricDataResponse_S'
+            ]
+        );
+        $markdown = (new ResultWriter())->renderMarkdown($results);
+
+        foreach ([
+            '| serialize | `restJson_PutObject_S`',
+            '| deserialize | `restJson_GetObject_S`',
+            '| serialize | `awsJson10_GetItemInput_Baseline`',
+            '| deserialize | `awsJson10_GetItemOutput_S`',
+            '| serialize | `awsQuery_PutMetricDataRequest_S`',
+            '| deserialize | `awsQuery_GetMetricDataResponse_S`'
+        ] as $row) {
+            self::assertStringContainsString($row, $markdown);
+        }
+    }
+
     public function testRendersSharedSerdeResultSchema(): void
     {
         $entry = ResultWriter::benchmarkEntry('example', [
