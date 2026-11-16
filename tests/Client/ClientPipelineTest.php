@@ -1604,6 +1604,52 @@ final class ClientPipelineTest extends TestCase
     }
 
     #[DataProvider('retryPipelineModes')]
+    public function testNonReplayableBodyBailoutDoesNotSpendRetryTokens(
+        bool $withInterceptors
+    ): void
+    {
+        // Regression: prepareRequestForRetry() must be checked before the
+        // strategy spends tokens. A non-replayable body aborts the retry, and
+        // the bucket capacity must be left untouched (no permanent leak).
+        $strategy = new StandardRetryStrategy();
+        $scope = '';
+        $capacityBefore = $strategy->begin($scope)->capacityRemaining;
+
+        $http = (new MockHttpClient())
+            ->queueException($this->networkException())
+            ->queueResponse('server-body');
+        [$pipeline] = $this->buildPipeline(
+            interceptors: $withInterceptors
+                ? [new RecordingInterceptor()]
+                : [],
+            http: $http,
+            protocol: new FakeProtocol(
+                requestBody: new TestStreamFixture(
+                    'payload',
+                    sizeKnown: true,
+                    seekable: false
+                )
+            ),
+            retryStrategy: $strategy
+        );
+
+        try {
+            $pipeline->execute(FakeOperation::instance(), new FakeInput());
+            $this->fail('Expected the network failure to surface.');
+        } catch (NetworkException) {
+            // Expected: a non-replayable body cannot be retried.
+        }
+
+        $this->assertSame(1, $http->sendCallCount);
+        $this->assertSame(
+            $capacityBefore,
+            $strategy->begin($scope)->capacityRemaining,
+            'Retry tokens must not be spent when the request cannot be '
+            . 'replayed.'
+        );
+    }
+
+    #[DataProvider('retryPipelineModes')]
     public function testUntouchedNonReplayableBodyCanRetry(
         bool $withInterceptors
     ): void
