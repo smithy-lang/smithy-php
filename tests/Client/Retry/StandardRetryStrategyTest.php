@@ -12,15 +12,14 @@ namespace Smithy\Tests\Client\Retry;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Smithy\Client\Retry\{
-    RetryInfoInterface,
     RetryRequestFlags,
-    RetrySafety,
     RetryState,
     RetryTokenBucket,
     StandardRetryStrategy,
     TokenAcquisitionFailedException
 };
 use Smithy\Core\Exception\{ApiException, ErrorFault};
+use Smithy\Core\Retry\{RetryInfoInterface, RetrySafety};
 use Smithy\Http\Client\Exception\NetworkException;
 use Smithy\Http\Message\Request;
 

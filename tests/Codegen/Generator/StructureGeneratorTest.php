@@ -893,6 +893,107 @@ PHP, $parentNamespace)
         }
     }
 
+    public function testModeledRetryableErrorEmitsRetrySafetyOverride(): void
+    {
+        $model = SmithyModel::fromJson(<<<'JSON'
+{
+    "smithy": "2.0",
+    "shapes": {
+        "smithy.example#ThrottlingError": {
+            "type": "structure",
+            "traits": {
+                "smithy.api#error": "client",
+                "smithy.api#retryable": {"throttling": true}
+            }
+        },
+        "smithy.example#TransientError": {
+            "type": "structure",
+            "members": {
+                "detail": {"target": "smithy.api#String"}
+            },
+            "traits": {
+                "smithy.api#error": "client",
+                "smithy.api#retryable": {}
+            }
+        }
+    }
+}
+JSON);
+        $settings = new CodegenSettings(
+            namespace: 'Smithy\\Example',
+            outputDir: '/tmp/out'
+        );
+
+        $throttling = (new StructureGenerator(
+            $model,
+            new PhpSymbolProvider($model, $settings),
+            $settings
+        ))->generate('smithy.example#ThrottlingError')->content;
+
+        // A client-fault error marked retryable+throttling overrides the
+        // fault-derived default (which would be RetrySafety::No).
+        $this->assertStringContainsString(
+            'use Smithy\\Core\\Retry\\RetrySafety;',
+            $throttling
+        );
+        $this->assertStringContainsString(
+            '$this->retrySafetyOverride = RetrySafety::Yes;',
+            $throttling
+        );
+        $this->assertStringContainsString(
+            '$this->throttleOverride = true;',
+            $throttling
+        );
+
+        $transient = (new StructureGenerator(
+            $model,
+            new PhpSymbolProvider($model, $settings),
+            $settings
+        ))->generate('smithy.example#TransientError')->content;
+
+        // Retryable without throttling: retryable, not a throttle.
+        $this->assertStringContainsString(
+            '$this->retrySafetyOverride = RetrySafety::Yes;',
+            $transient
+        );
+        $this->assertStringContainsString(
+            '$this->throttleOverride = false;',
+            $transient
+        );
+    }
+
+    public function testModeledNonRetryableErrorEmitsNoOverride(): void
+    {
+        $model = SmithyModel::fromJson(<<<'JSON'
+{
+    "smithy": "2.0",
+    "shapes": {
+        "smithy.example#PlainError": {
+            "type": "structure",
+            "traits": {"smithy.api#error": "client"}
+        }
+    }
+}
+JSON);
+        $settings = new CodegenSettings(
+            namespace: 'Smithy\\Example',
+            outputDir: '/tmp/out'
+        );
+
+        $content = (new StructureGenerator(
+            $model,
+            new PhpSymbolProvider($model, $settings),
+            $settings
+        ))->generate('smithy.example#PlainError')->content;
+
+        $this->assertStringNotContainsString('retrySafetyOverride', $content);
+        $this->assertStringNotContainsString('throttleOverride', $content);
+        $this->assertStringNotContainsString(
+            'Smithy\\Core\\Retry\\RetrySafety',
+            $content
+        );
+    }
+
     private function dumpValue(mixed $value): string
     {
         \ob_start();

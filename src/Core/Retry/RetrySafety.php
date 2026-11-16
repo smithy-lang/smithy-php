@@ -7,7 +7,7 @@
 
 declare(strict_types=1);
 
-namespace Smithy\Client\Retry;
+namespace Smithy\Core\Retry;
 
 /**
  * Whether it is safe to retry an error.

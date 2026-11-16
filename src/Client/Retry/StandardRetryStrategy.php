@@ -12,6 +12,8 @@ namespace Smithy\Client\Retry;
 use Closure;
 use InvalidArgumentException;
 use Smithy\Core\Exception\ApiException;
+use Smithy\Core\Retry\RetryInfoInterface;
+use Smithy\Core\Retry\RetrySafety;
 use Smithy\Http\Client\Exception\NetworkException;
 
 /**

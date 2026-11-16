@@ -12,6 +12,8 @@ namespace Smithy\Tests\Core\Exception;
 use PHPUnit\Framework\TestCase;
 use Smithy\Core\Exception\ApiException;
 use Smithy\Core\Exception\ErrorFault;
+use Smithy\Core\Retry\RetryInfoInterface;
+use Smithy\Core\Retry\RetrySafety;
 
 /**
  * `ApiException` is the base thrown for every API call error and the default parent for generated
@@ -117,5 +119,53 @@ final class ApiExceptionTest extends TestCase
         $this->assertInstanceOf(ApiException::class, $subclass);
         $this->assertSame('boom', $subclass->getMessage());
         $this->assertTrue($subclass->isClientFault());
+    }
+
+    public function testImplementsRetryInfoInterface(): void
+    {
+        $this->assertInstanceOf(RetryInfoInterface::class, new ApiException());
+    }
+
+    public function testRetrySafetyDefaultsFromFault(): void
+    {
+        // Server -> Yes, Client -> No, Other -> Maybe.
+        $this->assertSame(
+            RetrySafety::Yes,
+            (new ApiException(fault: ErrorFault::Server))->getRetrySafety()
+        );
+        $this->assertSame(
+            RetrySafety::No,
+            (new ApiException(fault: ErrorFault::Client))->getRetrySafety()
+        );
+        $this->assertSame(
+            RetrySafety::Maybe,
+            (new ApiException(fault: ErrorFault::Other))->getRetrySafety()
+        );
+    }
+
+    public function testDefaultsToNoThrottleAndNoRetryAfter(): void
+    {
+        $exception = new ApiException(fault: ErrorFault::Server);
+
+        $this->assertFalse($exception->isThrottle());
+        $this->assertNull($exception->getRetryAfter());
+    }
+
+    public function testModeledOverrideWinsOverFaultDefault(): void
+    {
+        // A modeled retryable+throttling error on a client fault: codegen
+        // sets the inherited overrides, which must beat the Client -> No
+        // default.
+        $error = new class extends ApiException {
+            public function __construct()
+            {
+                parent::__construct('throttled', ErrorFault::Client);
+                $this->retrySafetyOverride = RetrySafety::Yes;
+                $this->throttleOverride = true;
+            }
+        };
+
+        $this->assertSame(RetrySafety::Yes, $error->getRetrySafety());
+        $this->assertTrue($error->isThrottle());
     }
 }
