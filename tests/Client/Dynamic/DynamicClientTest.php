@@ -27,6 +27,7 @@ use Smithy\Client\Interceptor\{
     InterceptorChain
 };
 use Smithy\Client\Pagination\Paginator;
+use Smithy\Client\Retry\NoRetryStrategy;
 use Smithy\Client\Plugin\{
     PluginCollection,
     RequestCompressionPlugin
@@ -1285,7 +1286,8 @@ final class DynamicClientTest extends TestCase
             endpointResolver: new StaticEndpointResolver(
                 new Endpoint('https://example.com')
             ),
-            interceptors: new InterceptorChain(...$interceptors)
+            interceptors: new InterceptorChain(...$interceptors),
+            retryStrategy: NoRetryStrategy::instance()
         );
 
         return [

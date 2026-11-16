@@ -14,6 +14,7 @@ use Smithy\Client\Auth\{
     StaticAuthSchemeResolver
 };
 use Smithy\Client\ClientInterface;
+use Smithy\Client\Retry\NoRetryStrategy;
 use Smithy\Client\Endpoint\StaticEndpointResolver;
 use Smithy\Client\Plugin\{
     HttpChecksumPlugin,
@@ -110,6 +111,7 @@ final class GeneratedClientProtocolTest extends RestJsonClientProtocolTestCase
                 ),
                 protocol: new RestJsonProtocol(),
                 supportedAuthSchemes: [NoAuthScheme::instance()],
+                retryStrategy: NoRetryStrategy::instance(),
                 authSchemeResolver: StaticAuthSchemeResolver::noAuth(),
                 context: [
                     IdempotencyTokenPlugin::CONFIG_IDEMPOTENCY_TOKEN_PROVIDER

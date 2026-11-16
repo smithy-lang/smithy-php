@@ -23,7 +23,8 @@ use Smithy\Client\Interceptor\IdempotencyTokenInterceptor;
 use Smithy\Client\Protocol\ProtocolResolver;
 use Smithy\Client\Retry\{
     NoRetryStrategy,
-    RetryStrategyInterface
+    RetryStrategyInterface,
+    StandardRetryStrategy
 };
 use Smithy\Core\Endpoint\Endpoint;
 use Smithy\Core\Serde\Schema;
@@ -226,7 +227,26 @@ final class ClientConfigTest extends TestCase
         $new = $orig->withRetryStrategy($newRetry);
 
         $this->assertSame($newRetry, $new->retryStrategy);
-        $this->assertInstanceOf(NoRetryStrategy::class, $orig->retryStrategy);
+        $this->assertInstanceOf(
+            StandardRetryStrategy::class,
+            $orig->retryStrategy
+        );
+    }
+
+    public function testRetryStrategyDefaultsToStandardWithNoRetryOptOut(): void
+    {
+        $config = $this->baseConfig();
+
+        $this->assertInstanceOf(
+            StandardRetryStrategy::class,
+            $config->retryStrategy
+        );
+        $this->assertSame(3, $config->retryStrategy->maxAttempts());
+        $this->assertSame(
+            NoRetryStrategy::instance(),
+            $config->withRetryStrategy(NoRetryStrategy::instance())
+                ->retryStrategy
+        );
     }
 
     public function testWithRetryScopeReplacesOnlyRetryScope(): void

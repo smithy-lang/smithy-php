@@ -14,6 +14,7 @@ use Smithy\Client\Auth\{
     StaticAuthSchemeResolver
 };
 use Smithy\Client\ClientInterface;
+use Smithy\Client\Retry\NoRetryStrategy;
 use Smithy\Client\Dynamic\{
     DynamicClient,
     DynamicOperation
@@ -64,6 +65,7 @@ final class DynamicClientProtocolTest extends RestJsonClientProtocolTestCase
             httpClient: $http,
             endpoint: $endpoint,
             supportedAuthSchemes: [NoAuthScheme::instance()],
+            retryStrategy: NoRetryStrategy::instance(),
             authSchemeResolver: StaticAuthSchemeResolver::noAuth(),
             context: [
                 IdempotencyTokenPlugin::CONFIG_IDEMPOTENCY_TOKEN_PROVIDER
