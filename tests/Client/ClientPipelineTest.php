@@ -50,7 +50,9 @@ use Smithy\Client\Interceptor\{
     RequestContext
 };
 use Smithy\Client\Retry\{
+    NoRetryStrategy,
     RetryState,
+    StandardRetryStrategy,
     RetryRequestFlagResolverInterface,
     RetryStrategyInterface,
     TokenAcquisitionFailedException
@@ -69,6 +71,7 @@ use Smithy\Core\Serde\{
 };
 use Smithy\Core\Shape\OperationInterface;
 use Smithy\Core\Shape\ShapeType;
+use Smithy\Http\Client\Exception\NetworkException;
 use Smithy\Http\Client\{
     HttpRequestOptions,
     RequestTrailers
@@ -1601,6 +1604,52 @@ final class ClientPipelineTest extends TestCase
     }
 
     #[DataProvider('retryPipelineModes')]
+    public function testNonReplayableBodyBailoutDoesNotSpendRetryTokens(
+        bool $withInterceptors
+    ): void
+    {
+        // Regression: prepareRequestForRetry() must be checked before the
+        // strategy spends tokens. A non-replayable body aborts the retry, and
+        // the bucket capacity must be left untouched (no permanent leak).
+        $strategy = new StandardRetryStrategy();
+        $scope = '';
+        $capacityBefore = $strategy->begin($scope)->capacityRemaining;
+
+        $http = (new MockHttpClient())
+            ->queueException($this->networkException())
+            ->queueResponse('server-body');
+        [$pipeline] = $this->buildPipeline(
+            interceptors: $withInterceptors
+                ? [new RecordingInterceptor()]
+                : [],
+            http: $http,
+            protocol: new FakeProtocol(
+                requestBody: new TestStreamFixture(
+                    'payload',
+                    sizeKnown: true,
+                    seekable: false
+                )
+            ),
+            retryStrategy: $strategy
+        );
+
+        try {
+            $pipeline->execute(FakeOperation::instance(), new FakeInput());
+            $this->fail('Expected the network failure to surface.');
+        } catch (NetworkException) {
+            // Expected: a non-replayable body cannot be retried.
+        }
+
+        $this->assertSame(1, $http->sendCallCount);
+        $this->assertSame(
+            $capacityBefore,
+            $strategy->begin($scope)->capacityRemaining,
+            'Retry tokens must not be spent when the request cannot be '
+            . 'replayed.'
+        );
+    }
+
+    #[DataProvider('retryPipelineModes')]
     public function testUntouchedNonReplayableBodyCanRetry(
         bool $withInterceptors
     ): void
@@ -1656,6 +1705,99 @@ final class ClientPipelineTest extends TestCase
         yield 'with interceptors' => [true, null];
         yield 'override cannot raise limit without interceptors' => [false, 4];
         yield 'override cannot raise limit with interceptors' => [true, 4];
+    }
+
+    public function testDefaultStrategyRetriesTransientFailureOnce(): void
+    {
+        $loop = $this->installFakeEventLoop();
+        $http = (new MockHttpClient())
+            ->queueException($this->networkException())
+            ->queueResponse('server-body');
+        [$pipeline, $transport] = $this->buildPipeline(http: $http);
+
+        $pipeline->execute(FakeOperation::instance(), new FakeInput('hello'));
+
+        $this->assertSame(2, $transport->sendCallCount);
+        $this->assertCount(1, $loop->delays);
+        $this->assertGreaterThan(0.0, $loop->delays[0]);
+        $this->assertLessThanOrEqual(0.05, $loop->delays[0]);
+    }
+
+    public function testDefaultStrategyStopsAfterThreeAttempts(): void
+    {
+        $this->installFakeEventLoop();
+        $http = (new MockHttpClient())
+            ->fallbackException($this->networkException());
+        [$pipeline, $transport] = $this->buildPipeline(http: $http);
+
+        try {
+            $pipeline->execute(FakeOperation::instance(), new FakeInput());
+            $this->fail('Expected the final attempt to fail.');
+        } catch (NetworkException) {
+            $this->assertSame(3, $transport->sendCallCount);
+        }
+    }
+
+    public function testDefaultStrategyDoesNotRetryNonRetryableFailure(): void
+    {
+        $this->installFakeEventLoop();
+        $http = (new MockHttpClient())->fallbackException(
+            new \RuntimeException('permanent')
+        );
+        [$pipeline, $transport] = $this->buildPipeline(http: $http);
+
+        try {
+            $pipeline->execute(FakeOperation::instance(), new FakeInput());
+            $this->fail('Expected failure.');
+        } catch (\RuntimeException) {
+            $this->assertSame(1, $transport->sendCallCount);
+        }
+    }
+
+    public function testNoRetryStrategyOptOutMakesSingleAttempt(): void
+    {
+        $this->installFakeEventLoop();
+        $http = (new MockHttpClient())
+            ->fallbackException($this->networkException());
+        [$pipeline, $transport] = $this->buildPipeline(
+            http: $http,
+            retryStrategy: NoRetryStrategy::instance()
+        );
+
+        try {
+            $pipeline->execute(FakeOperation::instance(), new FakeInput());
+            $this->fail('Expected failure.');
+        } catch (NetworkException) {
+            $this->assertSame(1, $transport->sendCallCount);
+        }
+    }
+
+    public function testStandardStrategyWithPinnedJitterDelaysExactly(): void
+    {
+        $loop = $this->installFakeEventLoop();
+        $http = (new MockHttpClient())
+            ->fallbackException($this->networkException());
+        [$pipeline] = $this->buildPipeline(
+            http: $http,
+            retryStrategy: new StandardRetryStrategy(
+                random: static fn(): float => 0.0
+            )
+        );
+
+        try {
+            $pipeline->execute(FakeOperation::instance(), new FakeInput());
+        } catch (NetworkException) {
+        }
+
+        $this->assertEqualsWithDelta([0.05, 0.1], $loop->delays, 1e-9);
+    }
+
+    private function networkException(): NetworkException
+    {
+        return new NetworkException(
+            'connection reset',
+            new \Smithy\Http\Message\Request('GET', 'https://example.test/')
+        );
     }
 
     #[DataProvider('retryStrategyAttemptLimitCases')]

@@ -2,7 +2,18 @@
 
 **Status:** Current as of September 30, 2026
 
-**Package:** `smithy/smithy-php` (`Smithy\Client\Retry\`)
+**Packages:** the retry strategy lives in `smithy/smithy-php`
+(`Smithy\Client\Retry\`); the classification contracts live in `smithy/core`
+(`Smithy\Core\Retry\`).
+
+The split keeps error shapes free of a client dependency. `RetryInfoInterface`
+and `RetrySafety` sit in `smithy/core` so core and provider error shapes
+(`ApiException`, `AwsProtocolException`) can carry their own retry
+classification while depending only on core. The strategy that consumes that
+classification (`StandardRetryStrategy`, `NoRetryStrategy`,
+`RetryStrategyInterface`, `RetryState`, the token bucket) stays in
+`Smithy\Client\Retry`. Core never depends on client, so there is no cycle and
+each package installs alone.
 
 ## Scope
 
@@ -40,8 +51,49 @@ transport to enforce replay safety for its own message types.
 4. `maxAttempts()` returns the strategy-wide attempt limit, including the
    initial attempt.
 
-`NoRetryStrategy` is the default. It allows one attempt and rejects every
-refresh request.
+`StandardRetryStrategy` is the default. It retries with exponential backoff,
+jitter and a per-scope token bucket, matching smithy-java's
+`StandardRetryStrategy`:
+
+- 3 attempts by default (the initial attempt plus 2 retries).
+- Exponential backoff with jitter: base delay 50 ms, throttling base delay
+  1 s, capped at 20 s. A server-suggested wait is clamped to between the
+  computed delay and that delay plus five seconds.
+- A token bucket per retry scope: 500 tokens, a retry costs 14, a throttling
+  retry costs 5, and up to 128 scope buckets are kept (least recently used
+  evicted). A retry that cannot cover its cost surfaces the failure instead of
+  retrying; a successful call returns tokens.
+
+`NoRetryStrategy` is the explicit opt-out. It allows one attempt and rejects
+every refresh request.
+
+### Classification
+
+Classification follows CG13. The strategy decides retryability from the error
+and its previous-chain:
+
+1. If an exception in the chain implements `RetryInfoInterface`, it decides:
+   `getRetrySafety()` (`Yes`/`No`/`Maybe`, where `Maybe` is treated as not
+   retryable), `isThrottle()`, and `getRetryAfter()`.
+2. Otherwise a transport `NetworkException` or a server-fault (5xx)
+   `ApiException` is retried, and everything else is not.
+
+`ApiException` (core) and `AwsProtocolException` (protocol-aws) implement
+`RetryInfoInterface`, so the default classification needs no per-service code.
+`ApiException` maps its fault to safety (Server -> Yes, Client -> No,
+Other -> Maybe); `AwsProtocolException` also retries 500/502/503/504 and
+treats 429 as a retryable throttle. Codegen emits an override for a modeled
+`@retryable` error, forcing it retryable (and a throttle when the trait says
+so).
+
+A `Retry-After` / `x-amz-retry-after` header is captured for unmodeled errors
+during deserialization. Capturing it for modeled errors is a known limitation,
+deferred to a follow-up.
+
+`StandardRetryStrategy` retries any error classified as retryable. It does not
+yet promote classification by operation idempotency: raising a `Maybe` to
+retryable for `@readonly` or `@idempotent` operations is a planned interceptor,
+not implemented here (follow-up).
 
 Provider strategies can mutate the non-readonly fields on `RetryState`.
 The generic pipeline treats those fields as opaque and passes the same state
@@ -73,11 +125,16 @@ attempt
     +-> failure
             |
             +-> enforce request attempt cap
+            +-> prepare request state for replay (TransportInterface)
             +-> strategy.refresh() enforces strategy policy and capacity
             +-> restore request body and trailers
             +-> Async::delay()
             +-> next attempt from the baseline
 ```
+
+The pipeline checks replay preparation *before* calling `refresh()`, so a
+non-replayable request that can never be retried does not spend retry tokens
+first.
 
 The retry strategy sees the error after
 `modifyBeforeAttemptCompletion()` and `readAfterAttempt()`. Completion
@@ -116,8 +173,10 @@ compression use that boundary.
 
 ## Replay Safety
 
-Before retrying, `ClientPipeline` calls
-`TransportInterface::prepareRequestForRetry()`. For HTTP,
+Before spending any retry tokens, `ClientPipeline` calls
+`TransportInterface::prepareRequestForRetry()`. This replay check runs *before*
+`refresh()`, so a request whose body cannot be replayed never depletes the
+token bucket for a retry that could not happen. For HTTP,
 `HttpClientTransport` applies these rules:
 
 - `RequestStreamInterface` bodies must report replayability and rewind with

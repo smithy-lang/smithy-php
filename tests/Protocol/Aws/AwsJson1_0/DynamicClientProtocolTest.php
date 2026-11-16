@@ -14,6 +14,7 @@ use Smithy\Client\Auth\{
     StaticAuthSchemeResolver
 };
 use Smithy\Client\ClientInterface;
+use Smithy\Client\Retry\NoRetryStrategy;
 use Smithy\Client\Dynamic\{
     DynamicClient,
     DynamicOperation
@@ -62,6 +63,7 @@ final class DynamicClientProtocolTest extends AwsJson1_0ClientProtocolTestCase
             httpClient: $http,
             endpoint: $endpoint,
             supportedAuthSchemes: [NoAuthScheme::instance()],
+            retryStrategy: NoRetryStrategy::instance(),
             authSchemeResolver: StaticAuthSchemeResolver::noAuth(),
             plugins: new PluginCollection(
                 new RequestCompressionPlugin()

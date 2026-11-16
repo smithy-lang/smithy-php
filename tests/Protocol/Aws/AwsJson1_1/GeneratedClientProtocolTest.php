@@ -14,6 +14,7 @@ use Smithy\Client\Auth\{
     StaticAuthSchemeResolver
 };
 use Smithy\Client\ClientInterface;
+use Smithy\Client\Retry\NoRetryStrategy;
 use Smithy\Client\Endpoint\StaticEndpointResolver;
 use Smithy\Client\Plugin\{
     PluginCollection,
@@ -128,6 +129,7 @@ final class GeneratedClientProtocolTest extends AwsJson1_1ClientProtocolTestCase
                 ),
                 protocol: new AwsJson1_1Protocol(),
                 supportedAuthSchemes: [NoAuthScheme::instance()],
+                retryStrategy: NoRetryStrategy::instance(),
                 authSchemeResolver: StaticAuthSchemeResolver::noAuth()
             ),
             new PluginCollection(
