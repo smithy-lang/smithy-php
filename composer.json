@@ -68,6 +68,7 @@
         "codegen": "php bin/smithy-php-codegen",
         "codegen-output": "php tools/codegen-output/generate.php",
         "codegen-output:check": "php tools/codegen-output/generate.php --check",
-        "license:check": "php tools/check-license-headers.php"
+        "license:check": "php tools/check-license-headers.php",
+        "package-manifests:check": "php tools/package-manifests/check.php"
     }
 }
