@@ -6,7 +6,7 @@ all 8 published Composer packages.
 ## Target repos
 
 The 8 publish targets are read-only **mirror** repos under the `smithy-lang`
-org, created by an org admin before the first release (see `REPO-REQUEST.md`):
+org, created by an org admin before the first release:
 
 | Composer package | Split repo |
 |------------------|------------|
