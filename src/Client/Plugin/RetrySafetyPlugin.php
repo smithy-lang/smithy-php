@@ -13,8 +13,8 @@ use Smithy\Client\ClientConfig;
 use Smithy\Client\Interceptor\RetrySafetyInterceptor;
 
 /**
- * Register retry-safety promotion for `@readonly` and `@idempotent`
- * operations. On by default through {@see DefaultPlugin}.
+ * Register modeled retry info: `@readonly`/`@idempotent` operations and
+ * `@retryable` errors. On by default through {@see DefaultPlugin}.
  */
 final class RetrySafetyPlugin extends AbstractPlugin
 {

@@ -41,6 +41,7 @@ use Smithy\Core\Serde\{
     SerializableStructInterface
 };
 use Smithy\Core\Shape\{
+    Exception\DocumentException,
     OperationInterface,
     ShapeType
 };
@@ -151,17 +152,77 @@ final class RetrySafetyInterceptorTest extends TestCase
         self::assertSame(1, $this->refreshAttempts($error));
     }
 
-    public function testAppliesOnlyToRetrySafeOperations(): void
+    public function testAppliesToAllOperations(): void
     {
         $interceptor = new RetrySafetyInterceptor();
 
         self::assertTrue($interceptor->appliesTo(
             $this->operation([Schema::T_READ_ONLY => true])
         ));
-        self::assertTrue($interceptor->appliesTo(
-            $this->operation([Schema::T_IDEMPOTENT => true])
-        ));
-        self::assertFalse($interceptor->appliesTo(FakeOperation::instance()));
+        self::assertTrue($interceptor->appliesTo(FakeOperation::instance()));
+    }
+
+    public function testRetryableErrorIsRetrySafe(): void
+    {
+        $error = $this->modeledError([Schema::T_RETRYABLE => true]);
+
+        $this->complete($this->operation([]), $error);
+
+        self::assertSame(RetrySafety::Yes, $error->getRetrySafety());
+        self::assertFalse($error->isThrottle());
+        self::assertSame(2, $this->refreshAttempts($error));
+    }
+
+    public function testRetryableThrottlingErrorIsThrottle(): void
+    {
+        $error = $this->modeledError([
+            Schema::T_RETRYABLE => ['throttling' => true],
+        ]);
+
+        $this->complete($this->operation([]), $error);
+
+        self::assertSame(RetrySafety::Yes, $error->getRetrySafety());
+        self::assertTrue($error->isThrottle());
+    }
+
+    public function testRetryableOverridesClientFault(): void
+    {
+        $error = $this->modeledError(
+            [Schema::T_RETRYABLE => ['throttling' => false]],
+            ErrorFault::Client
+        );
+
+        $this->complete($this->operation([]), $error);
+
+        self::assertSame(RetrySafety::Yes, $error->getRetrySafety());
+        self::assertFalse($error->isThrottle());
+    }
+
+    public function testModeledErrorWithoutRetryableIsUnchanged(): void
+    {
+        $error = $this->modeledError([]);
+
+        $this->complete($this->operation([]), $error);
+
+        self::assertSame(RetrySafety::Maybe, $error->getRetrySafety());
+        self::assertFalse($error->isThrottle());
+        self::assertSame(1, $this->refreshAttempts($error));
+    }
+
+    public function testRetriesRetryableModeledErrorThroughPipeline(): void
+    {
+        $http = (new MockHttpClient())
+            ->queueException($this->modeledError(
+                [Schema::T_RETRYABLE => true],
+                ErrorFault::Client
+            ))
+            ->queueResponse('server-body');
+        $pipeline = $this->pipeline($http, new RetrySafetyInterceptor());
+
+        $output = $pipeline->execute($this->operation([]), new FakeInput());
+
+        self::assertSame(2, $http->sendCallCount);
+        self::assertSame('server-body', $output->value);
     }
 
     public function testSuccessIsPassedThrough(): void
@@ -292,6 +353,28 @@ final class RetrySafetyInterceptorTest extends TestCase
         ));
 
         return $operation;
+    }
+
+    /**
+     * Build a runtime-loaded modeled error, as the dynamic client does.
+     *
+     * @param array<int, mixed> $traits
+     */
+    private function modeledError(
+        array $traits,
+        ErrorFault $fault = ErrorFault::Other
+    ): DocumentException
+    {
+        return new DocumentException(
+            new Schema(
+                id: 'smithy.tests#FakeError',
+                type: ShapeType::Structure,
+                traits: $traits
+            ),
+            [],
+            'modeled',
+            $fault
+        );
     }
 
     private function context(

@@ -117,6 +117,20 @@ class ApiException extends \RuntimeException implements RetryInfoInterface
     }
 
     /**
+     * Classify this error as a modeled `@retryable` error.
+     *
+     * Mirrors what codegen writes into a generated `@retryable` error's
+     * constructor, so runtime-loaded errors classify the same way.
+     *
+     * @param bool $throttling The trait's `throttling` value.
+     */
+    public function applyRetryableTrait(bool $throttling): void
+    {
+        $this->retrySafetyOverride = RetrySafety::Yes;
+        $this->throttleOverride = $throttling;
+    }
+
+    /**
      * Return true when the failure is a throttling error.
      */
     public function isThrottle(): bool
