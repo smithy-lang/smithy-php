@@ -48,13 +48,7 @@ class ClientConfig
 {
     private readonly PluginState $pluginState;
 
-    /** @var array{
-     *     protocol: bool,
-     *     protocolResolver: bool,
-     *     authSchemeResolver: bool,
-     *     retryStrategy: bool
-     * }
-     */
+    /** @var array<string, bool> Keyed by {@see ClientConfigField} value. */
     private readonly array $explicitFields;
 
     public readonly InterceptorChain $interceptorChain;
@@ -161,16 +155,21 @@ class ClientConfig
         $this->protocolResolver =
             $protocolResolver ?? ProtocolResolver::defaults();
         $explicitFields ??= [];
-        $this->explicitFields = [
-            'protocol' => $protocolIsExplicit
-                ?? $explicitFields['protocol'] ?? $protocol !== null,
-            'protocolResolver' => $explicitFields['protocolResolver']
-                ?? $protocolResolver !== null,
-            'authSchemeResolver' => $explicitFields['authSchemeResolver']
-                ?? $authSchemeResolver !== null,
-            'retryStrategy' => $explicitFields['retryStrategy']
-                ?? $retryStrategy !== null
-        ];
+        $fields = [];
+        foreach (ClientConfigField::cases() as $field) {
+            $fields[$field->value] = $explicitFields[$field->value]
+                ?? match ($field) {
+                    ClientConfigField::Protocol => $protocol,
+                    ClientConfigField::ProtocolResolver => $protocolResolver,
+                    ClientConfigField::AuthSchemeResolver =>
+                        $authSchemeResolver,
+                    ClientConfigField::RetryStrategy => $retryStrategy
+                } !== null;
+        }
+        if ($protocolIsExplicit !== null) {
+            $fields[ClientConfigField::Protocol->value] = $protocolIsExplicit;
+        }
+        $this->explicitFields = $fields;
         $this->interceptorChain = $interceptors;
 
         $schemes = \array_values($supportedAuthSchemes);
@@ -350,7 +349,7 @@ class ClientConfig
         $protocol = $this->protocolResolver->resolveProtocol(
             $this->service,
             $this->protocolId,
-            $this->explicitFields['protocol'] ? $this->protocol : null
+            $this->hasExplicitProtocol() ? $this->protocol : null
         );
         if ($protocol === $this->protocol) {
             return $this;
@@ -472,7 +471,7 @@ class ClientConfig
     ): static
     {
         $config = $this->copyWith([
-            'protocol' => $this->explicitFields['protocol']
+            'protocol' => $this->hasExplicitProtocol()
                 ? $this->protocol
                 : null,
             'protocolResolver' => $resolver
@@ -659,18 +658,11 @@ class ClientConfig
      * Whether `$field` was set by the caller rather than filled by a default.
      *
      * A field is explicit when a non-null value was passed to the
-     * constructor or set through its own `withXxx()` method. Tracked
-     * fields: `protocol`, `protocolResolver`, `authSchemeResolver`,
-     * `retryStrategy`.
-     *
-     * @throws \InvalidArgumentException When `$field` is not tracked.
+     * constructor or set through its own `withXxx()` method.
      */
-    public function isExplicit(string $field): bool
+    public function isExplicit(ClientConfigField $field): bool
     {
-        return $this->explicitFields[$field]
-            ?? throw new \InvalidArgumentException(
-                "Unknown ClientConfig provenance field: {$field}."
-            );
+        return $this->explicitFields[$field->value];
     }
 
     /**
@@ -688,13 +680,12 @@ class ClientConfig
     protected function explicitFieldsFor(array $overrides): array
     {
         $fields = $this->explicitFields;
-        $fields['protocol'] = $overrides['protocolIsExplicit']
-            ?? $fields['protocol'];
-        foreach (['protocolResolver', 'authSchemeResolver', 'retryStrategy']
-            as $field
-        ) {
-            if (isset($overrides[$field])) {
-                $fields[$field] = true;
+        $protocol = ClientConfigField::Protocol->value;
+        $fields[$protocol] = $overrides['protocolIsExplicit']
+            ?? $fields[$protocol];
+        foreach (ClientConfigField::cases() as $field) {
+            if ($field->value !== $protocol && isset($overrides[$field->value])) {
+                $fields[$field->value] = true;
             }
         }
 
@@ -708,7 +699,7 @@ class ClientConfig
      */
     protected function hasExplicitProtocol(): bool
     {
-        return $this->explicitFields['protocol'];
+        return $this->explicitFields[ClientConfigField::Protocol->value];
     }
 
     private function resolveWithPluginPredicate(

@@ -19,6 +19,7 @@ use Smithy\Client\Auth\{
     StaticAuthSchemeResolver
 };
 use Smithy\Client\ClientConfig;
+use Smithy\Client\ClientConfigField;
 use Smithy\Client\Endpoint\StaticEndpointResolver;
 use Smithy\Client\Interceptor\IdempotencyTokenInterceptor;
 use Smithy\Client\Protocol\ProtocolResolver;
@@ -540,29 +541,29 @@ final class ClientConfigTest extends TestCase
     }
 
     /**
-     * @return iterable<string, array{string, \Closure(): object, string}>
+     * @return iterable<string, array{ClientConfigField, \Closure(): object, string}>
      */
     public static function provenanceFields(): iterable
     {
         yield 'retryStrategy' => [
-            'retryStrategy',
+            ClientConfigField::RetryStrategy,
             static fn() => NoRetryStrategy::instance(),
             'withRetryStrategy'
         ];
         yield 'authSchemeResolver' => [
-            'authSchemeResolver',
+            ClientConfigField::AuthSchemeResolver,
             static fn() => new AuthSchemeResolver(),
             'withAuthSchemeResolver'
         ];
         yield 'protocolResolver' => [
-            'protocolResolver',
+            ClientConfigField::ProtocolResolver,
             static fn() => new ProtocolResolver([
                 FakeProtocol::ID => new FakeProtocol()
             ]),
             'withProtocolResolver'
         ];
         yield 'protocol' => [
-            'protocol',
+            ClientConfigField::Protocol,
             static fn() => new FakeProtocol(),
             'withProtocol'
         ];
@@ -570,7 +571,7 @@ final class ClientConfigTest extends TestCase
 
     #[DataProvider('provenanceFields')]
     public function testTracksExplicitFields(
-        string $field,
+        ClientConfigField $field,
         \Closure $value,
         string $with
     ): void {
@@ -581,7 +582,7 @@ final class ClientConfigTest extends TestCase
             )
         ];
         $defaulted = new ClientConfig(...$base);
-        $ctorSet = new ClientConfig(...$base, ...[$field => $value()]);
+        $ctorSet = new ClientConfig(...$base, ...[$field->value => $value()]);
         $withSet = $defaulted->{$with}($value());
 
         self::assertFalse($defaulted->isExplicit($field));
@@ -596,7 +597,7 @@ final class ClientConfigTest extends TestCase
 
     #[DataProvider('provenanceFields')]
     public function testSubclassCopiesPreserveProvenance(
-        string $field,
+        ClientConfigField $field,
         \Closure $value,
         string $with
     ): void {
@@ -631,17 +632,11 @@ final class ClientConfigTest extends TestCase
         $resolved = $config->withService(FakeService::instance())
             ->resolveProtocol();
 
-        self::assertFalse($resolved->isExplicit('protocol'));
+        self::assertFalse($resolved->isExplicit(ClientConfigField::Protocol));
         self::assertFalse(
             $resolved->withProtocolId(FakeProtocol::ID)
-                ->isExplicit('protocol')
+                ->isExplicit(ClientConfigField::Protocol)
         );
-    }
-
-    public function testIsExplicitRejectsUnknownField(): void
-    {
-        $this->expectException(\InvalidArgumentException::class);
-        $this->baseConfig()->isExplicit('retryScope');
     }
 
     private function serviceWithProtocol(string $protocolId): ServiceInterface
