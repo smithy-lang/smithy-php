@@ -48,7 +48,14 @@ class ClientConfig
 {
     private readonly PluginState $pluginState;
 
-    private readonly bool $protocolIsExplicit;
+    /** @var array{
+     *     protocol: bool,
+     *     protocolResolver: bool,
+     *     authSchemeResolver: bool,
+     *     retryStrategy: bool
+     * }
+     */
+    private readonly array $explicitFields;
 
     public readonly InterceptorChain $interceptorChain;
 
@@ -102,6 +109,10 @@ class ClientConfig
      * @param ServiceInterface|null $service Runtime service metadata.
      * @param PluginState|null $pluginState Internal plugin application state.
      * @param bool|null $protocolIsExplicit Internal protocol provenance.
+     *                  Takes precedence over `$explicitFields['protocol']`.
+     * @param array<string, bool>|null $explicitFields Internal provenance
+     *        map threaded through {@see copyWith()}. Fields absent from
+     *        the map are explicit when their argument is non-null.
      */
     public function __construct(
         TransportInterface $transport,
@@ -118,7 +129,8 @@ class ClientConfig
         array $authSchemePreference = [],
         public readonly ?ServiceInterface $service = null,
         ?PluginState $pluginState = null,
-        ?bool $protocolIsExplicit = null
+        ?bool $protocolIsExplicit = null,
+        ?array $explicitFields = null
     )
     {
         if ($protocolId === '') {
@@ -148,8 +160,17 @@ class ClientConfig
         $this->transport = $transport;
         $this->protocolResolver =
             $protocolResolver ?? ProtocolResolver::defaults();
-        $this->protocolIsExplicit =
-            $protocolIsExplicit ?? $protocol !== null;
+        $explicitFields ??= [];
+        $this->explicitFields = [
+            'protocol' => $protocolIsExplicit
+                ?? $explicitFields['protocol'] ?? $protocol !== null,
+            'protocolResolver' => $explicitFields['protocolResolver']
+                ?? $protocolResolver !== null,
+            'authSchemeResolver' => $explicitFields['authSchemeResolver']
+                ?? $authSchemeResolver !== null,
+            'retryStrategy' => $explicitFields['retryStrategy']
+                ?? $retryStrategy !== null
+        ];
         $this->interceptorChain = $interceptors;
 
         $schemes = \array_values($supportedAuthSchemes);
@@ -329,7 +350,7 @@ class ClientConfig
         $protocol = $this->protocolResolver->resolveProtocol(
             $this->service,
             $this->protocolId,
-            $this->protocolIsExplicit ? $this->protocol : null
+            $this->explicitFields['protocol'] ? $this->protocol : null
         );
         if ($protocol === $this->protocol) {
             return $this;
@@ -451,7 +472,7 @@ class ClientConfig
     ): static
     {
         $config = $this->copyWith([
-            'protocol' => $this->protocolIsExplicit
+            'protocol' => $this->explicitFields['protocol']
                 ? $this->protocol
                 : null,
             'protocolResolver' => $resolver
@@ -597,8 +618,7 @@ class ClientConfig
         $protocolId = \array_key_exists('protocolId', $overrides)
             ? $overrides['protocolId']
             : $this->protocolId;
-        $protocolIsExplicit = $overrides['protocolIsExplicit']
-            ?? $this->protocolIsExplicit;
+        $explicitFields = $this->explicitFieldsFor($overrides);
         $transport = $overrides['transport'] ?? $this->transport;
         $endpointResolver =
             $overrides['endpointResolver'] ?? $this->endpointResolver;
@@ -631,8 +651,54 @@ class ClientConfig
                 ?? $this->authSchemePreference,
             service: $service,
             pluginState: $pluginState,
-            protocolIsExplicit: $protocolIsExplicit
+            explicitFields: $explicitFields
         );
+    }
+
+    /**
+     * Whether `$field` was set by the caller rather than filled by a default.
+     *
+     * A field is explicit when a non-null value was passed to the
+     * constructor or set through its own `withXxx()` method. Tracked
+     * fields: `protocol`, `protocolResolver`, `authSchemeResolver`,
+     * `retryStrategy`.
+     *
+     * @throws \InvalidArgumentException When `$field` is not tracked.
+     */
+    public function isExplicit(string $field): bool
+    {
+        return $this->explicitFields[$field]
+            ?? throw new \InvalidArgumentException(
+                "Unknown ClientConfig provenance field: {$field}."
+            );
+    }
+
+    /**
+     * Provenance map for a copy built from `$overrides`.
+     *
+     * Subclasses that override {@see copyWith()} pass the result as
+     * `explicitFields` so defaulted values stay defaulted in the copy.
+     *
+     * @internal Used by configuration subclasses when copying base state.
+     *
+     * @param array<string, mixed> $overrides
+     *
+     * @return array<string, bool>
+     */
+    protected function explicitFieldsFor(array $overrides): array
+    {
+        $fields = $this->explicitFields;
+        $fields['protocol'] = $overrides['protocolIsExplicit']
+            ?? $fields['protocol'];
+        foreach (['protocolResolver', 'authSchemeResolver', 'retryStrategy']
+            as $field
+        ) {
+            if (isset($overrides[$field])) {
+                $fields[$field] = true;
+            }
+        }
+
+        return $fields;
     }
 
     /**
@@ -642,7 +708,7 @@ class ClientConfig
      */
     protected function hasExplicitProtocol(): bool
     {
-        return $this->protocolIsExplicit;
+        return $this->explicitFields['protocol'];
     }
 
     private function resolveWithPluginPredicate(

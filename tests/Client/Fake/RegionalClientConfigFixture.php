@@ -33,6 +33,7 @@ final class RegionalClientConfigFixture extends ClientConfig
      * @param list<AuthSchemeInterface> $supportedAuthSchemes
      * @param list<string> $authSchemePreference
      * @param array<string, mixed> $context
+     * @param array<string, bool>|null $explicitFields
      */
     public function __construct(
         TransportInterface $transport,
@@ -50,7 +51,8 @@ final class RegionalClientConfigFixture extends ClientConfig
         public readonly string $region = '',
         ?ServiceInterface $service = null,
         ?PluginState $pluginState = null,
-        ?bool $protocolIsExplicit = null
+        ?bool $protocolIsExplicit = null,
+        ?array $explicitFields = null
     )
     {
         parent::__construct(
@@ -68,7 +70,8 @@ final class RegionalClientConfigFixture extends ClientConfig
             authSchemePreference: $authSchemePreference,
             service: $service,
             pluginState: $pluginState,
-            protocolIsExplicit: $protocolIsExplicit
+            protocolIsExplicit: $protocolIsExplicit,
+            explicitFields: $explicitFields
         );
     }
 
@@ -104,7 +107,8 @@ final class RegionalClientConfigFixture extends ClientConfig
             pluginState: $overrides['pluginState']
                 ?? $this->getPluginState(),
             protocolIsExplicit: $overrides['protocolIsExplicit']
-                ?? $this->hasExplicitProtocol()
+                ?? $this->hasExplicitProtocol(),
+            explicitFields: $this->explicitFieldsFor($overrides)
         );
     }
 }
