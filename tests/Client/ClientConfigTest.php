@@ -19,7 +19,7 @@ use Smithy\Client\Auth\{
     StaticAuthSchemeResolver
 };
 use Smithy\Client\ClientConfig;
-use Smithy\Client\ClientConfigField;
+use Smithy\Client\ExplicitClientConfigField;
 use Smithy\Client\Endpoint\StaticEndpointResolver;
 use Smithy\Client\Interceptor\IdempotencyTokenInterceptor;
 use Smithy\Client\Protocol\ProtocolResolver;
@@ -541,29 +541,29 @@ final class ClientConfigTest extends TestCase
     }
 
     /**
-     * @return iterable<string, array{ClientConfigField, \Closure(): object, string}>
+     * @return iterable<string, array{ExplicitClientConfigField, \Closure(): object, string}>
      */
     public static function provenanceFields(): iterable
     {
         yield 'retryStrategy' => [
-            ClientConfigField::RetryStrategy,
+            ExplicitClientConfigField::RetryStrategy,
             static fn() => NoRetryStrategy::instance(),
             'withRetryStrategy'
         ];
         yield 'authSchemeResolver' => [
-            ClientConfigField::AuthSchemeResolver,
+            ExplicitClientConfigField::AuthSchemeResolver,
             static fn() => new AuthSchemeResolver(),
             'withAuthSchemeResolver'
         ];
         yield 'protocolResolver' => [
-            ClientConfigField::ProtocolResolver,
+            ExplicitClientConfigField::ProtocolResolver,
             static fn() => new ProtocolResolver([
                 FakeProtocol::ID => new FakeProtocol()
             ]),
             'withProtocolResolver'
         ];
         yield 'protocol' => [
-            ClientConfigField::Protocol,
+            ExplicitClientConfigField::Protocol,
             static fn() => new FakeProtocol(),
             'withProtocol'
         ];
@@ -571,7 +571,7 @@ final class ClientConfigTest extends TestCase
 
     #[DataProvider('provenanceFields')]
     public function testTracksExplicitFields(
-        ClientConfigField $field,
+        ExplicitClientConfigField $field,
         \Closure $value,
         string $with
     ): void {
@@ -597,7 +597,7 @@ final class ClientConfigTest extends TestCase
 
     #[DataProvider('provenanceFields')]
     public function testSubclassCopiesPreserveProvenance(
-        ClientConfigField $field,
+        ExplicitClientConfigField $field,
         \Closure $value,
         string $with
     ): void {
@@ -632,10 +632,10 @@ final class ClientConfigTest extends TestCase
         $resolved = $config->withService(FakeService::instance())
             ->resolveProtocol();
 
-        self::assertFalse($resolved->isExplicit(ClientConfigField::Protocol));
+        self::assertFalse($resolved->isExplicit(ExplicitClientConfigField::Protocol));
         self::assertFalse(
             $resolved->withProtocolId(FakeProtocol::ID)
-                ->isExplicit(ClientConfigField::Protocol)
+                ->isExplicit(ExplicitClientConfigField::Protocol)
         );
     }
 

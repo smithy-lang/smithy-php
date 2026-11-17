@@ -15,7 +15,7 @@ namespace Smithy\Client;
  * Case values match the {@see ClientConfig} constructor argument names and
  * `copyWith()` override keys.
  */
-enum ClientConfigField: string
+enum ExplicitClientConfigField: string
 {
     case Protocol = 'protocol';
     case ProtocolResolver = 'protocolResolver';
