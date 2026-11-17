@@ -115,6 +115,5 @@ final class RegionalClientConfigFixture extends ClientConfig
             identityResolvers: $overrides['identityResolvers']
                 ?? $this->identityResolvers
         );
-        );
     }
 }
