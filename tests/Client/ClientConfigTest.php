@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace Smithy\Tests\Client;
 
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Smithy\Client\Auth\{
     AuthSchemeResolver,
@@ -18,6 +19,7 @@ use Smithy\Client\Auth\{
     StaticAuthSchemeResolver
 };
 use Smithy\Client\ClientConfig;
+use Smithy\Client\ExplicitClientConfigField;
 use Smithy\Client\Endpoint\StaticEndpointResolver;
 use Smithy\Client\Interceptor\IdempotencyTokenInterceptor;
 use Smithy\Client\Protocol\ProtocolResolver;
@@ -536,6 +538,105 @@ final class ClientConfigTest extends TestCase
         self::assertInstanceOf(RegionalClientConfigFixture::class, $new);
         self::assertSame('test-region', $new->region);
         self::assertSame($protocol, $new->getProtocol());
+    }
+
+    /**
+     * @return iterable<string, array{ExplicitClientConfigField, \Closure(): object, string}>
+     */
+    public static function provenanceFields(): iterable
+    {
+        yield 'retryStrategy' => [
+            ExplicitClientConfigField::RetryStrategy,
+            static fn() => NoRetryStrategy::instance(),
+            'withRetryStrategy'
+        ];
+        yield 'authSchemeResolver' => [
+            ExplicitClientConfigField::AuthSchemeResolver,
+            static fn() => new AuthSchemeResolver(),
+            'withAuthSchemeResolver'
+        ];
+        yield 'protocolResolver' => [
+            ExplicitClientConfigField::ProtocolResolver,
+            static fn() => new ProtocolResolver([
+                FakeProtocol::ID => new FakeProtocol()
+            ]),
+            'withProtocolResolver'
+        ];
+        yield 'protocol' => [
+            ExplicitClientConfigField::Protocol,
+            static fn() => new FakeProtocol(),
+            'withProtocol'
+        ];
+    }
+
+    #[DataProvider('provenanceFields')]
+    public function testTracksExplicitFields(
+        ExplicitClientConfigField $field,
+        \Closure $value,
+        string $with
+    ): void {
+        $base = [
+            'transport' => new HttpClientTransport(new MockHttpClient()),
+            'endpointResolver' => new StaticEndpointResolver(
+                new Endpoint('https://a.test')
+            )
+        ];
+        $defaulted = new ClientConfig(...$base);
+        $ctorSet = new ClientConfig(...$base, ...[$field->value => $value()]);
+        $withSet = $defaulted->{$with}($value());
+
+        self::assertFalse($defaulted->isExplicit($field));
+        self::assertTrue($ctorSet->isExplicit($field));
+        self::assertTrue($withSet->isExplicit($field));
+        // copyWith() passes resolved defaults back to the constructor.
+        self::assertFalse(
+            $defaulted->withRetryScope('x')->isExplicit($field)
+        );
+        self::assertTrue($ctorSet->withRetryScope('x')->isExplicit($field));
+    }
+
+    #[DataProvider('provenanceFields')]
+    public function testSubclassCopiesPreserveProvenance(
+        ExplicitClientConfigField $field,
+        \Closure $value,
+        string $with
+    ): void {
+        $config = new RegionalClientConfigFixture(
+            transport: new HttpClientTransport(new MockHttpClient()),
+            endpointResolver: new StaticEndpointResolver(
+                new Endpoint('https://a.test')
+            ),
+            region: 'test-region'
+        );
+
+        self::assertFalse(
+            $config->withRetryScope('x')->isExplicit($field)
+        );
+        self::assertTrue(
+            $config->{$with}($value())->withRetryScope('x')
+                ->isExplicit($field)
+        );
+    }
+
+    public function testResolvedProtocolIsNotExplicit(): void
+    {
+        $config = new ClientConfig(
+            transport: new HttpClientTransport(new MockHttpClient()),
+            endpointResolver: new StaticEndpointResolver(
+                new Endpoint('https://a.test')
+            ),
+            protocolResolver: new ProtocolResolver([
+                FakeProtocol::ID => new FakeProtocol()
+            ])
+        );
+        $resolved = $config->withService(FakeService::instance())
+            ->resolveProtocol();
+
+        self::assertFalse($resolved->isExplicit(ExplicitClientConfigField::Protocol));
+        self::assertFalse(
+            $resolved->withProtocolId(FakeProtocol::ID)
+                ->isExplicit(ExplicitClientConfigField::Protocol)
+        );
     }
 
     private function serviceWithProtocol(string $protocolId): ServiceInterface
