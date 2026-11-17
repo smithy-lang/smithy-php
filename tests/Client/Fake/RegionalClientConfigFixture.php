@@ -11,7 +11,8 @@ namespace Smithy\Tests\Client\Fake;
 
 use Smithy\Client\Auth\{
     AuthSchemeInterface,
-    AuthSchemeResolverInterface
+    AuthSchemeResolverInterface,
+    IdentityResolversInterface
 };
 use Smithy\Client\ClientConfig;
 use Smithy\Client\Endpoint\EndpointResolverInterface;
@@ -50,7 +51,8 @@ final class RegionalClientConfigFixture extends ClientConfig
         public readonly string $region = '',
         ?ServiceInterface $service = null,
         ?PluginState $pluginState = null,
-        ?bool $protocolIsExplicit = null
+        ?bool $protocolIsExplicit = null,
+        ?IdentityResolversInterface $identityResolvers = null
     )
     {
         parent::__construct(
@@ -68,7 +70,8 @@ final class RegionalClientConfigFixture extends ClientConfig
             authSchemePreference: $authSchemePreference,
             service: $service,
             pluginState: $pluginState,
-            protocolIsExplicit: $protocolIsExplicit
+            protocolIsExplicit: $protocolIsExplicit,
+            identityResolvers: $identityResolvers
         );
     }
 
@@ -104,7 +107,9 @@ final class RegionalClientConfigFixture extends ClientConfig
             pluginState: $overrides['pluginState']
                 ?? $this->getPluginState(),
             protocolIsExplicit: $overrides['protocolIsExplicit']
-                ?? $this->hasExplicitProtocol()
+                ?? $this->hasExplicitProtocol(),
+            identityResolvers: $overrides['identityResolvers']
+                ?? $this->identityResolvers
         );
     }
 }
