@@ -33,7 +33,7 @@ abstract class AbstractAwsErrorDeserializer extends HttpErrorDeserializer
         if ($errorClass === ApiException::class) {
             $errorClass = AwsProtocolException::class;
         }
-        if (!\is_a($errorClass, AwsProtocolException::class, true)) {
+        if (!\is_a($errorClass, AwsErrorInterface::class, true)) {
             return parent::createUnmodeledError(
                 $operation,
                 $response,
@@ -44,7 +44,7 @@ abstract class AbstractAwsErrorDeserializer extends HttpErrorDeserializer
             );
         }
 
-        $error = new $errorClass(
+        $error = $errorClass::fromAwsError(
             message: self::defaultMessage($response, $discriminator, $message),
             fault: $this->resolveFault($response),
             previous: $previous,

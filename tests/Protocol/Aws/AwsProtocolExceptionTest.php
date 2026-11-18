@@ -16,10 +16,10 @@ use Smithy\Core\Retry\{RetryInfoInterface, RetrySafety};
 use Smithy\Protocol\Aws\AwsProtocolException;
 
 /**
- * `AwsProtocolException` refines the fault-based retry classification with
- * the HTTP status code: transient 5xx statuses and 429 are retryable, and
- * 429 is a throttle. A modeled override and a captured `Retry-After` hint
- * still win.
+ * `AwsErrorRetryTrait`, used by `AwsProtocolException`, refines the
+ * fault-based retry classification with the HTTP status code: transient 5xx
+ * statuses and 429 are retryable, and 429 is a throttle. A modeled override and
+ * a captured `Retry-After` hint still win.
  */
 final class AwsProtocolExceptionTest extends TestCase
 {
