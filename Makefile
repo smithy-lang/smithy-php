@@ -46,7 +46,7 @@ codegen-output-check: ## Verify checked-in codegen output is current
 license-check: ## Check source license headers
 	$(PHP) tools/check-license-headers.php
 
-package-manifests-check: ## Check package manifests against the root composer.json
+package-manifests-check: ## Check package manifests and license files against the root
 	$(PHP) tools/package-manifests/check.php
 
 composer-validate: ## Validate the root and package manifests with Composer

@@ -65,24 +65,67 @@ foreach ($paths as $path) {
     $packages[$file] = $read($file);
 }
 
+$count = \count($packages);
+$status = 0;
+
 $differences = PackageManifests::compare($read('composer.json'), $packages);
 if ($differences === []) {
-    $count = \count($packages);
     \fwrite(
         STDOUT,
         "{$count} package composer.json files match the root composer.json.\n"
     );
+} else {
+    foreach ($differences as $difference) {
+        \fwrite(STDOUT, "{$difference}\n");
+    }
 
-    exit(0);
+    \fwrite(
+        STDERR,
+        "The package composer.json files do not match the root composer.json.\n"
+    );
+    $status = 1;
 }
 
-foreach ($differences as $difference) {
-    \fwrite(STDOUT, "{$difference}\n");
+$contents = static function (string $file) use ($root): ?string {
+    $path = $root . '/' . $file;
+
+    return \is_file($path) ? (string) \file_get_contents($path) : null;
+};
+
+$legal = [];
+foreach (['LICENSE', 'NOTICE'] as $name) {
+    $text = $contents($name);
+    if ($text === null) {
+        $fail("{$name}: is missing");
+    }
+
+    $legal[$name] = $text;
 }
 
-\fwrite(
-    STDERR,
-    "The package composer.json files do not match the root composer.json.\n"
-);
+$copies = [];
+foreach (\array_keys($packages) as $file) {
+    $directory = \dirname($file);
+    foreach (\array_keys($legal) as $name) {
+        $copies[$directory][$name] = $contents("{$directory}/{$name}");
+    }
+}
 
-exit(1);
+$differences = PackageManifests::compareLegalFiles($legal, $copies);
+if ($differences === []) {
+    \fwrite(
+        STDOUT,
+        "{$count} package directories carry the root LICENSE and NOTICE.\n"
+    );
+} else {
+    foreach ($differences as $difference) {
+        \fwrite(STDOUT, "{$difference}\n");
+    }
+
+    \fwrite(
+        STDERR,
+        "The package LICENSE and NOTICE files do not match the root files.\n"
+    );
+    $status = 1;
+}
+
+exit($status);
