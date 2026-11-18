@@ -22,6 +22,7 @@
     },
     "replace": {
         "smithy/async": "self.version",
+        "smithy/auth": "self.version",
         "smithy/client": "self.version",
         "smithy/codec": "self.version",
         "smithy/codegen": "self.version",
@@ -37,6 +38,7 @@
     "autoload": {
         "psr-4": {
             "Smithy\\Async\\": "src/Async/",
+            "Smithy\\Auth\\": "src/Auth/",
             "Smithy\\Codegen\\": "src/Codegen/",
             "Smithy\\Core\\": "src/Core/",
             "Smithy\\Client\\": "src/Client/",

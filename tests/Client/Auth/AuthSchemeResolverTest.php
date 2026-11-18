@@ -14,11 +14,13 @@ use PHPUnit\Framework\Attributes\{
     DataProvider
 };
 use PHPUnit\Framework\TestCase;
-use Smithy\Client\Auth\{
+use Smithy\Auth\{
     AuthSchemeOption,
-    AuthSchemeResolver,
     NoAuthScheme,
-    ResolvedAuthScheme,
+    ResolvedAuthScheme
+};
+use Smithy\Client\Auth\{
+    AuthSchemeResolver,
     StaticAuthSchemeResolver
 };
 use Smithy\Client\ClientConfig;
@@ -107,7 +109,7 @@ final class AuthSchemeResolverTest extends TestCase
 
     public function testPassesClientContextToSchemeProperties(): void
     {
-        $scheme = new class implements \Smithy\Client\Auth\AuthSchemeInterface {
+        $scheme = new class implements \Smithy\Auth\AuthSchemeInterface {
             public function getSchemeId(): string
             {
                 return 'aws.auth#sigv4';
@@ -120,9 +122,9 @@ final class AuthSchemeResolverTest extends TestCase
             }
 
             public function getIdentityResolver(
-                \Smithy\Client\Auth\IdentityResolversInterface $resolvers
-            ): ?\Smithy\Client\Auth\IdentityResolverInterface {
-                return \Smithy\Client\Auth\AnonymousIdentityResolver::instance();
+                \Smithy\Auth\IdentityResolversInterface $resolvers
+            ): ?\Smithy\Auth\IdentityResolverInterface {
+                return \Smithy\Auth\AnonymousIdentityResolver::instance();
             }
 
             /** @param array<string, mixed> $context */
@@ -131,9 +133,9 @@ final class AuthSchemeResolverTest extends TestCase
                 return ['signerContext' => $context['token'] ?? null];
             }
 
-            public function getSigner(): \Smithy\Client\Auth\SignerInterface
+            public function getSigner(): \Smithy\Auth\SignerInterface
             {
-                return \Smithy\Client\Auth\NullSigner::instance();
+                return \Smithy\Auth\NullSigner::instance();
             }
         };
         $config = (new ClientConfig(
@@ -290,7 +292,7 @@ final class AuthSchemeResolverTest extends TestCase
 
     public function testCarriesResolvedIdentityResolver(): void
     {
-        $tokenProvider = new \Smithy\Client\Auth\StaticTokenProvider('t');
+        $tokenProvider = new \Smithy\Auth\StaticTokenProvider('t');
         $scheme = new TestAuthSchemeFixture(self::SIGV4, $tokenProvider);
         $config = new ClientConfig(
             protocol: new FakeProtocol(),
@@ -602,10 +604,10 @@ final class AuthSchemeResolverTest extends TestCase
      */
     private function nullResolverScheme(
         string $schemeId
-    ): \Smithy\Client\Auth\AuthSchemeInterface
+    ): \Smithy\Auth\AuthSchemeInterface
     {
         return new class ($schemeId)
-            implements \Smithy\Client\Auth\AuthSchemeInterface {
+            implements \Smithy\Auth\AuthSchemeInterface {
             public function __construct(private readonly string $id) {}
 
             public function getSchemeId(): string
@@ -619,8 +621,8 @@ final class AuthSchemeResolverTest extends TestCase
             }
 
             public function getIdentityResolver(
-                \Smithy\Client\Auth\IdentityResolversInterface $resolvers
-            ): ?\Smithy\Client\Auth\IdentityResolverInterface {
+                \Smithy\Auth\IdentityResolversInterface $resolvers
+            ): ?\Smithy\Auth\IdentityResolverInterface {
                 return null;
             }
 
@@ -629,9 +631,9 @@ final class AuthSchemeResolverTest extends TestCase
                 return [];
             }
 
-            public function getSigner(): \Smithy\Client\Auth\SignerInterface
+            public function getSigner(): \Smithy\Auth\SignerInterface
             {
-                return \Smithy\Client\Auth\NullSigner::instance();
+                return \Smithy\Auth\NullSigner::instance();
             }
         };
     }

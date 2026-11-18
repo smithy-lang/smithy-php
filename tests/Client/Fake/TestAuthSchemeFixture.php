@@ -9,7 +9,7 @@ declare(strict_types=1);
 
 namespace Smithy\Tests\Client\Fake;
 
-use Smithy\Client\Auth\{
+use Smithy\Auth\{
     AnonymousIdentityResolver,
     AuthSchemeInterface,
     IdentityResolverInterface,

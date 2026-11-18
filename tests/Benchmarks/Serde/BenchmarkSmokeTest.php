@@ -10,16 +10,14 @@ declare(strict_types=1);
 namespace Smithy\Tests\Benchmarks\Serde;
 
 use PHPUnit\Framework\TestCase;
+use Smithy\Auth\NoAuthScheme;
 use Smithy\Benchmarks\Serde\Support\BenchmarkCaseRepository;
 use Smithy\Benchmarks\Serde\Support\BenchmarkValueComparator;
 use Smithy\Benchmarks\Serde\Support\GeneratedCodeLoader;
 use Smithy\Benchmarks\Serde\Support\FixedResponseHttpClient;
 use Smithy\Benchmarks\Serde\Support\PipelineBenchmarkInterceptor;
 use Smithy\Benchmarks\Serde\Support\PipelineBenchmarkPlugin;
-use Smithy\Client\Auth\{
-    NoAuthScheme,
-    StaticAuthSchemeResolver
-};
+use Smithy\Client\Auth\StaticAuthSchemeResolver;
 use Smithy\Client\ClientConfig;
 use Smithy\Client\Endpoint\StaticEndpointResolver;
 use Smithy\Client\Plugin\{

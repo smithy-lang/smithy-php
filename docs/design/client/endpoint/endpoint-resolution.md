@@ -491,7 +491,7 @@ implementation. It does not add modeled schemes that the endpoint omitted.
 Endpoint properties override signer properties only. If the selected scheme
 changes, the pipeline resolves an identity for the replacement scheme.
 
-See [Authentication](../auth/auth-runtime-design.md) for the complete auth selection rules
+See [Authentication](../../auth/auth-runtime-design.md) for the complete auth selection rules
 and [Client Runtime](../client-runtime-design.md) for the complete pipeline lifecycle.
 
 ## AWS Integration
@@ -626,7 +626,7 @@ the focused suites, benchmark results, and remaining service coverage.
 ## Related Documents
 
 - [Client Runtime](../client-runtime-design.md)
-- [Authentication](../auth/auth-runtime-design.md)
+- [Authentication](../../auth/auth-runtime-design.md)
 - [Dynamic Client](../dynamic/dynamic-client-design.md)
 - [Code Generation](../../codegen/smithy-php-code-generation.md)
 - [Endpoint Testing and Validation](testing-and-validation.md)

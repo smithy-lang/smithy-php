@@ -9,11 +9,11 @@ declare(strict_types=1);
 
 namespace Smithy\Tests\Client\Fake;
 
-use Smithy\Client\Auth\{
+use Smithy\Auth\{
     AuthSchemeInterface,
-    AuthSchemeResolverInterface,
     IdentityResolversInterface
 };
+use Smithy\Client\Auth\AuthSchemeResolverInterface;
 use Smithy\Client\ClientConfig;
 use Smithy\Client\Endpoint\EndpointResolverInterface;
 use Smithy\Client\Interceptor\InterceptorChain;

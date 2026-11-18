@@ -168,4 +168,4 @@ vendor/bin/phpunit tests/Client/Interceptor
 
 - [Client Runtime](../client-runtime-design.md)
 - [Plugins](../plugin/client-plugin-design.md)
-- [Authentication](../auth/auth-runtime-design.md)
+- [Authentication](../../auth/auth-runtime-design.md)

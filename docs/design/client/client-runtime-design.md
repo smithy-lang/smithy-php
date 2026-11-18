@@ -291,7 +291,7 @@ selected result before signing.
 Signing returns `SignerResult`, which contains the signed request and optional
 signature metadata.
 
-See [Authentication Design](auth/auth-runtime-design.md).
+See [Authentication Design](../auth/auth-runtime-design.md).
 
 ## Retry model
 
@@ -495,7 +495,7 @@ vendor/bin/phpunit tests/Client
 
 ## Related designs
 
-- [Authentication](auth/auth-runtime-design.md)
+- [Authentication](../auth/auth-runtime-design.md)
 - [Endpoint Resolution](endpoint/endpoint-resolution.md)
 - [Interceptors](interceptor/client-interceptor-design.md)
 - [Plugins](plugin/client-plugin-design.md)
