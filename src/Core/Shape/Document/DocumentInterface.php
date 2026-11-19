@@ -191,4 +191,21 @@ interface DocumentInterface extends SerializableShapeInterface
      *                                           members.
      */
     public function getMember(string $name): ?self;
+
+    /**
+     * Build a modeled shape from this document using the schema of the generated class.
+     *
+     * Member values are read by `jsonName` first, then by member name. Blob members read through
+     * {@see asBlob()}, timestamp members through {@see asTimestamp()} (numeric documents read as
+     * epoch seconds), and nested structures, unions, lists and maps recurse.
+     *
+     * @template T of \Smithy\Core\Serde\SerializableStructInterface|\Smithy\Core\Shape\UnionInterface
+     *
+     * @param class-string<T> $class Generated structure or union class.
+     *
+     * @return T Hydrated shape instance.
+     * @throws IncompatibleDocumentTypeException When a document cannot be coerced to the member
+     *         type the schema declares.
+     */
+    public function asShape(string $class): object;
 }

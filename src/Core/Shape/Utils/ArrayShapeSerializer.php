@@ -16,6 +16,7 @@ use Smithy\Core\Shape\BigDecimal;
 use Smithy\Core\Shape\BigInteger;
 use Smithy\Core\Shape\Document\AbstractDocument;
 use Smithy\Core\Shape\Document\DocumentInterface;
+use Smithy\Core\Shape\Document\IncompatibleDocumentTypeException;
 use Smithy\Core\Shape\EnumInterface;
 use Smithy\Core\Shape\Exception\InvalidShapeValueException;
 use Smithy\Core\Shape\UnionInterface;
@@ -98,6 +99,204 @@ final class ArrayShapeSerializer
         }
 
         return new $className(...$args);
+    }
+
+    /**
+     * Build an instance of a generated shape from a document.
+     *
+     * Member values are read by `jsonName` first, then by member name. Documents may carry any
+     * mix of typed and untyped children: blob members read through `asBlob()`, timestamp members
+     * through `asTimestamp()`, and aggregate members
+     * recurse through the member schema.
+     *
+     * @template TShape of SerializableStructInterface|UnionInterface
+     *
+     * @param class-string<TShape> $className Generated structure or union class.
+     * @param DocumentInterface $document Document holding the shape's data.
+     *
+     * @return TShape Hydrated instance of `$className`.
+     * @throws IncompatibleDocumentTypeException When a document cannot be coerced to the member
+     *         type the schema declares.
+     */
+    public static function fromDocument(
+        string $className,
+        DocumentInterface $document
+    ): object
+    {
+        /** @var Schema $schema */
+        $schema = $className::schema();
+
+        return self::fromArray(
+            $className,
+            self::documentToArray($schema, $document)
+        );
+    }
+
+    /**
+     * Convert a structure or union document into member-name keyed values.
+     *
+     * @param Schema $schema Structure or union schema.
+     * @param DocumentInterface $document Document holding the shape's data.
+     *
+     * @return array<string, mixed> Values keyed by modeled member name.
+     */
+    private static function documentToArray(
+        Schema $schema,
+        DocumentInterface $document
+    ): array
+    {
+        $out = [];
+        if ($schema->type === ShapeType::Union->value) {
+            foreach ($document->asMap() as $wireName => $child) {
+                if ($wireName === '__type') {
+                    continue;
+                }
+                $member = self::findDocumentMember($schema, (string) $wireName);
+                if ($member === null) {
+                    return [(string) $wireName => $child === null
+                        ? null
+                        : self::unwrapDocument($child)];
+                }
+
+                return [$member->memberName => $child === null
+                    ? null
+                    : self::documentToValue($member, $child)];
+            }
+
+            return $out;
+        }
+
+        foreach ($schema->getMembersByIndex() as $member) {
+            $name = $member->memberName;
+            if ($name === null) {
+                continue;
+            }
+            $jsonName = $member->getTrait(Schema::T_JSON_NAME);
+            $child = (\is_string($jsonName) && $jsonName !== $name
+                    ? $document->getMember($jsonName)
+                    : null)
+                ?? $document->getMember($name);
+            if ($child !== null) {
+                $out[$name] = self::documentToValue($member, $child);
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * Read a numeric document as a float.
+     *
+     * @param DocumentInterface $document Integer-family or floating-point document.
+     *
+     * @return float Numeric value.
+     */
+    private static function numericToFloat(DocumentInterface $document): float
+    {
+        return match ($document->type()) {
+            ShapeType::Byte,
+            ShapeType::Short,
+            ShapeType::Integer,
+            ShapeType::Long => (float) $document->asLong(),
+            default => $document->asDouble()
+        };
+    }
+
+    /**
+     * Find the member of a union schema that a wire name refers to.
+     *
+     * @param Schema $schema Union schema.
+     * @param string $wireName `jsonName` or member name.
+     *
+     * @return Schema|null Matching member, or null when none matches.
+     */
+    private static function findDocumentMember(
+        Schema $schema,
+        string $wireName
+    ): ?Schema
+    {
+        foreach ($schema->getMembersByIndex() as $member) {
+            if ($member->memberName === $wireName
+                || $member->getTrait(Schema::T_JSON_NAME) === $wireName
+            ) {
+                return $member;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Convert one document into the value its member schema describes.
+     *
+     * @param Schema $member Member or item schema.
+     * @param DocumentInterface $document Document holding the value.
+     *
+     * @return mixed Value ready for {@see hydrateMember()}.
+     */
+    private static function documentToValue(
+        Schema $member,
+        DocumentInterface $document
+    ): mixed
+    {
+        switch ($member->type) {
+            case ShapeType::Structure->value:
+            case ShapeType::Union->value:
+                return self::documentToArray(
+                    $member->resolveTarget(),
+                    $document
+                );
+            case ShapeType::List_->value:
+                $itemSchema = $member->getListMember();
+                $out = [];
+                foreach ($document->asList() as $item) {
+                    $out[] = $item === null
+                        ? null
+                        : ($itemSchema === null
+                            ? self::unwrapDocument($item)
+                            : self::documentToValue($itemSchema, $item));
+                }
+
+                return $out;
+            case ShapeType::Map->value:
+                $valueSchema = $member->getMapValue();
+                $out = [];
+                foreach ($document->asMap() as $key => $item) {
+                    $out[$key] = $item === null
+                        ? null
+                        : ($valueSchema === null
+                            ? self::unwrapDocument($item)
+                            : self::documentToValue($valueSchema, $item));
+                }
+
+                return $out;
+            case ShapeType::Document->value:
+                return $document;
+            case ShapeType::Blob->value:
+                return $document->asBlob();
+            case ShapeType::Timestamp->value:
+                return $document->asTimestamp();
+            case ShapeType::Boolean->value:
+                return $document->asBoolean();
+            case ShapeType::Byte->value:
+            case ShapeType::Short->value:
+            case ShapeType::Integer->value:
+            case ShapeType::Long->value:
+            case ShapeType::IntEnum->value:
+                return $document->asLong();
+            case ShapeType::Float_->value:
+            case ShapeType::Double->value:
+                return self::numericToFloat($document);
+            case ShapeType::BigInteger->value:
+                return $document->asBigInteger();
+            case ShapeType::BigDecimal->value:
+                return $document->asBigDecimal();
+            case ShapeType::String_->value:
+            case ShapeType::Enum->value:
+                return $document->asString();
+            default:
+                return self::unwrapDocument($document);
+        }
     }
 
     /**

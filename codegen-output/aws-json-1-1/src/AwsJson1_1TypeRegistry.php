@@ -15,10 +15,13 @@ namespace Smithy\ProtocolTests\AwsJson1_1;
  * Populated once at codegen time from the service closure. Callers
  * use `schemaFor` for lazy schema resolution, `classFor` for a raw
  * class-string when they need to reflect on the generated type, and
- * `shapeIdFor` for the inverse lookup keyed by class.
+ * `shapeIdFor` for the inverse lookup keyed by class. `deserialize`
+ * builds the registered shape that a document's discriminator names.
  */
-final class AwsJson1_1TypeRegistry
+final class AwsJson1_1TypeRegistry implements \Smithy\Core\Serde\TypeRegistryInterface
 {
+    use \Smithy\Core\Serde\TypeRegistryDeserializeTrait;
+
     /**
      * @var array<string, class-string>
      */
@@ -97,7 +100,7 @@ final class AwsJson1_1TypeRegistry
      *
      * @return class-string|null
      */
-    public static function classFor(string $shapeId): ?string
+    public function classFor(string $shapeId): ?string
     {
         return self::CLASSES_BY_SHAPE_ID[$shapeId] ?? null;
     }
@@ -108,7 +111,7 @@ final class AwsJson1_1TypeRegistry
      *
      * @param class-string $class
      */
-    public static function shapeIdFor(string $class): ?string
+    public function shapeIdFor(string $class): ?string
     {
         return self::SHAPE_IDS_BY_CLASS[$class] ?? null;
     }
@@ -120,7 +123,7 @@ final class AwsJson1_1TypeRegistry
      *
      * Returns null when the shape ID is not registered.
      */
-    public static function schemaFor(string $shapeId): ?\Smithy\Core\Serde\Schema
+    public function schemaFor(string $shapeId): ?\Smithy\Core\Serde\Schema
     {
         $class = self::CLASSES_BY_SHAPE_ID[$shapeId] ?? null;
         if ($class === null) {
@@ -136,7 +139,7 @@ final class AwsJson1_1TypeRegistry
      *
      * @return array<string, class-string>
      */
-    public static function all(): array
+    public function all(): array
     {
         return self::CLASSES_BY_SHAPE_ID;
     }

@@ -44,6 +44,14 @@ final class TypeRegistryGeneratorTest extends TestCase
         $this->assertStringContainsString('TypeRegistry.php', $file->path);
         // Class declaration references the service.
         $this->assertStringContainsString('TypeRegistry', $file->content);
+        $this->assertStringContainsString(
+            'implements \\Smithy\\Core\\Serde\\TypeRegistryInterface',
+            $file->content
+        );
+        $this->assertStringContainsString(
+            'use \\Smithy\\Core\\Serde\\TypeRegistryDeserializeTrait;',
+            $file->content
+        );
         // Preamble is present.
         $this->assertStringStartsWith(
             "<?php\n\n"

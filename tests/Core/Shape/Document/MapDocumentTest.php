@@ -93,4 +93,19 @@ final class MapDocumentTest extends TestCase
         (new MapDocument([]))->serialize($serializer, 0);
         $this->assertSame(ShapeType::Map->value, $captured->type);
     }
+
+    public function testDiscriminatorComesFromConstructor(): void
+    {
+        $doc = new MapDocument([], null, 'smithy.test#Widget');
+
+        $this->assertSame('smithy.test#Widget', $doc->discriminator());
+    }
+
+    public function testDiscriminatorFallsBackToSchemaId(): void
+    {
+        $doc = new MapDocument([], new Schema('smithy.test#M', ShapeType::Map));
+
+        $this->assertSame('smithy.test#M', $doc->discriminator());
+        $this->assertNull((new MapDocument([]))->discriminator());
+    }
 }

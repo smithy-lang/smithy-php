@@ -25,10 +25,13 @@ final class MapDocument extends AbstractDocument
     /**
      * @param array<string, AbstractDocument|null> $entries Key-to-document entries.
      * @param Schema|null $schema Schema to attach, or null for an untyped map.
+     * @param string|null $discriminator Shape ID read from the wire, or null when the source
+     *                    carried none.
      */
     public function __construct(
         public readonly array $entries,
-        ?Schema $schema = null
+        ?Schema $schema = null,
+        private readonly ?string $discriminator = null
     )
     {
         parent::__construct($schema);
@@ -42,6 +45,16 @@ final class MapDocument extends AbstractDocument
     public function type(): ShapeType
     {
         return ShapeType::Map;
+    }
+
+    /**
+     * Return the shape ID carried on the wire, or the attached schema's shape ID.
+     *
+     * @return string|null Shape ID, or null when the document carries neither.
+     */
+    public function discriminator(): ?string
+    {
+        return $this->discriminator ?? parent::discriminator();
     }
 
     /**
