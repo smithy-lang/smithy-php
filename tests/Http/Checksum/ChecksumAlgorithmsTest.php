@@ -27,26 +27,25 @@ final class ChecksumAlgorithmsTest extends TestCase
         $this->assertSame('x-amz-checksum-crc32', $default->header);
     }
 
-    public function testRequestTableIncludesCrc64Nvme(): void
+    public function testRequestTableOmitsUnsupportedAlgorithms(): void
     {
         $request = ChecksumAlgorithms::request();
 
-        $this->assertArrayHasKey('CRC64NVME', $request);
-        $crc64 = $request['CRC64NVME'];
-        $this->assertSame('crc64nvme', $crc64->hashAlgorithm);
-        $this->assertSame('x-amz-checksum-crc64nvme', $crc64->header);
-        $this->assertTrue($crc64->usesCrc64Nvme());
+        $this->assertArrayNotHasKey('CRC64NVME', $request);
         $this->assertSame(
-            ['CRC32', 'CRC32C', 'CRC64NVME', 'SHA1', 'SHA256', 'SHA512',
+            ['CRC32', 'CRC32C', 'SHA1', 'SHA256', 'SHA512',
                 'XXHASH64', 'XXHASH3', 'XXHASH128'],
             \array_keys($request)
         );
+        foreach ($request as $algorithm) {
+            $this->assertTrue($algorithm->isAvailable());
+        }
     }
 
-    public function testResponseTableIsFastestFirstAndIncludesCrc64Nvme(): void
+    public function testResponseTableIsFastestFirst(): void
     {
         $this->assertSame(
-            ['CRC32C', 'CRC32', 'CRC64NVME', 'XXHASH64', 'XXHASH3',
+            ['CRC32C', 'CRC32', 'XXHASH64', 'XXHASH3',
                 'XXHASH128', 'SHA1', 'SHA256', 'SHA512'],
             \array_keys(ChecksumAlgorithms::response())
         );
@@ -56,33 +55,54 @@ final class ChecksumAlgorithmsTest extends TestCase
     {
         $this->assertSame('CRC32C', ChecksumAlgorithms::byName('crc32c')?->name);
         $this->assertNull(ChecksumAlgorithms::byName('MD5'));
+        $this->assertNull(ChecksumAlgorithms::byName('CRC64NVME'));
         $this->assertNull(ChecksumAlgorithms::byName('not-an-algorithm'));
     }
 
     public function testSupportedKeepsModeledAvailableFastestFirst(): void
     {
         $supported = ChecksumAlgorithms::supported(
-            ['SHA256', 'CRC32', 'CRC64NVME']
+            ['SHA256', 'CRC32', 'CRC32C']
         );
 
         $this->assertSame(
-            ['CRC32', 'CRC64NVME', 'SHA256'],
+            ['CRC32C', 'CRC32', 'SHA256'],
             \array_keys($supported)
         );
     }
 
-    public function testSupportedDropsUnmodeledAlgorithms(): void
+    public function testSupportedDropsUnmodeledAndUnsupportedAlgorithms(): void
     {
-        $supported = ChecksumAlgorithms::supported(['CRC32']);
+        $supported = ChecksumAlgorithms::supported(['CRC32', 'CRC64NVME']);
 
         $this->assertSame(['CRC32'], \array_keys($supported));
     }
 
-    public function testCrc64NvmeIsAlwaysAvailable(): void
+    public function testResolveRequestReturnsSupportedAlgorithm(): void
     {
-        $crc64 = ChecksumAlgorithms::byName('CRC64NVME');
+        $algorithm = ChecksumAlgorithms::resolveRequest('crc32c');
 
-        $this->assertNotNull($crc64);
-        $this->assertTrue($crc64->isAvailable());
+        $this->assertSame('CRC32C', $algorithm->name);
+        $this->assertSame('crc32c', $algorithm->hashAlgorithm);
+    }
+
+    public function testResolveRequestRejectsUnsupportedAlgorithm(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage(
+            "Unsupported flexible checksum algorithm 'CRC64NVME'. Supported "
+            . 'algorithms are: CRC32, CRC32C, SHA1, SHA256, SHA512, '
+            . 'XXHASH64, XXHASH3, XXHASH128.'
+        );
+
+        ChecksumAlgorithms::resolveRequest('CRC64NVME');
+    }
+
+    public function testResolveRequestRejectsUnknownAlgorithm(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage("'MD5'");
+
+        ChecksumAlgorithms::resolveRequest('MD5');
     }
 }

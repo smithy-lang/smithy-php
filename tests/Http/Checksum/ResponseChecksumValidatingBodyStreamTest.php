@@ -52,33 +52,6 @@ final class ResponseChecksumValidatingBodyStreamTest extends TestCase
         }
     }
 
-    public function testValidatesCrc64Nvme(): void
-    {
-        $stream = $this->stream(
-            'OOJZ0D8xKts=',
-            algorithm: 'CRC64NVME',
-            hashAlgorithm: 'crc64nvme',
-            header: 'x-amz-checksum-crc64nvme',
-        );
-
-        $this->assertSame('Hello world', (string) $stream);
-        $this->assertTrue($stream->isValidated());
-        $this->assertSame('CRC64NVME', $stream->getAlgorithm());
-    }
-
-    public function testThrowsCrc64NvmeMismatch(): void
-    {
-        $stream = $this->stream(
-            'AAAAAAAAAAA=',
-            algorithm: 'CRC64NVME',
-            hashAlgorithm: 'crc64nvme',
-            header: 'x-amz-checksum-crc64nvme',
-        );
-
-        $this->expectException(ChecksumMismatchException::class);
-        $stream->getContents();
-    }
-
     public function testValidatesEmptyPayload(): void
     {
         $stream = new ResponseChecksumValidatingBodyStream(
@@ -94,23 +67,6 @@ final class ResponseChecksumValidatingBodyStreamTest extends TestCase
 
         $this->assertSame('', $stream->getContents());
         $this->assertTrue($stream->isValidationComplete());
-        $this->assertTrue($stream->isValidated());
-    }
-
-    public function testValidatesEmptyCrc64NvmePayload(): void
-    {
-        $stream = new ResponseChecksumValidatingBodyStream(
-            new StringRequestStream(''),
-            new ResponseChecksumSelection(
-                algorithm: 'CRC64NVME',
-                hashAlgorithm: 'crc64nvme',
-                header: 'x-amz-checksum-crc64nvme',
-                encodedChecksum: 'AAAAAAAAAAA=',
-                checksum: \base64_decode('AAAAAAAAAAA=', true),
-            )
-        );
-
-        $this->assertSame('', $stream->getContents());
         $this->assertTrue($stream->isValidated());
     }
 
@@ -139,9 +95,6 @@ final class ResponseChecksumValidatingBodyStreamTest extends TestCase
 
     private function stream(
         string $expected,
-        string $algorithm = 'CRC32',
-        string $hashAlgorithm = 'crc32b',
-        string $header = 'x-amz-checksum-crc32',
     ): ResponseChecksumValidatingBodyStream {
         $checksum = \base64_decode($expected, true);
         $this->assertIsString($checksum);
@@ -149,9 +102,9 @@ final class ResponseChecksumValidatingBodyStreamTest extends TestCase
         return new ResponseChecksumValidatingBodyStream(
             new StringRequestStream('Hello world'),
             new ResponseChecksumSelection(
-                algorithm: $algorithm,
-                hashAlgorithm: $hashAlgorithm,
-                header: $header,
+                algorithm: 'CRC32',
+                hashAlgorithm: 'crc32b',
+                header: 'x-amz-checksum-crc32',
                 encodedChecksum: $expected,
                 checksum: $checksum
             )

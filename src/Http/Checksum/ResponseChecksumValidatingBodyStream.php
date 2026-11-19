@@ -16,11 +16,7 @@ use Smithy\Http\Message\RequestStreamInterface;
  */
 final class ResponseChecksumValidatingBodyStream implements RequestStreamInterface
 {
-    private readonly bool $usesCrc64Nvme;
-
     private \HashContext $hashContext;
-
-    private Crc64Nvme $crc64Nvme;
 
     private readonly int $startPosition;
 
@@ -37,9 +33,7 @@ final class ResponseChecksumValidatingBodyStream implements RequestStreamInterfa
         private readonly ResponseChecksumSelection $selection,
     ) {
         $this->startPosition = $inner->isSeekable() ? $inner->tell() : 0;
-        $this->usesCrc64Nvme =
-            $selection->hashAlgorithm === ChecksumAlgorithm::CRC64NVME_HASH;
-        $this->initHash();
+        $this->hashContext = \hash_init($selection->hashAlgorithm);
     }
 
     public function __toString(): string
@@ -210,11 +204,7 @@ final class ResponseChecksumValidatingBodyStream implements RequestStreamInterfa
 
         if ($bytes !== '') {
             $this->started = true;
-            if ($this->usesCrc64Nvme) {
-                $this->crc64Nvme->update($bytes);
-            } else {
-                \hash_update($this->hashContext, $bytes);
-            }
+            \hash_update($this->hashContext, $bytes);
         }
 
         if ($this->inner->fullyConsumed() || $this->inner->eof()) {
@@ -228,9 +218,7 @@ final class ResponseChecksumValidatingBodyStream implements RequestStreamInterfa
             return;
         }
 
-        $calculated = $this->usesCrc64Nvme
-            ? $this->crc64Nvme->digest()
-            : \hash_final($this->hashContext, true);
+        $calculated = \hash_final($this->hashContext, true);
         $this->validationComplete = true;
         if (\hash_equals($this->selection->checksum, $calculated)) {
             $this->validated = true;
@@ -248,20 +236,11 @@ final class ResponseChecksumValidatingBodyStream implements RequestStreamInterfa
 
     private function resetValidation(): void
     {
-        $this->initHash();
+        $this->hashContext = \hash_init($this->selection->hashAlgorithm);
         $this->started = false;
         $this->validationComplete = false;
         $this->validated = false;
         $this->failure = null;
-    }
-
-    private function initHash(): void
-    {
-        if ($this->usesCrc64Nvme) {
-            $this->crc64Nvme = new Crc64Nvme();
-        } else {
-            $this->hashContext = \hash_init($this->selection->hashAlgorithm);
-        }
     }
 
     private function throwIfFailed(): void
