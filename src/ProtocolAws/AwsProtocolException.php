@@ -33,9 +33,9 @@ class AwsProtocolException extends ApiException implements AwsErrorInterface
         string $message = '',
         ErrorFault $fault = ErrorFault::Other,
         ?\Throwable $previous = null,
-        private readonly ?string $awsErrorCode = null,
-        private readonly ?string $requestId = null,
-        private readonly ?int $httpStatusCode = null
+        private ?string $awsErrorCode = null,
+        private ?string $requestId = null,
+        private ?int $httpStatusCode = null
     )
     {
         parent::__construct($message, $fault, $previous);
@@ -78,5 +78,23 @@ class AwsProtocolException extends ApiException implements AwsErrorInterface
     ): static
     {
         return new static($message, $fault, $previous, $awsErrorCode, $requestId, $httpStatusCode);
+    }
+
+    /**
+     * Set the AWS error metadata of a deserialized error.
+     */
+    public function setAwsErrorMetadata(
+        string $message,
+        ?string $awsErrorCode,
+        ?string $requestId,
+        ?int $httpStatusCode
+    ): void
+    {
+        if ($this->message === '') {
+            $this->message = $message;
+        }
+        $this->awsErrorCode = $awsErrorCode;
+        $this->requestId = $requestId;
+        $this->httpStatusCode = $httpStatusCode;
     }
 }

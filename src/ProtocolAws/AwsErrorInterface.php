@@ -16,7 +16,9 @@ use Smithy\Core\Exception\ErrorFault;
  *
  * Error deserializers build any exception class implementing this interface
  * with the AWS error code, request ID and HTTP status of the response, and
- * attach a `Retry-After` hint when the response has one.
+ * attach a `Retry-After` hint when the response has one. Modeled errors
+ * receive the same metadata through {@see setAwsErrorMetadata()} after
+ * their members are deserialized.
  */
 interface AwsErrorInterface
 {
@@ -28,6 +30,19 @@ interface AwsErrorInterface
         ?string $requestId,
         ?int $httpStatusCode
     ): static;
+
+    /**
+     * Set the AWS error metadata of a deserialized error.
+     *
+     * Replaces the error code, request ID and HTTP status. `$message`
+     * becomes the exception message when the current message is empty.
+     */
+    public function setAwsErrorMetadata(
+        string $message,
+        ?string $awsErrorCode,
+        ?string $requestId,
+        ?int $httpStatusCode
+    ): void;
 
     public function setRetryAfter(?float $seconds): void;
 }

@@ -69,9 +69,9 @@ class CustomAwsError extends ApiException implements AwsErrorInterface
         string $message = '',
         ErrorFault $fault = ErrorFault::Other,
         ?\Throwable $previous = null,
-        public readonly ?string $awsErrorCode = null,
-        public readonly ?string $requestId = null,
-        public readonly ?int $httpStatusCode = null
+        public ?string $awsErrorCode = null,
+        public ?string $requestId = null,
+        public ?int $httpStatusCode = null
     ) {
         parent::__construct($message, $fault, $previous);
     }
@@ -85,5 +85,19 @@ class CustomAwsError extends ApiException implements AwsErrorInterface
         ?int $httpStatusCode
     ): static {
         return new static($message, $fault, $previous, $awsErrorCode, $requestId, $httpStatusCode);
+    }
+
+    public function setAwsErrorMetadata(
+        string $message,
+        ?string $awsErrorCode,
+        ?string $requestId,
+        ?int $httpStatusCode
+    ): void {
+        if ($this->message === '') {
+            $this->message = $message;
+        }
+        $this->awsErrorCode = $awsErrorCode;
+        $this->requestId = $requestId;
+        $this->httpStatusCode = $httpStatusCode;
     }
 }

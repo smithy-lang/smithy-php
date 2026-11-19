@@ -16,10 +16,41 @@ use Smithy\Http\Message\Response;
 use Smithy\Protocol\HttpErrorDeserializer;
 
 /**
- * Create unmodeled errors containing AWS response metadata.
+ * Create AWS errors containing AWS response metadata.
+ *
+ * Unmodeled errors are built with {@see AwsErrorInterface::fromAwsError()};
+ * modeled errors implementing {@see AwsErrorInterface} receive the same
+ * metadata through {@see AwsErrorInterface::setAwsErrorMetadata()}.
  */
 abstract class AbstractAwsErrorDeserializer extends HttpErrorDeserializer
 {
+    protected function decorateModeledError(
+        \Throwable $error,
+        OperationInterface $operation,
+        ResponseInterface $response,
+        ?string $discriminator,
+        string $message,
+        ?string $requestId
+    ): \Throwable
+    {
+        if (!$error instanceof AwsErrorInterface) {
+            return $error;
+        }
+
+        $error->setAwsErrorMetadata(
+            self::defaultMessage($response, $discriminator, $message),
+            $discriminator,
+            $requestId ?? self::headerRequestId($response),
+            $response->getStatusCode()
+        );
+        $retryAfter = self::parseRetryAfter($response);
+        if ($retryAfter !== null) {
+            $error->setRetryAfter($retryAfter);
+        }
+
+        return $error;
+    }
+
     protected function createUnmodeledError(
         OperationInterface $operation,
         ResponseInterface $response,
@@ -49,7 +80,7 @@ abstract class AbstractAwsErrorDeserializer extends HttpErrorDeserializer
             fault: $this->resolveFault($response),
             previous: $previous,
             awsErrorCode: $discriminator,
-            requestId: $requestId,
+            requestId: $requestId ?? self::headerRequestId($response),
             httpStatusCode: $response->getStatusCode()
         );
         $retryAfter = self::parseRetryAfter($response);
@@ -82,6 +113,22 @@ abstract class AbstractAwsErrorDeserializer extends HttpErrorDeserializer
         }
 
         return null;
+    }
+
+    /**
+     * Read the request ID from the `x-amzn-requestid` or `x-amz-request-id`
+     * header. Returns null when both are absent.
+     */
+    private static function headerRequestId(
+        ResponseInterface $response
+    ): ?string
+    {
+        $requestId = $response->getHeaderLine('x-amzn-requestid');
+        if ($requestId === '') {
+            $requestId = $response->getHeaderLine('x-amz-request-id');
+        }
+
+        return $requestId !== '' ? $requestId : null;
     }
 
     /**
