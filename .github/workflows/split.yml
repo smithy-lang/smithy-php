@@ -1,0 +1,75 @@
+name: Split packages
+
+# DRAFT - not yet enabled in the real repo.
+#
+# Splits the monorepo into per-package read-only repositories on every version
+# tag, propagating the SAME tag to each split repo so all packages share one
+# version. splitsh-lite is the primary tool (installed in the job); split.sh
+# falls back to `git subtree split` if the binary is unavailable.
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+jobs:
+  split:
+    name: Split ${{ matrix.pkg.slug }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    # GUARD: only run in the canonical upstream repo. Forks and clones that push
+    # a tag will NOT trigger the split (and have no SSH key or org access anyway).
+    if: github.repository == 'smithy-lang/smithy-php'
+
+    strategy:
+      fail-fast: false
+      matrix:
+        # One split repo per package. Keep in sync with tools/split/packages.map.
+        pkg:
+          - { subdir: Async,       slug: smithy-php-async }
+          - { subdir: Core,        slug: smithy-php-core }
+          - { subdir: Codec,       slug: smithy-php-codec }
+          - { subdir: Http,        slug: smithy-php-http }
+          - { subdir: Protocol,    slug: smithy-php-protocol }
+          - { subdir: ProtocolAws, slug: smithy-php-protocol-aws }
+          - { subdir: Client,      slug: smithy-php-client }
+          - { subdir: Codegen,     slug: smithy-php-codegen }
+
+    steps:
+      - name: Checkout monorepo (full history)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # subtree/splitsh need the whole history
+
+      - name: Install splitsh-lite
+        run: |
+          curl -sSL https://github.com/splitsh/lite/releases/download/v2.0.0/lite_linux_amd64.tar.gz \
+            | tar -xz -C /usr/local/bin splitsh-lite
+          splitsh-lite --version || true
+
+      - name: Add deploy key for ${{ matrix.pkg.slug }}
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          # One write-deploy-key secret per split repo, e.g. SPLIT_KEY_ASYNC.
+          # Store each in repo/org secrets before enabling.
+          ssh-private-key: ${{ secrets[format('SPLIT_KEY_{0}', matrix.pkg.subdir)] }}
+
+      - name: Resolve tag
+        id: tag
+        run: echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+
+      - name: Split and push ${{ matrix.pkg.slug }}
+        env:
+          SPLIT_ORG: ${{ vars.SPLIT_ORG || 'smithy-lang' }}   # org var overrides; defaults to smithy-lang
+          TAG: ${{ steps.tag.outputs.tag }}
+          BRANCH: main
+          PUSH: '1'
+          # Limit this matrix leg to one package by filtering the map at runtime.
+          MAP_FILE: ${{ runner.temp }}/one.map
+        run: |
+          grep -E "^${{ matrix.pkg.subdir }}[[:space:]]" tools/split/packages.map > "${MAP_FILE}"
+          bash tools/split/split.sh

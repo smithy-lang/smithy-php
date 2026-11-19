@@ -1,0 +1,17 @@
+# smithy-php monorepo -> per-package split map
+# Format: <src-subdir> <composer-package-name> <split-repo-slug>
+# One line per package. Lines starting with # are ignored.
+# The split repo URL is built as: git@github.com:${SPLIT_ORG}/<split-repo-slug>.git
+#
+# Design target is 8 packages. If a <src-subdir> is missing from the working
+# tree (e.g. ProtocolAws before PR #137 merges) the split script skips it and
+# logs a notice, so the tooling degrades gracefully.
+
+Async       smithy/async        smithy-php-async
+Core        smithy/core         smithy-php-core
+Codec       smithy/codec        smithy-php-codec
+Http        smithy/http         smithy-php-http
+Protocol    smithy/protocol     smithy-php-protocol
+ProtocolAws smithy/protocol-aws smithy-php-protocol-aws
+Client      smithy/client       smithy-php-client
+Codegen     smithy/codegen      smithy-php-codegen
