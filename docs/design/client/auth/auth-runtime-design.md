@@ -9,7 +9,7 @@
 Smithy-PHP resolves authentication per request attempt. Operation metadata
 supplies modeled auth scheme IDs. Endpoint resolution can replace that
 selection and add signer-property overrides. `ClientConfig` supplies the
-runtime schemes the client can use.
+runtime schemes the client can use and a repository of identity resolvers.
 
 For each attempt, the pipeline selects a supported modeled scheme and resolves
 its identity before endpoint resolution. It then resolves the endpoint,
@@ -64,7 +64,7 @@ dynamic operation metadata expose effective auth schemes through
 
 | Type | Responsibility |
 |---|---|
-| `AuthSchemeInterface` | Bind a scheme ID to an identity resolver and signer. |
+| `AuthSchemeInterface` | Bind a scheme ID to an identity resolver and signer. It receives the client context bag for property defaults and an `IdentityResolversInterface` for resolver lookup. |
 | `AuthSchemeOption` | Carry one candidate ID plus independent identity and signer property overrides. |
 | `AuthSchemeResolverInterface` | Select modeled auth, then reconcile endpoint auth for an attempt. |
 | `ResolvedAuthScheme` | Carry the selected implementation and effective identity and signer properties. |
@@ -72,6 +72,7 @@ dynamic operation metadata expose effective auth schemes through
 | `SignerResult` | Carry the signed request and reusable signature metadata. |
 | `IdentityInterface` | Carry signer-specific identity material. |
 | `IdentityResolverInterface` | Resolve an identity from scheme properties. |
+| `IdentityResolversInterface` | Look up an identity resolver by identity type; returns the resolver registered for that type, or null to mark the scheme unusable so selection moves to the next option. |
 | `IdentityResult` | Distinguish a successful identity, an expected source miss, and a thrown fatal failure. |
 | `IdentityChain` | Assemble ordered providers and try resolvers in order. |
 | `ChainSetup` | Share assembly state while providers register resolvers. |
@@ -91,6 +92,12 @@ understand their identity material and signing rules.
 - `authSchemeResolver`: selects a supported scheme using operation and
   endpoint metadata
 - `authSchemePreference`: customer-preferred short scheme names
+- `identityResolvers`: an `IdentityResolversInterface` repository of identity
+  resolvers keyed by identity type, passed to each scheme's
+  `getIdentityResolver()`
+
+`withIdentityResolver()` registers one resolver by identity type;
+`withIdentityResolvers()` replaces the repository.
 
 `NoAuthScheme` is always present. The constructor appends it when callers do
 not include it in `supportedAuthSchemes`. That makes anonymous operations
@@ -116,7 +123,9 @@ identity and signer property overrides.
 The resolver applies the request-level preference, or
 `ClientConfig::$authSchemePreference`, without discarding duplicate options.
 It selects the first option whose full scheme ID exists in
-`ClientConfig::$supportedAuthSchemes`.
+`ClientConfig::$supportedAuthSchemes` and whose scheme yields a usable
+identity resolver from `ClientConfig::$identityResolvers`. An option whose
+scheme yields no resolver is passed over so a later option can be selected.
 
 After endpoint resolution,
 `resolveEndpointAuthScheme()` reconciles the modeled result with the
@@ -154,8 +163,13 @@ matches exact scheme IDs.
 ## Identity Resolution
 
 An `IdentityResolverInterface` returns an `IdentityResult` from
-identity-specific properties. Scheme defaults and option overrides are merged
-before the resolver is called. Signer properties are kept separate.
+identity-specific properties. During selection, a scheme obtains its resolver
+from `getIdentityResolver()`, either from its own configuration or by looking
+the identity type up in the `IdentityResolversInterface` repository. A null
+result marks the option unusable, and the resolver advances to the next
+option; a usable resolver makes the option the selected scheme. Scheme
+defaults and option overrides are merged before the resolver is called. Signer
+properties are kept separate.
 
 `IdentityResult::success()` carries an identity. `IdentityResult::notFound()`
 represents an expected source-specific miss, such as an unconfigured
@@ -258,7 +272,8 @@ request.
 ### HTTP bearer auth
 
 `HttpBearerAuthScheme` uses a configured token provider and
-`HttpBearerAuthSigner`.
+`HttpBearerAuthSigner`. When no provider is configured it looks up a
+`BearerToken` resolver from the `IdentityResolversInterface` repository.
 
 `HttpBearerAuthSigner` requires:
 
