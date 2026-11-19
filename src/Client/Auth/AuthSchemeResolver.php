@@ -9,6 +9,11 @@ declare(strict_types=1);
 
 namespace Smithy\Client\Auth;
 
+use Smithy\Auth\{
+    AuthSchemeInterface,
+    AuthSchemeOption,
+    ResolvedAuthScheme
+};
 use Smithy\Client\ClientConfig;
 use Smithy\Core\Endpoint\EndpointAuthScheme;
 use Smithy\Core\Shape\OperationInterface;
@@ -41,10 +46,17 @@ class AuthSchemeResolver implements AuthSchemeResolverInterface
             $preference
         ) as $option) {
             $scheme = $config->getSupportedAuthScheme($option->schemeId);
-            if ($scheme !== null) {
-                return self::resolveOption($scheme, $option, $config);
+            if ($scheme === null) {
+                continue;
             }
-        }
+            $resolved = self::resolveOption($scheme, $option, $config);
+            // A usable identity resolver makes the option selectable; when
+            // the scheme yields one, return it. A skipped option lets a later
+            // option (no-auth, or another configured scheme) win, matching
+            // smithy-java's ClientPipeline selection loop.
+            if ($resolved !== null) {
+                return $resolved;
+            }        }
 
         throw new \RuntimeException(
             'No supported auth scheme is available for operation '
@@ -99,11 +111,15 @@ class AuthSchemeResolver implements AuthSchemeResolverInterface
                     [
                         ...$resolvedAuthScheme->signerProperties,
                         ...$option->signerPropertyOverrides
-                    ]
+                    ],
+                    $resolvedAuthScheme->identityResolver
                 );
             }
 
-            return self::resolveOption($scheme, $option, $config);
+            $resolved = self::resolveOption($scheme, $option, $config);
+            if ($resolved !== null) {
+                return $resolved;
+            }
         }
 
         $requested = [];
@@ -176,23 +192,34 @@ class AuthSchemeResolver implements AuthSchemeResolverInterface
 
     /**
      * Resolve a supported option with scheme defaults and option overrides.
+     *
+     * Returns the resolved option when the scheme yields a usable identity
+     * resolver, or null to let the caller move to the next option.
      */
     private static function resolveOption(
         AuthSchemeInterface $scheme,
         AuthSchemeOption $option,
         ClientConfig $config
-    ): ResolvedAuthScheme
+    ): ?ResolvedAuthScheme
     {
+        $identityResolver = $scheme->getIdentityResolver(
+            $config->getIdentityResolvers()
+        );
+        if ($identityResolver === null) {
+            return null;
+        }
+
         return new ResolvedAuthScheme(
             $scheme,
             [
-                ...$scheme->getIdentityProperties($config),
+                ...$scheme->getIdentityProperties($config->context),
                 ...$option->identityPropertyOverrides
             ],
             [
-                ...$scheme->getSignerProperties($config),
+                ...$scheme->getSignerProperties($config->context),
                 ...$option->signerPropertyOverrides
-            ]
+            ],
+            $identityResolver
         );
     }
 

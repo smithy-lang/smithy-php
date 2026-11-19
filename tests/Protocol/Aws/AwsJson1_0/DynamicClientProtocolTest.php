@@ -9,10 +9,8 @@ declare(strict_types=1);
 
 namespace Smithy\Tests\Protocol\Aws\AwsJson1_0;
 
-use Smithy\Client\Auth\{
-    NoAuthScheme,
-    StaticAuthSchemeResolver
-};
+use Smithy\Auth\NoAuthScheme;
+use Smithy\Client\Auth\StaticAuthSchemeResolver;
 use Smithy\Client\ClientInterface;
 use Smithy\Client\Retry\NoRetryStrategy;
 use Smithy\Client\Dynamic\{

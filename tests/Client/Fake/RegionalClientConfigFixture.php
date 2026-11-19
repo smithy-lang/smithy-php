@@ -9,10 +9,11 @@ declare(strict_types=1);
 
 namespace Smithy\Tests\Client\Fake;
 
-use Smithy\Client\Auth\{
+use Smithy\Auth\{
     AuthSchemeInterface,
-    AuthSchemeResolverInterface
+    IdentityResolversInterface
 };
+use Smithy\Client\Auth\AuthSchemeResolverInterface;
 use Smithy\Client\ClientConfig;
 use Smithy\Client\Endpoint\EndpointResolverInterface;
 use Smithy\Client\Interceptor\InterceptorChain;
@@ -33,6 +34,7 @@ final class RegionalClientConfigFixture extends ClientConfig
      * @param list<AuthSchemeInterface> $supportedAuthSchemes
      * @param list<string> $authSchemePreference
      * @param array<string, mixed> $context
+     * @param array<string, bool>|null $explicitFields
      */
     public function __construct(
         TransportInterface $transport,
@@ -50,7 +52,9 @@ final class RegionalClientConfigFixture extends ClientConfig
         public readonly string $region = '',
         ?ServiceInterface $service = null,
         ?PluginState $pluginState = null,
-        ?bool $protocolIsExplicit = null
+        ?bool $protocolIsExplicit = null,
+        ?array $explicitFields = null,
+        ?IdentityResolversInterface $identityResolvers = null
     )
     {
         parent::__construct(
@@ -68,7 +72,9 @@ final class RegionalClientConfigFixture extends ClientConfig
             authSchemePreference: $authSchemePreference,
             service: $service,
             pluginState: $pluginState,
-            protocolIsExplicit: $protocolIsExplicit
+            protocolIsExplicit: $protocolIsExplicit,
+            explicitFields: $explicitFields,
+            identityResolvers: $identityResolvers
         );
     }
 
@@ -104,7 +110,10 @@ final class RegionalClientConfigFixture extends ClientConfig
             pluginState: $overrides['pluginState']
                 ?? $this->getPluginState(),
             protocolIsExplicit: $overrides['protocolIsExplicit']
-                ?? $this->hasExplicitProtocol()
+                ?? $this->hasExplicitProtocol(),
+            explicitFields: $this->explicitFieldsFor($overrides),
+            identityResolvers: $overrides['identityResolvers']
+                ?? $this->identityResolvers
         );
     }
 }

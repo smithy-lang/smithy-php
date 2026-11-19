@@ -19,22 +19,24 @@ use Smithy\Async\{
     Async,
     EventLoopInterface
 };
-use Smithy\Client\{
-    ClientConfig,
-    ClientPipeline,
-    RequestOverrideConfig
-};
-use Smithy\Client\Auth\{
+use Smithy\Auth\{
     AnonymousIdentity,
     AuthSchemeInterface,
-    AuthSchemeResolverInterface,
     IdentityInterface,
     IdentityNotFoundException,
     IdentityResolverInterface,
     IdentityResult,
     ResolvedAuthScheme,
     SignerInterface,
-    SignerResult,
+    SignerResult
+};
+use Smithy\Client\{
+    ClientConfig,
+    ClientPipeline,
+    RequestOverrideConfig
+};
+use Smithy\Client\Auth\{
+    AuthSchemeResolverInterface,
     StaticAuthSchemeResolver
 };
 use Smithy\Client\Endpoint\{
@@ -87,7 +89,7 @@ use Smithy\Http\Message\{
 };
 use Smithy\Protocol\ProtocolInterface;
 use Smithy\Tests\Async\Utils\RecordingEventLoopFixture;
-use Smithy\Tests\Client\Auth\Utils\NotFoundResolverFixture;
+use Smithy\Tests\Auth\Utils\NotFoundResolverFixture;
 use Smithy\Tests\Client\Fake\{
     FakeInput,
     FakeOperation,
@@ -1064,6 +1066,118 @@ final class ClientPipelineTest extends TestCase
 
         $this->assertNull($seen->selectedScheme);
         $this->assertSame(0, $http->sendCallCount);
+    }
+
+    public function testNoUsableSchemeFailsWhenEveryResolverIsNull(): void
+    {
+        $http = (new MockHttpClient())->willReturn('body');
+        $nullResolverScheme = new class implements AuthSchemeInterface {
+            public function getSchemeId(): string
+            {
+                return 'smithy.api#httpBearerAuth';
+            }
+
+            public function getIdentityProperties(array $context): array
+            {
+                return [];
+            }
+
+            public function getIdentityResolver(
+                \Smithy\Auth\IdentityResolversInterface $resolvers
+            ): ?IdentityResolverInterface {
+                return null;
+            }
+
+            public function getSignerProperties(array $context): array
+            {
+                return [];
+            }
+
+            public function getSigner(): SignerInterface
+            {
+                return \Smithy\Auth\NullSigner::instance();
+            }
+        };
+        $pipeline = new ClientPipeline(new ClientConfig(
+            protocol: new FakeProtocol(),
+            transport: new \Smithy\Http\Client\HttpClientTransport(
+                $http
+            ),
+            endpointResolver: new StaticEndpointResolver(
+                new Endpoint('https://example.test')
+            ),
+            supportedAuthSchemes: [$nullResolverScheme],
+            authSchemeResolver: new StaticAuthSchemeResolver([
+                'smithy.api#httpBearerAuth'
+            ])
+        ));
+
+        try {
+            $pipeline->execute(FakeOperation::instance(), new FakeInput());
+            $this->fail('Expected auth resolution to fail.');
+        } catch (\RuntimeException $error) {
+            $this->assertStringContainsString(
+                'No supported auth scheme',
+                $error->getMessage()
+            );
+        }
+
+        $this->assertSame(0, $http->sendCallCount);
+    }
+
+    public function testNullResolverSchemeFallsBackToNextOption(): void
+    {
+        $seen = (object) ['selectedScheme' => null];
+        $http = (new MockHttpClient())->willReturn('body');
+        $nullResolverScheme = new class implements AuthSchemeInterface {
+            public function getSchemeId(): string
+            {
+                return 'smithy.api#httpBearerAuth';
+            }
+
+            public function getIdentityProperties(array $context): array
+            {
+                return [];
+            }
+
+            public function getIdentityResolver(
+                \Smithy\Auth\IdentityResolversInterface $resolvers
+            ): ?IdentityResolverInterface {
+                return null;
+            }
+
+            public function getSignerProperties(array $context): array
+            {
+                return [];
+            }
+
+            public function getSigner(): SignerInterface
+            {
+                return \Smithy\Auth\NullSigner::instance();
+            }
+        };
+        $pipeline = new ClientPipeline(new ClientConfig(
+            protocol: new FakeProtocol(),
+            transport: new \Smithy\Http\Client\HttpClientTransport(
+                $http
+            ),
+            endpointResolver: new StaticEndpointResolver(
+                new Endpoint('https://example.test')
+            ),
+            supportedAuthSchemes: [
+                $nullResolverScheme,
+                $this->recordingAuthScheme('aws.auth#sigv4', $seen)
+            ],
+            authSchemeResolver: new StaticAuthSchemeResolver([
+                'smithy.api#httpBearerAuth',
+                'aws.auth#sigv4'
+            ])
+        ));
+
+        $pipeline->execute(FakeOperation::instance(), new FakeInput());
+
+        $this->assertSame('aws.auth#sigv4', $seen->selectedScheme);
+        $this->assertSame(1, $http->sendCallCount);
     }
 
     public function testProtocolIsCalledExactlyOncePerAttempt(): void

@@ -9,14 +9,14 @@ declare(strict_types=1);
 
 namespace Smithy\Tests\Client\Fake;
 
-use Smithy\Client\Auth\{
+use Smithy\Auth\{
     AnonymousIdentityResolver,
     AuthSchemeInterface,
     IdentityResolverInterface,
+    IdentityResolversInterface,
     NullSigner,
     SignerInterface
 };
-use Smithy\Client\ClientConfig;
 
 /**
  * Auth scheme fixture with a configurable scheme ID.
@@ -36,20 +36,20 @@ final class TestAuthSchemeFixture implements AuthSchemeInterface
         return $this->id;
     }
 
-    public function getIdentityProperties(ClientConfig $config): array
+    public function getIdentityProperties(array $context): array
     {
         return $this->identityProperties;
     }
 
     public function getIdentityResolver(
-        ClientConfig $config
-    ): IdentityResolverInterface
+        IdentityResolversInterface $resolvers
+    ): ?IdentityResolverInterface
     {
         return $this->identityResolver
             ?? AnonymousIdentityResolver::instance();
     }
 
-    public function getSignerProperties(ClientConfig $config): array
+    public function getSignerProperties(array $context): array
     {
         return $this->signerProperties;
     }

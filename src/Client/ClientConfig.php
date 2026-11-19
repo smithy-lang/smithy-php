@@ -9,10 +9,13 @@ declare(strict_types=1);
 
 namespace Smithy\Client;
 
-use Smithy\Client\Auth\AuthSchemeInterface;
+use Smithy\Auth\AuthSchemeInterface;
+use Smithy\Auth\IdentityResolverInterface;
+use Smithy\Auth\IdentityResolvers;
+use Smithy\Auth\IdentityResolversInterface;
+use Smithy\Auth\NoAuthScheme;
 use Smithy\Client\Auth\AuthSchemeResolver;
 use Smithy\Client\Auth\AuthSchemeResolverInterface;
-use Smithy\Client\Auth\NoAuthScheme;
 use Smithy\Client\Endpoint\EndpointResolverInterface;
 use Smithy\Client\Interceptor\InterceptorChain;
 use Smithy\Client\Interceptor\InterceptorInterface;
@@ -48,7 +51,8 @@ class ClientConfig
 {
     private readonly PluginState $pluginState;
 
-    private readonly bool $protocolIsExplicit;
+    /** @var array<string, bool> Keyed by {@see ExplicitClientConfigField} value. */
+    private readonly array $explicitFields;
 
     public readonly InterceptorChain $interceptorChain;
 
@@ -62,6 +66,8 @@ class ClientConfig
     public readonly array $authSchemePreference;
 
     public readonly AuthSchemeResolverInterface $authSchemeResolver;
+
+    public readonly IdentityResolversInterface $identityResolvers;
 
     public readonly RetryStrategyInterface $retryStrategy;
 
@@ -89,6 +95,9 @@ class ClientConfig
      *                                  the resolver may select from.
      * @param AuthSchemeResolverInterface|null $authSchemeResolver
      *                                         Selects a scheme per operation.
+     * @param IdentityResolversInterface|null $identityResolvers Repository of
+     *        identity resolvers keyed by identity type, queried by auth
+     *        schemes. Defaults to an empty {@see IdentityResolvers}.
      * @param list<string> $authSchemePreference Auth scheme names in
      *        customer-preferred order.
      * @param RetryStrategyInterface|null $retryStrategy Defaults to a new
@@ -102,6 +111,10 @@ class ClientConfig
      * @param ServiceInterface|null $service Runtime service metadata.
      * @param PluginState|null $pluginState Internal plugin application state.
      * @param bool|null $protocolIsExplicit Internal protocol provenance.
+     *                  Takes precedence over `$explicitFields['protocol']`.
+     * @param array<string, bool>|null $explicitFields Internal provenance
+     *        map threaded through {@see copyWith()}. Fields absent from
+     *        the map are explicit when their argument is non-null.
      */
     public function __construct(
         TransportInterface $transport,
@@ -118,7 +131,9 @@ class ClientConfig
         array $authSchemePreference = [],
         public readonly ?ServiceInterface $service = null,
         ?PluginState $pluginState = null,
-        ?bool $protocolIsExplicit = null
+        ?bool $protocolIsExplicit = null,
+        ?array $explicitFields = null,
+        ?IdentityResolversInterface $identityResolvers = null
     )
     {
         if ($protocolId === '') {
@@ -148,8 +163,22 @@ class ClientConfig
         $this->transport = $transport;
         $this->protocolResolver =
             $protocolResolver ?? ProtocolResolver::defaults();
-        $this->protocolIsExplicit =
-            $protocolIsExplicit ?? $protocol !== null;
+        $explicitFields ??= [];
+        $fields = [];
+        foreach (ExplicitClientConfigField::cases() as $field) {
+            $fields[$field->value] = $explicitFields[$field->value]
+                ?? match ($field) {
+                    ExplicitClientConfigField::Protocol => $protocol,
+                    ExplicitClientConfigField::ProtocolResolver => $protocolResolver,
+                    ExplicitClientConfigField::AuthSchemeResolver =>
+                        $authSchemeResolver,
+                    ExplicitClientConfigField::RetryStrategy => $retryStrategy
+                } !== null;
+        }
+        if ($protocolIsExplicit !== null) {
+            $fields[ExplicitClientConfigField::Protocol->value] = $protocolIsExplicit;
+        }
+        $this->explicitFields = $fields;
         $this->interceptorChain = $interceptors;
 
         $schemes = \array_values($supportedAuthSchemes);
@@ -175,6 +204,8 @@ class ClientConfig
 
         $this->authSchemeResolver = $authSchemeResolver
             ?? new AuthSchemeResolver();
+        $this->identityResolvers = $identityResolvers
+            ?? new IdentityResolvers();
         $this->retryStrategy = $retryStrategy ?? new StandardRetryStrategy();
         $this->retryScope = $retryScope;
         $this->context = $context;
@@ -329,7 +360,7 @@ class ClientConfig
         $protocol = $this->protocolResolver->resolveProtocol(
             $this->service,
             $this->protocolId,
-            $this->protocolIsExplicit ? $this->protocol : null
+            $this->hasExplicitProtocol() ? $this->protocol : null
         );
         if ($protocol === $this->protocol) {
             return $this;
@@ -451,7 +482,7 @@ class ClientConfig
     ): static
     {
         $config = $this->copyWith([
-            'protocol' => $this->protocolIsExplicit
+            'protocol' => $this->hasExplicitProtocol()
                 ? $this->protocol
                 : null,
             'protocolResolver' => $resolver
@@ -517,6 +548,54 @@ class ClientConfig
     ): static
     {
         return $this->copyWith(['authSchemeResolver' => $resolver]);
+    }
+
+    /**
+     * Create a config with the identity resolver repository replaced.
+     */
+    public function withIdentityResolvers(
+        IdentityResolversInterface $resolvers
+    ): static
+    {
+        return $this->copyWith(['identityResolvers' => $resolvers]);
+    }
+
+    /**
+     * Create a config with one identity resolver registered by identity type.
+     *
+     * Adds to the current {@see IdentityResolvers}, replacing any resolver
+     * already registered for the same identity type.
+     *
+     * @param class-string<\Smithy\Auth\IdentityInterface> $identityClass
+     */
+    public function withIdentityResolver(
+        string $identityClass,
+        IdentityResolverInterface $resolver
+    ): static
+    {
+        $resolvers = $this->identityResolvers;
+        if (!$resolvers instanceof IdentityResolvers) {
+            throw new \LogicException(
+                'withIdentityResolver() requires the default '
+                . IdentityResolvers::class
+                . ' repository; use withIdentityResolvers() instead.'
+            );
+        }
+
+        return $this->copyWith([
+            'identityResolvers' => $resolvers->with(
+                $identityClass,
+                $resolver
+            )
+        ]);
+    }
+
+    /**
+     * Return the configured identity resolver repository.
+     */
+    public function getIdentityResolvers(): IdentityResolversInterface
+    {
+        return $this->identityResolvers;
     }
 
     /**
@@ -597,8 +676,7 @@ class ClientConfig
         $protocolId = \array_key_exists('protocolId', $overrides)
             ? $overrides['protocolId']
             : $this->protocolId;
-        $protocolIsExplicit = $overrides['protocolIsExplicit']
-            ?? $this->protocolIsExplicit;
+        $explicitFields = $this->explicitFieldsFor($overrides);
         $transport = $overrides['transport'] ?? $this->transport;
         $endpointResolver =
             $overrides['endpointResolver'] ?? $this->endpointResolver;
@@ -608,6 +686,8 @@ class ClientConfig
             ?? $this->supportedAuthSchemes;
         $authSchemeResolver = $overrides['authSchemeResolver']
             ?? $this->authSchemeResolver;
+        $identityResolvers = $overrides['identityResolvers']
+            ?? $this->identityResolvers;
         $retryStrategy =
             $overrides['retryStrategy'] ?? $this->retryStrategy;
         $retryScope = $overrides['retryScope'] ?? $this->retryScope;
@@ -631,8 +711,47 @@ class ClientConfig
                 ?? $this->authSchemePreference,
             service: $service,
             pluginState: $pluginState,
-            protocolIsExplicit: $protocolIsExplicit
+            explicitFields: $explicitFields,
+            identityResolvers: $identityResolvers
         );
+    }
+
+    /**
+     * Whether `$field` was set by the caller rather than filled by a default.
+     *
+     * A field is explicit when a non-null value was passed to the
+     * constructor or set through its own `withXxx()` method.
+     */
+    public function isExplicit(ExplicitClientConfigField $field): bool
+    {
+        return $this->explicitFields[$field->value];
+    }
+
+    /**
+     * Provenance map for a copy built from `$overrides`.
+     *
+     * Subclasses that override {@see copyWith()} pass the result as
+     * `explicitFields` so defaulted values stay defaulted in the copy.
+     *
+     * @internal Used by configuration subclasses when copying base state.
+     *
+     * @param array<string, mixed> $overrides
+     *
+     * @return array<string, bool>
+     */
+    protected function explicitFieldsFor(array $overrides): array
+    {
+        $fields = $this->explicitFields;
+        $protocol = ExplicitClientConfigField::Protocol->value;
+        $fields[$protocol] = $overrides['protocolIsExplicit']
+            ?? $fields[$protocol];
+        foreach (ExplicitClientConfigField::cases() as $field) {
+            if ($field->value !== $protocol && isset($overrides[$field->value])) {
+                $fields[$field->value] = true;
+            }
+        }
+
+        return $fields;
     }
 
     /**
@@ -642,7 +761,7 @@ class ClientConfig
      */
     protected function hasExplicitProtocol(): bool
     {
-        return $this->protocolIsExplicit;
+        return $this->explicitFields[ExplicitClientConfigField::Protocol->value];
     }
 
     private function resolveWithPluginPredicate(

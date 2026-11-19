@@ -11,10 +11,8 @@ namespace Smithy\Tests\Client\Auth;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
-use Smithy\Client\Auth\{
-    NoAuthScheme,
-    StaticAuthSchemeResolver
-};
+use Smithy\Auth\NoAuthScheme;
+use Smithy\Client\Auth\StaticAuthSchemeResolver;
 use Smithy\Client\ClientConfig;
 use Smithy\Client\Endpoint\StaticEndpointResolver;
 use Smithy\Core\Endpoint\Endpoint;
