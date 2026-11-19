@@ -11,6 +11,7 @@ namespace Smithy\Codec\Json;
 
 use Smithy\Core\Serde\Schema;
 use Smithy\Core\Serde\TimestampFormat;
+use Smithy\Core\Shape\Document\DocumentSettingsAwareInterface;
 use Smithy\Core\Shape\Document\IncompatibleDocumentTypeException;
 use Smithy\Core\Shape\Document\StringDocument;
 
@@ -20,20 +21,28 @@ use Smithy\Core\Shape\Document\StringDocument;
  * JSON carries blobs as base64 strings and timestamps as strings in the codec's configured
  * format, so this document coerces its string payload to those types on request.
  */
-final class JsonStringDocument extends StringDocument
+final class JsonStringDocument extends StringDocument implements DocumentSettingsAwareInterface
 {
     /**
      * @param string $value String payload.
-     * @param TimestampFormat $timestampFormat Timestamp format the codec is configured with.
+     * @param JsonCodecSettings $settings Settings of the codec that read the value.
      * @param Schema|null $schema Schema to attach, or null for an untyped document.
      */
     public function __construct(
         string $value,
-        private readonly TimestampFormat $timestampFormat,
+        private readonly JsonCodecSettings $settings,
         ?Schema $schema = null
     )
     {
         parent::__construct($value, $schema);
+    }
+
+    /**
+     * Return the settings of the codec that read this document.
+     */
+    public function getDocumentSettings(): JsonCodecSettings
+    {
+        return $this->settings;
     }
 
     /**
@@ -63,7 +72,8 @@ final class JsonStringDocument extends StringDocument
      */
     public function asTimestamp(): float
     {
-        if ($this->timestampFormat === TimestampFormat::EpochSeconds) {
+        $format = $this->settings->defaultTimestampFormat;
+        if ($format === TimestampFormat::EpochSeconds) {
             throw new IncompatibleDocumentTypeException(
                 'Cannot parse a JSON string document as a timestamp when the codec uses '
                     . 'epoch-seconds'
@@ -71,7 +81,7 @@ final class JsonStringDocument extends StringDocument
         }
 
         try {
-            return $this->timestampFormat->parse($this->value);
+            return $format->parse($this->value);
         } catch (\InvalidArgumentException $e) {
             throw new IncompatibleDocumentTypeException(
                 $e->getMessage(),

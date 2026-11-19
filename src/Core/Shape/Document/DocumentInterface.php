@@ -195,9 +195,12 @@ interface DocumentInterface extends SerializableShapeInterface
     /**
      * Build a modeled shape from this document using the schema of the generated class.
      *
-     * Member values are read by `jsonName` first, then by member name. Blob members read through
-     * {@see asBlob()}, timestamp members through {@see asTimestamp()} (numeric documents read as
-     * epoch seconds), and nested structures, unions, lists and maps recurse.
+     * Documents that carry codec settings ({@see DocumentSettingsAwareInterface}) read members by
+     * `jsonName` only when the settings use it, and parse string timestamps with the member's
+     * `timestampFormat` trait when the settings honor it. Documents without settings read members
+     * by `jsonName` first, then by member name. Blob members read through {@see asBlob()},
+     * timestamp members through {@see asTimestamp()} (numeric documents read as epoch seconds),
+     * and nested structures, unions, lists and maps recurse.
      *
      * @template T of \Smithy\Core\Serde\SerializableStructInterface|\Smithy\Core\Shape\UnionInterface
      *

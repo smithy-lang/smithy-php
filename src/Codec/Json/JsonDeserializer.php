@@ -364,10 +364,7 @@ final class JsonDeserializer implements ShapeDeserializerInterface
                 return $this->readMap($context, $value);
 
             case ShapeType::Document->value:
-                return JsonDocumentReader::read(
-                    $value,
-                    $this->settings->defaultTimestampFormat
-                );
+                return JsonDocumentReader::read($value, $this->settings);
 
             default:
                 return $value;

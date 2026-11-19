@@ -74,7 +74,7 @@ final class DocumentShapeEndToEndTest extends TestCase
     {
         $document = JsonDocumentReader::read(
             ['__type' => 'smithy.test#SampleUnion', 'count' => 7],
-            TimestampFormat::DateTime
+            new JsonCodecSettings(TimestampFormat::DateTime)
         );
 
         $union = $this->registry()->deserialize($document);
@@ -88,7 +88,7 @@ final class DocumentShapeEndToEndTest extends TestCase
     {
         $union = JsonDocumentReader::read(
             ['hamster' => ['x' => 1]],
-            TimestampFormat::DateTime
+            new JsonCodecSettings(TimestampFormat::DateTime)
         )?->asShape(JsonSampleUnionFixture::class);
 
         self::assertSame('hamster', $union?->tag());
@@ -137,7 +137,7 @@ final class DocumentShapeEndToEndTest extends TestCase
     {
         $document = JsonDocumentReader::read(
             \json_decode(self::BOX_JSON, true, 512, \JSON_THROW_ON_ERROR),
-            TimestampFormat::DateTime
+            new JsonCodecSettings(TimestampFormat::DateTime)
         );
         self::assertNotNull($document);
         self::assertSame('smithy.test#WidgetBox', $document->discriminator());

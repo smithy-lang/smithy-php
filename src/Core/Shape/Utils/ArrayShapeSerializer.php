@@ -11,11 +11,14 @@ namespace Smithy\Core\Shape\Utils;
 
 use Smithy\Core\Serde\Schema;
 use Smithy\Core\Serde\SerializableStructInterface;
+use Smithy\Core\Serde\TimestampFormat;
 use Smithy\Core\Shape\ShapeType;
 use Smithy\Core\Shape\BigDecimal;
 use Smithy\Core\Shape\BigInteger;
 use Smithy\Core\Shape\Document\AbstractDocument;
 use Smithy\Core\Shape\Document\DocumentInterface;
+use Smithy\Core\Shape\Document\DocumentSettingsAwareInterface;
+use Smithy\Core\Shape\Document\DocumentSettingsInterface;
 use Smithy\Core\Shape\Document\IncompatibleDocumentTypeException;
 use Smithy\Core\Shape\EnumInterface;
 use Smithy\Core\Shape\Exception\InvalidShapeValueException;
@@ -104,10 +107,12 @@ final class ArrayShapeSerializer
     /**
      * Build an instance of a generated shape from a document.
      *
-     * Member values are read by `jsonName` first, then by member name. Documents may carry any
-     * mix of typed and untyped children: blob members read through `asBlob()`, timestamp members
-     * through `asTimestamp()`, and aggregate members
-     * recurse through the member schema.
+     * Documents that carry codec settings ({@see DocumentSettingsAwareInterface}) read members by
+     * `jsonName` only when the settings use it, and parse string timestamps with the member's
+     * `timestampFormat` trait when the settings honor it, else the settings' default format.
+     * Documents without settings read members by `jsonName` first, then by member name, and
+     * timestamp members read through `asTimestamp()`. Blob members read through `asBlob()` and
+     * aggregate members recurse through the member schema.
      *
      * @template TShape of SerializableStructInterface|UnionInterface
      *
@@ -128,7 +133,7 @@ final class ArrayShapeSerializer
 
         return self::fromArray(
             $className,
-            self::documentToArray($schema, $document)
+            self::documentToArray($schema, $document, null)
         );
     }
 
@@ -137,21 +142,28 @@ final class ArrayShapeSerializer
      *
      * @param Schema $schema Structure or union schema.
      * @param DocumentInterface $document Document holding the shape's data.
+     * @param DocumentSettingsInterface|null $inherited Settings of the enclosing document.
      *
      * @return array<string, mixed> Values keyed by modeled member name.
      */
     private static function documentToArray(
         Schema $schema,
-        DocumentInterface $document
+        DocumentInterface $document,
+        ?DocumentSettingsInterface $inherited
     ): array
     {
+        $settings = self::settingsOf($document) ?? $inherited;
         $out = [];
         if ($schema->type === ShapeType::Union->value) {
             foreach ($document->asMap() as $wireName => $child) {
                 if ($wireName === '__type') {
                     continue;
                 }
-                $member = self::findDocumentMember($schema, (string) $wireName);
+                $member = self::findDocumentMember(
+                    $schema,
+                    (string) $wireName,
+                    $settings
+                );
                 if ($member === null) {
                     return [(string) $wireName => $child === null
                         ? null
@@ -160,7 +172,7 @@ final class ArrayShapeSerializer
 
                 return [$member->memberName => $child === null
                     ? null
-                    : self::documentToValue($member, $child)];
+                    : self::documentToValue($member, $child, $settings)];
             }
 
             return $out;
@@ -171,13 +183,15 @@ final class ArrayShapeSerializer
             if ($name === null) {
                 continue;
             }
-            $jsonName = $member->getTrait(Schema::T_JSON_NAME);
+            $jsonName = $settings?->usesJsonName() === false
+                ? null
+                : $member->getTrait(Schema::T_JSON_NAME);
             $child = (\is_string($jsonName) && $jsonName !== $name
                     ? $document->getMember($jsonName)
                     : null)
                 ?? $document->getMember($name);
             if ($child !== null) {
-                $out[$name] = self::documentToValue($member, $child);
+                $out[$name] = self::documentToValue($member, $child, $settings);
             }
         }
 
@@ -203,21 +217,82 @@ final class ArrayShapeSerializer
     }
 
     /**
+     * Return the codec settings a document carries.
+     *
+     * @param DocumentInterface $document Document to inspect.
+     *
+     * @return DocumentSettingsInterface|null Settings, or null for user-built documents.
+     */
+    private static function settingsOf(DocumentInterface $document): ?DocumentSettingsInterface
+    {
+        return $document instanceof DocumentSettingsAwareInterface
+            ? $document->getDocumentSettings()
+            : null;
+    }
+
+    /**
+     * Read a timestamp member from a document.
+     *
+     * String documents parse with the member's `timestampFormat` trait when the settings honor
+     * it, else the settings' default format. All other documents read through `asTimestamp()`.
+     *
+     * @param Schema $member Timestamp member or item schema.
+     * @param DocumentInterface $document Document holding the value.
+     * @param DocumentSettingsInterface|null $settings Settings in effect, or null.
+     *
+     * @return float Epoch seconds.
+     * @throws IncompatibleDocumentTypeException When a string does not match the format.
+     */
+    private static function documentToTimestamp(
+        Schema $member,
+        DocumentInterface $document,
+        ?DocumentSettingsInterface $settings
+    ): float
+    {
+        if ($settings === null || $document->type() !== ShapeType::String_) {
+            return $document->asTimestamp();
+        }
+
+        $format = ($settings->usesTimestampFormatTrait()
+            ? TimestampFormat::fromTraitString(
+                $member->getTrait(Schema::T_TIMESTAMP_FORMAT)
+            )
+            : null
+        ) ?? $settings->getDefaultTimestampFormat();
+        $value = $document->asString();
+        if ($format === TimestampFormat::EpochSeconds && !\is_numeric($value)) {
+            throw new IncompatibleDocumentTypeException(
+                "Cannot parse '{$value}' as epoch-seconds"
+            );
+        }
+
+        try {
+            return $format->parse($value);
+        } catch (\InvalidArgumentException $e) {
+            throw new IncompatibleDocumentTypeException($e->getMessage(), 0, $e);
+        }
+    }
+
+    /**
      * Find the member of a union schema that a wire name refers to.
      *
      * @param Schema $schema Union schema.
      * @param string $wireName `jsonName` or member name.
+     * @param DocumentSettingsInterface|null $settings Settings of the document, or null.
      *
      * @return Schema|null Matching member, or null when none matches.
      */
     private static function findDocumentMember(
         Schema $schema,
-        string $wireName
+        string $wireName,
+        ?DocumentSettingsInterface $settings
     ): ?Schema
     {
+        $useJsonName = $settings?->usesJsonName() !== false;
         foreach ($schema->getMembersByIndex() as $member) {
             if ($member->memberName === $wireName
-                || $member->getTrait(Schema::T_JSON_NAME) === $wireName
+                || ($useJsonName
+                    && $member->getTrait(Schema::T_JSON_NAME) === $wireName)
             ) {
                 return $member;
             }
@@ -231,20 +306,24 @@ final class ArrayShapeSerializer
      *
      * @param Schema $member Member or item schema.
      * @param DocumentInterface $document Document holding the value.
+     * @param DocumentSettingsInterface|null $inherited Settings of the enclosing document.
      *
      * @return mixed Value ready for {@see hydrateMember()}.
      */
     private static function documentToValue(
         Schema $member,
-        DocumentInterface $document
+        DocumentInterface $document,
+        ?DocumentSettingsInterface $inherited
     ): mixed
     {
+        $settings = self::settingsOf($document) ?? $inherited;
         switch ($member->type) {
             case ShapeType::Structure->value:
             case ShapeType::Union->value:
                 return self::documentToArray(
                     $member->resolveTarget(),
-                    $document
+                    $document,
+                    $settings
                 );
             case ShapeType::List_->value:
                 $itemSchema = $member->getListMember();
@@ -254,7 +333,7 @@ final class ArrayShapeSerializer
                         ? null
                         : ($itemSchema === null
                             ? self::unwrapDocument($item)
-                            : self::documentToValue($itemSchema, $item));
+                            : self::documentToValue($itemSchema, $item, $settings));
                 }
 
                 return $out;
@@ -266,7 +345,7 @@ final class ArrayShapeSerializer
                         ? null
                         : ($valueSchema === null
                             ? self::unwrapDocument($item)
-                            : self::documentToValue($valueSchema, $item));
+                            : self::documentToValue($valueSchema, $item, $settings));
                 }
 
                 return $out;
@@ -275,7 +354,7 @@ final class ArrayShapeSerializer
             case ShapeType::Blob->value:
                 return $document->asBlob();
             case ShapeType::Timestamp->value:
-                return $document->asTimestamp();
+                return self::documentToTimestamp($member, $document, $settings);
             case ShapeType::Boolean->value:
                 return $document->asBoolean();
             case ShapeType::Byte->value:
