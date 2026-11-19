@@ -12,14 +12,16 @@ namespace Smithy\Tests\Client;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use Smithy\Client\Auth\{
-    AuthSchemeResolver,
+use Smithy\Auth\{
     AuthSchemeInterface,
     BearerToken,
     IdentityResolvers,
     NoAuthScheme,
-    StaticAuthSchemeResolver,
     StaticTokenProvider
+};
+use Smithy\Client\Auth\{
+    AuthSchemeResolver,
+    StaticAuthSchemeResolver
 };
 use Smithy\Client\ClientConfig;
 use Smithy\Client\ExplicitClientConfigField;

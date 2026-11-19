@@ -8,6 +8,7 @@
 
 declare(strict_types=1);
 
+use Smithy\Auth\NoAuthScheme;
 use Smithy\Benchmarks\RpcV2Cbor\RpcV2CborClient;
 use Smithy\Benchmarks\Serde\Support\BenchmarkCaseRepository;
 use Smithy\Benchmarks\Serde\Support\BenchmarkEnvironment;
@@ -17,10 +18,7 @@ use Smithy\Benchmarks\Serde\Support\GeneratedCodeLoader;
 use Smithy\Benchmarks\Serde\Support\FixedResponseHttpClient;
 use Smithy\Benchmarks\Serde\Support\PipelineBenchmarkPlugin;
 use Smithy\Benchmarks\Serde\Support\ResultWriter;
-use Smithy\Client\Auth\{
-    NoAuthScheme,
-    StaticAuthSchemeResolver
-};
+use Smithy\Client\Auth\StaticAuthSchemeResolver;
 use Smithy\Client\{
     ClientConfig,
     ClientInterface

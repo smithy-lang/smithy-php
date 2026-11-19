@@ -341,4 +341,4 @@ listed in [Testing and Validation](testing-and-validation.md).
 - [Testing and Validation](testing-and-validation.md)
 - [Client Runtime](../client-runtime-design.md)
 - [Endpoint Resolution](../endpoint/endpoint-resolution.md)
-- [Auth Runtime](../auth/auth-runtime-design.md)
+- [Auth Runtime](../../auth/auth-runtime-design.md)

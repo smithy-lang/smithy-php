@@ -19,22 +19,24 @@ use Smithy\Async\{
     Async,
     EventLoopInterface
 };
-use Smithy\Client\{
-    ClientConfig,
-    ClientPipeline,
-    RequestOverrideConfig
-};
-use Smithy\Client\Auth\{
+use Smithy\Auth\{
     AnonymousIdentity,
     AuthSchemeInterface,
-    AuthSchemeResolverInterface,
     IdentityInterface,
     IdentityNotFoundException,
     IdentityResolverInterface,
     IdentityResult,
     ResolvedAuthScheme,
     SignerInterface,
-    SignerResult,
+    SignerResult
+};
+use Smithy\Client\{
+    ClientConfig,
+    ClientPipeline,
+    RequestOverrideConfig
+};
+use Smithy\Client\Auth\{
+    AuthSchemeResolverInterface,
     StaticAuthSchemeResolver
 };
 use Smithy\Client\Endpoint\{
@@ -87,7 +89,7 @@ use Smithy\Http\Message\{
 };
 use Smithy\Protocol\ProtocolInterface;
 use Smithy\Tests\Async\Utils\RecordingEventLoopFixture;
-use Smithy\Tests\Client\Auth\Utils\NotFoundResolverFixture;
+use Smithy\Tests\Auth\Utils\NotFoundResolverFixture;
 use Smithy\Tests\Client\Fake\{
     FakeInput,
     FakeOperation,
@@ -1081,7 +1083,7 @@ final class ClientPipelineTest extends TestCase
             }
 
             public function getIdentityResolver(
-                \Smithy\Client\Auth\IdentityResolversInterface $resolvers
+                \Smithy\Auth\IdentityResolversInterface $resolvers
             ): ?IdentityResolverInterface {
                 return null;
             }
@@ -1093,7 +1095,7 @@ final class ClientPipelineTest extends TestCase
 
             public function getSigner(): SignerInterface
             {
-                return \Smithy\Client\Auth\NullSigner::instance();
+                return \Smithy\Auth\NullSigner::instance();
             }
         };
         $pipeline = new ClientPipeline(new ClientConfig(
@@ -1139,7 +1141,7 @@ final class ClientPipelineTest extends TestCase
             }
 
             public function getIdentityResolver(
-                \Smithy\Client\Auth\IdentityResolversInterface $resolvers
+                \Smithy\Auth\IdentityResolversInterface $resolvers
             ): ?IdentityResolverInterface {
                 return null;
             }
@@ -1151,7 +1153,7 @@ final class ClientPipelineTest extends TestCase
 
             public function getSigner(): SignerInterface
             {
-                return \Smithy\Client\Auth\NullSigner::instance();
+                return \Smithy\Auth\NullSigner::instance();
             }
         };
         $pipeline = new ClientPipeline(new ClientConfig(

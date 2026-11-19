@@ -102,5 +102,5 @@ needs:
 ## Related Documents
 
 - [Endpoint Resolution](endpoint-resolution.md)
-- [Auth Runtime](../auth/auth-runtime-design.md)
+- [Auth Runtime](../../auth/auth-runtime-design.md)
 - [Dynamic Client Testing and Validation](../dynamic/testing-and-validation.md)

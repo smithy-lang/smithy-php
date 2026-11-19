@@ -10,11 +10,9 @@ declare(strict_types=1);
 namespace Smithy\Tests\Protocol\RpcV2\Json;
 
 use PHPUnit\Framework\Attributes\DataProvider;
+use Smithy\Auth\NoAuthScheme;
 use Smithy\Client\ClientInterface;
-use Smithy\Client\Auth\{
-    NoAuthScheme,
-    StaticAuthSchemeResolver
-};
+use Smithy\Client\Auth\StaticAuthSchemeResolver;
 use Smithy\Client\Endpoint\StaticEndpointResolver;
 use Smithy\Core\Endpoint\Endpoint;
 use Smithy\Core\Exception\ApiException;

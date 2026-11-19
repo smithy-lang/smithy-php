@@ -259,7 +259,7 @@ resolver. A provider runtime can supply additional schemes.
 - accepts credentials and bearer token providers
 - maps endpoint auth names such as `sigv4` to Smithy auth scheme IDs
 
-See [Auth Runtime](../auth/auth-runtime-design.md) for selection and identity caching.
+See [Auth Runtime](../../auth/auth-runtime-design.md) for selection and identity caching.
 
 ## Retries and Overrides
 

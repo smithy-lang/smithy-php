@@ -7,8 +7,8 @@ invariants, lifecycle, performance decisions, and extension boundaries.
 ## Components
 
 - [Async runtime](async/async-runtime-and-http-concurrency.md)
+- [Authentication](auth/auth-runtime-design.md)
 - [Client runtime](client/client-runtime-design.md)
-  - [Authentication](client/auth/auth-runtime-design.md)
   - [Dynamic client](client/dynamic/dynamic-client-design.md)
   - [Endpoint resolution](client/endpoint/endpoint-resolution.md)
   - [Interceptors](client/interceptor/client-interceptor-design.md)
