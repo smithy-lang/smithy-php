@@ -16,21 +16,23 @@ use Smithy\Core\Shape\ShapeType;
 use Smithy\Core\Shape\BigDecimal;
 use Smithy\Core\Shape\BigInteger;
 use Smithy\Core\Shape\Document\AbstractDocument;
+use Smithy\Core\Shape\Document\IncompatibleDocumentTypeException;
+use Smithy\Core\Shape\Document\ByteDocument;
+use Smithy\Core\Shape\Document\DoubleDocument;
+use Smithy\Core\Shape\Document\FloatDocument;
+use Smithy\Core\Shape\Document\IntegerDocument;
+use Smithy\Core\Shape\Document\LongDocument;
+use Smithy\Core\Shape\Document\MapDocument;
+use Smithy\Core\Shape\Document\ShortDocument;
+use Smithy\Core\Shape\Document\TimestampDocument;
+use Smithy\Tests\Core\Shape\Document\Fixture\WidgetFixture;
 use Smithy\Core\Shape\Document\BigDecimalDocument;
 use Smithy\Core\Shape\Document\BigIntegerDocument;
 use Smithy\Core\Shape\Document\BlobDocument;
 use Smithy\Core\Shape\Document\BlobValue;
 use Smithy\Core\Shape\Document\BooleanDocument;
-use Smithy\Core\Shape\Document\ByteDocument;
-use Smithy\Core\Shape\Document\DoubleDocument;
-use Smithy\Core\Shape\Document\FloatDocument;
-use Smithy\Core\Shape\Document\IntegerDocument;
 use Smithy\Core\Shape\Document\ListDocument;
-use Smithy\Core\Shape\Document\LongDocument;
-use Smithy\Core\Shape\Document\MapDocument;
-use Smithy\Core\Shape\Document\ShortDocument;
 use Smithy\Core\Shape\Document\StringDocument;
-use Smithy\Core\Shape\Document\TimestampDocument;
 use Smithy\Core\Shape\Document\TimestampValue;
 use Smithy\Core\Shape\Exception\InvalidShapeValueException;
 
@@ -323,5 +325,93 @@ final class AbstractDocumentTest extends TestCase
     public function testSchemaAccessorReturnsNullWhenAbsent(): void
     {
         $this->assertNull(AbstractDocument::fromString('hello')->schema());
+    }
+
+    public function testAsShapeBuildsStructFromMemberNames(): void
+    {
+        $widget = AbstractDocument::fromValue([
+            'name' => 'w',
+            'count' => 2,
+            'tags' => ['a', 'b']
+        ])?->asShape(WidgetFixture::class);
+
+        $this->assertEquals(new WidgetFixture('w', null, null, 2, ['a', 'b']), $widget);
+    }
+
+    public function testAsShapePrefersJsonNameOverMemberName(): void
+    {
+        $widget = AbstractDocument::fromValue(['Name' => 'json', 'name' => 'member'])
+            ?->asShape(WidgetFixture::class);
+
+        $this->assertSame('json', $widget?->name);
+    }
+
+    public function testAsShapeReadsBlobAndTimestampFromTypedDocuments(): void
+    {
+        $widget = (new MapDocument([
+            'data' => new BlobDocument('raw'),
+            'created' => new TimestampDocument(7.5)
+        ]))->asShape(WidgetFixture::class);
+
+        $this->assertSame('raw', $widget->data);
+        $this->assertSame(7.5, $widget->created);
+    }
+
+    public function testAsShapeReadsNumericTimestampAsEpochSeconds(): void
+    {
+        $widget = AbstractDocument::fromValue(['created' => 12])
+            ?->asShape(WidgetFixture::class);
+
+        $this->assertSame(12.0, $widget?->created);
+    }
+
+    public function testAsShapeRejectsUndecodableBlob(): void
+    {
+        $this->expectException(IncompatibleDocumentTypeException::class);
+
+        AbstractDocument::fromValue(['data' => 'abc'])
+            ?->asShape(WidgetFixture::class);
+    }
+
+    public function testAsShapeIgnoresUnknownKeys(): void
+    {
+        $widget = AbstractDocument::fromValue(['__type' => 'x', 'extra' => 1])
+            ?->asShape(WidgetFixture::class);
+
+        $this->assertEquals(new WidgetFixture(), $widget);
+    }
+
+    public function testAsShapeRejectsNonMapDocument(): void
+    {
+        $this->expectException(IncompatibleDocumentTypeException::class);
+
+        AbstractDocument::fromString('x')->asShape(WidgetFixture::class);
+    }
+
+    public function testNumericDocumentsReadAsEpochSeconds(): void
+    {
+        $docs = [
+            new ByteDocument(5),
+            new ShortDocument(5),
+            new IntegerDocument(5),
+            new LongDocument(5),
+            new FloatDocument(5.0),
+            new DoubleDocument(5.0),
+            new BigIntegerDocument(new BigInteger('5')),
+            new BigDecimalDocument(new BigDecimal('5.0'))
+        ];
+
+        foreach ($docs as $doc) {
+            $this->assertSame(5.0, $doc->asTimestamp(), $doc::class);
+        }
+    }
+
+    public function testFractionalNumericDocumentKeepsFraction(): void
+    {
+        $this->assertSame(1.5, (new DoubleDocument(1.5))->asTimestamp());
+        $this->assertSame(
+            1.5,
+            (new BigDecimalDocument(new BigDecimal('1.5')))->asTimestamp()
+        );
     }
 }
