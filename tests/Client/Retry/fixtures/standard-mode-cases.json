@@ -1,0 +1,439 @@
+{
+    "source": "AwsDrSeps seps/accepted/shared/new-retries.md, Appendix A: Standard Mode Testcases",
+    "cases": [
+        {
+            "name": "Retry eventually succeeds",
+            "given": {
+                "max_attempts": 3,
+                "initial_retry_tokens": 500,
+                "exponential_base": 1,
+                "exponential_power": 2,
+                "max_backoff_time": 20
+            },
+            "responses": [
+                {
+                    "response": {
+                        "status_code": 500
+                    },
+                    "expected": {
+                        "outcome": "retry_request",
+                        "retry_quota": 495,
+                        "delay": 1
+                    }
+                },
+                {
+                    "response": {
+                        "status_code": 500
+                    },
+                    "expected": {
+                        "outcome": "retry_request",
+                        "retry_quota": 490,
+                        "delay": 2
+                    }
+                },
+                {
+                    "response": {
+                        "status_code": 200
+                    },
+                    "expected": {
+                        "outcome": "success",
+                        "retry_quota": 495
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Fail due to max attempts reached",
+            "given": {
+                "max_attempts": 3,
+                "initial_retry_tokens": 500,
+                "exponential_base": 1,
+                "exponential_power": 2,
+                "max_backoff_time": 20
+            },
+            "responses": [
+                {
+                    "response": {
+                        "status_code": 502
+                    },
+                    "expected": {
+                        "outcome": "retry_request",
+                        "retry_quota": 495,
+                        "delay": 1
+                    }
+                },
+                {
+                    "response": {
+                        "status_code": 502
+                    },
+                    "expected": {
+                        "outcome": "retry_request",
+                        "retry_quota": 490,
+                        "delay": 2
+                    }
+                },
+                {
+                    "response": {
+                        "status_code": 502
+                    },
+                    "expected": {
+                        "outcome": "max_attempts_exceeded",
+                        "retry_quota": 490
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Retry quota reached after a single retry",
+            "given": {
+                "max_attempts": 3,
+                "initial_retry_tokens": 5,
+                "exponential_base": 1,
+                "exponential_power": 2,
+                "max_backoff_time": 20
+            },
+            "responses": [
+                {
+                    "response": {
+                        "status_code": 500
+                    },
+                    "expected": {
+                        "outcome": "retry_request",
+                        "retry_quota": 0,
+                        "delay": 1
+                    }
+                },
+                {
+                    "response": {
+                        "status_code": 502
+                    },
+                    "expected": {
+                        "outcome": "retry_quota_exceeded",
+                        "retry_quota": 0
+                    }
+                }
+            ]
+        },
+        {
+            "name": "No retries at all if retry quota is 0",
+            "given": {
+                "max_attempts": 3,
+                "initial_retry_tokens": 0,
+                "exponential_base": 1,
+                "exponential_power": 2,
+                "max_backoff_time": 20
+            },
+            "responses": [
+                {
+                    "response": {
+                        "status_code": 500
+                    },
+                    "expected": {
+                        "outcome": "retry_quota_exceeded",
+                        "retry_quota": 0
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Verifying exponential backoff timing",
+            "given": {
+                "max_attempts": 5,
+                "initial_retry_tokens": 500,
+                "exponential_base": 1,
+                "exponential_power": 2,
+                "max_backoff_time": 20
+            },
+            "responses": [
+                {
+                    "response": {
+                        "status_code": 500
+                    },
+                    "expected": {
+                        "outcome": "retry_request",
+                        "retry_quota": 495,
+                        "delay": 1
+                    }
+                },
+                {
+                    "response": {
+                        "status_code": 500
+                    },
+                    "expected": {
+                        "outcome": "retry_request",
+                        "retry_quota": 490,
+                        "delay": 2
+                    }
+                },
+                {
+                    "response": {
+                        "status_code": 500
+                    },
+                    "expected": {
+                        "outcome": "retry_request",
+                        "retry_quota": 485,
+                        "delay": 4
+                    }
+                },
+                {
+                    "response": {
+                        "status_code": 500
+                    },
+                    "expected": {
+                        "outcome": "retry_request",
+                        "retry_quota": 480,
+                        "delay": 8
+                    }
+                },
+                {
+                    "response": {
+                        "status_code": 500
+                    },
+                    "expected": {
+                        "outcome": "max_attempts_exceeded",
+                        "retry_quota": 480
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Verify max backoff time",
+            "given": {
+                "max_attempts": 5,
+                "initial_retry_tokens": 500,
+                "exponential_base": 1,
+                "exponential_power": 2,
+                "max_backoff_time": 3
+            },
+            "responses": [
+                {
+                    "response": {
+                        "status_code": 500
+                    },
+                    "expected": {
+                        "outcome": "retry_request",
+                        "retry_quota": 495,
+                        "delay": 1
+                    }
+                },
+                {
+                    "response": {
+                        "status_code": 500
+                    },
+                    "expected": {
+                        "outcome": "retry_request",
+                        "retry_quota": 490,
+                        "delay": 2
+                    }
+                },
+                {
+                    "response": {
+                        "status_code": 500
+                    },
+                    "expected": {
+                        "outcome": "retry_request",
+                        "retry_quota": 485,
+                        "delay": 3
+                    }
+                },
+                {
+                    "response": {
+                        "status_code": 500
+                    },
+                    "expected": {
+                        "outcome": "retry_request",
+                        "retry_quota": 480,
+                        "delay": 3
+                    }
+                },
+                {
+                    "response": {
+                        "status_code": 500
+                    },
+                    "expected": {
+                        "outcome": "max_attempts_exceeded",
+                        "retry_quota": 480
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Retry stops after retry quota exhaustion",
+            "given": {
+                "max_attempts": 5,
+                "initial_retry_tokens": 10,
+                "exponential_base": 1,
+                "exponential_power": 2,
+                "max_backoff_time": 20
+            },
+            "responses": [
+                {
+                    "response": {
+                        "status_code": 500
+                    },
+                    "expected": {
+                        "outcome": "retry_request",
+                        "retry_quota": 5,
+                        "delay": 1
+                    }
+                },
+                {
+                    "response": {
+                        "status_code": 502
+                    },
+                    "expected": {
+                        "outcome": "retry_request",
+                        "retry_quota": 0,
+                        "delay": 2
+                    }
+                },
+                {
+                    "response": {
+                        "status_code": 503
+                    },
+                    "expected": {
+                        "outcome": "retry_quota_exceeded",
+                        "retry_quota": 0
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Retry quota recovery after successful responses",
+            "given": {
+                "max_attempts": 5,
+                "initial_retry_tokens": 15,
+                "exponential_base": 1,
+                "exponential_power": 2,
+                "max_backoff_time": 20
+            },
+            "responses": [
+                {
+                    "response": {
+                        "status_code": 500
+                    },
+                    "expected": {
+                        "outcome": "retry_request",
+                        "retry_quota": 10,
+                        "delay": 1
+                    }
+                },
+                {
+                    "response": {
+                        "status_code": 502
+                    },
+                    "expected": {
+                        "outcome": "retry_request",
+                        "retry_quota": 5,
+                        "delay": 2
+                    }
+                },
+                {
+                    "response": {
+                        "status_code": 200
+                    },
+                    "expected": {
+                        "outcome": "success",
+                        "retry_quota": 10
+                    }
+                },
+                {
+                    "response": {
+                        "status_code": 500
+                    },
+                    "expected": {
+                        "outcome": "retry_request",
+                        "retry_quota": 5,
+                        "delay": 1
+                    }
+                },
+                {
+                    "response": {
+                        "status_code": 200
+                    },
+                    "expected": {
+                        "outcome": "success",
+                        "retry_quota": 10
+                    }
+                }
+            ]
+        }
+    ],
+    "shared_cases": [
+        {
+            "name": "Shared multi-threaded scenario (per-request attempts, per-client retry quota)",
+            "given": {
+                "max_attempts": 5,
+                "initial_retry_tokens": 500,
+                "exponential_base": 1,
+                "exponential_power": 2,
+                "max_backoff_time": 10
+            },
+            "steps": [
+                {
+                    "thread": "thread_1",
+                    "responses": [
+                        {
+                            "response": {
+                                "status_code": 500
+                            },
+                            "expected": {
+                                "outcome": "retry_request",
+                                "retry_quota": 495,
+                                "delay": 1
+                            }
+                        },
+                        {
+                            "response": {
+                                "status_code": 500
+                            },
+                            "expected": {
+                                "outcome": "retry_request",
+                                "retry_quota": 490,
+                                "delay": 2
+                            }
+                        }
+                    ]
+                },
+                {
+                    "thread": "thread_2",
+                    "responses": [
+                        {
+                            "response": {
+                                "status_code": 500
+                            },
+                            "expected": {
+                                "outcome": "retry_request",
+                                "retry_quota": 485,
+                                "delay": 1
+                            }
+                        },
+                        {
+                            "response": {
+                                "status_code": 200
+                            },
+                            "expected": {
+                                "outcome": "success",
+                                "retry_quota": 490
+                            }
+                        }
+                    ]
+                },
+                {
+                    "thread": "thread_1",
+                    "responses": [
+                        {
+                            "response": {
+                                "status_code": 200
+                            },
+                            "expected": {
+                                "outcome": "success",
+                                "retry_quota": 495
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
