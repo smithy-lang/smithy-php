@@ -1,11 +1,11 @@
-# Tagging & release flow (smithy-php monorepo -> 8 split repos)
+# Tagging & release flow (smithy-php monorepo -> 9 split repos)
 
 Status: **DRAFT**. Describes how one monorepo tag becomes one version across
-all 8 published Composer packages.
+all 9 published Composer packages.
 
 ## Target repos
 
-The 8 publish targets are read-only **mirror** repos under the `smithy-lang`
+The 9 publish targets are read-only **mirror** repos under the `smithy-lang`
 org, created by an org admin before the first release:
 
 | Composer package | Split repo |
@@ -14,6 +14,7 @@ org, created by an org admin before the first release:
 | `smithy/core` | `smithy-lang/smithy-php-core` |
 | `smithy/codec` | `smithy-lang/smithy-php-codec` |
 | `smithy/http` | `smithy-lang/smithy-php-http` |
+| `smithy/auth` | `smithy-lang/smithy-php-auth` |
 | `smithy/protocol` | `smithy-lang/smithy-php-protocol` |
 | `smithy/protocol-aws` | `smithy-lang/smithy-php-protocol-aws` |
 | `smithy/client` | `smithy-lang/smithy-php-client` |
@@ -23,7 +24,7 @@ The monorepo `smithy-lang/smithy-php` stays the single source of truth and keeps
 all development; the split tooling force-pushes the computed branch and tag into
 these mirrors. Nobody commits to a mirror directly.
 
-## How the 8 packages share one version
+## How the 9 packages share one version
 
 Every package's `composer.json` requires its siblings with `"self.version"`:
 
@@ -32,7 +33,7 @@ Every package's `composer.json` requires its siblings with `"self.version"`:
 ```
 
 `self.version` means "the exact version of the package being installed". So
-when all 8 packages are tagged `v0.1.0-preview`, each one requires its siblings
+when all 9 packages are tagged `v0.1.0-preview`, each one requires its siblings
 at `v0.1.0-preview` automatically. There is no per-package version to bump by
 hand; the single monorepo tag is the one source of truth.
 
@@ -76,19 +77,19 @@ locally. It only matters once the packages are split and published.
 monorepo tag v0.1.0-preview
         |
         v  (split.yml, one matrix leg per package)
-  8 split repos each get: main branch updated + tag v0.1.0-preview
+  9 split repos each get: main branch updated + tag v0.1.0-preview
         |
         v  (Packagist webhook per repo)
-  8 Packagist packages each expose version v0.1.0-preview
+  9 Packagist packages each expose version v0.1.0-preview
 ```
 
 ## Who needs to act (humans)
 
 - **Tag/release authority:** a maintainer with push access to the upstream
   monorepo creates and pushes the version tag.
-- **Packagist:** registering the 8 packages and submitting/yanking versions is
+- **Packagist:** registering the 9 packages and submitting/yanking versions is
   a human action on packagist.org (see ROLLBACK.md).
-- **Split repos + deploy keys:** the 8 `smithy-lang/smithy-php-<pkg>` mirror
+- **Split repos + deploy keys:** the 9 `smithy-lang/smithy-php-<pkg>` mirror
   repos, and one write-deploy-key secret per repo, must exist before the
   workflow is enabled.
 

@@ -10,7 +10,7 @@ Order matters: stop new installs first, then clean up refs, then fix forward.
 
 ## 1. Stop new installs (human-only, Packagist)
 
-For EACH of the 8 packages on packagist.org:
+For EACH of the 9 packages on packagist.org:
 
 - [ ] Open `packagist.org/packages/smithy/<pkg>`.
 - [ ] Delete the bad version (e.g. `v0.1.0-preview`), OR abandon the package if
@@ -21,12 +21,12 @@ Note: deleting a Packagist version does not uninstall it for anyone who already
 pinned it; it only prevents new resolution. That is why we ship a fixed higher
 tag afterwards.
 
-## 2. Delete the tag from the 8 split repos
+## 2. Delete the tag from the 9 split repos
 
 Per split repo (scriptable; `$SPLIT_ORG` is the real org):
 
 ```
-for slug in async core codec http protocol protocol-aws client codegen; do
+for slug in async core codec http auth protocol protocol-aws client codegen; do
   git push "git@github.com:${SPLIT_ORG}/smithy-php-${slug}.git" \
     :refs/tags/v0.1.0-preview
 done

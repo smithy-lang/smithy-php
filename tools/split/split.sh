@@ -10,7 +10,7 @@
 #
 # This script NEVER pushes unless PUSH=1 is set in the environment. By default
 # it performs the split locally and prints what it WOULD push. The target org
-# defaults to "smithy-lang" (the canonical home of the 8 split repos) but can
+# defaults to "smithy-lang" (the canonical home of the 9 split repos) but can
 # be overridden via SPLIT_ORG, e.g. for a scratch-repo rehearsal.
 #
 # Usage:
