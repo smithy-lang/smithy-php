@@ -282,6 +282,31 @@ request.
 
 It signs by setting the `Authorization` header to `Bearer <token>`.
 
+### AWS SigV4 auth
+
+The `Smithy\Auth\Aws` namespace (`src/Auth/Aws`) holds AWS SigV4 signing and
+the AWS credentials identity:
+
+| Type | Role |
+| --- | --- |
+| `AwsCredentialsIdentityInterface` | Identity with access key ID, secret access key, optional session token, and optional account ID |
+| `AwsCredentials` | Immutable value implementation of that interface |
+| `StaticCredentialProvider` | Identity resolver that returns one fixed `AwsCredentialsIdentityInterface` |
+| `SignatureV4` | SigV4 algorithm for request signing and presigned URLs |
+| `SigV4Signer` | `SignerInterface` adapter that signs an `HttpTransportRequest` with `SignatureV4` |
+| `SigV4AuthScheme` | `AuthSchemeInterface` for `aws.auth#sigv4` |
+
+`SigV4AuthScheme` is built with a signing name and signing region. It reads
+identity properties from the `aws.identityContext` client context key, looks up
+the `AwsCredentialsIdentityInterface` resolver in the
+`IdentityResolversInterface` repository, and returns a `SigV4Signer`.
+
+`SigV4Signer` reads these signer properties: `signingName`, `signingRegion`,
+`unsignedPayload`, and `timestamp`. Endpoint auth-scheme entries supply
+them. The payload is signed with its SHA-256 hash, and
+`unsignedPayload: true` signs it as `UNSIGNED-PAYLOAD`. A request body that
+cannot be hashed (a non-seekable stream) requires `unsignedPayload: true`.
+
 ## Endpoint Auth
 
 Endpoint rulesets may return `EndpointAuthScheme` values on the resolved
