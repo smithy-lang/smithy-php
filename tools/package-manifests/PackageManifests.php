@@ -11,7 +11,8 @@ namespace Smithy\Tools\PackageManifests;
 
 /**
  * Compares the package composer.json files under src with the root
- * composer.json.
+ * composer.json, and the package LICENSE and NOTICE files with the root
+ * files.
  *
  * @internal
  */
@@ -98,6 +99,38 @@ final class PackageManifests
             if (!isset($required[$dependency])) {
                 $differences[] = "composer.json: require {$dependency}"
                     . ' is in no package composer.json';
+            }
+        }
+
+        return $differences;
+    }
+
+    /**
+     * Returns one line for each package LICENSE or NOTICE file that is
+     * missing or that differs from the root file. An empty list means that
+     * every package directory carries the root files.
+     *
+     * @param array<string, string> $root The contents of the root files,
+     *     keyed by file name.
+     * @param array<string, array<string, string|null>> $packages The contents
+     *     of the same files in each package directory, keyed by directory
+     *     and then by file name. Null stands for a missing file.
+     * @return list<string>
+     */
+    public static function compareLegalFiles(array $root, array $packages): array
+    {
+        $differences = [];
+
+        foreach ($packages as $directory => $files) {
+            foreach ($root as $name => $contents) {
+                $copy = $files[$name] ?? null;
+
+                if ($copy === null) {
+                    $differences[] = "{$directory}/{$name}: is missing";
+                } elseif ($copy !== $contents) {
+                    $differences[] = "{$directory}/{$name}: differs from the"
+                        . " root {$name}";
+                }
             }
         }
 

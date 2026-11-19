@@ -275,4 +275,49 @@ final class PackageManifestsTest extends TestCase
             PackageManifests::compare($root, $packages)
         );
     }
+
+    public function testAcceptsPackagesThatCarryTheRootLegalFiles(): void
+    {
+        $root = ['LICENSE' => "license\n", 'NOTICE' => "notice\n"];
+        $packages = [
+            'src/Core' => $root,
+            'src/Http' => $root
+        ];
+
+        self::assertSame(
+            [],
+            PackageManifests::compareLegalFiles($root, $packages)
+        );
+    }
+
+    public function testReportsPackageWithoutLegalFile(): void
+    {
+        $root = ['LICENSE' => "license\n", 'NOTICE' => "notice\n"];
+        $packages = [
+            'src/Core' => ['LICENSE' => "license\n", 'NOTICE' => null],
+            'src/Http' => []
+        ];
+
+        self::assertSame(
+            [
+                'src/Core/NOTICE: is missing',
+                'src/Http/LICENSE: is missing',
+                'src/Http/NOTICE: is missing'
+            ],
+            PackageManifests::compareLegalFiles($root, $packages)
+        );
+    }
+
+    public function testReportsLegalFileThatDiffersFromTheRoot(): void
+    {
+        $root = ['LICENSE' => "license\n", 'NOTICE' => "notice\n"];
+        $packages = [
+            'src/Core' => ['LICENSE' => "license\n", 'NOTICE' => "other\n"]
+        ];
+
+        self::assertSame(
+            ['src/Core/NOTICE: differs from the root NOTICE'],
+            PackageManifests::compareLegalFiles($root, $packages)
+        );
+    }
 }
