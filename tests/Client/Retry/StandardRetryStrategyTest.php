@@ -251,6 +251,23 @@ final class StandardRetryStrategyTest extends TestCase
         self::assertSame(486, $strategy->begin('s')->capacityRemaining);
     }
 
+    public function testRecordSuccessResetsLastRetryCost(): void
+    {
+        $strategy = $this->strategy();
+        $state = $strategy->begin('s');
+        $strategy->refresh($state, $this->serverError());
+        $strategy->refresh($state, $this->serverError());
+        self::assertSame(14, $state->lastRetryCost);
+
+        $strategy->recordSuccess($state);
+        self::assertSame(0, $state->lastRetryCost);
+        self::assertSame(486, $state->capacityRemaining);
+
+        // A second success must release one token, not the old retry cost.
+        $strategy->recordSuccess($state);
+        self::assertSame(487, $state->capacityRemaining);
+    }
+
     public function testRecordSuccessReleasesAtLeastOneTokenUpToMax(): void
     {
         $strategy = $this->strategy();
