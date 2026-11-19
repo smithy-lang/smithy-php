@@ -9,6 +9,10 @@ declare(strict_types=1);
 
 namespace Smithy\ProtocolTests\AwsQuery;
 
+use Smithy\Core\Serde\Schema;
+use Smithy\Core\Serde\TypeRegistryDeserializeTrait;
+use Smithy\Core\Serde\TypeRegistryInterface;
+
 /**
  * Shape-ID registry for the AwsQuery service.
  *
@@ -18,9 +22,9 @@ namespace Smithy\ProtocolTests\AwsQuery;
  * `shapeIdFor` for the inverse lookup keyed by class. `deserialize`
  * builds the registered shape that a document's discriminator names.
  */
-final class AwsQueryTypeRegistry implements \Smithy\Core\Serde\TypeRegistryInterface
+final class AwsQueryTypeRegistry implements TypeRegistryInterface
 {
-    use \Smithy\Core\Serde\TypeRegistryDeserializeTrait;
+    use TypeRegistryDeserializeTrait;
 
     /**
      * @var array<string, class-string>
@@ -149,7 +153,7 @@ final class AwsQueryTypeRegistry implements \Smithy\Core\Serde\TypeRegistryInter
      *
      * Returns null when the shape ID is not registered.
      */
-    public function schemaFor(string $shapeId): ?\Smithy\Core\Serde\Schema
+    public function schemaFor(string $shapeId): ?Schema
     {
         $class = self::CLASSES_BY_SHAPE_ID[$shapeId] ?? null;
         if ($class === null) {

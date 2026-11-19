@@ -9,6 +9,10 @@ declare(strict_types=1);
 
 namespace Smithy\CodegenOutput\TrimmedPetStore;
 
+use Smithy\Core\Serde\Schema;
+use Smithy\Core\Serde\TypeRegistryDeserializeTrait;
+use Smithy\Core\Serde\TypeRegistryInterface;
+
 /**
  * Shape-ID registry for the TrimmedPetStore service.
  *
@@ -18,9 +22,9 @@ namespace Smithy\CodegenOutput\TrimmedPetStore;
  * `shapeIdFor` for the inverse lookup keyed by class. `deserialize`
  * builds the registered shape that a document's discriminator names.
  */
-final class TrimmedPetStoreTypeRegistry implements \Smithy\Core\Serde\TypeRegistryInterface
+final class TrimmedPetStoreTypeRegistry implements TypeRegistryInterface
 {
-    use \Smithy\Core\Serde\TypeRegistryDeserializeTrait;
+    use TypeRegistryDeserializeTrait;
 
     /**
      * @var array<string, class-string>
@@ -77,7 +81,7 @@ final class TrimmedPetStoreTypeRegistry implements \Smithy\Core\Serde\TypeRegist
      *
      * Returns null when the shape ID is not registered.
      */
-    public function schemaFor(string $shapeId): ?\Smithy\Core\Serde\Schema
+    public function schemaFor(string $shapeId): ?Schema
     {
         $class = self::CLASSES_BY_SHAPE_ID[$shapeId] ?? null;
         if ($class === null) {

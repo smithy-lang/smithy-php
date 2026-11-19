@@ -13,6 +13,9 @@ use Smithy\Codegen\CodegenSettings;
 use Smithy\Codegen\Model\SmithyModel;
 use Smithy\Codegen\PhpSymbolProviderInterface;
 use Smithy\Codegen\Writer\PhpCodeWriter;
+use Smithy\Core\Serde\Schema;
+use Smithy\Core\Serde\TypeRegistryDeserializeTrait;
+use Smithy\Core\Serde\TypeRegistryInterface;
 
 /**
  * Generates a per-service `TypeRegistry` class that maps Smithy shape IDs
@@ -80,6 +83,9 @@ final class TypeRegistryGenerator
         $entries = $this->collectShapeEntries($serviceClosure);
 
         $writer = new PhpCodeWriter($namespace);
+        $writer->addImport(Schema::class);
+        $writer->addImport(TypeRegistryDeserializeTrait::class);
+        $writer->addImport(TypeRegistryInterface::class);
 
         $writer->writeDocBlock([
             "Shape-ID registry for the {$shortName} service.",
@@ -90,14 +96,12 @@ final class TypeRegistryGenerator
             '`shapeIdFor` for the inverse lookup keyed by class. `deserialize`',
             'builds the registered shape that a document\'s discriminator names.'
         ]);
-        $writer->writeLine(
-            "final class {$className} implements "
-            . '\\Smithy\\Core\\Serde\\TypeRegistryInterface'
+        $writer->writeClassDeclaration(
+            "final class {$className}",
+            ['TypeRegistryInterface']
         );
         $writer->openBlock('{');
-        $writer->writeLine(
-            'use \\Smithy\\Core\\Serde\\TypeRegistryDeserializeTrait;'
-        );
+        $writer->writeLine('use TypeRegistryDeserializeTrait;');
         $writer->writeLine();
 
         // Both directions of the map share the same source-of-truth entries.
@@ -161,8 +165,7 @@ final class TypeRegistryGenerator
             'Returns null when the shape ID is not registered.'
         ]);
         $writer->writeLine(
-            'public function schemaFor(string $shapeId): '
-            . '?\\Smithy\\Core\\Serde\\Schema'
+            'public function schemaFor(string $shapeId): ?Schema'
         );
         $writer->openBlock('{');
         $writer->writeLine(
