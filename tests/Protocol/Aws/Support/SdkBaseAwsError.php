@@ -7,61 +7,21 @@
 
 declare(strict_types=1);
 
-namespace Smithy\Tests\Protocol\Aws;
+namespace Smithy\Tests\Protocol\Aws\Support;
 
-use PHPUnit\Framework\TestCase;
-use Smithy\Codec\Json\JsonCodec;
 use Smithy\Core\Exception\ApiException;
 use Smithy\Core\Exception\ErrorFault;
-use Smithy\Core\Retry\RetrySafety;
-use Smithy\Core\Shape\OperationInterface;
-use Smithy\Http\Message\Response;
 use Smithy\Protocol\Aws\{
     AwsErrorInterface,
-    AwsErrorRetryTrait,
-    RestJsonErrorDeserializer
+    AwsErrorRetryTrait
 };
-
-/**
- * Error deserializers populate any exception class that implements
- * `AwsErrorInterface`, not only `AwsProtocolException`.
- */
-final class AwsErrorInterfaceTest extends TestCase
-{
-    public function testDeserializerPopulatesInterfaceImplementer(): void
-    {
-        $operation = $this->createStub(OperationInterface::class);
-        $operation->method('getServiceExceptionClass')
-            ->willReturn(CustomAwsError::class);
-        $response = new Response(
-            503,
-            [
-                'x-amzn-errortype' => 'SlowDown',
-                'x-amzn-requestid' => 'req-1',
-                'retry-after' => '3'
-            ],
-            '{"message":"Slow down"}'
-        );
-
-        $error = (new RestJsonErrorDeserializer(new JsonCodec()))
-            ->deserialize($operation, $response);
-
-        $this->assertInstanceOf(CustomAwsError::class, $error);
-        $this->assertSame('Slow down', $error->getMessage());
-        $this->assertSame('SlowDown', $error->getAwsErrorCode());
-        $this->assertSame('req-1', $error->getAwsRequestId());
-        $this->assertSame(503, $error->getHttpStatusCode());
-        $this->assertSame(3.0, $error->getRetryAfter());
-        $this->assertSame(RetrySafety::Yes, $error->getRetrySafety());
-    }
-}
 
 /**
  * Test fixture: an SDK-style base exception outside `AwsProtocolException`.
  *
  * @phpstan-consistent-constructor
  */
-class CustomAwsError extends ApiException implements AwsErrorInterface
+class SdkBaseAwsError extends ApiException implements AwsErrorInterface
 {
     use AwsErrorRetryTrait;
 
