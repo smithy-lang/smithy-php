@@ -197,6 +197,40 @@ final class AwsChunkedRequestStreamTest extends TestCase
         $this->assertSame($checksum, $stream->checksum());
     }
 
+    public function testEncodesNonSeekableResourcePayloadInChunks(): void
+    {
+        $payload = \str_repeat('0123456789', 10);
+        $command = \escapeshellarg(PHP_BINARY)
+            . ' -r '
+            . \escapeshellarg(\sprintf('echo %s;', \var_export($payload, true)));
+        $resource = \popen($command, 'r');
+        if ($resource === false) {
+            $this->fail('Unable to open test process pipe.');
+        }
+
+        try {
+            $stream = new AwsChunkedRequestStream(
+                new ResourceRequestStream($resource),
+                ChecksumAlgorithm::resolveRequest('CRC32C'),
+                40,
+            );
+            $checksum = \base64_encode(\hash('crc32c', $payload, true));
+
+            $expected = "28\r\n" . \substr($payload, 0, 40) . "\r\n"
+                . "28\r\n" . \substr($payload, 40, 40) . "\r\n"
+                . "14\r\n" . \substr($payload, 80) . "\r\n"
+                . "0\r\nx-amz-checksum-crc32c:{$checksum}\r\n\r\n";
+
+            $this->assertFalse($stream->isReplayable());
+            $this->assertSame($expected, $stream->getContents());
+            $this->assertSame($checksum, $stream->checksum());
+        } finally {
+            if (\is_resource($resource)) {
+                \pclose($resource);
+            }
+        }
+    }
+
     public function testRetryReusesChecksumFromFirstAttempt(): void
     {
         $path = \tempnam(\sys_get_temp_dir(), 'aws-chunked');
