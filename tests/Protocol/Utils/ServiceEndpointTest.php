@@ -82,6 +82,43 @@ final class ServiceEndpointTest extends TestCase
         self::assertSame('yes', $result->request->getHeaderLine('X-Test'));
     }
 
+    /**
+     * @return iterable<string, array{string, string}>
+     */
+    public static function emptyRequestPathProvider(): iterable
+    {
+        yield 'root endpoint' => [
+            'https://bucket.example.com',
+            'https://bucket.example.com/?acl'
+        ];
+        yield 'root slash endpoint' => [
+            'https://bucket.example.com/',
+            'https://bucket.example.com/?acl'
+        ];
+        yield 'base path endpoint' => [
+            'https://example.com/bucket',
+            'https://example.com/bucket?acl'
+        ];
+    }
+
+    #[DataProvider('emptyRequestPathProvider')]
+    public function testEmptyRequestPathKeepsEndpointPathOrRoot(
+        string $url,
+        string $expected
+    ): void
+    {
+        $request = new HttpTransportRequest(Request::fromNormalized(
+            'GET',
+            new ComponentUri(path: '', query: 'acl'),
+            [],
+            ''
+        ));
+
+        $result = ServiceEndpoint::apply($request, new Endpoint($url));
+
+        self::assertSame($expected, (string) $result->request->getUri());
+    }
+
     public function testRejectsEndpointUserInfo(): void
     {
         $this->expectException(\InvalidArgumentException::class);
