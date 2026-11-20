@@ -317,6 +317,7 @@ JSON);
         "example#MemberSensitiveChoice": {
             "type": "union",
             "members": {
+                "visible": {"target": "smithy.api#String"},
                 "secret": {
                     "target": "smithy.api#String",
                     "traits": {"smithy.api#sensitive": {}}
@@ -462,6 +463,16 @@ JSON);
             $this->assertStringNotContainsString(
                 'inherited-secret',
                 $inheritedOutput
+            );
+            $this->assertSame(
+                ['tag' => 'future', 'value' => '***REDACTED***'],
+                $inheritedUnknown->__debugInfo()
+            );
+
+            $this->assertSame(
+                ['tag' => 'visible', 'value' => 'public-value'],
+                $memberSensitiveClass::visible('public-value')
+                    ->__debugInfo()
             );
         } finally {
             foreach ($files as $file) {
