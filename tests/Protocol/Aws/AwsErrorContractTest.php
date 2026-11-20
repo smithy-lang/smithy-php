@@ -35,7 +35,7 @@ use Smithy\ProtocolTests\AwsQuery;
 use Smithy\ProtocolTests\Ec2Query;
 use Smithy\ProtocolTests\RestJson;
 use Smithy\ProtocolTests\RestXml;
-use Smithy\Tests\Protocol\Aws\Support\SdkBaseAwsError;
+use Smithy\Tests\Protocol\Utils\SdkBaseAwsError;
 
 /**
  * Error contract shared by the six AWS protocols.

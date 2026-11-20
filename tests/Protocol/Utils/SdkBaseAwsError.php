@@ -7,7 +7,7 @@
 
 declare(strict_types=1);
 
-namespace Smithy\Tests\Protocol\Aws\Support;
+namespace Smithy\Tests\Protocol\Utils;
 
 use Smithy\Core\Exception\ApiException;
 use Smithy\Core\Exception\ErrorFault;
