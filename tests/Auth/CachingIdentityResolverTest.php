@@ -13,11 +13,16 @@ use PHPUnit\Framework\TestCase;
 use Smithy\Auth\{
     CachingIdentityResolver,
     IdentityInterface,
-    IdentityResult
+    IdentityResult,
+    NonRecoverableIdentityException
 };
 use Smithy\Tests\Auth\Utils\{
+    ClockFixture,
     CountingResolverFixture,
+    ExpiringIdentityFixture,
     FlakyResolverFixture,
+    ReentrantResolverFixture,
+    ScriptedResolverFixture,
     SequenceResolverFixture
 };
 final class CachingIdentityResolverTest extends TestCase
@@ -239,6 +244,89 @@ final class CachingIdentityResolverTest extends TestCase
         $this->assertNull($miss->identity);
         $this->assertSame($identity, $resolved->unwrap());
         $this->assertSame(2, $inner->calls);
+    }
+
+    public function testReentrantCallDuringRefreshReturnsCachedIdentity(): void
+    {
+        $clock = new ClockFixture();
+        $identity = new ExpiringIdentityFixture('AKID-1', $clock->now + 30);
+        $inner = new ReentrantResolverFixture($identity);
+        $resolver = new CachingIdentityResolver($inner, clock: $clock);
+
+        $resolver->resolveIdentity();
+        $inner->caller = $resolver;
+        $resolver->resolveIdentity();
+
+        $this->assertSame(2, $inner->calls);
+        $this->assertSame($identity, $inner->reentrantResult?->unwrap());
+    }
+
+    public function testRefreshWithoutIdentityKeepsCachedIdentityAndBacksOff(): void
+    {
+        $clock = new ClockFixture();
+        $cached = new ExpiringIdentityFixture('AKID-1', $clock->now + 30);
+        $inner = new ScriptedResolverFixture();
+        $resolver = new CachingIdentityResolver($inner, clock: $clock);
+
+        $inner->push(IdentityResult::success($cached));
+        $resolver->resolveIdentity();
+        $inner->push(IdentityResult::notFound(self::class, 'gone'));
+
+        $this->assertSame($cached, $resolver->resolveIdentity()->unwrap());
+        $this->assertSame($cached, $resolver->resolveIdentity()->unwrap());
+        $this->assertSame(2, $inner->calls);
+    }
+
+    public function testDefaultBackoffLastsBetween300And600Seconds(): void
+    {
+        $clock = new ClockFixture();
+        $cached = new ExpiringIdentityFixture('AKID-1', $clock->now + 30);
+        $inner = new ScriptedResolverFixture();
+        $resolver = new CachingIdentityResolver($inner, clock: $clock);
+
+        $inner->push(IdentityResult::success($cached));
+        $resolver->resolveIdentity();
+        $inner->push(new \RuntimeException('down'));
+        $resolver->resolveIdentity();
+
+        $clock->advance(299);
+        $resolver->resolveIdentity();
+        $this->assertSame(2, $inner->calls);
+
+        $inner->push(new \RuntimeException('down'));
+        $clock->advance(302);
+        $resolver->resolveIdentity();
+        $this->assertSame(3, $inner->calls);
+    }
+
+    public function testDefaultErrorCacheLastsBetween1And5Seconds(): void
+    {
+        $clock = new ClockFixture();
+        $cached = new ExpiringIdentityFixture('AKID-1', $clock->now + 30);
+        $inner = new ScriptedResolverFixture();
+        $resolver = new CachingIdentityResolver($inner, clock: $clock);
+
+        $inner->push(IdentityResult::success($cached));
+        $resolver->resolveIdentity();
+        $inner->push(new NonRecoverableIdentityException('sign in'));
+        try {
+            $resolver->resolveIdentity();
+            $this->fail('expected exception was not thrown');
+        } catch (NonRecoverableIdentityException) {
+        }
+
+        $clock->advance(0.5);
+        try {
+            $resolver->resolveIdentity();
+            $this->fail('expected exception was not thrown');
+        } catch (NonRecoverableIdentityException) {
+        }
+        $this->assertSame(2, $inner->calls);
+
+        $inner->push(IdentityResult::success($cached));
+        $clock->advance(5.6);
+        $resolver->resolveIdentity();
+        $this->assertSame(3, $inner->calls);
     }
 
     private static function identityExpiring(
