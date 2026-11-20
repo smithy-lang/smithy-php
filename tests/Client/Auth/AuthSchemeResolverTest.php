@@ -107,6 +107,59 @@ final class AuthSchemeResolverTest extends TestCase
         );
     }
 
+    public function testPassesOperationToSchemeSignerProperties(): void
+    {
+        $scheme = new class implements \Smithy\Auth\AuthSchemeInterface {
+            public function getSchemeId(): string
+            {
+                return 'aws.auth#sigv4';
+            }
+
+            public function getIdentityProperties(array $context): array
+            {
+                return [];
+            }
+
+            public function getIdentityResolver(
+                \Smithy\Auth\IdentityResolversInterface $resolvers
+            ): ?\Smithy\Auth\IdentityResolverInterface {
+                return \Smithy\Auth\AnonymousIdentityResolver::instance();
+            }
+
+            public function getSignerProperties(
+                array $context,
+                ?OperationInterface $operation = null
+            ): array {
+                return ['operation' => $operation?->getName()];
+            }
+
+            public function getSigner(): \Smithy\Auth\SignerInterface
+            {
+                return \Smithy\Auth\NullSigner::instance();
+            }
+        };
+        $config = new ClientConfig(
+            protocol: new FakeProtocol(),
+            transport: new \Smithy\Http\Client\HttpClientTransport(
+                new MockHttpClient()
+            ),
+            endpointResolver: new StaticEndpointResolver(
+                new Endpoint('https://example.test')
+            ),
+            supportedAuthSchemes: [$scheme]
+        );
+
+        $resolved = $config->authSchemeResolver->resolveAuthScheme(
+            $this->operation([self::SIGV4]),
+            $config
+        );
+
+        $this->assertSame(
+            ['operation' => 'TestOperation'],
+            $resolved->signerProperties
+        );
+    }
+
     public function testPassesClientContextToSchemeProperties(): void
     {
         $scheme = new class implements \Smithy\Auth\AuthSchemeInterface {
@@ -128,7 +181,10 @@ final class AuthSchemeResolverTest extends TestCase
             }
 
             /** @param array<string, mixed> $context */
-            public function getSignerProperties(array $context): array
+            public function getSignerProperties(
+                array $context,
+                ?\Smithy\Core\Shape\OperationInterface $operation = null
+            ): array
             {
                 return ['signerContext' => $context['token'] ?? null];
             }
@@ -626,7 +682,10 @@ final class AuthSchemeResolverTest extends TestCase
                 return null;
             }
 
-            public function getSignerProperties(array $context): array
+            public function getSignerProperties(
+                array $context,
+                ?\Smithy\Core\Shape\OperationInterface $operation = null
+            ): array
             {
                 return [];
             }

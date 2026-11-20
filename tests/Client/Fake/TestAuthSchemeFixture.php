@@ -17,6 +17,7 @@ use Smithy\Auth\{
     NullSigner,
     SignerInterface
 };
+use Smithy\Core\Shape\OperationInterface;
 
 /**
  * Auth scheme fixture with a configurable scheme ID.
@@ -49,7 +50,10 @@ final class TestAuthSchemeFixture implements AuthSchemeInterface
             ?? AnonymousIdentityResolver::instance();
     }
 
-    public function getSignerProperties(array $context): array
+    public function getSignerProperties(
+        array $context,
+        ?OperationInterface $operation = null
+    ): array
     {
         return $this->signerProperties;
     }

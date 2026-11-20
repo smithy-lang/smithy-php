@@ -1088,7 +1088,10 @@ final class ClientPipelineTest extends TestCase
                 return null;
             }
 
-            public function getSignerProperties(array $context): array
+            public function getSignerProperties(
+                array $context,
+                ?\Smithy\Core\Shape\OperationInterface $operation = null
+            ): array
             {
                 return [];
             }
@@ -1146,7 +1149,10 @@ final class ClientPipelineTest extends TestCase
                 return null;
             }
 
-            public function getSignerProperties(array $context): array
+            public function getSignerProperties(
+                array $context,
+                ?\Smithy\Core\Shape\OperationInterface $operation = null
+            ): array
             {
                 return [];
             }
