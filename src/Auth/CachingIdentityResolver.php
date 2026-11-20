@@ -17,7 +17,7 @@ namespace Smithy\Auth;
  * an expiration remain cached indefinitely unless a matching rejected
  * identity marks the entry for refresh.
  *
- * Refresh follows the Credential Refresh SEP:
+ * Refresh follows the credential refresh behavior:
  *
  * - A refresh window opens before expiration. Expired and invalidated
  *   identities refresh as if inside it. A call made while a refresh is

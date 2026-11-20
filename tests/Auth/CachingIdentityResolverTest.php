@@ -28,7 +28,7 @@ use Smithy\Tests\Auth\Utils\{
 };
 final class CachingIdentityResolverTest extends TestCase
 {
-    private const SEP_SEED_LIFETIME = 21600;
+    private const SPECIFICATION_SEED_LIFETIME = 21600;
 
     public function testFirstCallDelegatesToInner(): void
     {
@@ -333,14 +333,12 @@ final class CachingIdentityResolverTest extends TestCase
     }
 
     /**
-     * Cases from the Credential Refresh SEP test suite.
-     *
-     * `fixtures/credential-refresh-tests.json` is a verbatim copy of AwsDrSeps
-     * `seps/accepted/shared/credential-refresh/credential-refresh-tests.json`.
+     * Credential refresh specification test cases from
+     * `fixtures/credential-refresh-tests.json`.
      *
      * @return iterable<string, array{array<string, mixed>}>
      */
-    public static function sepCasesProvider(): iterable
+    public static function specificationCasesProvider(): iterable
     {
         $cases = \json_decode(
             (string) \file_get_contents(
@@ -356,13 +354,13 @@ final class CachingIdentityResolverTest extends TestCase
     }
 
     /** @param array<string, mixed> $case */
-    #[DataProvider('sepCasesProvider')]
-    public function testSepSuiteCase(array $case): void
+    #[DataProvider('specificationCasesProvider')]
+    public function testSpecificationCase(array $case): void
     {
         $given = $case['given'];
         $clock = new ClockFixture();
         $inner = new ScriptedResolverFixture();
-        $resolver = self::sepResolver(
+        $resolver = self::specificationResolver(
             $inner,
             $clock,
             $given['configuredAdvisoryWindowSeconds'] ?? null,
@@ -373,15 +371,15 @@ final class CachingIdentityResolverTest extends TestCase
         if ($given['cachedCredentials'] !== 'none') {
             $seed = new ExpiringIdentityFixture(
                 $given['accessKeyId'] ?? 'AKID-1',
-                $clock->now + self::SEP_SEED_LIFETIME
+                $clock->now + self::SPECIFICATION_SEED_LIFETIME
             );
             $inner->push(IdentityResult::success($seed));
             $resolver->resolveIdentity();
             $clock->advance(match ($given['cachedCredentials']) {
                 'valid' => 0,
-                'advisory' => self::SEP_SEED_LIFETIME - 1800,
-                'mandatory' => self::SEP_SEED_LIFETIME - 30,
-                'expired' => self::SEP_SEED_LIFETIME + 60,
+                'advisory' => self::SPECIFICATION_SEED_LIFETIME - 1800,
+                'mandatory' => self::SPECIFICATION_SEED_LIFETIME - 30,
+                'expired' => self::SPECIFICATION_SEED_LIFETIME + 60,
             });
         }
 
@@ -397,7 +395,7 @@ final class CachingIdentityResolverTest extends TestCase
                     ));
                     break;
                 case 'getCredentials':
-                    $this->runSepGetCredentials(
+                    $this->runSpecificationGetCredentials(
                         $step,
                         $resolver,
                         $inner,
@@ -414,7 +412,7 @@ final class CachingIdentityResolverTest extends TestCase
      * @param array<string, mixed> $step
      * @param array<string, mixed> $case
      */
-    private function runSepGetCredentials(
+    private function runSpecificationGetCredentials(
         array $step,
         CachingIdentityResolver $resolver,
         ScriptedResolverFixture $inner,
@@ -424,7 +422,7 @@ final class CachingIdentityResolverTest extends TestCase
     ): void {
         $inner->clear();
         $fresh = null;
-        $lifetime = $step['lifetimeSeconds'] ?? self::SEP_SEED_LIFETIME;
+        $lifetime = $step['lifetimeSeconds'] ?? self::SPECIFICATION_SEED_LIFETIME;
         switch ($step['response'] ?? null) {
             case 'freshCredentials':
                 $fresh = new ExpiringIdentityFixture(
@@ -488,7 +486,7 @@ final class CachingIdentityResolverTest extends TestCase
             $this->assertSame($before, $inner->calls);
         }
         if (isset($expected['advisoryWindowSeconds'])) {
-            $this->assertSepAdvisoryWindow(
+            $this->assertSpecificationAdvisoryWindow(
                 $expected['advisoryWindowSeconds'],
                 $lifetime,
                 $case['given']['configuredAdvisoryWindowSeconds'] ?? null
@@ -500,14 +498,14 @@ final class CachingIdentityResolverTest extends TestCase
      * Fetch an identity with the given lifetime on a fresh resolver and check
      * that it refreshes once exactly `$window` seconds remain.
      */
-    private function assertSepAdvisoryWindow(
+    private function assertSpecificationAdvisoryWindow(
         int $window,
         int $lifetime,
         ?int $configuredWindow
     ): void {
         $clock = new ClockFixture();
         $inner = new ScriptedResolverFixture();
-        $resolver = self::sepResolver($inner, $clock, $configuredWindow, 300.0);
+        $resolver = self::specificationResolver($inner, $clock, $configuredWindow, 300.0);
 
         $inner->push(IdentityResult::success(
             new ExpiringIdentityFixture('AKID-PROBE', $clock->now + $lifetime)
@@ -526,7 +524,7 @@ final class CachingIdentityResolverTest extends TestCase
         $this->assertSame(2, $inner->calls, 'did not refresh inside the window');
     }
 
-    private static function sepResolver(
+    private static function specificationResolver(
         ScriptedResolverFixture $inner,
         ClockFixture $clock,
         ?int $advisoryWindow,
