@@ -14,6 +14,7 @@ use Smithy\Codegen\CodegenSettings;
 use Smithy\Codegen\Generator\GeneratedFile;
 use Smithy\Codegen\Generator\SchemasGenerator;
 use Smithy\Codegen\Generator\StructureGenerator;
+use Smithy\Codegen\Generator\UnionGenerator;
 use Smithy\Codegen\Model\SmithyModel;
 use Smithy\Codegen\PhpSymbolProvider;
 use Smithy\Codegen\PriorCodegenEvaluator;
@@ -21,6 +22,22 @@ use Smithy\Core\Serde\Schema;
 
 final class StructureGeneratorTest extends TestCase
 {
+    /** @var list<GeneratedFile> */
+    private array $generatedFiles = [];
+
+    private ?string $generatedDir = null;
+
+    protected function tearDown(): void
+    {
+        foreach ($this->generatedFiles as $file) {
+            @\unlink($file->path);
+        }
+        if ($this->generatedDir !== null) {
+            @\rmdir($this->generatedDir);
+        }
+        $this->generatedFiles = [];
+        $this->generatedDir = null;
+    }
     public function testGeneratesFinalClassImplementingSerializableStructInterface(): void
     {
         $model = SmithyModel::fromFile(
@@ -992,6 +1009,303 @@ JSON);
             'Smithy\\Core\\Retry\\RetrySafety',
             $content
         );
+    }
+
+    public function testGeneratedStructureRedactsSensitiveMembers(): void
+    {
+        $namespace = $this->loadGeneratedShapes(
+            [
+                'example#Container' => [
+                    'type' => 'structure',
+                    'members' => [
+                        'visible' => ['target' => 'smithy.api#String'],
+                        'secret' => [
+                            'target' => 'smithy.api#String',
+                            'traits' => ['smithy.api#sensitive' => []]
+                        ]
+                    ]
+                ]
+            ],
+            ['example#Container']
+        );
+        $class = $namespace . '\\Container';
+        $value = new $class('public-value', 'member-secret');
+
+        $this->assertSame(
+            [
+                'visible' => 'public-value',
+                'secret' => '***REDACTED***'
+            ],
+            $value->__debugInfo()
+        );
+        foreach ([
+            (string) $value,
+            \print_r($value, true),
+            $this->dumpValue($value),
+            \json_encode($value, JSON_THROW_ON_ERROR),
+            \serialize($value)
+        ] as $output) {
+            $this->assertStringContainsString('public-value', $output);
+            $this->assertStringContainsString('***REDACTED***', $output);
+            $this->assertStringNotContainsString('member-secret', $output);
+        }
+    }
+
+    public function testGeneratedStructureRedactsNestedStructuresUnionsAndCollections(): void
+    {
+        $secret = ['target' => 'example#SecretString'];
+        $namespace = $this->loadGeneratedShapes(
+            [
+                'example#SecretString' => [
+                    'type' => 'string',
+                    'traits' => ['smithy.api#sensitive' => []]
+                ],
+                'example#Nested' => [
+                    'type' => 'structure',
+                    'members' => ['secret' => $secret]
+                ],
+                'example#SecretList' => [
+                    'type' => 'list',
+                    'member' => $secret
+                ],
+                'example#SecretMap' => [
+                    'type' => 'map',
+                    'key' => ['target' => 'smithy.api#String'],
+                    'value' => $secret
+                ],
+                'example#Choice' => [
+                    'type' => 'union',
+                    'members' => [
+                        'visible' => ['target' => 'smithy.api#String'],
+                        'secret' => $secret
+                    ]
+                ],
+                'example#Container' => [
+                    'type' => 'structure',
+                    'members' => [
+                        'nested' => ['target' => 'example#Nested'],
+                        'secrets' => ['target' => 'example#SecretList'],
+                        'secretMap' => ['target' => 'example#SecretMap'],
+                        'choice' => ['target' => 'example#Choice']
+                    ]
+                ]
+            ],
+            ['example#Nested', 'example#Container'],
+            ['example#Choice']
+        );
+        $nestedClass = $namespace . '\\Nested';
+        $choiceClass = $namespace . '\\Choice';
+        $class = $namespace . '\\Container';
+        $value = new $class(
+            new $nestedClass('nested-secret'),
+            ['list-secret'],
+            ['safe-key' => 'map-secret'],
+            $choiceClass::secret('union-secret')
+        );
+
+        foreach ([
+            \print_r($value, true),
+            $this->dumpValue($value),
+            \json_encode($value, JSON_THROW_ON_ERROR),
+            \serialize($value)
+        ] as $output) {
+            $this->assertStringNotContainsString('nested-secret', $output);
+            $this->assertStringNotContainsString('list-secret', $output);
+            $this->assertStringNotContainsString('map-secret', $output);
+            $this->assertStringNotContainsString('union-secret', $output);
+            $this->assertStringContainsString('safe-key', $output);
+        }
+    }
+
+    public function testGeneratedSensitiveShapeRedactsEveryMember(): void
+    {
+        $namespace = $this->loadGeneratedShapes(
+            [
+                'example#Container' => [
+                    'type' => 'structure',
+                    'traits' => ['smithy.api#sensitive' => []],
+                    'members' => [
+                        'first' => ['target' => 'smithy.api#String'],
+                        'second' => ['target' => 'smithy.api#String']
+                    ]
+                ]
+            ],
+            ['example#Container']
+        );
+        $class = $namespace . '\\Container';
+        $value = new $class('first-secret', 'second-secret');
+
+        $this->assertSame(
+            [
+                'first' => '***REDACTED***',
+                'second' => '***REDACTED***'
+            ],
+            $value->__debugInfo()
+        );
+        $this->assertStringNotContainsString(
+            'first-secret',
+            (string) $value
+        );
+        $this->assertStringNotContainsString(
+            'second-secret',
+            (string) $value
+        );
+    }
+
+    public function testGeneratedStructureRedactsMapWithSensitiveKeys(): void
+    {
+        $namespace = $this->loadGeneratedShapes(
+            [
+                'example#SecretString' => [
+                    'type' => 'string',
+                    'traits' => ['smithy.api#sensitive' => []]
+                ],
+                'example#SecretKeyMap' => [
+                    'type' => 'map',
+                    'key' => ['target' => 'example#SecretString'],
+                    'value' => ['target' => 'smithy.api#String']
+                ],
+                'example#Container' => [
+                    'type' => 'structure',
+                    'members' => [
+                        'values' => ['target' => 'example#SecretKeyMap']
+                    ]
+                ]
+            ],
+            ['example#Container']
+        );
+        $class = $namespace . '\\Container';
+        $value = new $class(['secret-key' => 'visible-value']);
+
+        $output = \print_r($value, true);
+        $this->assertStringContainsString('***REDACTED***', $output);
+        $this->assertStringNotContainsString('secret-key', $output);
+        $this->assertStringNotContainsString('visible-value', $output);
+    }
+
+    public function testGeneratedSensitiveStructureRejectsUnserialize(): void
+    {
+        $namespace = $this->loadGeneratedShapes(
+            [
+                'example#Container' => [
+                    'type' => 'structure',
+                    'members' => [
+                        'secret' => [
+                            'target' => 'smithy.api#String',
+                            'traits' => ['smithy.api#sensitive' => []]
+                        ]
+                    ]
+                ]
+            ],
+            ['example#Container']
+        );
+        $class = $namespace . '\\Container';
+        $serialized = \serialize(new $class('member-secret'));
+
+        $this->expectException(\LogicException::class);
+        $this->expectExceptionMessage('cannot be restored');
+
+        \unserialize($serialized);
+    }
+
+    public function testGeneratedStructureDebugRedactionHasADepthLimit(): void
+    {
+        $shapes = [
+            'example#SecretString' => [
+                'type' => 'string',
+                'traits' => ['smithy.api#sensitive' => []]
+            ],
+            'example#List0' => [
+                'type' => 'list',
+                'member' => ['target' => 'smithy.api#String']
+            ]
+        ];
+        for ($index = 1; $index < 65; $index++) {
+            $shapes["example#List{$index}"] = [
+                'type' => 'list',
+                'member' => ['target' => 'example#List' . ($index - 1)]
+            ];
+        }
+        $shapes['example#Container'] = [
+            'type' => 'structure',
+            'members' => [
+                'deep' => ['target' => 'example#List64'],
+                'secret' => ['target' => 'example#SecretString']
+            ]
+        ];
+        $namespace = $this->loadGeneratedShapes(
+            $shapes,
+            ['example#Container']
+        );
+        $nestedValue = 'leaf';
+        for ($index = 0; $index < 65; $index++) {
+            $nestedValue = [$nestedValue];
+        }
+        $class = $namespace . '\\Container';
+        $value = new $class($nestedValue, 'member-secret');
+
+        $this->assertStringContainsString(
+            '<maximum debug depth reached>',
+            \print_r($value, true)
+        );
+    }
+
+    /**
+     * Generate, write and load the schemas, structures and unions of a
+     * model, and return the generated namespace.
+     *
+     * @param array<string, array<string, mixed>> $shapes
+     * @param list<string> $structures
+     * @param list<string> $unions
+     */
+    private function loadGeneratedShapes(
+        array $shapes,
+        array $structures,
+        array $unions = []
+    ): string
+    {
+        $model = SmithyModel::fromArray([
+            'smithy' => '2.0',
+            'shapes' => $shapes
+        ]);
+        $this->generatedDir = \sys_get_temp_dir()
+            . '/smithy-generated-structure-'
+            . \bin2hex(\random_bytes(4));
+        $namespace = 'Smithy\\Tests\\Generated\\Structure'
+            . \bin2hex(\random_bytes(4));
+        $settings = new CodegenSettings(
+            namespace: $namespace,
+            outputDir: $this->generatedDir,
+            organization: 'flat'
+        );
+        $symbols = new PhpSymbolProvider($model, $settings);
+        $this->generatedFiles = [
+            (new SchemasGenerator($model, $symbols, $settings))->generate(
+                \array_fill_keys([...$structures, ...$unions], true)
+            )
+        ];
+        foreach ($structures as $shapeId) {
+            $this->generatedFiles[] = (new StructureGenerator(
+                $model,
+                $symbols,
+                $settings
+            ))->generate($shapeId);
+        }
+        foreach ($unions as $shapeId) {
+            \array_push(
+                $this->generatedFiles,
+                ...(new UnionGenerator($model, $symbols, $settings))
+                    ->generate($shapeId)
+            );
+        }
+        foreach ($this->generatedFiles as $file) {
+            $file->writeToDisk();
+        }
+        foreach ($this->generatedFiles as $file) {
+            require $file->path;
+        }
+
+        return $namespace;
     }
 
     private function dumpValue(mixed $value): string
