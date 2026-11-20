@@ -48,9 +48,9 @@ final class AwsErrorInterfaceTest extends TestCase
 
         $this->assertInstanceOf(CustomAwsError::class, $error);
         $this->assertSame('Slow down', $error->getMessage());
-        $this->assertSame('SlowDown', $error->awsErrorCode);
-        $this->assertSame('req-1', $error->requestId);
-        $this->assertSame(503, $error->httpStatusCode);
+        $this->assertSame('SlowDown', $error->getAwsErrorCode());
+        $this->assertSame('req-1', $error->getAwsRequestId());
+        $this->assertSame(503, $error->getHttpStatusCode());
         $this->assertSame(3.0, $error->getRetryAfter());
         $this->assertSame(RetrySafety::Yes, $error->getRetrySafety());
     }
@@ -69,11 +69,26 @@ class CustomAwsError extends ApiException implements AwsErrorInterface
         string $message = '',
         ErrorFault $fault = ErrorFault::Other,
         ?\Throwable $previous = null,
-        public ?string $awsErrorCode = null,
-        public ?string $requestId = null,
-        public ?int $httpStatusCode = null
+        private ?string $awsErrorCode = null,
+        private ?string $requestId = null,
+        private ?int $httpStatusCode = null
     ) {
         parent::__construct($message, $fault, $previous);
+    }
+
+    public function getAwsErrorCode(): ?string
+    {
+        return $this->awsErrorCode;
+    }
+
+    public function getAwsRequestId(): ?string
+    {
+        return $this->requestId;
+    }
+
+    public function getHttpStatusCode(): ?int
+    {
+        return $this->httpStatusCode;
     }
 
     public static function fromAwsError(
