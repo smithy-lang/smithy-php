@@ -9,18 +9,21 @@ declare(strict_types=1);
 
 namespace Smithy\Http\Checksum;
 
-use Smithy\Http\Message\RequestStreamInterface;
+use Psr\Http\Message\StreamInterface;
+use Smithy\Core\Checksum\Checksum;
 
 /**
- * Validate a selected response checksum as the payload is consumed.
+ * Wrap a response body and validate its checksum as the payload is read.
+ *
+ * The expected checksum is computed incrementally from the bytes the caller
+ * reads and compared once the body reaches EOF. A mismatch raises a
+ * {@see ChecksumMismatchException}; a match leaves {@see isValidated()} true.
  */
-final class ResponseChecksumValidatingBodyStream implements RequestStreamInterface
+final class ChecksumStream implements StreamInterface
 {
-    private \HashContext $hashContext;
+    private Checksum $checksum;
 
     private readonly int $startPosition;
-
-    private bool $started = false;
 
     private bool $validationComplete = false;
 
@@ -29,11 +32,11 @@ final class ResponseChecksumValidatingBodyStream implements RequestStreamInterfa
     private ?ChecksumMismatchException $failure = null;
 
     public function __construct(
-        private readonly RequestStreamInterface $inner,
-        private readonly ResponseChecksumSelection $selection,
+        private readonly StreamInterface $inner,
+        private readonly ExpectedChecksum $expected,
     ) {
         $this->startPosition = $inner->isSeekable() ? $inner->tell() : 0;
-        $this->hashContext = \hash_init($selection->hashAlgorithm);
+        $this->checksum = $expected->algorithm->create();
     }
 
     public function __toString(): string
@@ -54,11 +57,6 @@ final class ResponseChecksumValidatingBodyStream implements RequestStreamInterfa
     public function getSize(): ?int
     {
         return $this->inner->getSize();
-    }
-
-    public function length(): ?int
-    {
-        return $this->inner->length();
     }
 
     public function tell(): int
@@ -109,11 +107,6 @@ final class ResponseChecksumValidatingBodyStream implements RequestStreamInterfa
         $this->resetValidation();
     }
 
-    public function rewindForRetry(): void
-    {
-        $this->rewind();
-    }
-
     public function isWritable(): bool
     {
         return false;
@@ -156,31 +149,6 @@ final class ResponseChecksumValidatingBodyStream implements RequestStreamInterfa
         return $this->inner->getMetadata($key);
     }
 
-    public function hash(string $algo = 'sha256', bool $raw = false): string
-    {
-        return $this->inner->hash($algo, $raw);
-    }
-
-    public function isReplayable(): bool
-    {
-        return $this->inner->isReplayable();
-    }
-
-    public function isAvailable(): bool
-    {
-        return $this->inner->isAvailable();
-    }
-
-    public function started(): bool
-    {
-        return $this->started;
-    }
-
-    public function fullyConsumed(): bool
-    {
-        return $this->inner->fullyConsumed();
-    }
-
     public function isValidationComplete(): bool
     {
         return $this->validationComplete;
@@ -193,7 +161,7 @@ final class ResponseChecksumValidatingBodyStream implements RequestStreamInterfa
 
     public function getAlgorithm(): string
     {
-        return $this->selection->algorithm;
+        return $this->expected->algorithm->value;
     }
 
     private function update(string $bytes): void
@@ -203,11 +171,10 @@ final class ResponseChecksumValidatingBodyStream implements RequestStreamInterfa
         }
 
         if ($bytes !== '') {
-            $this->started = true;
-            \hash_update($this->hashContext, $bytes);
+            $this->checksum->update($bytes);
         }
 
-        if ($this->inner->fullyConsumed() || $this->inner->eof()) {
+        if ($this->inner->eof()) {
             $this->completeValidation();
         }
     }
@@ -218,17 +185,17 @@ final class ResponseChecksumValidatingBodyStream implements RequestStreamInterfa
             return;
         }
 
-        $calculated = \hash_final($this->hashContext, true);
+        $calculated = $this->checksum->digest();
         $this->validationComplete = true;
-        if (\hash_equals($this->selection->checksum, $calculated)) {
+        if ($this->expected->matches($calculated)) {
             $this->validated = true;
 
             return;
         }
 
         $this->failure = new ChecksumMismatchException(
-            algorithm: $this->selection->algorithm,
-            expectedChecksum: $this->selection->encodedChecksum,
+            algorithm: $this->expected->algorithm,
+            expectedChecksum: $this->expected->base64Digest,
             calculatedChecksum: \base64_encode($calculated),
         );
         throw $this->failure;
@@ -236,8 +203,7 @@ final class ResponseChecksumValidatingBodyStream implements RequestStreamInterfa
 
     private function resetValidation(): void
     {
-        $this->hashContext = \hash_init($this->selection->hashAlgorithm);
-        $this->started = false;
+        $this->checksum = $this->expected->algorithm->create();
         $this->validationComplete = false;
         $this->validated = false;
         $this->failure = null;

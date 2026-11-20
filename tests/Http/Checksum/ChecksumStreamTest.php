@@ -11,21 +11,21 @@ namespace Smithy\Tests\Http\Checksum;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
+use Smithy\Core\Checksum\ChecksumAlgorithm;
 use Smithy\Http\Checksum\ChecksumMismatchException;
-use Smithy\Http\Checksum\ResponseChecksumSelection;
-use Smithy\Http\Checksum\ResponseChecksumValidatingBodyStream;
-use Smithy\Http\Message\StringRequestStream;
+use Smithy\Http\Checksum\ChecksumStream;
+use Smithy\Http\Checksum\ExpectedChecksum;
+use Smithy\Http\Message\StringResponseStream;
 
-#[CoversClass(ResponseChecksumValidatingBodyStream::class)]
-final class ResponseChecksumValidatingBodyStreamTest extends TestCase
+#[CoversClass(ChecksumStream::class)]
+final class ChecksumStreamTest extends TestCase
 {
-    public function testValidatesIncrementallyAtEndOfPayload(): void
+    public function testValidatesAtEndOfPayload(): void
     {
         $stream = $this->stream('i9aeUg==');
 
         $this->assertSame('Hello', $stream->read(5));
         $this->assertFalse($stream->isValidationComplete());
-        $this->assertFalse($stream->isValidated());
 
         $this->assertSame(' world', $stream->getContents());
         $this->assertTrue($stream->isValidationComplete());
@@ -41,11 +41,7 @@ final class ResponseChecksumValidatingBodyStreamTest extends TestCase
             $stream->getContents();
             $this->fail('Expected checksum validation to fail.');
         } catch (ChecksumMismatchException $exception) {
-            $this->assertSame('CRC32', $exception->algorithm);
-            $this->assertSame(
-                'bm90LWEtY2hlY2tzdW0=',
-                $exception->expectedChecksum
-            );
+            $this->assertSame(ChecksumAlgorithm::CRC32, $exception->algorithm);
             $this->assertSame('i9aeUg==', $exception->calculatedChecksum);
             $this->assertTrue($stream->isValidationComplete());
             $this->assertFalse($stream->isValidated());
@@ -54,23 +50,16 @@ final class ResponseChecksumValidatingBodyStreamTest extends TestCase
 
     public function testValidatesEmptyPayload(): void
     {
-        $stream = new ResponseChecksumValidatingBodyStream(
-            new StringRequestStream(''),
-            new ResponseChecksumSelection(
-                algorithm: 'CRC32',
-                hashAlgorithm: 'crc32b',
-                header: 'x-amz-checksum-crc32',
-                encodedChecksum: 'AAAAAA==',
-                checksum: \base64_decode('AAAAAA==', true),
-            )
+        $stream = new ChecksumStream(
+            new StringResponseStream(''),
+            new ExpectedChecksum(ChecksumAlgorithm::CRC32, 'AAAAAA==')
         );
 
         $this->assertSame('', $stream->getContents());
-        $this->assertTrue($stream->isValidationComplete());
         $this->assertTrue($stream->isValidated());
     }
 
-    public function testRewindRestartsPartialValidation(): void
+    public function testRewindRestartsValidation(): void
     {
         $stream = $this->stream('i9aeUg==');
 
@@ -93,21 +82,11 @@ final class ResponseChecksumValidatingBodyStreamTest extends TestCase
         $stream->seek(1);
     }
 
-    private function stream(
-        string $expected,
-    ): ResponseChecksumValidatingBodyStream {
-        $checksum = \base64_decode($expected, true);
-        $this->assertIsString($checksum);
-
-        return new ResponseChecksumValidatingBodyStream(
-            new StringRequestStream('Hello world'),
-            new ResponseChecksumSelection(
-                algorithm: 'CRC32',
-                hashAlgorithm: 'crc32b',
-                header: 'x-amz-checksum-crc32',
-                encodedChecksum: $expected,
-                checksum: $checksum
-            )
+    private function stream(string $base64Digest): ChecksumStream
+    {
+        return new ChecksumStream(
+            new StringResponseStream('Hello world'),
+            new ExpectedChecksum(ChecksumAlgorithm::CRC32, $base64Digest)
         );
     }
 }
