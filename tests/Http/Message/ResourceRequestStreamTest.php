@@ -184,7 +184,9 @@ final class ResourceRequestStreamTest extends TestCase
     public function testReadsNonSeekableSocketToEof(): void
     {
         $pair = \stream_socket_pair(
-            STREAM_PF_UNIX,
+            PHP_OS_FAMILY === 'Windows'
+                ? STREAM_PF_INET
+                : STREAM_PF_UNIX,
             STREAM_SOCK_STREAM,
             STREAM_IPPROTO_IP
         );
