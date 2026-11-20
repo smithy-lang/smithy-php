@@ -16,7 +16,7 @@ use Smithy\Auth\Aws\AwsChunkedRequestStream;
 use Smithy\Auth\Aws\AwsChunkedTrailer;
 use Smithy\Auth\Aws\AwsCredentials;
 use Smithy\Auth\Aws\SigV4Signer;
-use Smithy\Http\Checksum\ChecksumAlgorithms;
+use Smithy\Core\Checksum\ChecksumAlgorithm;
 use Smithy\Http\Message\HttpTransportRequest;
 use Smithy\Http\Message\Request;
 use Smithy\Tests\Auth\Aws\Utils\NonSeekableStreamFixture;
@@ -32,7 +32,7 @@ final class AwsChunkedTrailerTest extends TestCase
     {
         $request = AwsChunkedTrailer::applyUnsigned(
             $this->putRequest('Hello world'),
-            ChecksumAlgorithms::resolveRequest('CRC32'),
+            ChecksumAlgorithm::resolveRequest('CRC32'),
         );
         $encoded = "b\r\nHello world\r\n0\r\nx-amz-checksum-crc32:i9aeUg==\r\n\r\n";
 
@@ -59,7 +59,7 @@ final class AwsChunkedTrailerTest extends TestCase
     {
         $request = AwsChunkedTrailer::applyUnsigned(
             $this->putRequest(new NonSeekableStreamFixture('Hello world')),
-            ChecksumAlgorithms::resolveRequest('CRC32'),
+            ChecksumAlgorithm::resolveRequest('CRC32'),
         );
 
         $this->assertSame('chunked', $request->getHeaderLine('Transfer-Encoding'));
@@ -76,7 +76,7 @@ final class AwsChunkedTrailerTest extends TestCase
     {
         $request = AwsChunkedTrailer::applyUnsigned(
             $this->putRequest('Hello world')->withHeader('Content-Encoding', 'gzip'),
-            ChecksumAlgorithms::resolveRequest('CRC32'),
+            ChecksumAlgorithm::resolveRequest('CRC32'),
         );
 
         $this->assertSame(
@@ -92,7 +92,7 @@ final class AwsChunkedTrailerTest extends TestCase
 
         AwsChunkedTrailer::applyUnsigned(
             new Request('PUT', 'http://bucket.s3.us-east-1.amazonaws.com/key', [], 'x'),
-            ChecksumAlgorithms::resolveRequest('CRC32'),
+            ChecksumAlgorithm::resolveRequest('CRC32'),
         );
     }
 
@@ -100,7 +100,7 @@ final class AwsChunkedTrailerTest extends TestCase
     {
         $request = AwsChunkedTrailer::applyUnsigned(
             $this->putRequest('Hello world'),
-            ChecksumAlgorithms::resolveRequest('CRC32'),
+            ChecksumAlgorithm::resolveRequest('CRC32'),
         );
 
         $signed = $this->sign($request, []);
@@ -125,7 +125,7 @@ final class AwsChunkedTrailerTest extends TestCase
     {
         $request = AwsChunkedTrailer::applyUnsigned(
             $this->putRequest('Hello world'),
-            ChecksumAlgorithms::resolveRequest('CRC32'),
+            ChecksumAlgorithm::resolveRequest('CRC32'),
         )->withoutHeader('x-amz-content-sha256');
 
         $signed = $this->sign($request, [

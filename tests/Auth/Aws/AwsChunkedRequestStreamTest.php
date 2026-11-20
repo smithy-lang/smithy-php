@@ -12,7 +12,7 @@ namespace Smithy\Tests\Auth\Aws;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Smithy\Auth\Aws\AwsChunkedRequestStream;
-use Smithy\Http\Checksum\ChecksumAlgorithms;
+use Smithy\Core\Checksum\ChecksumAlgorithm;
 use Smithy\Http\Message\ResourceRequestStream;
 use Smithy\Http\Message\StreamBodyAdapter;
 use Smithy\Http\Message\StringRequestStream;
@@ -74,7 +74,7 @@ final class AwsChunkedRequestStreamTest extends TestCase
     {
         $stream = new AwsChunkedRequestStream(
             new StringRequestStream('Hello world'),
-            ChecksumAlgorithms::resolveRequest($algorithm),
+            ChecksumAlgorithm::resolveRequest($algorithm),
         );
 
         $expected = "b\r\nHello world\r\n"
@@ -95,7 +95,7 @@ final class AwsChunkedRequestStreamTest extends TestCase
         $payload = \str_repeat('a', 1024);
         $stream = new AwsChunkedRequestStream(
             new StringRequestStream($payload),
-            ChecksumAlgorithms::resolveRequest('CRC32'),
+            ChecksumAlgorithm::resolveRequest('CRC32'),
             1024,
         );
         $checksum = \base64_encode(\hash('crc32b', $payload, true));
@@ -114,7 +114,7 @@ final class AwsChunkedRequestStreamTest extends TestCase
     {
         $stream = new AwsChunkedRequestStream(
             StringRequestStream::empty(),
-            ChecksumAlgorithms::resolveRequest('CRC32'),
+            ChecksumAlgorithm::resolveRequest('CRC32'),
         );
 
         $expected = "0\r\nx-amz-checksum-crc32:AAAAAA==\r\n\r\n";
@@ -131,7 +131,7 @@ final class AwsChunkedRequestStreamTest extends TestCase
         $payload = \random_bytes(3 * $chunkSize + 5);
         $stream = new AwsChunkedRequestStream(
             new StringRequestStream($payload),
-            ChecksumAlgorithms::resolveRequest('SHA256'),
+            ChecksumAlgorithm::resolveRequest('SHA256'),
             $chunkSize,
         );
         $checksum = \base64_encode(\hash('sha256', $payload, true));
@@ -161,7 +161,7 @@ final class AwsChunkedRequestStreamTest extends TestCase
         $payload = \str_repeat('z', 32);
         $stream = new AwsChunkedRequestStream(
             new StringRequestStream($payload),
-            ChecksumAlgorithms::resolveRequest('CRC32'),
+            ChecksumAlgorithm::resolveRequest('CRC32'),
             16,
         );
         $checksum = \base64_encode(\hash('crc32b', $payload, true));
@@ -179,7 +179,7 @@ final class AwsChunkedRequestStreamTest extends TestCase
         $payload = \str_repeat('0123456789', 10);
         $stream = new AwsChunkedRequestStream(
             StreamBodyAdapter::wrap(new NonSeekableStreamFixture($payload)),
-            ChecksumAlgorithms::resolveRequest('CRC32C'),
+            ChecksumAlgorithm::resolveRequest('CRC32C'),
             40,
         );
         $checksum = \base64_encode(\hash('crc32c', $payload, true));
@@ -205,7 +205,7 @@ final class AwsChunkedRequestStreamTest extends TestCase
             \file_put_contents($path, 'first');
             $stream = new AwsChunkedRequestStream(
                 ResourceRequestStream::fromFile($path),
-                ChecksumAlgorithms::resolveRequest('CRC32'),
+                ChecksumAlgorithm::resolveRequest('CRC32'),
             );
             $firstChecksum = \base64_encode(\hash('crc32b', 'first', true));
 
@@ -232,7 +232,7 @@ final class AwsChunkedRequestStreamTest extends TestCase
     {
         $stream = new AwsChunkedRequestStream(
             new StringRequestStream('Hello world'),
-            ChecksumAlgorithms::resolveRequest('CRC32'),
+            ChecksumAlgorithm::resolveRequest('CRC32'),
         );
         $encoded = "b\r\nHello world\r\n0\r\nx-amz-checksum-crc32:i9aeUg==\r\n\r\n";
 
@@ -247,7 +247,7 @@ final class AwsChunkedRequestStreamTest extends TestCase
 
         new AwsChunkedRequestStream(
             StringRequestStream::empty(),
-            ChecksumAlgorithms::resolveRequest('CRC32'),
+            ChecksumAlgorithm::resolveRequest('CRC32'),
             0,
         );
     }

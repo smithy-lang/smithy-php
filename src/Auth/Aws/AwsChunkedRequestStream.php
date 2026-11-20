@@ -9,7 +9,8 @@ declare(strict_types=1);
 
 namespace Smithy\Auth\Aws;
 
-use Smithy\Http\Checksum\ChecksumAlgorithm;
+use Smithy\Core\Checksum\Checksum;
+use Smithy\Core\Checksum\ChecksumAlgorithm;
 use Smithy\Http\Message\RequestStreamInterface;
 
 /**
@@ -36,7 +37,7 @@ final class AwsChunkedRequestStream implements RequestStreamInterface
 
     private const CRLF = "\r\n";
 
-    private \HashContext $hashContext;
+    private Checksum $hasher;
 
     private string $pending = '';
 
@@ -59,7 +60,7 @@ final class AwsChunkedRequestStream implements RequestStreamInterface
             );
         }
 
-        $this->hashContext = \hash_init($algorithm->hashAlgorithm);
+        $this->hasher = $algorithm->create();
     }
 
     /**
@@ -67,7 +68,7 @@ final class AwsChunkedRequestStream implements RequestStreamInterface
      */
     public function trailerName(): string
     {
-        return $this->algorithm->header;
+        return self::headerName($this->algorithm);
     }
 
     /**
@@ -171,7 +172,7 @@ final class AwsChunkedRequestStream implements RequestStreamInterface
     {
         $this->inner->rewindForRetry();
         $this->retryChecksum ??= $this->checksum;
-        $this->hashContext = \hash_init($this->algorithm->hashAlgorithm);
+        $this->hasher = $this->algorithm->create();
         $this->pending = '';
         $this->position = 0;
         $this->trailerWritten = false;
@@ -286,15 +287,13 @@ final class AwsChunkedRequestStream implements RequestStreamInterface
         }
 
         if ($chunk !== '') {
-            \hash_update($this->hashContext, $chunk);
+            $this->hasher->update($chunk);
             $this->pending .= \dechex(\strlen($chunk)) . self::CRLF
                 . $chunk . self::CRLF;
         }
 
         if (\strlen($chunk) < $this->chunkSize || $this->inner->eof()) {
-            $calculated = \base64_encode(
-                \hash_final($this->hashContext, true)
-            );
+            $calculated = \base64_encode($this->hasher->digest());
             $this->checksum = $this->retryChecksum ?? $calculated;
             $this->pending .= $this->trailerBlock($this->checksum);
             $this->trailerWritten = true;
@@ -304,7 +303,7 @@ final class AwsChunkedRequestStream implements RequestStreamInterface
     private function trailerBlock(string $checksum): string
     {
         return '0' . self::CRLF
-            . $this->algorithm->header . ':' . $checksum . self::CRLF
+            . self::headerName($this->algorithm) . ':' . $checksum . self::CRLF
             . self::CRLF;
     }
 
@@ -313,12 +312,20 @@ final class AwsChunkedRequestStream implements RequestStreamInterface
         return \strlen(\dechex($size)) + $size + 2 * \strlen(self::CRLF);
     }
 
+    /**
+     * Return the AWS trailer header name for an algorithm, such as
+     * `x-amz-checksum-crc32`. The `x-amz-checksum-` prefix is AWS-specific and
+     * owned here rather than by the algorithm.
+     */
+    private static function headerName(ChecksumAlgorithm $algorithm): string
+    {
+        return 'x-amz-checksum-' . \strtolower($algorithm->value);
+    }
+
     private static function encodedDigestLength(
         ChecksumAlgorithm $algorithm
     ): int
     {
-        $digestBytes = \strlen(\hash($algorithm->hashAlgorithm, '', true));
-
-        return 4 * \intdiv($digestBytes + 2, 3);
+        return 4 * \intdiv($algorithm->digestLength() + 2, 3);
     }
 }

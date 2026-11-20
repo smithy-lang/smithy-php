@@ -10,7 +10,7 @@ declare(strict_types=1);
 namespace Smithy\Auth\Aws;
 
 use Psr\Http\Message\RequestInterface;
-use Smithy\Http\Checksum\ChecksumAlgorithm;
+use Smithy\Core\Checksum\ChecksumAlgorithm;
 use Smithy\Http\Message\StreamBodyAdapter;
 
 /**
