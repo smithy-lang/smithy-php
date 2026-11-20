@@ -36,7 +36,7 @@ final class HashChecksum implements Checksum
 
     public function digest(): string
     {
-        return \hash_final($this->context, true);
+        return \hash_final(\hash_copy($this->context), true);
     }
 
     public function digestLength(): int

@@ -20,7 +20,10 @@ interface Checksum
     public function update(string $bytes): void;
 
     /**
-     * Return the finished checksum as raw bytes.
+     * Return the digest of all bytes passed to {@see update()} so far, as raw
+     * bytes. The checksum stays usable: {@see update()} and {@see digest()}
+     * may be called again afterwards, and repeated {@see digest()} calls over
+     * the same input return the same value.
      */
     public function digest(): string;
 
