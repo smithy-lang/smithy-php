@@ -60,6 +60,8 @@ class DynamicClient extends AbstractClient
      * Create a dynamic client with explicit runtime dependencies.
      *
      * @param array<string, string> $errorDiscriminatorTraits
+     * @param list<string> $authSchemeIds Auth scheme trait IDs counted as
+     *     service auth schemes when the model applies no auth trait.
      */
     public function __construct(
         SmithyModel $model,
@@ -68,7 +70,8 @@ class DynamicClient extends AbstractClient
         ?string $protocolId = null,
         PluginCollection $plugins = new PluginCollection(),
         ?SchemaTraitRegistry $traitRegistry = null,
-        array $errorDiscriminatorTraits = []
+        array $errorDiscriminatorTraits = [],
+        array $authSchemeIds = []
     )
     {
         $this->documentFactory = new DocumentFactory();
@@ -83,7 +86,8 @@ class DynamicClient extends AbstractClient
             $serviceId,
             $protocolId,
             $errorDiscriminatorTraits,
-            $this->documentFactory
+            $this->documentFactory,
+            $authSchemeIds
         );
 
         parent::__construct(

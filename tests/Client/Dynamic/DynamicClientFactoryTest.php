@@ -17,6 +17,7 @@ use Smithy\Client\Dynamic\{
     DynamicClientRuntime
 };
 use Smithy\Client\Endpoint\Bytecode\StdFunctions;
+use Smithy\Core\Model\SmithyModel;
 use Smithy\Protocol\RpcV2\RpcV2CborProtocol;
 use Smithy\Tests\Client\Dynamic\Utils\IdentifiedProtocolFixture;
 use Smithy\Tests\Client\Fake\TestAuthSchemeFixture;
@@ -112,6 +113,45 @@ final class DynamicClientFactoryTest extends TestCase
             supportedAuthSchemes: [
                 new TestAuthSchemeFixture('')
             ]
+        );
+    }
+
+    public function testCountsRegisteredAuthSchemeTraits(): void
+    {
+        $model = SmithyModel::fromArray([
+            'smithy' => '2.0',
+            'shapes' => [
+                'example#Service' => [
+                    'type' => 'service',
+                    'version' => '2026-11-21',
+                    'operations' => [['target' => 'example#Call']],
+                    'traits' => [
+                        'smithy.protocols#rpcv2Cbor' => [],
+                        'vendor.auth#token' => [],
+                        'vendor.auth#other' => []
+                    ]
+                ],
+                'example#Call' => ['type' => 'operation']
+            ]
+        ]);
+
+        $client = DynamicClientFactory::create(
+            model: $model,
+            runtime: self::runtime()->merge(new DynamicClientRuntime(
+                authSchemes: [new TestAuthSchemeFixture('vendor.auth#other')]
+            )),
+            httpClient: new MockHttpClient(),
+            endpoint: 'https://example.com',
+            supportedAuthSchemes: [
+                new TestAuthSchemeFixture('vendor.auth#token')
+            ]
+        );
+
+        self::assertSame(
+            ['vendor.auth#other', 'vendor.auth#token'],
+            $client->getService()
+                ->getOperation('Call')
+                ?->getEffectiveAuthSchemes()
         );
     }
 

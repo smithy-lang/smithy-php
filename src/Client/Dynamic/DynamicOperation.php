@@ -49,6 +49,8 @@ final class DynamicOperation implements OperationInterface
      * @param array<string, string> $errorDiscriminatorTraits
      * @param DocumentFactory|null $documentFactory Shared factory from the
      *                                             owning client.
+     * @param list<string> $authSchemeIds Auth scheme trait IDs registered
+     *     with the owning client.
      */
     public function __construct(
         private readonly SmithyModel $model,
@@ -57,7 +59,8 @@ final class DynamicOperation implements OperationInterface
         private readonly string $operationId,
         ?string $protocolId = null,
         private readonly array $errorDiscriminatorTraits = [],
-        ?DocumentFactory $documentFactory = null
+        ?DocumentFactory $documentFactory = null,
+        array $authSchemeIds = []
     )
     {
         $operation = $model->expectShape($operationId);
@@ -102,7 +105,8 @@ final class DynamicOperation implements OperationInterface
         $this->effectiveAuthSchemes =
             $model->getEffectiveAuthSchemeIds(
                 $serviceId,
-                $operationId
+                $operationId,
+                $authSchemeIds
             );
         $this->inputStreamMember = self::findStreamingMember(
             $this->inputSchema

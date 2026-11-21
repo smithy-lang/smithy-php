@@ -641,6 +641,45 @@ final class CodegenSettingsTest extends TestCase
         );
     }
 
+    public function testFromArrayReadsAuthSchemeIds(): void
+    {
+        $settings = CodegenSettings::fromArray([
+            'namespace' => 'Smithy\\Example',
+            'outputDir' => '/tmp/output',
+            'authSchemeIds' => ['aws.auth#sigv4', 'aws.auth#sigv4a']
+        ]);
+
+        $this->assertSame(
+            ['aws.auth#sigv4', 'aws.auth#sigv4a'],
+            $settings->authSchemeIds
+        );
+        $this->assertSame(
+            ['aws.auth#sigv4', 'aws.auth#sigv4a'],
+            $settings->copyWith([])->authSchemeIds
+        );
+        $this->assertSame(
+            [],
+            (new CodegenSettings(
+                namespace: 'Smithy\\Example',
+                outputDir: '/tmp/output'
+            ))->authSchemeIds
+        );
+    }
+
+    public function testConstructorRejectsEmptyAuthSchemeId(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage(
+            'authSchemeIds must be a list of shape IDs'
+        );
+
+        new CodegenSettings(
+            namespace: 'Smithy\\Example',
+            outputDir: '/tmp/output',
+            authSchemeIds: ['aws.auth#sigv4', '']
+        );
+    }
+
     public function testConstructorRejectsEmptyOperationSet(): void
     {
         $this->expectException(\InvalidArgumentException::class);
