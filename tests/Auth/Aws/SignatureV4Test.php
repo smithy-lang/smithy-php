@@ -11,6 +11,7 @@ namespace Smithy\Tests\Auth\Aws;
 
 use Smithy\Auth\Aws\SignatureV4;
 use Smithy\Auth\Aws\AwsCredentials;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\RequestInterface;
 use Smithy\Async\RevoltEventLoop;
@@ -425,5 +426,142 @@ final class SignatureV4Test extends TestCase
         $this->assertSame('3600', $q['X-Amz-Expires']);
         $this->assertArrayHasKey('X-Amz-Signature', $q);
         $this->assertMatchesRegularExpression('/^[a-f0-9]{64}$/', $q['X-Amz-Signature']);
+    }
+
+    /**
+     * @return array<string, array{string, string, string}>
+     */
+    public static function canonicalPathProvider(): array
+    {
+        return [
+            'space' => ['/b%20c', '/b%2520c', '/b%20c'],
+            'double slash' => ['/a//b', '/a/b', '/a//b'],
+            'leading and trailing slash' => ['/a/b/', '/a/b/', '/a/b/'],
+            'dot segments' => ['/a/./b/../c', '/a/c', '/a/./b/../c'],
+            'encoded slash' => ['/a%2Fb', '/a%252Fb', '/a%2Fb'],
+            'encoded unicode' => [
+                '/%E2%9C%93',
+                '/%25E2%259C%2593',
+                '/%E2%9C%93',
+            ],
+            'root' => ['/', '/', '/'],
+        ];
+    }
+
+    /**
+     * Builds the signature the AWS SigV4 steps give for an empty-body GET
+     * with the given canonical path.
+     */
+    private function expectedSignature(string $canonicalPath): string
+    {
+        $contentHash = hash('sha256', '');
+        $canonicalRequest = implode("\n", [
+            'GET',
+            $canonicalPath,
+            '',
+            "host:s3.amazonaws.com\n"
+                . "x-amz-content-sha256:{$contentHash}\n"
+                . "x-amz-date:20150830T123600Z\n",
+            'host;x-amz-content-sha256;x-amz-date',
+            $contentHash,
+        ]);
+        $scope = '20150830/' . self::REGION . '/' . self::SERVICE
+            . '/aws4_request';
+        $stringToSign = implode("\n", [
+            'AWS4-HMAC-SHA256',
+            '20150830T123600Z',
+            $scope,
+            hash('sha256', $canonicalRequest),
+        ]);
+        $key = hash_hmac('sha256', 'aws4_request', hash_hmac(
+            'sha256',
+            self::SERVICE,
+            hash_hmac(
+                'sha256',
+                self::REGION,
+                hash_hmac('sha256', '20150830', 'AWS4' . self::SECRET, true),
+                true
+            ),
+            true
+        ), true);
+
+        return hash_hmac('sha256', $stringToSign, $key);
+    }
+
+    #[DataProvider('canonicalPathProvider')]
+    public function testSignsCanonicalPathWithDoubleEncoding(
+        string $path,
+        string $doubleEncoded,
+        string $asSent
+    ): void
+    {
+        $req = new Request('GET', 'https://s3.amazonaws.com' . $path, [
+            'Host' => 's3.amazonaws.com',
+        ]);
+        $result = $this->signer()->signRequest(
+            $req,
+            $this->creds(),
+            ['timestamp' => self::TIMESTAMP],
+        );
+
+        $this->assertSame(
+            $this->expectedSignature($doubleEncoded),
+            $result->signature
+        );
+    }
+
+    #[DataProvider('canonicalPathProvider')]
+    public function testSignsCanonicalPathAsSentWhenDoubleEncodingDisabled(
+        string $path,
+        string $doubleEncoded,
+        string $asSent
+    ): void
+    {
+        $req = new Request('GET', 'https://s3.amazonaws.com' . $path, [
+            'Host' => 's3.amazonaws.com',
+        ]);
+        $result = $this->signer()->signRequest(
+            $req,
+            $this->creds(),
+            [
+                'timestamp' => self::TIMESTAMP,
+                'disable_double_encoding' => true,
+            ],
+        );
+
+        $this->assertSame(
+            $this->expectedSignature($asSent),
+            $result->signature
+        );
+    }
+
+    public function testPresignsPathAsSentWhenDoubleEncodingDisabled(): void
+    {
+        $req = new Request('GET', 'https://s3.amazonaws.com/a//b%20c', [
+            'Host' => 's3.amazonaws.com',
+        ]);
+        $default = $this->signer()->presignRequest(
+            $req,
+            $this->creds(),
+            3600,
+            ['timestamp' => self::TIMESTAMP],
+        );
+        $disabled = $this->signer()->presignRequest(
+            $req,
+            $this->creds(),
+            3600,
+            [
+                'timestamp' => self::TIMESTAMP,
+                'disable_double_encoding' => true,
+            ],
+        );
+
+        parse_str($default->getUri()->getQuery(), $defaultQuery);
+        parse_str($disabled->getUri()->getQuery(), $disabledQuery);
+        $this->assertSame('/a//b%20c', $disabled->getUri()->getPath());
+        $this->assertNotSame(
+            $defaultQuery['X-Amz-Signature'],
+            $disabledQuery['X-Amz-Signature']
+        );
     }
 }
