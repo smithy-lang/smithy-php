@@ -10,7 +10,7 @@ declare(strict_types=1);
 namespace Smithy\ProtocolTests\RpcV2Cbor;
 
 use Smithy\Client\AbstractClient;
-use Smithy\Client\ClientConfig;
+use Smithy\Client\AbstractClientConfig;
 use Smithy\Client\Plugin\PluginCollection;
 use Smithy\Client\RequestOverrideConfig;
 use Smithy\ProtocolTests\RpcV2Cbor\Input\OperationWithDefaultsInput;
@@ -54,7 +54,7 @@ use Smithy\ProtocolTests\RpcV2Cbor\Shape\Unit;
 final class RpcV2CborClient extends AbstractClient implements RpcV2CborClientInterface
 {
     public function __construct(
-        ClientConfig $config,
+        AbstractClientConfig $config,
         PluginCollection $plugins = new PluginCollection()
     )
     {

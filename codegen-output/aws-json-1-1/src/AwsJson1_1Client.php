@@ -10,7 +10,7 @@ declare(strict_types=1);
 namespace Smithy\ProtocolTests\AwsJson1_1;
 
 use Smithy\Client\AbstractClient;
-use Smithy\Client\ClientConfig;
+use Smithy\Client\AbstractClientConfig;
 use Smithy\Client\Plugin\PluginCollection;
 use Smithy\Client\RequestOverrideConfig;
 use Smithy\ProtocolTests\AwsJson1_1\Input\ContentTypeParametersInput;
@@ -61,7 +61,7 @@ use Smithy\ProtocolTests\AwsJson1_1\Shape\Unit;
 final class AwsJson1_1Client extends AbstractClient implements AwsJson1_1ClientInterface
 {
     public function __construct(
-        ClientConfig $config,
+        AbstractClientConfig $config,
         PluginCollection $plugins = new PluginCollection()
     )
     {

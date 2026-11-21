@@ -10,7 +10,7 @@ declare(strict_types=1);
 namespace Smithy\ProtocolTests\AwsQuery;
 
 use Smithy\Client\AbstractClient;
-use Smithy\Client\ClientConfig;
+use Smithy\Client\AbstractClientConfig;
 use Smithy\Client\Plugin\PluginCollection;
 use Smithy\Client\RequestOverrideConfig;
 use Smithy\ProtocolTests\AwsQuery\Input\EmptyInputAndEmptyOutputInput;
@@ -90,7 +90,7 @@ use Smithy\ProtocolTests\AwsQuery\Shape\Unit;
 final class AwsQueryClient extends AbstractClient implements AwsQueryClientInterface
 {
     public function __construct(
-        ClientConfig $config,
+        AbstractClientConfig $config,
         PluginCollection $plugins = new PluginCollection()
     )
     {

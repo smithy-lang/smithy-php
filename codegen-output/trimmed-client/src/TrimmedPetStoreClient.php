@@ -10,7 +10,7 @@ declare(strict_types=1);
 namespace Smithy\CodegenOutput\TrimmedPetStore;
 
 use Smithy\Client\AbstractClient;
-use Smithy\Client\ClientConfig;
+use Smithy\Client\AbstractClientConfig;
 use Smithy\Client\Plugin\PluginCollection;
 use Smithy\Client\RequestOverrideConfig;
 use Smithy\Client\Waiter\WaiterConfig;
@@ -31,7 +31,7 @@ use Smithy\CodegenOutput\TrimmedPetStore\Output\GetPetOutput;
 final class TrimmedPetStoreClient extends AbstractClient implements TrimmedPetStoreClientInterface
 {
     public function __construct(
-        ClientConfig $config,
+        AbstractClientConfig $config,
         PluginCollection $plugins = new PluginCollection()
     )
     {

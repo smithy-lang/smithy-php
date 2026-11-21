@@ -9,7 +9,7 @@ declare(strict_types=1);
 
 namespace Smithy\Tests\Client\Plugin\Utils;
 
-use Smithy\Client\ClientConfig;
+use Smithy\Client\AbstractClientConfig;
 use Smithy\Client\Plugin\{
     AbstractPlugin,
     PluginInterface
@@ -27,7 +27,7 @@ final class RegisteringPluginFixture extends AbstractPlugin
         private readonly PluginInterface $plugin
     ) {}
 
-    public function configure(ClientConfig $config): ClientConfig
+    public function configure(AbstractClientConfig $config): AbstractClientConfig
     {
         $this->calls->append($this->name);
 

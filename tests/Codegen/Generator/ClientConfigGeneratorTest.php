@@ -18,8 +18,9 @@ final class ClientConfigGeneratorTest extends TestCase
 {
     public function testGeneratesClientConfigClassForKnownServiceShape(): void
     {
-        // Non-AWS service (no ruleset trait) -> generator emits an empty
-        // `<ShortName>ClientConfig` subclass of `Smithy\Client\ClientConfig`.
+        // Non-AWS service (no ruleset trait) -> generator emits a
+        // `<ShortName>ClientConfig` subclass of
+        // `Smithy\Client\AbstractClientConfig` with its own copyWith().
         $model = SmithyModel::fromFile(
             __DIR__ . '/../../fixtures/defaults-model.json'
         );
@@ -42,14 +43,14 @@ final class ClientConfigGeneratorTest extends TestCase
             . "declare(strict_types=1);",
             $file->content
         );
-        // Extends the configured base ClientConfig from Smithy\Client.
+        // Extends the configured base AbstractClientConfig from Smithy\Client.
         $this->assertStringContainsString(
-            'use Smithy\\Client\\ClientConfig;',
+            'use Smithy\\Client\\AbstractClientConfig;',
             $file->content
         );
         $this->assertMatchesRegularExpression(
             '/final class \w+ClientConfig '
-                . 'extends ClientConfig/',
+                . 'extends AbstractClientConfig/',
             $file->content
         );
         $this->assertStringEndsWith('ClientConfig.php', $file->path);
@@ -75,12 +76,16 @@ final class ClientConfigGeneratorTest extends TestCase
         $file = $generator->generate('smithy.example#DefaultsService');
 
         $this->assertStringContainsString(
-            'use Smithy\\Client\\ClientConfig;',
+            'use Smithy\\Client\\AbstractClientConfig;',
             $file->content
         );
         $this->assertStringContainsString(
-            'final class ExampleClientConfig '
-                . 'extends ClientConfig {}',
+            "final class ExampleClientConfig extends AbstractClientConfig\n{",
+            $file->content
+        );
+        $this->assertStringContainsString(
+            "    protected function copyWith(array \$overrides): static\n"
+                . "    {\n",
             $file->content
         );
     }

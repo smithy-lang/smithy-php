@@ -9,7 +9,7 @@ declare(strict_types=1);
 
 namespace Smithy\Benchmarks\Serde\Support;
 
-use Smithy\Client\ClientConfig;
+use Smithy\Client\AbstractClientConfig;
 use Smithy\Client\Interceptor\AbstractInterceptor;
 use Smithy\Client\Plugin\AbstractPlugin;
 
@@ -18,7 +18,7 @@ use Smithy\Client\Plugin\AbstractPlugin;
  */
 final class PipelineBenchmarkPlugin extends AbstractPlugin
 {
-    public function configure(ClientConfig $config): ClientConfig
+    public function configure(AbstractClientConfig $config): AbstractClientConfig
     {
         return $config->withInterceptor(
             new PipelineBenchmarkInterceptor()
