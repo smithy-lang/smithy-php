@@ -61,7 +61,9 @@ class DynamicClient extends AbstractClient
      *
      * @param array<string, string> $errorDiscriminatorTraits
      * @param list<string> $authSchemeIds Auth scheme trait IDs counted as
-     *     service auth schemes when the model applies no auth trait.
+     *     service auth schemes when the model applies no auth trait. The
+     *     client adds the IDs of the auth schemes in its plugin-resolved
+     *     configuration.
      */
     public function __construct(
         SmithyModel $model,
@@ -87,13 +89,29 @@ class DynamicClient extends AbstractClient
             $protocolId,
             $errorDiscriminatorTraits,
             $this->documentFactory,
-            $authSchemeIds
+            fn(): array => $this->resolveAuthSchemeIds($authSchemeIds)
         );
 
         parent::__construct(
             $config->withService($this->service),
             $plugins
         );
+    }
+
+    /**
+     * Return the given auth scheme IDs plus those of the resolved config.
+     *
+     * @param list<string> $authSchemeIds
+     *
+     * @return list<string>
+     */
+    private function resolveAuthSchemeIds(array $authSchemeIds): array
+    {
+        foreach ($this->config->supportedAuthSchemes as $scheme) {
+            $authSchemeIds[] = $scheme->getSchemeId();
+        }
+
+        return $authSchemeIds;
     }
 
     /**

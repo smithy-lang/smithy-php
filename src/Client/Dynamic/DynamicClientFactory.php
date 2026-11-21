@@ -181,11 +181,6 @@ final class DynamicClientFactory
             context: $context
         );
 
-        $authSchemeIds = [];
-        foreach ($config->supportedAuthSchemes as $scheme) {
-            $authSchemeIds[] = $scheme->getSchemeId();
-        }
-
         return new $clientClass(
             $model,
             $config,
@@ -193,8 +188,7 @@ final class DynamicClientFactory
             $protocolId,
             $plugins,
             $runtime->getTraitRegistry(),
-            $runtime->getErrorDiscriminatorTraits(),
-            $authSchemeIds
+            $runtime->getErrorDiscriminatorTraits()
         );
     }
 
