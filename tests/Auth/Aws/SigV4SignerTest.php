@@ -127,6 +127,29 @@ final class SigV4SignerTest extends TestCase
         $this->assertSame('UNSIGNED-PAYLOAD', $signed->getHeaderLine('X-Amz-Content-Sha256'));
     }
 
+    public function testUnsignedPayloadIsIgnoredOverHttp(): void
+    {
+        $signer = new SigV4Signer('s3', 'us-east-1');
+        $req = new Request('PUT', 'http://s3.amazonaws.com/bucket/key', [
+            'Host' => 's3.amazonaws.com',
+        ], 'body');
+
+        $result = $this->sign(
+            $signer,
+            $req,
+            new AwsCredentials('AKID', 'SECRET'),
+            [
+                'unsignedPayload' => true,
+                'timestamp' => 1440938160,
+            ]
+        );
+
+        $this->assertSame(
+            hash('sha256', 'body'),
+            $this->signedRequest($result)->getHeaderLine('X-Amz-Content-Sha256')
+        );
+    }
+
     public function testS3HashesSeekableBody(): void
     {
         $signer = new SigV4Signer('s3', 'us-east-1');
