@@ -11,6 +11,8 @@ namespace Smithy\Tests\Protocol\Aws;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use Smithy\Codec\Json\JsonCodec;
+use Smithy\Core\Retry\RetrySafety;
 use Smithy\Core\Shape\OperationInterface;
 use Smithy\Http\Message\{
     HttpTransportResponse,
@@ -22,6 +24,7 @@ use Smithy\Protocol\Aws\{
     AwsProtocolException,
     AwsQueryProtocol,
     Ec2QueryProtocol,
+    RestJsonErrorDeserializer,
     RestJsonProtocol,
     RestXmlProtocol
 };
@@ -32,6 +35,7 @@ use Smithy\ProtocolTests\AwsQuery;
 use Smithy\ProtocolTests\Ec2Query;
 use Smithy\ProtocolTests\RestJson;
 use Smithy\ProtocolTests\RestXml;
+use Smithy\Tests\Protocol\Utils\SdkBaseAwsError;
 
 /**
  * Error contract shared by the six AWS protocols.
@@ -341,6 +345,64 @@ final class AwsErrorContractTest extends TestCase
         );
         $this->assertSame(2.0, $error->getRetryAfter());
         $this->assertTrue($error->isThrottle());
+    }
+
+    /**
+     * @param array<string, class-string> $modeled
+     */
+    #[DataProvider('protocolProvider')]
+    public function testRetryAfterOnUnmodeledError(
+        ProtocolInterface $protocol,
+        OperationInterface $operation,
+        string $serviceException,
+        array $modeled,
+        \Closure $body
+    ): void
+    {
+        [$headers, $payload] = $body('SlowDown', 'Slow down');
+        $error = $this->deserialize(
+            $protocol,
+            $operation,
+            503,
+            [$headers + ['retry-after' => '3'], $payload]
+        );
+
+        $this->assertSame($serviceException, $error::class);
+        $this->assertContract(
+            $error,
+            'SlowDown',
+            self::REQUEST_ID,
+            503,
+            'Slow down'
+        );
+        $this->assertSame(3.0, $error->getRetryAfter());
+        $this->assertSame(RetrySafety::Yes, $error->getRetrySafety());
+    }
+
+    public function testUnmodeledErrorUsesSdkBaseException(): void
+    {
+        $operation = $this->createStub(OperationInterface::class);
+        $operation->method('getServiceExceptionClass')
+            ->willReturn(SdkBaseAwsError::class);
+
+        $error = (new RestJsonErrorDeserializer(new JsonCodec()))
+            ->deserialize($operation, new Response(
+                503,
+                [
+                    'x-amzn-errortype' => 'SlowDown',
+                    'x-amzn-requestid' => self::REQUEST_ID,
+                    'retry-after' => '3'
+                ],
+                '{"message":"Slow down"}'
+            ));
+
+        $this->assertInstanceOf(SdkBaseAwsError::class, $error);
+        $this->assertSame('Slow down', $error->getMessage());
+        $this->assertSame('SlowDown', $error->getAwsErrorCode());
+        $this->assertSame(self::REQUEST_ID, $error->getAwsRequestId());
+        $this->assertSame(503, $error->getHttpStatusCode());
+        $this->assertSame(3.0, $error->getRetryAfter());
+        $this->assertSame(RetrySafety::Yes, $error->getRetrySafety());
     }
 
     /**
