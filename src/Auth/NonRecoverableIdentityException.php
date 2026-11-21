@@ -17,6 +17,4 @@ namespace Smithy\Auth;
  * applies no refresh backoff, and re-raises it to later callers for a short
  * jittered period.
  */
-class NonRecoverableIdentityException extends \RuntimeException
-{
-}
+class NonRecoverableIdentityException extends \RuntimeException {}
