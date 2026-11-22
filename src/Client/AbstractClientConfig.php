@@ -16,7 +16,11 @@ use Smithy\Auth\IdentityResolversInterface;
 use Smithy\Auth\NoAuthScheme;
 use Smithy\Client\Auth\AuthSchemeResolver;
 use Smithy\Client\Auth\AuthSchemeResolverInterface;
-use Smithy\Client\Endpoint\EndpointResolverInterface;
+use Smithy\Client\Endpoint\{
+    EndpointOption,
+    EndpointResolverInterface,
+    StaticEndpointResolver
+};
 use Smithy\Client\Interceptor\InterceptorChain;
 use Smithy\Client\Interceptor\InterceptorInterface;
 use Smithy\Client\Plugin\{
@@ -80,14 +84,16 @@ abstract class AbstractClientConfig
 
     public readonly ProtocolResolverInterface $protocolResolver;
 
+    public readonly EndpointResolverInterface $endpointResolver;
+
     /** @var array<string, mixed> */
     public readonly array $context;
 
     /**
      * @param TransportInterface $transport Transport for serialized protocol
      *                                     messages.
-     * @param EndpointResolverInterface $endpointResolver Resolves the
-     *                                  endpoint once per operation execution.
+     * @param EndpointResolverInterface|null $endpointResolver Resolves the
+     *        endpoint once per operation execution. Set this or `$endpoint`.
      * @param ProtocolInterface|null $protocol Explicit protocol override.
      * @param ProtocolResolverInterface|null $protocolResolver Selects a
      *     modeled protocol when no explicit implementation is configured.
@@ -118,10 +124,16 @@ abstract class AbstractClientConfig
      * @param array<string, bool>|null $explicitFields Internal provenance
      *        map threaded through {@see copyWith()}. Fields absent from
      *        the map are explicit when their argument is non-null.
+     * @param string|null $endpoint Endpoint URL for every operation, wrapped
+     *        in a {@see StaticEndpointResolver}. Set this or
+     *        `$endpointResolver`.
+     *
+     * @throws \InvalidArgumentException When both or neither of
+     *         `$endpointResolver` and `$endpoint` are set.
      */
     public function __construct(
         TransportInterface $transport,
-        public readonly EndpointResolverInterface $endpointResolver,
+        ?EndpointResolverInterface $endpointResolver = null,
         public readonly ?ProtocolInterface $protocol = null,
         ?ProtocolResolverInterface $protocolResolver = null,
         public readonly ?string $protocolId = null,
@@ -136,9 +148,15 @@ abstract class AbstractClientConfig
         ?PluginState $pluginState = null,
         ?bool $protocolIsExplicit = null,
         ?array $explicitFields = null,
-        ?IdentityResolversInterface $identityResolvers = null
-    )
-    {
+        ?IdentityResolversInterface $identityResolvers = null,
+        ?string $endpoint = null
+    ) {
+        $this->endpointResolver = EndpointOption::resolve(
+            $endpointResolver,
+            $endpoint
+        ) ?? throw new \InvalidArgumentException(
+            'Client config requires an endpoint resolver or endpoint.'
+        );
         if ($protocolId === '') {
             throw new \InvalidArgumentException(
                 'Protocol ID must be a non-empty shape ID.'
