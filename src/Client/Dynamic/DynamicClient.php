@@ -89,7 +89,10 @@ class DynamicClient extends AbstractClient
             $protocolId,
             $errorDiscriminatorTraits,
             $this->documentFactory,
-            fn(): array => $this->resolveAuthSchemeIds($authSchemeIds)
+            fn(): array => $this->resolveAuthSchemeIds(
+                $config,
+                $authSchemeIds
+            )
         );
 
         parent::__construct(
@@ -99,15 +102,22 @@ class DynamicClient extends AbstractClient
     }
 
     /**
-     * Return the given auth scheme IDs plus those of the resolved config.
+     * Return the given auth scheme IDs plus those of the client config.
+     *
+     * Reads the plugin-resolved config once construction finishes and the
+     * constructor's config while plugins are still being applied.
      *
      * @param list<string> $authSchemeIds
      *
      * @return list<string>
      */
-    private function resolveAuthSchemeIds(array $authSchemeIds): array
+    private function resolveAuthSchemeIds(
+        ClientConfig $constructorConfig,
+        array $authSchemeIds
+    ): array
     {
-        foreach ($this->config->supportedAuthSchemes as $scheme) {
+        $config = $this->config ?? $constructorConfig;
+        foreach ($config->supportedAuthSchemes as $scheme) {
             $authSchemeIds[] = $scheme->getSchemeId();
         }
 

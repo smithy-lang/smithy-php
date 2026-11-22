@@ -33,6 +33,8 @@ final class DynamicOperation implements OperationInterface
     private readonly string $runtimeIdentity;
     /** @var list<string>|null */
     private ?array $effectiveAuthSchemes = null;
+    /** @var list<string> Auth scheme IDs the cached schemes were built from. */
+    private array $effectiveAuthSchemeIds = [];
     private readonly ?Schema $inputStreamMember;
     private readonly ?Schema $outputStreamMember;
     private readonly DocumentFactory $documentFactory;
@@ -51,7 +53,8 @@ final class DynamicOperation implements OperationInterface
      *                                             owning client.
      * @param (\Closure(): list<string>)|null $authSchemeIds Returns the auth
      *     scheme trait IDs registered with the owning client. The operation
-     *     calls it once, on the first effective auth lookup.
+     *     calls it on each effective auth lookup and rebuilds its cached
+     *     schemes when the IDs change.
      */
     public function __construct(
         private readonly SmithyModel $model,
@@ -166,14 +169,22 @@ final class DynamicOperation implements OperationInterface
      */
     public function getEffectiveAuthSchemes(): array
     {
-        return $this->effectiveAuthSchemes ??=
-            $this->model->getEffectiveAuthSchemeIds(
-                $this->serviceId,
-                $this->operationId,
-                $this->authSchemeIds === null
-                    ? []
-                    : ($this->authSchemeIds)()
-            );
+        $authSchemeIds = $this->authSchemeIds === null
+            ? []
+            : ($this->authSchemeIds)();
+        if ($this->effectiveAuthSchemes === null
+            || $authSchemeIds !== $this->effectiveAuthSchemeIds
+        ) {
+            $this->effectiveAuthSchemeIds = $authSchemeIds;
+            $this->effectiveAuthSchemes =
+                $this->model->getEffectiveAuthSchemeIds(
+                    $this->serviceId,
+                    $this->operationId,
+                    $authSchemeIds
+                );
+        }
+
+        return $this->effectiveAuthSchemes;
     }
 
     /**

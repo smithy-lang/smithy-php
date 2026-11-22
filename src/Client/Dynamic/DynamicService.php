@@ -43,7 +43,7 @@ final class DynamicService implements ServiceInterface
      *                                             created operations.
      * @param (\Closure(): list<string>)|null $authSchemeIds Returns the auth
      *     scheme trait IDs registered with the owning client; each created
-     *     operation calls it on its first effective auth lookup.
+     *     operation calls it on each effective auth lookup.
      */
     public function __construct(
         private readonly SmithyModel $model,

@@ -199,6 +199,59 @@ final class DynamicClientFactoryTest extends TestCase
         );
     }
 
+    public function testAuthLookupDuringPluginConfigurationStaysCurrent(): void
+    {
+        $model = SmithyModel::fromArray([
+            'smithy' => '2.0',
+            'shapes' => [
+                'example#Service' => [
+                    'type' => 'service',
+                    'version' => '2026-11-21',
+                    'operations' => [['target' => 'example#Call']],
+                    'traits' => [
+                        'smithy.protocols#rpcv2Cbor' => [],
+                        'vendor.auth#plugin' => []
+                    ]
+                ],
+                'example#Call' => ['type' => 'operation']
+            ]
+        ]);
+        $plugin = new class extends AbstractPlugin {
+            /** @var list<string>|null */
+            public ?array $schemesDuringConfigure = null;
+
+            public function configure(ClientConfig $config): ClientConfig
+            {
+                $this->schemesDuringConfigure = $config->service
+                    ?->getOperation('Call')
+                    ?->getEffectiveAuthSchemes();
+
+                return $config->withAddedAuthScheme(
+                    new TestAuthSchemeFixture('vendor.auth#plugin')
+                );
+            }
+        };
+
+        $client = DynamicClientFactory::create(
+            model: $model,
+            runtime: self::runtime(),
+            httpClient: new MockHttpClient(),
+            endpoint: 'https://example.com',
+            plugins: new PluginCollection($plugin)
+        );
+
+        self::assertSame(
+            ['smithy.api#noAuth'],
+            $plugin->schemesDuringConfigure
+        );
+        self::assertSame(
+            ['vendor.auth#plugin'],
+            $client->getService()
+                ->getOperation('Call')
+                ?->getEffectiveAuthSchemes()
+        );
+    }
+
     private static function runtime(): DynamicClientRuntime
     {
         return new DynamicClientRuntime(
