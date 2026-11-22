@@ -11,7 +11,10 @@ namespace Smithy\Tests\Auth\Aws;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
+use Smithy\Auth\AnonymousIdentityResolver;
+use Smithy\Auth\Aws\AwsCredentialsIdentityInterface;
 use Smithy\Auth\Aws\SigV4AuthScheme;
+use Smithy\Auth\IdentityResolvers;
 use Smithy\Core\Serde\Schema;
 use Smithy\Core\Shape\OperationInterface;
 use Smithy\Core\Shape\ShapeType;
@@ -54,6 +57,30 @@ final class SigV4AuthSchemeTest extends TestCase
                 $this->operation([SigV4AuthScheme::UNSIGNED_PAYLOAD_TRAIT => []])
             )
         );
+    }
+
+    public function testProvidesIdentityAndSignerPropertiesSeparately(): void
+    {
+        $identityProperties = ['region' => 'us-east-1', 'useFips' => true];
+        $context = [SigV4AuthScheme::IDENTITY_CONTEXT_KEY => $identityProperties];
+        $resolver = AnonymousIdentityResolver::instance();
+        $scheme = new SigV4AuthScheme('test', 'us-west-2');
+
+        $this->assertSame(
+            $identityProperties,
+            $scheme->getIdentityProperties($context)
+        );
+        $this->assertSame(
+            ['signingName' => 'test', 'signingRegion' => 'us-west-2'],
+            $scheme->getSignerProperties($context)
+        );
+        $this->assertSame(
+            $resolver,
+            $scheme->getIdentityResolver(new IdentityResolvers([
+                AwsCredentialsIdentityInterface::class => $resolver,
+            ]))
+        );
+        $this->assertNotSame($scheme->getSigner(), $scheme->getSigner());
     }
 
     /**
