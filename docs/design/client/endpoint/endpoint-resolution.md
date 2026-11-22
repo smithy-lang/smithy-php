@@ -109,9 +109,20 @@ property map remains available through `Endpoint::$properties`,
 
 ### `StaticEndpointResolver`
 
-`StaticEndpointResolver` returns one `Endpoint` for every operation. Dynamic
-clients use it when the caller supplies an explicit endpoint and the modeled
-BDD does not consume an `Endpoint` parameter.
+`StaticEndpointResolver` returns one `Endpoint` for every operation. Client
+configs build one from the `endpoint` URL option:
+
+```php
+$config = new ClientConfig(
+    transport: $transport,
+    endpoint: 'https://service.example.com'
+);
+```
+
+A config takes either `endpoint` or `endpointResolver`; passing both fails.
+Copies made by `withXxx()` keep the resolved endpoint. Dynamic clients use the
+same rule when the caller supplies an explicit endpoint and the modeled BDD
+does not consume an `Endpoint` parameter.
 
 ## Supported Ruleset Forms
 
