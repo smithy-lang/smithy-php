@@ -424,6 +424,56 @@ final class OperationGeneratorTest extends TestCase
         );
     }
 
+    public function testCountsConfiguredAuthSchemeIds(): void
+    {
+        $model = SmithyModel::fromJson(\json_encode([
+            'smithy' => '2.0',
+            'shapes' => [
+                'smithy.example#ExampleService' => [
+                    'type' => 'service',
+                    'version' => '2026-11-21',
+                    'operations' => [
+                        ['target' => 'smithy.example#GetThing']
+                    ],
+                    'traits' => [
+                        'vendor.auth#token' => []
+                    ]
+                ],
+                'smithy.example#GetThing' => [
+                    'type' => 'operation'
+                ]
+            ]
+        ], JSON_THROW_ON_ERROR));
+        $defaultSettings = new CodegenSettings(
+            namespace: 'Smithy\\Example',
+            outputDir: '/tmp/out',
+            organization: 'flat'
+        );
+        $settings = $defaultSettings->copyWith([
+            'authSchemeIds' => ['vendor.auth#token']
+        ]);
+
+        $defaultFile = (new OperationGenerator(
+            $model,
+            new PhpSymbolProvider($model, $defaultSettings),
+            $defaultSettings
+        ))->generate('smithy.example#GetThing');
+        $file = (new OperationGenerator(
+            $model,
+            new PhpSymbolProvider($model, $settings),
+            $settings
+        ))->generate('smithy.example#GetThing');
+
+        $this->assertMatchesRegularExpression(
+            "/AUTH_SCHEMES = \[\s*'smithy\.api#noAuth',?\s*\];/",
+            $defaultFile->content
+        );
+        $this->assertMatchesRegularExpression(
+            "/AUTH_SCHEMES = \[\s*'vendor\.auth#token',?\s*\];/",
+            $file->content
+        );
+    }
+
     public function testUsesConfiguredErrorDiscriminatorsAndSchemaTraits(): void
     {
         $model = SmithyModel::fromJson(\json_encode([
