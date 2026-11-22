@@ -614,7 +614,8 @@ final class JsonSerializerTest extends TestCase
     public function testInvalidRawBigNumberThrowsBeforePlaceholderIsEmitted(
         ShapeType $type,
         string $value
-    ): void {
+    ): void
+    {
         $list = new Schema(
             id: 'smithy.test#Event$bl',
             type: ShapeType::List_,

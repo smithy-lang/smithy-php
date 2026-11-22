@@ -442,7 +442,8 @@ final class RpcV2CborProtocolTest extends TestCase
         array $errorSchemas = [],
         ?string $requestTarget = null,
         string $serviceExceptionClass = ApiException::class
-    ): RpcV2CborOperationFixture {
+    ): RpcV2CborOperationFixture
+    {
         return new RpcV2CborOperationFixture(
             inputSchema: $inputSchema,
             outputSchema: $outputSchema,

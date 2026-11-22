@@ -58,7 +58,8 @@ class SdkBaseAwsError extends ApiException implements AwsErrorInterface
         ?string $awsErrorCode,
         ?string $requestId,
         ?int $httpStatusCode
-    ): static {
+    ): static
+    {
         return new static($message, $fault, $previous, $awsErrorCode, $requestId, $httpStatusCode);
     }
 
@@ -67,7 +68,8 @@ class SdkBaseAwsError extends ApiException implements AwsErrorInterface
         ?string $awsErrorCode,
         ?string $requestId,
         ?int $httpStatusCode
-    ): void {
+    ): void
+    {
         if ($this->message === '') {
             $this->message = $message;
         }

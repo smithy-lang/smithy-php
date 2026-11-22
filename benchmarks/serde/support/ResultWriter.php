@@ -28,7 +28,8 @@ final class ResultWriter
         array $results,
         string $directory,
         string $name = 'serde-rpcv2'
-    ): string {
+    ): string
+    {
         if (!\is_dir($directory)
             && !\mkdir($directory, 0777, true)
         ) {
@@ -73,7 +74,8 @@ final class ResultWriter
     public function updateClientReadme(
         array $results,
         string $readmePath
-    ): void {
+    ): void
+    {
         $this->replaceReadmeSection(
             $readmePath,
             self::CLIENT_START_MARKER,
@@ -117,7 +119,8 @@ final class ResultWriter
     public static function benchmarkEntry(
         string $id,
         array $statistics
-    ): array {
+    ): array
+    {
         return [
             'id' => $id,
             'n' => $statistics['iterations'],
@@ -188,7 +191,8 @@ final class ResultWriter
         array $results,
         array $entries,
         bool $showDirection
-    ): string {
+    ): string
+    {
         $metadata = $results['metadata'] ?? [];
         $benchmark = $metadata['benchmark'] ?? [];
         $php = $metadata['php'] ?? [];

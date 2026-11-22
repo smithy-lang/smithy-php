@@ -240,7 +240,8 @@ final class TimestampFormatTest extends TestCase
     public function testFromTraitStringResolvesKnownTraitValues(
         ?string $trait,
         ?TimestampFormat $expected
-    ): void {
+    ): void
+    {
         $this->assertSame($expected, TimestampFormat::fromTraitString($trait));
     }
 

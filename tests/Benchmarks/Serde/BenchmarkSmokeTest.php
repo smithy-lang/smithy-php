@@ -296,7 +296,8 @@ final class BenchmarkSmokeTest extends TestCase
     private function operation(
         GeneratedCodeLoader $loader,
         array $case
-    ): OperationInterface {
+    ): OperationInterface
+    {
         $class = $loader->operationClass($case['operation']);
 
         return $class::instance();

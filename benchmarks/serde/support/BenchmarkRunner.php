@@ -137,7 +137,8 @@ final class BenchmarkRunner
     public static function calculateOpsPerCpuSecond(
         int $operations,
         ?int $cpuNanoseconds
-    ): ?float {
+    ): ?float
+    {
         if ($operations < 0) {
             throw new \InvalidArgumentException(
                 'Operation count cannot be negative.'

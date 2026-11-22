@@ -46,7 +46,8 @@ final class CliCodegenIntegration extends AbstractCodegenIntegration
     public function customizeSettings(
         CodegenSettings $settings,
         SmithyModel $model
-    ): CodegenSettings {
+    ): CodegenSettings
+    {
         return $this->outputDir === null
             ? $settings
             : $settings->copyWith(['outputDir' => $this->outputDir]);

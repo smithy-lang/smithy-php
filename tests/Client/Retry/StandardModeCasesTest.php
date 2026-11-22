@@ -63,7 +63,8 @@ final class StandardModeCasesTest extends TestCase
     public function testSharedQuotaAcrossRequests(
         array $given,
         array $steps
-    ): void {
+    ): void
+    {
         $strategy = $this->strategy($given);
         $states = [];
 
@@ -105,7 +106,8 @@ final class StandardModeCasesTest extends TestCase
         StandardRetryStrategy $strategy,
         RetryState $state,
         array $step
-    ): bool {
+    ): bool
+    {
         $expected = $step['expected'];
         $status = $step['response']['status_code'];
 

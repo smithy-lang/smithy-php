@@ -419,7 +419,8 @@ final class CachingIdentityResolverTest extends TestCase
         ClockFixture $clock,
         ?IdentityInterface $seed,
         array $case
-    ): void {
+    ): void
+    {
         $inner->clear();
         $fresh = null;
         $lifetime = $step['lifetimeSeconds'] ?? self::SPECIFICATION_SEED_LIFETIME;
@@ -502,7 +503,8 @@ final class CachingIdentityResolverTest extends TestCase
         int $window,
         int $lifetime,
         ?int $configuredWindow
-    ): void {
+    ): void
+    {
         $clock = new ClockFixture();
         $inner = new ScriptedResolverFixture();
         $resolver = self::specificationResolver($inner, $clock, $configuredWindow, 300.0);
@@ -529,7 +531,8 @@ final class CachingIdentityResolverTest extends TestCase
         ClockFixture $clock,
         ?int $advisoryWindow,
         float $backoff
-    ): CachingIdentityResolver {
+    ): CachingIdentityResolver
+    {
         return new CachingIdentityResolver(
             $inner,
             refreshWindowSeconds: $advisoryWindow,

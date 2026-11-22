@@ -80,7 +80,8 @@ final class HashChecksumTest extends TestCase
     #[DataProvider('algorithms')]
     public function testDigestIsNonDestructiveForEveryAlgorithm(
         ChecksumAlgorithm $algorithm
-    ): void {
+    ): void
+    {
         $checksum = $algorithm->create();
         $checksum->update('first');
 

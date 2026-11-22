@@ -410,7 +410,8 @@ final class LifecycleIntegration extends AbstractCodegenIntegration
     public function preprocessModel(
         SmithyModel $model,
         CodegenSettings $settings
-    ): SmithyModel {
+    ): SmithyModel
+    {
         $data = $model->toArray();
         $data['shapes']['smithy.example#Human']['traits'][
             'smithy.api#documentation'
@@ -422,7 +423,8 @@ final class LifecycleIntegration extends AbstractCodegenIntegration
     public function customizeSettings(
         CodegenSettings $settings,
         SmithyModel $model
-    ): CodegenSettings {
+    ): CodegenSettings
+    {
         return $settings->copyWith([
             'namespace' => 'Smithy\\Integrated'
         ]);
@@ -432,7 +434,8 @@ final class LifecycleIntegration extends AbstractCodegenIntegration
         PhpSymbolProviderInterface $symbolProvider,
         SmithyModel $model,
         CodegenSettings $settings
-    ): PhpSymbolProviderInterface {
+    ): PhpSymbolProviderInterface
+    {
         return new PropertyNameSymbolProvider($symbolProvider);
     }
 
@@ -504,7 +507,8 @@ final class NamespaceChangingIntegration extends AbstractCodegenIntegration
         PhpSymbolProviderInterface $symbolProvider,
         SmithyModel $model,
         CodegenSettings $settings
-    ): PhpSymbolProviderInterface {
+    ): PhpSymbolProviderInterface
+    {
         return new NamespaceChangingSymbolProvider($symbolProvider);
     }
 }
@@ -516,7 +520,8 @@ final class SchemaAccessorCollisionIntegration extends
         PhpSymbolProviderInterface $symbolProvider,
         SmithyModel $model,
         CodegenSettings $settings
-    ): PhpSymbolProviderInterface {
+    ): PhpSymbolProviderInterface
+    {
         return new SchemaAccessorCollisionSymbolProvider($symbolProvider);
     }
 }
@@ -527,7 +532,8 @@ final class PropertyNameIntegration extends AbstractCodegenIntegration
         PhpSymbolProviderInterface $symbolProvider,
         SmithyModel $model,
         CodegenSettings $settings
-    ): PhpSymbolProviderInterface {
+    ): PhpSymbolProviderInterface
+    {
         return new PropertyNameSymbolProvider($symbolProvider);
     }
 }
@@ -538,7 +544,8 @@ final class UnitNameIntegration extends AbstractCodegenIntegration
         PhpSymbolProviderInterface $symbolProvider,
         SmithyModel $model,
         CodegenSettings $settings
-    ): PhpSymbolProviderInterface {
+    ): PhpSymbolProviderInterface
+    {
         return new UnitNameSymbolProvider($symbolProvider);
     }
 }
@@ -558,7 +565,8 @@ final readonly class PropertyNameSymbolProvider implements
     public function toMemberType(
         string $parentShapeId,
         string $memberName
-    ): PhpType {
+    ): PhpType
+    {
         return $this->delegate->toMemberType($parentShapeId, $memberName);
     }
 
@@ -602,7 +610,8 @@ final readonly class UnitNameSymbolProvider implements
     public function toMemberType(
         string $parentShapeId,
         string $memberName
-    ): PhpType {
+    ): PhpType
+    {
         return $this->delegate->toMemberType($parentShapeId, $memberName);
     }
 
@@ -657,7 +666,8 @@ final readonly class SchemaAccessorCollisionSymbolProvider implements
     public function toMemberType(
         string $parentShapeId,
         string $memberName
-    ): PhpType {
+    ): PhpType
+    {
         return $this->delegate->toMemberType($parentShapeId, $memberName);
     }
 
@@ -702,7 +712,8 @@ final readonly class NamespaceChangingSymbolProvider implements
     public function toMemberType(
         string $parentShapeId,
         string $memberName
-    ): PhpType {
+    ): PhpType
+    {
         return $this->delegate->toMemberType($parentShapeId, $memberName);
     }
 

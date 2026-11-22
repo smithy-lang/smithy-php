@@ -21,7 +21,8 @@ final class BenchmarkEnvironment
         string $root,
         BenchmarkRunner $runner,
         string $suite
-    ): array {
+    ): array
+    {
         $revision = self::revision($root);
         $opcache = \function_exists('opcache_get_status')
             ? \opcache_get_status(false)

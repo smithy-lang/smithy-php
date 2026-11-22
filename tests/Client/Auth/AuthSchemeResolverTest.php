@@ -122,14 +122,16 @@ final class AuthSchemeResolverTest extends TestCase
 
             public function getIdentityResolver(
                 \Smithy\Auth\IdentityResolversInterface $resolvers
-            ): ?\Smithy\Auth\IdentityResolverInterface {
+            ): ?\Smithy\Auth\IdentityResolverInterface
+            {
                 return \Smithy\Auth\AnonymousIdentityResolver::instance();
             }
 
             public function getSignerProperties(
                 array $context,
                 ?OperationInterface $operation = null
-            ): array {
+            ): array
+            {
                 return ['operation' => $operation?->getName()];
             }
 
@@ -176,7 +178,8 @@ final class AuthSchemeResolverTest extends TestCase
 
             public function getIdentityResolver(
                 \Smithy\Auth\IdentityResolversInterface $resolvers
-            ): ?\Smithy\Auth\IdentityResolverInterface {
+            ): ?\Smithy\Auth\IdentityResolverInterface
+            {
                 return \Smithy\Auth\AnonymousIdentityResolver::instance();
             }
 
@@ -678,7 +681,8 @@ final class AuthSchemeResolverTest extends TestCase
 
             public function getIdentityResolver(
                 \Smithy\Auth\IdentityResolversInterface $resolvers
-            ): ?\Smithy\Auth\IdentityResolverInterface {
+            ): ?\Smithy\Auth\IdentityResolverInterface
+            {
                 return null;
             }
 
