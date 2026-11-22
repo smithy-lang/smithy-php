@@ -13,6 +13,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Smithy\Client\{
     AbstractClient,
+    AbstractClientConfig,
     ClientConfig,
     RequestOverrideConfig
 };
@@ -194,8 +195,8 @@ final class AbstractClientTest extends TestCase
             ) {}
 
             public function configure(
-                ClientConfig $config
-            ): ClientConfig {
+                AbstractClientConfig $config
+            ): AbstractClientConfig {
                 $this->observed['service'] = $config->service;
 
                 return $config;
@@ -358,8 +359,8 @@ final class AbstractClientTest extends TestCase
             ) {}
 
             public function configure(
-                ClientConfig $config
-            ): ClientConfig {
+                AbstractClientConfig $config
+            ): AbstractClientConfig {
                 return $config->withProtocol($this->protocol);
             }
         };
