@@ -16,7 +16,7 @@ use Smithy\Client\Dynamic\{
     DynamicClientFactory,
     DynamicClientRuntime
 };
-use Smithy\Client\ClientConfig;
+use Smithy\Client\AbstractClientConfig;
 use Smithy\Client\Endpoint\Bytecode\StdFunctions;
 use Smithy\Client\Plugin\{AbstractPlugin, PluginCollection};
 use Smithy\Core\Model\SmithyModel;
@@ -175,7 +175,9 @@ final class DynamicClientFactoryTest extends TestCase
             ]
         ]);
         $plugin = new class extends AbstractPlugin {
-            public function configure(ClientConfig $config): ClientConfig
+            public function configure(
+                AbstractClientConfig $config
+            ): AbstractClientConfig
             {
                 return $config->withAddedAuthScheme(
                     new TestAuthSchemeFixture('vendor.auth#plugin')
@@ -220,7 +222,9 @@ final class DynamicClientFactoryTest extends TestCase
             /** @var list<string>|null */
             public ?array $schemesDuringConfigure = null;
 
-            public function configure(ClientConfig $config): ClientConfig
+            public function configure(
+                AbstractClientConfig $config
+            ): AbstractClientConfig
             {
                 $this->schemesDuringConfigure = $config->service
                     ?->getOperation('Call')
