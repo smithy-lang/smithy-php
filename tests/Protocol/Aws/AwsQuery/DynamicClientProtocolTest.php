@@ -28,7 +28,7 @@ use Smithy\Core\Serde\{
     SerializableStructInterface
 };
 use Smithy\Core\Shape\Document\BlobValue;
-use Smithy\Core\Shape\Exception\DocumentException;
+use Smithy\Protocol\Aws\AwsDocumentException;
 use Smithy\Core\Shape\{
     BigDecimal,
     BigInteger,
@@ -106,7 +106,10 @@ final class DynamicClientProtocolTest extends AwsQueryClientProtocolTestCase
         \Throwable $error
     ): SerializableStructInterface
     {
-        self::assertInstanceOf(DocumentException::class, $error);
+        self::assertInstanceOf(AwsDocumentException::class, $error);
+        self::assertNotNull($error->getAwsErrorCode());
+        $error->setExtendedRequestId('host-id');
+        self::assertSame('host-id', $error->getExtendedRequestId());
 
         return $error;
     }
