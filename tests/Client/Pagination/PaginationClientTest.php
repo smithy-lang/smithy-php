@@ -43,15 +43,13 @@ final class PaginationClientTest extends TestCase
 {
     public function testPaginationMembersArePrivateWritable(): void
     {
-        foreach (
-            [
-                [ListStringsInput::class, 'nextToken'],
-                [ListStringsInput::class, 'pageSize'],
-                [ListMapsInput::class, 'exclusiveStartKey'],
-                [ListMapsInput::class, 'limit'],
-                [ListWithoutPageSizeInput::class, 'cursor']
-            ] as [$class, $property]
-        ) {
+        foreach ([
+            [ListStringsInput::class, 'nextToken'],
+            [ListStringsInput::class, 'pageSize'],
+            [ListMapsInput::class, 'exclusiveStartKey'],
+            [ListMapsInput::class, 'limit'],
+            [ListWithoutPageSizeInput::class, 'cursor']
+        ] as [$class, $property]) {
             $reflection = new \ReflectionProperty($class, $property);
 
             self::assertTrue($reflection->isPrivate());

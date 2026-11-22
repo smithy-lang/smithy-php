@@ -51,7 +51,8 @@ final class FixedResponseHttpClient implements HttpClientInterface
     public function sendRequest(
         RequestInterface $request,
         ?HttpRequestOptions $options = null
-    ): ResponseInterface {
+    ): ResponseInterface
+    {
         $this->response->getBody()->rewind();
 
         return $this->response;
@@ -81,7 +82,8 @@ final class NoOpConnectionManager implements ConnectionManagerInterface
         RequestContext $requestContext,
         ConnectConfiguration $connectConfig = new ConnectConfiguration(),
         ?CancellationInterface $cancellation = null
-    ): ExchangeInterface {
+    ): ExchangeInterface
+    {
         throw new \BadMethodCallException(
             'The in-memory benchmark client does not lease connections.'
         );

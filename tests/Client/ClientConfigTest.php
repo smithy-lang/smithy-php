@@ -624,7 +624,8 @@ final class ClientConfigTest extends TestCase
         ExplicitClientConfigField $field,
         \Closure $value,
         string $with
-    ): void {
+    ): void
+    {
         $base = [
             'transport' => new HttpClientTransport(new MockHttpClient()),
             'endpointResolver' => new StaticEndpointResolver(
@@ -650,7 +651,8 @@ final class ClientConfigTest extends TestCase
         ExplicitClientConfigField $field,
         \Closure $value,
         string $with
-    ): void {
+    ): void
+    {
         $config = new RegionalClientConfigFixture(
             transport: new HttpClientTransport(new MockHttpClient()),
             endpointResolver: new StaticEndpointResolver(

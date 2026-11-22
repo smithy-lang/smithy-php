@@ -231,7 +231,8 @@ final readonly class LeadingSeparatorSymbolProvider implements
     public function toMemberType(
         string $parentShapeId,
         string $memberName
-    ): PhpType {
+    ): PhpType
+    {
         return $this->delegate->toMemberType($parentShapeId, $memberName);
     }
 

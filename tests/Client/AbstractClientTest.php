@@ -196,7 +196,8 @@ final class AbstractClientTest extends TestCase
 
             public function configure(
                 AbstractClientConfig $config
-            ): AbstractClientConfig {
+            ): AbstractClientConfig
+            {
                 $this->observed['service'] = $config->service;
 
                 return $config;
@@ -360,7 +361,8 @@ final class AbstractClientTest extends TestCase
 
             public function configure(
                 AbstractClientConfig $config
-            ): AbstractClientConfig {
+            ): AbstractClientConfig
+            {
                 return $config->withProtocol($this->protocol);
             }
         };
@@ -397,7 +399,8 @@ final class AbstractClientTest extends TestCase
 
             public function modifyBeforeCall(
                 CallContext $ctx
-            ): ClientConfig {
+            ): ClientConfig
+            {
                 return $ctx->config->withProtocol($this->protocol);
             }
         };
@@ -426,7 +429,8 @@ final class AbstractClientTest extends TestCase
 
             public function modifyBeforeCall(
                 CallContext $ctx
-            ): ClientConfig {
+            ): ClientConfig
+            {
                 ++$this->modifyCalls;
 
                 return $ctx->config;
@@ -440,7 +444,8 @@ final class AbstractClientTest extends TestCase
             public function interceptCall(
                 InputContext $ctx,
                 callable $next
-            ): SerializableStructInterface {
+            ): SerializableStructInterface
+            {
                 return new FakeOutput('wrapped');
             }
         };
@@ -451,7 +456,8 @@ final class AbstractClientTest extends TestCase
 
             public function modifyBeforeCall(
                 CallContext $ctx
-            ): ClientConfig {
+            ): ClientConfig
+            {
                 return $ctx->config->withInterceptor($this->wrapper);
             }
         };

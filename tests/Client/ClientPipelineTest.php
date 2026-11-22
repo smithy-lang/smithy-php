@@ -1084,7 +1084,8 @@ final class ClientPipelineTest extends TestCase
 
             public function getIdentityResolver(
                 \Smithy\Auth\IdentityResolversInterface $resolvers
-            ): ?IdentityResolverInterface {
+            ): ?IdentityResolverInterface
+            {
                 return null;
             }
 
@@ -1145,7 +1146,8 @@ final class ClientPipelineTest extends TestCase
 
             public function getIdentityResolver(
                 \Smithy\Auth\IdentityResolversInterface $resolvers
-            ): ?IdentityResolverInterface {
+            ): ?IdentityResolverInterface
+            {
                 return null;
             }
 

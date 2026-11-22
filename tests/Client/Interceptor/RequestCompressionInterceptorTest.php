@@ -670,7 +670,8 @@ final class RequestCompressionInterceptorTest extends TestCase
         FakeInput $input,
         ClientConfig $config,
         RequestInterface $request
-    ): RequestContext {
+    ): RequestContext
+    {
         return new RequestContext(
             $operation,
             $input,

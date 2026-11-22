@@ -27,7 +27,9 @@ abstract class AbstractArrayShapeSerializerFixture implements SerializableStruct
     public function serialize(
         ShapeSerializerInterface $serializer,
         int $idx
-    ): void {}
+    ): void
+    {
+    }
 
     /** @inheritDoc */
     public function serializeMembers(ShapeSerializerInterface $serializer): void {}
