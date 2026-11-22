@@ -18,11 +18,17 @@ use Smithy\Client\Dynamic\{
 };
 use Smithy\Client\AbstractClientConfig;
 use Smithy\Client\Endpoint\Bytecode\StdFunctions;
+use Smithy\Client\Endpoint\StaticEndpointResolver;
 use Smithy\Client\Plugin\{AbstractPlugin, PluginCollection};
+use Smithy\Core\Endpoint\Endpoint;
 use Smithy\Core\Model\SmithyModel;
 use Smithy\Protocol\RpcV2\RpcV2CborProtocol;
 use Smithy\Tests\Client\Dynamic\Utils\IdentifiedProtocolFixture;
-use Smithy\Tests\Client\Fake\TestAuthSchemeFixture;
+use Smithy\Tests\Client\Fake\{
+    FakeInput,
+    FakeOperation,
+    TestAuthSchemeFixture
+};
 use Smithy\Tests\Utils\Http\MockHttpClient;
 
 #[CoversClass(DynamicClientFactory::class)]
@@ -45,17 +51,60 @@ final class DynamicClientFactoryTest extends TestCase
         );
     }
 
+    public function testPassesEndpointToConfigWithoutModeledBdd(): void
+    {
+        $client = DynamicClientFactory::create(
+            model: __DIR__ . '/fixtures/dynamic-model.json',
+            runtime: self::runtime(),
+            httpClient: new MockHttpClient(),
+            endpoint: 'https://example.com'
+        );
+
+        $config = $client->getConfig();
+        self::assertInstanceOf(
+            StaticEndpointResolver::class,
+            $config->endpointResolver
+        );
+        self::assertSame(
+            'https://example.com',
+            $config->endpointResolver->resolveEndpoint(
+                FakeOperation::instance(),
+                new FakeInput(),
+                $config
+            )->url
+        );
+    }
+
     public function testRequiresEndpointResolution(): void
     {
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage(
-            'A dynamic client requires an endpoint resolver'
+            'Client config requires an endpoint resolver or endpoint.'
         );
 
         DynamicClientFactory::create(
             model: __DIR__ . '/fixtures/dynamic-model.json',
             runtime: self::runtime(),
             httpClient: new MockHttpClient()
+        );
+    }
+
+    public function testRejectsEndpointWithEndpointResolver(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage(
+            'Provide either an endpoint resolver or a static endpoint, '
+            . 'not both.'
+        );
+
+        DynamicClientFactory::create(
+            model: __DIR__ . '/fixtures/dynamic-model.json',
+            runtime: self::runtime(),
+            httpClient: new MockHttpClient(),
+            endpointResolver: new StaticEndpointResolver(
+                new Endpoint('https://a.test')
+            ),
+            endpoint: 'https://b.test'
         );
     }
 

@@ -580,7 +580,6 @@ handler.
 - `smithy-php/src/Client/Endpoint/EndpointAuthScheme.php`
 - `smithy-php/src/Client/Endpoint/EndpointResolverInterface.php`
 - `smithy-php/src/Client/Endpoint/StaticEndpointResolver.php`
-- `smithy-php/src/Client/Endpoint/EndpointOption.php`
 
 **Bytecode runtime**
 

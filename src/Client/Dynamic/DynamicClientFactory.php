@@ -15,7 +15,6 @@ use Smithy\Client\Endpoint\{
     Bytecode\BytecodeEndpointResolver,
     Bytecode\Compiler\BddCompiler,
     Bytecode\RulesFunctionInterface,
-    EndpointOption,
     EndpointResolverInterface
 };
 use Smithy\Client\Interceptor\InterceptorChain;
@@ -115,7 +114,6 @@ final class DynamicClientFactory
                 . "configured protocol {$protocolId}."
             );
         }
-        $usesModeledEndpoint = false;
         if ($endpointResolver === null) {
             $endpointBdd = $serviceTraits[self::ENDPOINT_BDD] ?? null;
             if ($endpointBdd !== null && !\is_array($endpointBdd)) {
@@ -140,17 +138,9 @@ final class DynamicClientFactory
                     ),
                     endpointAuthSchemeIds: $endpointAuthSchemeIds
                 );
+                // The modeled rules consume the URL as their input.
+                $endpoint = null;
             }
-        }
-        if (!$usesModeledEndpoint) {
-            $endpointResolver = EndpointOption::resolve(
-                $endpointResolver,
-                $endpoint
-            ) ?? throw new \InvalidArgumentException(
-                'A dynamic client requires an endpoint resolver or '
-                . 'static endpoint when the service has no modeled '
-                . 'endpoint BDD.'
-            );
         }
 
         $context = self::withEndpointParameters(
@@ -172,7 +162,8 @@ final class DynamicClientFactory
             authSchemePreference: $authSchemePreference,
             retryStrategy: $retryStrategy,
             retryScope: $retryScope,
-            context: $context
+            context: $context,
+            endpoint: $endpoint
         );
 
         return new $clientClass(

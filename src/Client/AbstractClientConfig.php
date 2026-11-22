@@ -17,7 +17,6 @@ use Smithy\Auth\NoAuthScheme;
 use Smithy\Client\Auth\AuthSchemeResolver;
 use Smithy\Client\Auth\AuthSchemeResolverInterface;
 use Smithy\Client\Endpoint\{
-    EndpointOption,
     EndpointResolverInterface,
     StaticEndpointResolver
 };
@@ -37,6 +36,7 @@ use Smithy\Client\Protocol\{
 use Smithy\Client\Retry\NoRetryStrategy;
 use Smithy\Client\Retry\RetryStrategyInterface;
 use Smithy\Client\Retry\StandardRetryStrategy;
+use Smithy\Core\Endpoint\Endpoint;
 use Smithy\Core\Transport\TransportInterface;
 use Smithy\Core\Shape\ServiceInterface;
 use Smithy\Protocol\ProtocolInterface;
@@ -151,11 +151,9 @@ abstract class AbstractClientConfig
         ?IdentityResolversInterface $identityResolvers = null,
         ?string $endpoint = null
     ) {
-        $this->endpointResolver = EndpointOption::resolve(
+        $this->endpointResolver = self::resolveEndpointOption(
             $endpointResolver,
             $endpoint
-        ) ?? throw new \InvalidArgumentException(
-            'Client config requires an endpoint resolver or endpoint.'
         );
         if ($protocolId === '') {
             throw new \InvalidArgumentException(
@@ -745,6 +743,32 @@ abstract class AbstractClientConfig
         $state = $this->pluginState->withPredicate($predicate);
 
         return $this->withResolvedPluginState($state);
+    }
+
+    /**
+     * Return the configured resolver, or a {@see StaticEndpointResolver}
+     * for a non-empty endpoint URL.
+     *
+     * @throws \InvalidArgumentException When both or neither option is set.
+     */
+    private static function resolveEndpointOption(
+        ?EndpointResolverInterface $endpointResolver,
+        ?string $endpoint
+    ): EndpointResolverInterface
+    {
+        if ($endpointResolver !== null && $endpoint !== null) {
+            throw new \InvalidArgumentException(
+                'Provide either an endpoint resolver or a static endpoint, '
+                . 'not both.'
+            );
+        }
+        if ($endpoint !== null && $endpoint !== '') {
+            return new StaticEndpointResolver(new Endpoint($endpoint));
+        }
+
+        return $endpointResolver ?? throw new \InvalidArgumentException(
+            'Client config requires an endpoint resolver or endpoint.'
+        );
     }
 
     private static function toClosure(callable $callable): \Closure

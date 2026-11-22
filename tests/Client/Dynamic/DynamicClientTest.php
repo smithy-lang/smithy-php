@@ -893,8 +893,7 @@ final class DynamicClientTest extends TestCase
     {
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage(
-            'requires an endpoint resolver or static endpoint when the '
-            . 'service has no modeled endpoint BDD'
+            'Client config requires an endpoint resolver or endpoint.'
         );
 
         DynamicClient::create(
@@ -907,8 +906,7 @@ final class DynamicClientTest extends TestCase
     {
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage(
-            'requires an endpoint resolver or static endpoint when the '
-            . 'service has no modeled endpoint BDD'
+            'Client config requires an endpoint resolver or endpoint.'
         );
 
         DynamicClient::create(

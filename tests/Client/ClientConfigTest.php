@@ -294,6 +294,19 @@ final class ClientConfigTest extends TestCase
         );
     }
 
+    public function testEmptyEndpointRequiresEndpointResolver(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage(
+            'Client config requires an endpoint resolver or endpoint.'
+        );
+
+        new ClientConfig(
+            transport: new HttpClientTransport(new MockHttpClient()),
+            endpoint: ''
+        );
+    }
+
     public function testWithRetryStrategyReplacesOnlyRetryStrategy(): void
     {
         $orig = $this->baseConfig();
