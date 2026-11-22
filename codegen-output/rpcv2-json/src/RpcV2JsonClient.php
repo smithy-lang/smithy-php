@@ -10,7 +10,7 @@ declare(strict_types=1);
 namespace Smithy\ProtocolTests\RpcV2Json;
 
 use Smithy\Client\AbstractClient;
-use Smithy\Client\AbstractClientConfig;
+use Smithy\Client\ClientConfig;
 use Smithy\Client\Plugin\PluginCollection;
 use Smithy\Client\RequestOverrideConfig;
 use Smithy\ProtocolTests\RpcV2Json\Input\OperationWithDefaultsInput;
@@ -56,7 +56,7 @@ use Smithy\ProtocolTests\RpcV2Json\Shape\Unit;
 final class RpcV2JsonClient extends AbstractClient implements RpcV2JsonClientInterface
 {
     public function __construct(
-        AbstractClientConfig $config,
+        ClientConfig $config,
         PluginCollection $plugins = new PluginCollection()
     )
     {

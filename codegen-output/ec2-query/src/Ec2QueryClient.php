@@ -10,7 +10,7 @@ declare(strict_types=1);
 namespace Smithy\ProtocolTests\Ec2Query;
 
 use Smithy\Client\AbstractClient;
-use Smithy\Client\AbstractClientConfig;
+use Smithy\Client\ClientConfig;
 use Smithy\Client\Plugin\PluginCollection;
 use Smithy\Client\RequestOverrideConfig;
 use Smithy\ProtocolTests\Ec2Query\Input\EmptyInputAndEmptyOutputInput;
@@ -75,7 +75,7 @@ use Smithy\ProtocolTests\Ec2Query\Shape\Unit;
 final class Ec2QueryClient extends AbstractClient implements Ec2QueryClientInterface
 {
     public function __construct(
-        AbstractClientConfig $config,
+        ClientConfig $config,
         PluginCollection $plugins = new PluginCollection()
     )
     {

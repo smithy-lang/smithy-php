@@ -10,7 +10,7 @@ declare(strict_types=1);
 namespace Smithy\ProtocolTests\RestJson;
 
 use Smithy\Client\AbstractClient;
-use Smithy\Client\AbstractClientConfig;
+use Smithy\Client\ClientConfig;
 use Smithy\Client\Plugin\PluginCollection;
 use Smithy\Client\RequestOverrideConfig;
 use Smithy\ProtocolTests\RestJson\Input\AllQueryStringTypesInput;
@@ -171,7 +171,7 @@ use Smithy\ProtocolTests\RestJson\Shape\Unit;
 final class RestJsonClient extends AbstractClient implements RestJsonClientInterface
 {
     public function __construct(
-        AbstractClientConfig $config,
+        ClientConfig $config,
         PluginCollection $plugins = new PluginCollection()
     )
     {

@@ -10,7 +10,7 @@ declare(strict_types=1);
 namespace Smithy\ProtocolTests\RestXml;
 
 use Smithy\Client\AbstractClient;
-use Smithy\Client\AbstractClientConfig;
+use Smithy\Client\ClientConfig;
 use Smithy\Client\Plugin\PluginCollection;
 use Smithy\Client\RequestOverrideConfig;
 use Smithy\ProtocolTests\RestXml\Input\AllQueryStringTypesInput;
@@ -179,7 +179,7 @@ use Smithy\ProtocolTests\RestXml\Shape\Unit;
 final class RestXmlClient extends AbstractClient implements RestXmlClientInterface
 {
     public function __construct(
-        AbstractClientConfig $config,
+        ClientConfig $config,
         PluginCollection $plugins = new PluginCollection()
     )
     {

@@ -24,7 +24,7 @@ final class CodegenSettings
     private const DEFAULT_CLIENT_BASE_INTERFACE =
         'Smithy\\Client\\ClientInterface';
     private const DEFAULT_CLIENT_CONFIG_CLASS =
-        'Smithy\\Client\\AbstractClientConfig';
+        'Smithy\\Client\\ClientConfig';
 
     private const ORGANIZATIONS = [
         'categorized',

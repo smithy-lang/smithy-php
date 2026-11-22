@@ -70,7 +70,7 @@ final class ClientGeneratorTest extends TestCase
             $file->content
         );
         $this->assertStringContainsString(
-            'use Smithy\\Client\\AbstractClientConfig;',
+            'use Smithy\\Client\\ClientConfig;',
             $file->content
         );
         $this->assertStringContainsString(
@@ -79,7 +79,7 @@ final class ClientGeneratorTest extends TestCase
         );
         $this->assertStringContainsString(
             "public function __construct(\n"
-                . "        AbstractClientConfig \$config,\n"
+                . "        ClientConfig \$config,\n"
                 . "        PluginCollection \$plugins = new "
                 . "PluginCollection()\n"
                 . '    )',
@@ -378,9 +378,7 @@ final class ClientGeneratorTest extends TestCase
                 ],
                 'smithy.example#GetThing' => [
                     'type' => 'operation',
-                    'input' => [
-                        'target' => 'smithy.example#AbstractClientConfig'
-                    ],
+                    'input' => ['target' => 'smithy.example#ClientConfig'],
                     'output' => [
                         'target' => 'smithy.example#PluginCollection'
                     ],
@@ -388,7 +386,7 @@ final class ClientGeneratorTest extends TestCase
                         'vendor.example#plugin' => []
                     ]
                 ],
-                'smithy.example#AbstractClientConfig' => [
+                'smithy.example#ClientConfig' => [
                     'type' => 'structure',
                     'members' => []
                 ],
@@ -412,7 +410,7 @@ final class ClientGeneratorTest extends TestCase
         );
 
         $this->assertStringContainsString(
-            'use Smithy\\Example\\Input\\AbstractClientConfig;',
+            'use Smithy\\Example\\Input\\ClientConfig;',
             $defaultFile->content
         );
         $this->assertStringContainsString(
@@ -420,8 +418,7 @@ final class ClientGeneratorTest extends TestCase
             $defaultFile->content
         );
         $this->assertStringContainsString(
-            'use Smithy\\Client\\AbstractClientConfig as '
-                . 'ConfiguredClientConfig;',
+            'use Smithy\\Client\\ClientConfig as ConfiguredClientConfig;',
             $defaultFile->content
         );
         $this->assertStringContainsString(
@@ -485,8 +482,7 @@ final class ClientGeneratorTest extends TestCase
         );
 
         $this->assertStringContainsString(
-            'use Smithy\\Client\\AbstractClientConfig as '
-                . 'ConfiguredClientConfig;',
+            'use Smithy\\Client\\ClientConfig as ConfiguredClientConfig;',
             $flatFile->content
         );
         $this->assertStringContainsString(
@@ -495,8 +491,7 @@ final class ClientGeneratorTest extends TestCase
             $flatFile->content
         );
         $this->assertStringContainsString(
-            "function getThing(\n"
-                . '        ?AbstractClientConfig $input',
+            'function getThing(?ClientConfig $input',
             $flatFile->content
         );
         $this->assertStringContainsString(
@@ -674,11 +669,11 @@ final class ClientGeneratorTest extends TestCase
             $file->content
         );
         $this->assertStringContainsString(
-            'use Smithy\\Client\\AbstractClientConfig;',
+            'use Smithy\\Client\\ClientConfig;',
             $file->content
         );
         $this->assertStringContainsString(
-            'AbstractClientConfig $config,',
+            'ClientConfig $config,',
             $file->content
         );
         $this->assertStringContainsString(

@@ -73,7 +73,7 @@ final class CodegenSettingsTest extends TestCase
         $this->assertSame([], $settings->waiterResourceInitialisms);
         $this->assertFalse($settings->assumeAsciiEndpointStrings);
         $this->assertSame(
-            'Smithy\\Client\\AbstractClientConfig',
+            'Smithy\\Client\\ClientConfig',
             $settings->clientConfigClass
         );
         $this->assertSame(
