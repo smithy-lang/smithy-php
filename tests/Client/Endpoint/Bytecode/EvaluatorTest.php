@@ -580,14 +580,14 @@ final class EvaluatorTest extends TestCase
                 'isIp' => false
             ]
         ];
-        yield 'parse URL defaults path' => [
+        yield 'parse URL leaves an absent path empty' => [
             [Opcodes::LOAD_CONST, 0, Opcodes::PARSE_URL],
             ['https://example.test'],
             [],
             [
                 'scheme' => 'https',
                 'authority' => 'example.test',
-                'path' => '/',
+                'path' => '',
                 'normalizedPath' => '/',
                 'isIp' => false
             ]
