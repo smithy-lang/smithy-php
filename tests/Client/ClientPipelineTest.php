@@ -1084,11 +1084,15 @@ final class ClientPipelineTest extends TestCase
 
             public function getIdentityResolver(
                 \Smithy\Auth\IdentityResolversInterface $resolvers
-            ): ?IdentityResolverInterface {
+            ): ?IdentityResolverInterface
+            {
                 return null;
             }
 
-            public function getSignerProperties(array $context): array
+            public function getSignerProperties(
+                array $context,
+                ?\Smithy\Core\Shape\OperationInterface $operation = null
+            ): array
             {
                 return [];
             }
@@ -1142,11 +1146,15 @@ final class ClientPipelineTest extends TestCase
 
             public function getIdentityResolver(
                 \Smithy\Auth\IdentityResolversInterface $resolvers
-            ): ?IdentityResolverInterface {
+            ): ?IdentityResolverInterface
+            {
                 return null;
             }
 
-            public function getSignerProperties(array $context): array
+            public function getSignerProperties(
+                array $context,
+                ?\Smithy\Core\Shape\OperationInterface $operation = null
+            ): array
             {
                 return [];
             }

@@ -216,9 +216,18 @@ final class StdFunctionsTest extends TestCase
         $this->assertIsArray($result);
         $this->assertSame('https', $result['scheme']);
         $this->assertSame('example.com', $result['authority']);
-        $this->assertSame('/', $result['path']);
+        $this->assertSame('', $result['path']);
         $this->assertSame('/', $result['normalizedPath']);
         $this->assertFalse($result['isIp']);
+    }
+
+    public function testParseUrlKeepsExplicitRootPath(): void
+    {
+        $fn = StdFunctions::get('parseURL');
+        $result = $fn->apply1('https://example.com/');
+        $this->assertIsArray($result);
+        $this->assertSame('/', $result['path']);
+        $this->assertSame('/', $result['normalizedPath']);
     }
 
     public function testParseUrlWithPortAndPath(): void

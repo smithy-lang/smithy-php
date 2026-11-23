@@ -172,6 +172,113 @@ final class PaginatorTest extends TestCase
         $this->assertSame(['resume'], $client->tokens);
     }
 
+    public function testDisabledStopOnSameTokenContinuesUntilEmptyToken(): void
+    {
+        $client = new MockClient([
+            new PaginationOutput('first', new PaginationResult('same')),
+            new PaginationOutput('second', new PaginationResult('same')),
+            new PaginationOutput('third', new PaginationResult('same')),
+            new PaginationOutput('last', new PaginationResult(null)),
+            new PaginationOutput('unused', new PaginationResult(null))
+        ]);
+        $paginator = (new Paginator(
+            $client,
+            PaginationOperation::instance(),
+            new PaginationInput()
+        ))->withStopOnSameToken(false);
+
+        $pages = \iterator_to_array($paginator, false);
+
+        $this->assertCount(4, $pages);
+        $this->assertSame([null, 'same', 'same', 'same'], $client->tokens);
+    }
+
+    public function testDisabledStopOnSameTokenContinuesPastResumeToken(): void
+    {
+        $client = new MockClient([
+            new PaginationOutput('first', new PaginationResult('resume')),
+            new PaginationOutput('last', new PaginationResult(null))
+        ]);
+        $paginator = (new Paginator(
+            $client,
+            PaginationOperation::instance(),
+            new PaginationInput('resume')
+        ))->withStopOnSameToken(false);
+
+        $pages = \iterator_to_array($paginator, false);
+
+        $this->assertCount(2, $pages);
+        $this->assertSame(['resume', 'resume'], $client->tokens);
+    }
+
+    public function testDisabledStopOnSameTokenSupportsMapTokens(): void
+    {
+        $token = ['pk' => ['S' => 'one']];
+        $client = new MockClient([
+            new PaginationOutput('first', new PaginationResult($token)),
+            new PaginationOutput('second', new PaginationResult($token)),
+            new PaginationOutput('last', new PaginationResult([]))
+        ]);
+        $paginator = (new Paginator(
+            $client,
+            PaginationOperation::instance(),
+            new PaginationInput()
+        ))->withStopOnSameToken(false);
+
+        $pages = \iterator_to_array($paginator, false);
+
+        $this->assertCount(3, $pages);
+        $this->assertSame([null, $token, $token], $client->tokens);
+    }
+
+    public function testDisabledStopOnSameTokenStillHonorsMaxItems(): void
+    {
+        $client = new MockClient([
+            new PaginationOutput(
+                'first',
+                new PaginationResult('same', ['a', 'b'])
+            ),
+            new PaginationOutput(
+                'second',
+                new PaginationResult('same', ['c', 'd'])
+            ),
+            new PaginationOutput(
+                'unused',
+                new PaginationResult('same', ['e', 'f'])
+            )
+        ]);
+        $paginator = (new Paginator(
+            $client,
+            PaginationOperation::instance(),
+            new PaginationInput(pageSize: 2)
+        ))->withStopOnSameToken(false)->withMaxItems(4);
+
+        $pages = \iterator_to_array($paginator, false);
+
+        $this->assertCount(2, $pages);
+        $this->assertSame([2, 2], $client->pageSizes);
+    }
+
+    public function testWithStopOnSameTokenReturnsNewInstance(): void
+    {
+        $client = new MockClient([
+            new PaginationOutput('first', new PaginationResult('same')),
+            new PaginationOutput('second', new PaginationResult('same')),
+            new PaginationOutput('third', new PaginationResult(null))
+        ]);
+        $paginator = new Paginator(
+            $client,
+            PaginationOperation::instance(),
+            new PaginationInput()
+        );
+
+        $continuing = $paginator->withStopOnSameToken(false);
+
+        $this->assertNotSame($paginator, $continuing);
+        $this->assertCount(2, \iterator_to_array($paginator, false));
+        $this->assertSame([null, 'same'], $client->tokens);
+    }
+
     public function testPaginatorCanBeIteratedMoreThanOnce(): void
     {
         $client = new MockClient([

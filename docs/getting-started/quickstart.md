@@ -83,9 +83,7 @@ configured with the cURL transport and a static local endpoint:
 ```php
 $client = new PetStoreClient(new ClientConfig(
     transport: new HttpClientTransport(new CurlClient()),
-    endpointResolver: new StaticEndpointResolver(
-        new Endpoint('http://127.0.0.1:8080')
-    )
+    endpoint: 'http://127.0.0.1:8080'
 ));
 ```
 

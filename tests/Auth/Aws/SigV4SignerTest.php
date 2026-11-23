@@ -127,6 +127,29 @@ final class SigV4SignerTest extends TestCase
         $this->assertSame('UNSIGNED-PAYLOAD', $signed->getHeaderLine('X-Amz-Content-Sha256'));
     }
 
+    public function testUnsignedPayloadIsIgnoredOverHttp(): void
+    {
+        $signer = new SigV4Signer('s3', 'us-east-1');
+        $req = new Request('PUT', 'http://s3.amazonaws.com/bucket/key', [
+            'Host' => 's3.amazonaws.com',
+        ], 'body');
+
+        $result = $this->sign(
+            $signer,
+            $req,
+            new AwsCredentials('AKID', 'SECRET'),
+            [
+                'unsignedPayload' => true,
+                'timestamp' => 1440938160,
+            ]
+        );
+
+        $this->assertSame(
+            hash('sha256', 'body'),
+            $this->signedRequest($result)->getHeaderLine('X-Amz-Content-Sha256')
+        );
+    }
+
     public function testS3HashesSeekableBody(): void
     {
         $signer = new SigV4Signer('s3', 'us-east-1');
@@ -230,5 +253,57 @@ final class SigV4SignerTest extends TestCase
         $signer->close();
 
         $this->addToAssertionCount(1);
+    }
+
+    public function testDisableDoubleEncodingPropertySignsPathAsSent(): void
+    {
+        $signer = new SigV4Signer('s3', 'us-east-1');
+        $req = new Request('GET', 'https://s3.amazonaws.com/a//b%20c', [
+            'Host' => 's3.amazonaws.com',
+        ]);
+        $creds = new AwsCredentials('AKID', 'SECRET');
+
+        $default = $this->sign(
+            $signer,
+            $req,
+            $creds,
+            ['timestamp' => 1440938160]
+        );
+        $disabled = $this->sign(
+            $signer,
+            $req,
+            $creds,
+            ['timestamp' => 1440938160, 'disableDoubleEncoding' => true]
+        );
+
+        $this->assertNotSame($default->signature, $disabled->signature);
+        $this->assertSame(
+            '/a//b%20c',
+            $this->signedRequest($disabled)->getUri()->getPath()
+        );
+    }
+
+    public function testDisableDoubleEncodingFalseKeepsDefaultSigning(): void
+    {
+        $signer = new SigV4Signer('s3', 'us-east-1');
+        $req = new Request('GET', 'https://s3.amazonaws.com/a//b%20c', [
+            'Host' => 's3.amazonaws.com',
+        ]);
+        $creds = new AwsCredentials('AKID', 'SECRET');
+
+        $default = $this->sign(
+            $signer,
+            $req,
+            $creds,
+            ['timestamp' => 1440938160]
+        );
+        $explicit = $this->sign(
+            $signer,
+            $req,
+            $creds,
+            ['timestamp' => 1440938160, 'disableDoubleEncoding' => false]
+        );
+
+        $this->assertSame($default->signature, $explicit->signature);
     }
 }

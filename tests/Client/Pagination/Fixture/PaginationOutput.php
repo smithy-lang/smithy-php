@@ -50,11 +50,15 @@ final class PaginationOutput implements SerializableStructInterface
     public function serialize(
         ShapeSerializerInterface $serializer,
         int $memberIndex
-    ): void {}
+    ): void
+    {
+    }
 
     public function serializeMembers(
         ShapeSerializerInterface $serializer
-    ): void {}
+    ): void
+    {
+    }
 
     public function getMemberValue(Schema $member): mixed
     {

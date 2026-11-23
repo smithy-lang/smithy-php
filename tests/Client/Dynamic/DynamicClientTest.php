@@ -55,6 +55,7 @@ use Smithy\Tests\Client\Dynamic\Utils\{
     DynamicRetryStrategyFixture,
     IdentifiedProtocolFixture,
     InputRecordingInterceptorFixture,
+    NonClientConfigFixture,
     TestDynamicClient
 };
 use Smithy\Tests\Client\Pagination\Generated\Pagination\Output\ListStringsOutput;
@@ -99,6 +100,30 @@ final class DynamicClientTest extends TestCase
             '/service/Sprockets/operation/Echo',
             $http->getLastRequest()?->getUri()->getPath()
         );
+    }
+
+    public function testRunsOperationWithConfigThatIsNotClientConfig(): void
+    {
+        $http = $this->httpClient();
+        $config = new NonClientConfigFixture(
+            protocol: new RpcV2CborProtocol(),
+            transport: new \Smithy\Http\Client\HttpClientTransport(
+                $http
+            ),
+            endpointResolver: new StaticEndpointResolver(
+                new Endpoint('https://example.com')
+            ),
+            retryStrategy: NoRetryStrategy::instance()
+        );
+        $client = new DynamicClient(
+            $this->model(),
+            $config,
+            protocolId: 'smithy.protocols#rpcv2Cbor'
+        );
+
+        $output = $client->call('Echo', ['message' => 'hello']);
+
+        self::assertSame('hello', $this->memberValue($output, 'message'));
     }
 
     public function testAppliesModeledRequestPlugins(): void
@@ -868,8 +893,7 @@ final class DynamicClientTest extends TestCase
     {
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage(
-            'requires an endpoint resolver or static endpoint when the '
-            . 'service has no modeled endpoint BDD'
+            'Client config requires an endpoint resolver or endpoint.'
         );
 
         DynamicClient::create(
@@ -882,8 +906,7 @@ final class DynamicClientTest extends TestCase
     {
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage(
-            'requires an endpoint resolver or static endpoint when the '
-            . 'service has no modeled endpoint BDD'
+            'Client config requires an endpoint resolver or endpoint.'
         );
 
         DynamicClient::create(

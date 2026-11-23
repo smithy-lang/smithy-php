@@ -59,7 +59,8 @@ final class InterceptorChainTest extends TestCase
         $first = new class extends AbstractInterceptor {
             public function modifyBeforeCall(
                 CallContext $ctx
-            ): ClientConfig {
+            ): ClientConfig
+            {
                 return $ctx->config->withContext('first', true);
             }
         };
@@ -70,7 +71,8 @@ final class InterceptorChainTest extends TestCase
 
             public function modifyBeforeCall(
                 CallContext $ctx
-            ): ClientConfig {
+            ): ClientConfig
+            {
                 \PHPUnit\Framework\Assert::assertTrue(
                     $ctx->config->context['first']
                 );

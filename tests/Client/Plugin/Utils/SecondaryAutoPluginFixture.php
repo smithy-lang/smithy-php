@@ -9,7 +9,7 @@ declare(strict_types=1);
 
 namespace Smithy\Tests\Client\Plugin\Utils;
 
-use Smithy\Client\ClientConfig;
+use Smithy\Client\AbstractClientConfig;
 use Smithy\Client\Plugin\{
     AbstractPlugin,
     AutoPluginInterface,
@@ -27,7 +27,7 @@ final class SecondaryAutoPluginFixture extends AbstractPlugin implements
         ++self::$constructionCount;
     }
 
-    public function configure(ClientConfig $config): ClientConfig
+    public function configure(AbstractClientConfig $config): AbstractClientConfig
     {
         ++self::$configurationCount;
 

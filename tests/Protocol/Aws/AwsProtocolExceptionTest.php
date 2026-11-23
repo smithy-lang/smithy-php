@@ -19,7 +19,7 @@ use Smithy\Protocol\Aws\AwsProtocolException;
  * `AwsErrorRetryTrait`, used by `AwsProtocolException`, refines the
  * fault-based retry classification with the HTTP status code: transient 5xx
  * statuses and 429 are retryable, and 429 is a throttle. A modeled override and
- * a captured `Retry-After` hint still win.
+ * a captured `x-amz-retry-after` hint still win.
  */
 final class AwsProtocolExceptionTest extends TestCase
 {
@@ -87,5 +87,18 @@ final class AwsProtocolExceptionTest extends TestCase
 
         $error->setRetryAfter(2.5);
         $this->assertSame(2.5, $error->getRetryAfter());
+    }
+
+    public function testMetadataSetterUpdatesGetters(): void
+    {
+        $error = new AwsProtocolException();
+        $error->setAwsErrorMetadata('Gone', 'NotFound', 'req-1', 404);
+        $error->setExtendedRequestId('host-1');
+
+        $this->assertSame('Gone', $error->getMessage());
+        $this->assertSame('NotFound', $error->getAwsErrorCode());
+        $this->assertSame('req-1', $error->getAwsRequestId());
+        $this->assertSame(404, $error->getHttpStatusCode());
+        $this->assertSame('host-1', $error->getExtendedRequestId());
     }
 }

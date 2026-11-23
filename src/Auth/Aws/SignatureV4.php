@@ -81,9 +81,19 @@ final class SignatureV4
      * `X-Amz-Content-Sha256`, and (if applicable) `X-Amz-Security-Token`
      * headers.
      *
+     * `streaming_unsigned_trailer` signs with the
+     * `STREAMING-UNSIGNED-PAYLOAD-TRAILER` content hash for `aws-chunked`
+     * bodies prepared by {@see AwsChunkedTrailer::applyUnsigned()}.
+     *
+     * `disable_double_encoding` signs the request path exactly as it is
+     * sent: the path is percent-encoded once and its empty, `.` and `..`
+     * segments are kept. S3 requires this form.
+     *
      * @param array{
      *     timestamp?: int,
      *     unsigned_payload?: bool,
+     *     streaming_unsigned_trailer?: bool,
+     *     disable_double_encoding?: bool,
      * } $options
      */
     public function signRequest(
@@ -111,8 +121,7 @@ final class SignatureV4
             ];
         }
 
-        if (
-            $request->getHeaderLine('X-Amz-Content-Sha256')
+        if ($request->getHeaderLine('X-Amz-Content-Sha256')
                 !== $contentHash
         ) {
             $headers['x-amz-content-sha256'] = [
@@ -131,7 +140,11 @@ final class SignatureV4
         }
 
         // Create canonical request.
-        $canonicalRequest = $this->createCanonicalRequest($request, $contentHash);
+        $canonicalRequest = $this->createCanonicalRequest(
+            $request,
+            $contentHash,
+            !empty($options['disable_double_encoding']),
+        );
 
         // Create string to sign.
         $credentialScope = $this->createCredentialScope($date);
@@ -176,14 +189,18 @@ final class SignatureV4
      * Presign a PSR-7 request for use as a pre-signed URL.
      *
      * @param int $expires Expiration time in seconds (max 604800 = 7 days).
-     * @param array{timestamp?: int} $options
+     * @param array{
+     *     timestamp?: int,
+     *     disable_double_encoding?: bool,
+     * } $options
      */
     public function presignRequest(
         RequestInterface $request,
         AwsCredentialsIdentityInterface $credentials,
         int $expires,
         array $options = [],
-    ): RequestInterface {
+    ): RequestInterface
+    {
         $expires = min($expires, 604800); // AWS maximum is 7 days.
         $timestamp = $options['timestamp'] ?? time();
         $dateTime = gmdate('Ymd\THis\Z', $timestamp);
@@ -213,7 +230,11 @@ final class SignatureV4
         $request = $request->withUri($uri);
 
         // Create canonical request for presigned URL — payload is unsigned.
-        $canonicalRequest = $this->createCanonicalRequest($request, 'UNSIGNED-PAYLOAD');
+        $canonicalRequest = $this->createCanonicalRequest(
+            $request,
+            'UNSIGNED-PAYLOAD',
+            !empty($options['disable_double_encoding']),
+        );
 
         // Create string to sign.
         $credentialScope = $this->createCredentialScope($date);
@@ -231,13 +252,20 @@ final class SignatureV4
     }
 
     /**
-     * @param array{unsigned_payload?: bool} $options
+     * @param array{
+     *     unsigned_payload?: bool,
+     *     streaming_unsigned_trailer?: bool,
+     * } $options
      */
     private function getContentHash(
         RequestInterface $request,
         array $options,
     ): string
     {
+        if (!empty($options['streaming_unsigned_trailer'])) {
+            return AwsChunkedTrailer::STREAMING_UNSIGNED_PAYLOAD_TRAILER;
+        }
+
         if (!empty($options['unsigned_payload'])) {
             return 'UNSIGNED-PAYLOAD';
         }
@@ -278,11 +306,15 @@ final class SignatureV4
     private function createCanonicalRequest(
         RequestInterface $request,
         string $contentHash,
+        bool $disableDoubleEncoding = false,
     ): string
     {
         $uri = $request->getUri();
 
-        $canonicalUri = $this->createCanonicalUri($uri);
+        $canonicalUri = $this->createCanonicalUri(
+            $uri,
+            $disableDoubleEncoding
+        );
         $canonicalQueryString = $this->createCanonicalQueryString($uri);
         [$canonicalHeaders, $signedHeaders] = $this->createCanonicalHeaders($request);
 
@@ -296,11 +328,19 @@ final class SignatureV4
         ]);
     }
 
-    private function createCanonicalUri(UriInterface $uri): string
+    private function createCanonicalUri(
+        UriInterface $uri,
+        bool $disableDoubleEncoding
+    ): string
     {
         $path = $uri->getPath();
         if ($path === '') {
             return '/';
+        }
+
+        // The sent path is already percent-encoded once; sign it as sent.
+        if ($disableDoubleEncoding) {
+            return $path;
         }
 
         // Normalize path segments (collapse . and .., percent-encode).
@@ -410,7 +450,8 @@ final class SignatureV4
         string $dateTime,
         string $credentialScope,
         string $canonicalRequest,
-    ): string {
+    ): string
+    {
         return implode("\n", [
             self::ALGORITHM,
             $dateTime,

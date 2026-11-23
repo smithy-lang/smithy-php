@@ -239,7 +239,8 @@ function createClient(
     array $responseCase,
     PluginCollection $plugins,
     bool $builtinPlugins
-): ClientInterface {
+): ClientInterface
+{
     $body = \base64_decode((string) $responseCase['body'], true);
     if ($body === false) {
         throw new \RuntimeException('Invalid pipeline response body.');
@@ -280,7 +281,8 @@ function validatePipelineOutput(
     SerializableStructInterface $output,
     array $responseCase,
     string $id
-): void {
+): void
+{
     $expected = ArrayShapeSerializer::fromArray(
         'Smithy\\Benchmarks\\RpcV2Cbor\\Output\\WideTypesOutput',
         $responseCase['params']

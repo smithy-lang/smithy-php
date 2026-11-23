@@ -123,8 +123,9 @@ final class ComposerAutoPluginRegistryTest extends TestCase
             ) {}
 
             public function configure(
-                \Smithy\Client\ClientConfig $config
-            ): \Smithy\Client\ClientConfig {
+                \Smithy\Client\AbstractClientConfig $config
+            ): \Smithy\Client\AbstractClientConfig
+            {
                 return $config;
             }
         };

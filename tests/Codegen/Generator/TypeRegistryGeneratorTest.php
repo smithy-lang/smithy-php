@@ -44,6 +44,31 @@ final class TypeRegistryGeneratorTest extends TestCase
         $this->assertStringContainsString('TypeRegistry.php', $file->path);
         // Class declaration references the service.
         $this->assertStringContainsString('TypeRegistry', $file->content);
+        $this->assertStringContainsString(
+            'use Smithy\\Core\\Serde\\TypeRegistryInterface;',
+            $file->content
+        );
+        $this->assertStringContainsString(
+            'use Smithy\\Core\\Serde\\TypeRegistryDeserializeTrait;',
+            $file->content
+        );
+        $this->assertStringContainsString(
+            'use Smithy\\Core\\Serde\\Schema;',
+            $file->content
+        );
+        $this->assertStringContainsString(
+            'final class ExampleTypeRegistry implements TypeRegistryInterface',
+            $file->content
+        );
+        $this->assertStringContainsString(
+            "    use TypeRegistryDeserializeTrait;\n",
+            $file->content
+        );
+        $this->assertStringContainsString(
+            'public function schemaFor(string $shapeId): ?Schema',
+            $file->content
+        );
+        $this->assertStringNotContainsString('\\Smithy\\Core\\Serde\\', $file->content);
         // Preamble is present.
         $this->assertStringStartsWith(
             "<?php\n\n"
@@ -206,7 +231,8 @@ final readonly class LeadingSeparatorSymbolProvider implements
     public function toMemberType(
         string $parentShapeId,
         string $memberName
-    ): PhpType {
+    ): PhpType
+    {
         return $this->delegate->toMemberType($parentShapeId, $memberName);
     }
 

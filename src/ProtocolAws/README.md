@@ -17,13 +17,18 @@ composer require smithy/protocol-aws
 Unmodeled errors are built from the operation's service exception class when
 it implements `AwsErrorInterface`, and from `AwsProtocolException` otherwise.
 The deserializer calls `fromAwsError()` with the AWS error code, request ID and
-HTTP status, and calls `setRetryAfter()` when the response has a `Retry-After`
-hint. Modeled errors that implement `AwsErrorInterface` receive the same
+HTTP status, and calls `setRetryAfter()` when the response has an
+`x-amz-retry-after` hint. Modeled errors that implement `AwsErrorInterface` receive the same
 metadata through `setAwsErrorMetadata()` after their members are
 deserialized; the envelope message becomes the exception message when the
 modeled message is empty. `AwsErrorRetryTrait` supplies the status-based
 retry classification, so SDK base exceptions can implement the interface on
 their own hierarchy.
+
+Read the metadata with `getAwsErrorCode()`, `getAwsRequestId()` and
+`getHttpStatusCode()`. Errors that implement `AwsExtendedRequestIdInterface`
+(including `AwsProtocolException`) also carry an extended request ID, such as
+the Amazon S3 `x-amz-id-2` value, through `getExtendedRequestId()`.
 
 ## AWS JSON
 

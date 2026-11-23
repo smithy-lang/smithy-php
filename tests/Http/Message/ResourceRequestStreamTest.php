@@ -150,6 +150,104 @@ final class ResourceRequestStreamTest extends TestCase
         $stream->read(-1);
     }
 
+    public function testReadsNonSeekablePipeInChunks(): void
+    {
+        $command = \escapeshellarg(PHP_BINARY)
+            . ' -r '
+            . \escapeshellarg("echo 'abcdef';");
+        $resource = \popen($command, 'r');
+        if ($resource === false) {
+            $this->fail('Unable to open test process pipe.');
+        }
+
+        try {
+            $stream = new ResourceRequestStream($resource);
+
+            $this->assertFalse($stream->isSeekable());
+            $this->assertTrue($stream->isReadable());
+            $this->assertSame(0, $stream->tell());
+            $this->assertSame('ab', $stream->read(2));
+            $this->assertTrue($stream->isReadable());
+            $this->assertSame(2, $stream->tell());
+            $this->assertSame('cd', $stream->read(2));
+            $this->assertSame('ef', $stream->read(2));
+            $this->assertSame(6, $stream->tell());
+            $this->assertSame('', $stream->read(2));
+            $this->assertTrue($stream->eof());
+        } finally {
+            if (\is_resource($resource)) {
+                \pclose($resource);
+            }
+        }
+    }
+
+    public function testReadsNonSeekableSocketToEof(): void
+    {
+        $pair = \stream_socket_pair(
+            PHP_OS_FAMILY === 'Windows'
+                ? STREAM_PF_INET
+                : STREAM_PF_UNIX,
+            STREAM_SOCK_STREAM,
+            STREAM_IPPROTO_IP
+        );
+        if ($pair === false) {
+            $this->fail('Unable to create socket pair.');
+        }
+
+        [$read, $write] = $pair;
+        \fwrite($write, 'abcdef');
+        \fclose($write);
+
+        try {
+            $stream = new ResourceRequestStream($read);
+
+            $this->assertFalse($stream->isSeekable());
+            $this->assertSame('abc', $stream->read(3));
+            $this->assertSame('def', $stream->getContents());
+            $this->assertTrue($stream->eof());
+        } finally {
+            if (\is_resource($read)) {
+                \fclose($read);
+            }
+        }
+    }
+
+    public function testNonSeekableSeekAndRewindRaise(): void
+    {
+        $command = \escapeshellarg(PHP_BINARY)
+            . ' -r '
+            . \escapeshellarg("echo 'abcdef';");
+        $resource = \popen($command, 'r');
+        if ($resource === false) {
+            $this->fail('Unable to open test process pipe.');
+        }
+
+        try {
+            $stream = new ResourceRequestStream($resource);
+            $stream->read(2);
+
+            $this->assertFalse($stream->isSeekable());
+
+            try {
+                $stream->seek(0);
+                $this->fail('Expected seek to fail.');
+            } catch (\RuntimeException $exception) {
+                $this->assertSame(
+                    'Stream is not seekable.',
+                    $exception->getMessage()
+                );
+            }
+
+            $this->expectException(\RuntimeException::class);
+            $this->expectExceptionMessage('Stream is not seekable.');
+            $stream->rewind();
+        } finally {
+            if (\is_resource($resource)) {
+                \pclose($resource);
+            }
+        }
+    }
+
     public function testHashesExplicitLengthForLazyResource(): void
     {
         $stream = ResourceRequestStream::create(

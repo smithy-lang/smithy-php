@@ -111,6 +111,36 @@ final class ClientConfigGeneratorTest extends TestCase
         );
     }
 
+    public function testEmitsCopyWithForAbstractClientConfigBase(): void
+    {
+        $model = SmithyModel::fromFile(
+            __DIR__ . '/../../fixtures/defaults-model.json'
+        );
+        $settings = new CodegenSettings(
+            namespace: 'Smithy\\Example',
+            outputDir: '/tmp/out',
+            organization: 'flat',
+            clientConfigClass: 'Smithy\\Client\\AbstractClientConfig'
+        );
+        $generator = new ClientConfigGenerator($model, $settings);
+
+        $file = $generator->generate('smithy.example#DefaultsService');
+
+        $this->assertStringContainsString(
+            'use Smithy\\Client\\AbstractClientConfig;',
+            $file->content
+        );
+        $this->assertStringContainsString(
+            "final class ExampleClientConfig extends AbstractClientConfig\n{",
+            $file->content
+        );
+        $this->assertStringContainsString(
+            "    protected function copyWith(array \$overrides): static\n"
+                . "    {\n",
+            $file->content
+        );
+    }
+
     public function testGenerateRaisesForUnknownServiceShapeId(): void
     {
         $model = SmithyModel::fromFile(

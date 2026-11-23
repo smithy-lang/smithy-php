@@ -24,7 +24,8 @@ use Smithy\Http\Message\HttpTransportRequest;
  *
  *   - Verifies the resolved identity is an {@see AwsCredentialsIdentityInterface}.
  *   - Reads optional signing overrides out of `$properties`
- *     (`signingName`, `signingRegion`, `unsignedPayload`, `timestamp`)
+ *     (`signingName`, `signingRegion`, `unsignedPayload`,
+ *     `streamingUnsignedTrailer`, `disableDoubleEncoding`, `timestamp`)
  *     — these come from a resolved endpoint's auth-scheme entry or from
  *     per-operation static context.
  *   - Delegates to a fresh `SignatureV4` instance sized to the effective
@@ -60,8 +61,19 @@ final class SigV4Signer implements SignerInterface
         );
 
         $options = [];
-        if (($properties['unsignedPayload'] ?? null) === true) {
+        // The payload is left unsigned only over HTTPS. Plain HTTP always
+        // signs the body so the request keeps its integrity.
+        if (($properties['unsignedPayload'] ?? null) === true
+            && \strtolower($httpRequest->getUri()->getScheme()) === 'https'
+        ) {
             $options['unsigned_payload'] = true;
+        }
+        if (($properties['streamingUnsignedTrailer'] ?? null) === true) {
+            $options['streaming_unsigned_trailer'] = true;
+        }
+        // S3 endpoints set this to sign the path exactly as it is sent.
+        if (($properties['disableDoubleEncoding'] ?? null) === true) {
+            $options['disable_double_encoding'] = true;
         }
         if (isset($properties['timestamp'])
             && \is_int($properties['timestamp'])

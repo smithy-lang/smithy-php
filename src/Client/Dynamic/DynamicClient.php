@@ -12,6 +12,7 @@ namespace Smithy\Client\Dynamic;
 use Smithy\Auth\AuthSchemeInterface;
 use Smithy\Client\{
     AbstractClient,
+    AbstractClientConfig,
     ClientConfig,
     RequestOverrideConfig
 };
@@ -60,15 +61,20 @@ class DynamicClient extends AbstractClient
      * Create a dynamic client with explicit runtime dependencies.
      *
      * @param array<string, string> $errorDiscriminatorTraits
+     * @param list<string> $authSchemeIds Auth scheme trait IDs counted as
+     *     service auth schemes when the model applies no auth trait. The
+     *     client adds the IDs of the auth schemes in its plugin-resolved
+     *     configuration.
      */
     public function __construct(
         SmithyModel $model,
-        ClientConfig $config,
+        AbstractClientConfig $config,
         ?string $serviceId = null,
         ?string $protocolId = null,
         PluginCollection $plugins = new PluginCollection(),
         ?SchemaTraitRegistry $traitRegistry = null,
-        array $errorDiscriminatorTraits = []
+        array $errorDiscriminatorTraits = [],
+        array $authSchemeIds = []
     )
     {
         $this->documentFactory = new DocumentFactory();
@@ -83,13 +89,40 @@ class DynamicClient extends AbstractClient
             $serviceId,
             $protocolId,
             $errorDiscriminatorTraits,
-            $this->documentFactory
+            $this->documentFactory,
+            fn(): array => $this->resolveAuthSchemeIds(
+                $config,
+                $authSchemeIds
+            )
         );
 
         parent::__construct(
             $config->withService($this->service),
             $plugins
         );
+    }
+
+    /**
+     * Return the given auth scheme IDs plus those of the client config.
+     *
+     * Reads the plugin-resolved config once construction finishes and the
+     * constructor's config while plugins are still being applied.
+     *
+     * @param list<string> $authSchemeIds
+     *
+     * @return list<string>
+     */
+    private function resolveAuthSchemeIds(
+        AbstractClientConfig $constructorConfig,
+        array $authSchemeIds
+    ): array
+    {
+        $config = $this->config ?? $constructorConfig;
+        foreach ($config->supportedAuthSchemes as $scheme) {
+            $authSchemeIds[] = $scheme->getSchemeId();
+        }
+
+        return $authSchemeIds;
     }
 
     /**
@@ -165,6 +198,8 @@ class DynamicClient extends AbstractClient
      * @param list<AuthSchemeInterface> $supportedAuthSchemes
      * @param list<string>|null $authSchemePreference
      * @param array<string, mixed> $context
+     * @param string|null $endpoint Endpoint URL the config wraps in a
+     *        static resolver. Set this or `$endpointResolver`.
      *
      * @internal Called by {@see DynamicClientFactory}.
      */
@@ -176,15 +211,16 @@ class DynamicClient extends AbstractClient
         ProtocolResolverInterface $protocolResolver,
         ?HttpClientInterface $httpClient,
         ?TransportInterface $transport,
-        EndpointResolverInterface $endpointResolver,
+        ?EndpointResolverInterface $endpointResolver,
         InterceptorChain $interceptors,
         array $supportedAuthSchemes,
         ?AuthSchemeResolverInterface $authSchemeResolver,
         ?array $authSchemePreference,
         ?RetryStrategyInterface $retryStrategy,
         string $retryScope,
-        array $context
-    ): ClientConfig
+        array $context,
+        ?string $endpoint = null
+    ): AbstractClientConfig
     {
         if ($transport !== null && $httpClient !== null) {
             throw new \InvalidArgumentException(
@@ -207,7 +243,8 @@ class DynamicClient extends AbstractClient
             authSchemePreference: $authSchemePreference ?? [],
             retryStrategy: $retryStrategy,
             retryScope: $retryScope,
-            context: $context
+            context: $context,
+            endpoint: $endpoint
         );
     }
 

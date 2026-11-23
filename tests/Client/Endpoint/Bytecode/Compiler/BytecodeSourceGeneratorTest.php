@@ -118,6 +118,38 @@ final class BytecodeSourceGeneratorTest extends TestCase
         );
     }
 
+    public function testGeneratedSourceStartsWithLicenseHeader(): void
+    {
+        $bytecode = new Bytecode(
+            code: [],
+            constants: [],
+            functions: [],
+            registers: [],
+            inputRegisterMap: [],
+            bddNodes: [],
+            bddRoot: 1,
+            conditionOffsets: [],
+            resultOffsets: [],
+            conditionTypes: [],
+            conditionOperands: []
+        );
+
+        $source = (new BytecodeSourceGenerator())->generate(
+            $bytecode,
+            'Smithy\\Tests\\Generated\\Endpoint',
+            'HeaderBytecodeFixture'
+        );
+
+        self::assertStringStartsWith(
+            "<?php\n\n/*\n"
+            . " * Copyright Amazon.com, Inc. or its affiliates."
+            . " All Rights Reserved.\n"
+            . " * SPDX-License-Identifier: Apache-2.0\n"
+            . " */\n\ndeclare(strict_types=1);\n",
+            $source
+        );
+    }
+
     public function testGeneratedSourceUsesFullyQualifiedRegistryCalls(): void
     {
         $bytecode = new Bytecode(

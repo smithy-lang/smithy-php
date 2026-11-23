@@ -49,5 +49,7 @@ final class UnionFixture implements UnionInterface
     public function serialize(
         ShapeSerializerInterface $serializer,
         int $idx
-    ): void {}
+    ): void
+    {
+    }
 }

@@ -38,5 +38,7 @@ final class EnumFixture implements EnumInterface
     public function serialize(
         ShapeSerializerInterface $serializer,
         int $idx
-    ): void {}
+    ): void
+    {
+    }
 }

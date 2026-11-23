@@ -42,6 +42,7 @@ use Smithy\Core\Shape\{
 use Smithy\Http\Client\HttpClientTransport;
 use Smithy\Tests\Client\Dynamic\Utils\IdentifiedProtocolFixture;
 use Smithy\Tests\Client\Fake\{
+    FakeInput,
     FakeOperation,
     FakeProtocol,
     FakeService,
@@ -225,6 +226,85 @@ final class ClientConfigTest extends TestCase
 
         $this->assertSame($newResolver, $new->endpointResolver);
         $this->assertSame($orig->transport, $new->transport);
+    }
+
+    public function testEndpointBuildsStaticEndpointResolver(): void
+    {
+        $config = new ClientConfig(
+            transport: new HttpClientTransport(new MockHttpClient()),
+            protocol: new FakeProtocol(),
+            endpoint: 'https://endpoint.test'
+        );
+
+        $this->assertInstanceOf(
+            StaticEndpointResolver::class,
+            $config->endpointResolver
+        );
+        $this->assertSame(
+            'https://endpoint.test',
+            $config->endpointResolver->resolveEndpoint(
+                FakeOperation::instance(),
+                new FakeInput(),
+                $config
+            )->url
+        );
+    }
+
+    public function testEndpointSurvivesCopies(): void
+    {
+        $config = new ClientConfig(
+            transport: new HttpClientTransport(new MockHttpClient()),
+            protocol: new FakeProtocol(),
+            endpoint: 'https://endpoint.test'
+        );
+
+        $copy = $config
+            ->withRetryScope('scope')
+            ->withService(FakeService::instance());
+
+        $this->assertSame($config->endpointResolver, $copy->endpointResolver);
+    }
+
+    public function testRejectsEndpointWithEndpointResolver(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage(
+            'Provide either an endpoint resolver or a static endpoint, '
+            . 'not both.'
+        );
+
+        new ClientConfig(
+            transport: new HttpClientTransport(new MockHttpClient()),
+            endpointResolver: new StaticEndpointResolver(
+                new Endpoint('https://a.test')
+            ),
+            endpoint: 'https://b.test'
+        );
+    }
+
+    public function testRequiresEndpointOrEndpointResolver(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage(
+            'Client config requires an endpoint resolver or endpoint.'
+        );
+
+        new ClientConfig(
+            transport: new HttpClientTransport(new MockHttpClient())
+        );
+    }
+
+    public function testEmptyEndpointRequiresEndpointResolver(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage(
+            'Client config requires an endpoint resolver or endpoint.'
+        );
+
+        new ClientConfig(
+            transport: new HttpClientTransport(new MockHttpClient()),
+            endpoint: ''
+        );
     }
 
     public function testWithRetryStrategyReplacesOnlyRetryStrategy(): void
@@ -624,7 +704,8 @@ final class ClientConfigTest extends TestCase
         ExplicitClientConfigField $field,
         \Closure $value,
         string $with
-    ): void {
+    ): void
+    {
         $base = [
             'transport' => new HttpClientTransport(new MockHttpClient()),
             'endpointResolver' => new StaticEndpointResolver(
@@ -650,7 +731,8 @@ final class ClientConfigTest extends TestCase
         ExplicitClientConfigField $field,
         \Closure $value,
         string $with
-    ): void {
+    ): void
+    {
         $config = new RegionalClientConfigFixture(
             transport: new HttpClientTransport(new MockHttpClient()),
             endpointResolver: new StaticEndpointResolver(

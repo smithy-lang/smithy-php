@@ -34,11 +34,15 @@ final class SerializableStructFixture implements SerializableStructInterface
     public function serialize(
         ShapeSerializerInterface $serializer,
         int $idx
-    ): void {}
+    ): void
+    {
+    }
 
     public function serializeMembers(
         ShapeSerializerInterface $serializer
-    ): void {}
+    ): void
+    {
+    }
 
     public function getMemberValue(Schema $member): mixed
     {
