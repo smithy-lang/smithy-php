@@ -1,16 +1,16 @@
 name: Split packages
 
-# DRAFT - not yet enabled in the real repo.
-#
 # Splits the monorepo into per-package read-only repositories on every version
 # tag, propagating the SAME tag to each split repo so all packages share one
-# version. splitsh-lite is the primary tool (installed in the job); split.sh
-# falls back to `git subtree split` if the binary is unavailable.
+# version. Release tags are plain semver with no prefix, e.g. 0.1.0 or
+# 0.1.0-preview. splitsh-lite is the primary tool (installed in the job);
+# split.sh falls back to `git subtree split` if the binary is unavailable.
 
 on:
   push:
     tags:
-      - 'v*'
+      - '[0-9]+.[0-9]+.[0-9]+'
+      - '[0-9]+.[0-9]+.[0-9]+-*'
 
 permissions:
   contents: read

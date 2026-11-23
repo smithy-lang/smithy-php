@@ -16,7 +16,7 @@
 # Usage:
 #   ./split.sh                                  # local split, org=smithy-lang
 #   SPLIT_ORG=my-org ./split.sh                 # local split against another org
-#   TAG=v0.1.0 ./split.sh                       # local split for a specific tag
+#   TAG=0.1.0 ./split.sh                        # local split for a specific tag
 #   PUSH=1 ./split.sh                           # actually push (CI / release)
 #
 # Environment:

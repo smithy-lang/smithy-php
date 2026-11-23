@@ -34,8 +34,8 @@ Every package's `composer.json` requires its siblings with `"self.version"`:
 ```
 
 `self.version` means "the exact version of the package being installed". So
-when all 9 packages are tagged `v0.1.0-preview`, each one requires its siblings
-at `v0.1.0-preview` automatically. There is no per-package version to bump by
+when all 9 packages are tagged `0.1.0-preview`, each one requires its siblings
+at `0.1.0-preview` automatically. There is no per-package version to bump by
 hand; the single monorepo tag is the one source of truth.
 
 While developing in the monorepo, packages resolve to each other through the
@@ -45,15 +45,15 @@ locally. It only matters once the packages are split and published.
 ## Release steps
 
 1. **Pick the version.** One semver tag for the whole release, e.g.
-   `v0.1.0-preview`. Pre-release suffixes (`-preview`, `-alpha.N`, `-rc.N`) are
+   `0.1.0-preview`. Pre-release suffixes (`-preview`, `-alpha.N`, `-rc.N`) are
    Packagist-visible but not installed by default constraints - good for a
    developer preview.
 
 2. **Tag the monorepo** on the release commit:
 
    ```
-   git tag -a v0.1.0-preview -m "smithy-php developer preview 0.1.0"
-   git push origin v0.1.0-preview
+   git tag -a 0.1.0-preview -m "smithy-php developer preview 0.1.0"
+   git push origin 0.1.0-preview
    ```
 
 3. **The tag push triggers `.github/workflows/split.yml`** (guarded to the
@@ -62,7 +62,7 @@ locally. It only matters once the packages are split and published.
    - pushes the split history to `main` of the per-package repo (a
      fast-forward; the first release replaces the README-only initial commit
      with a lease pinned to its SHA),
-   - pushes the SAME tag (`v0.1.0-preview`) to that repo.
+   - pushes the SAME tag (`0.1.0-preview`) to that repo.
 
 4. **Packagist publishes each tag.** Each split repo is registered on Packagist
    with a GitHub webhook (or auto-update), so the new tag appears as an
@@ -71,19 +71,19 @@ locally. It only matters once the packages are split and published.
 
 5. **Verify** one clean install (see ROLLBACK.md "verify" for the exact probe):
    ```
-   composer require smithy/client:v0.1.0-preview --dry-run
+   composer require smithy/client:0.1.0-preview --dry-run
    ```
 
 ## Propagation summary
 
 ```
-monorepo tag v0.1.0-preview
+monorepo tag 0.1.0-preview
         |
         v  (split.yml, one matrix leg per package)
-  9 split repos each get: main branch updated + tag v0.1.0-preview
+  9 split repos each get: main branch updated + tag 0.1.0-preview
         |
         v  (Packagist webhook per repo)
-  9 Packagist packages each expose version v0.1.0-preview
+  9 Packagist packages each expose version 0.1.0-preview
 ```
 
 ## Who needs to act (humans)

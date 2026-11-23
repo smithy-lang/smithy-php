@@ -7,7 +7,7 @@ Splits the smithy-php monorepo into 9 standalone, read-only Composer packages so
 |------|---------|
 | `split.sh` | Split each `src/<Pkg>` into a standalone history and (optionally) push to a per-package repo. splitsh-lite primary, `git subtree split` fallback. |
 | `packages.map` | The 9 package rows: src dir -> Composer name -> split repo slug. |
-| `.github/workflows/split.yml` | Runs the split on a `v*` tag push, guarded to the canonical repo. |
+| `.github/workflows/split.yml` | Runs the split when a semver tag such as `0.1.0` is pushed, guarded to the canonical repo. |
 | `TAGGING.md` | How one monorepo tag becomes one version across all 9 packages. |
 | `ROLLBACK.md` | Checklist to retract a bad release. |
 
