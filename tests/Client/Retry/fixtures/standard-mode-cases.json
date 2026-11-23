@@ -435,5 +435,125 @@
                 }
             ]
         }
+    ],
+    "header_cases": [
+        {
+            "name": "Honor x-amz-retry-after Header",
+            "given": {},
+            "responses": [
+                {
+                    "response": {
+                        "status_code": 500,
+                        "headers": {
+                            "x-amz-retry-after": "1500"
+                        }
+                    },
+                    "expected": {
+                        "outcome": "retry_request",
+                        "retry_quota": 486,
+                        "delay": 1.5
+                    }
+                },
+                {
+                    "response": {
+                        "status_code": 200
+                    },
+                    "expected": {
+                        "outcome": "success",
+                        "retry_quota": 500
+                    }
+                }
+            ]
+        },
+        {
+            "name": "x-amz-retry-after minimum is exponential backoff duration",
+            "given": {
+                "exponential_base": 1
+            },
+            "responses": [
+                {
+                    "response": {
+                        "status_code": 500,
+                        "headers": {
+                            "x-amz-retry-after": "0"
+                        }
+                    },
+                    "expected": {
+                        "outcome": "retry_request",
+                        "retry_quota": 486,
+                        "delay": 0.05
+                    }
+                },
+                {
+                    "response": {
+                        "status_code": 200
+                    },
+                    "expected": {
+                        "outcome": "success",
+                        "retry_quota": 500
+                    }
+                }
+            ]
+        },
+        {
+            "name": "x-amz-retry-after maximum is 5+exponential backoff duration",
+            "given": {
+                "exponential_base": 1
+            },
+            "responses": [
+                {
+                    "response": {
+                        "status_code": 500,
+                        "headers": {
+                            "x-amz-retry-after": "10000"
+                        }
+                    },
+                    "expected": {
+                        "outcome": "retry_request",
+                        "retry_quota": 486,
+                        "delay": 5.05
+                    }
+                },
+                {
+                    "response": {
+                        "status_code": 200
+                    },
+                    "expected": {
+                        "outcome": "success",
+                        "retry_quota": 500
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Invalid x-amz-retry-after Falls Back to Exponential Backoff",
+            "given": {
+                "exponential_base": 1
+            },
+            "responses": [
+                {
+                    "response": {
+                        "status_code": 500,
+                        "headers": {
+                            "x-amz-retry-after": "invalid"
+                        }
+                    },
+                    "expected": {
+                        "outcome": "retry_request",
+                        "retry_quota": 486,
+                        "delay": 0.05
+                    }
+                },
+                {
+                    "response": {
+                        "status_code": 200
+                    },
+                    "expected": {
+                        "outcome": "success",
+                        "retry_quota": 500
+                    }
+                }
+            ]
+        }
     ]
 }
