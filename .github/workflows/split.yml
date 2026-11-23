@@ -6,12 +6,21 @@ name: Split packages
 # Composer pre-release such as 0.2.0-beta.1 (-alpha.N, -beta.N, -RC.N).
 # splitsh-lite is the primary tool (installed in the job);
 # split.sh falls back to `git subtree split` if the binary is unavailable.
+# A manual run (Run workflow, enter a tag) retries the split for that tag.
 
 on:
   push:
     tags:
       - '[0-9]+.[0-9]+.[0-9]+'
       - '[0-9]+.[0-9]+.[0-9]+-*'
+  # Retry a release: re-runs the split for a tag that already exists.
+  # Mirrors that already hold the split are left alone.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing tag to split and push, e.g. 0.1.0'
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -42,10 +51,30 @@ jobs:
           - { subdir: Codegen,     slug: smithy-php-codegen }
 
     steps:
-      - name: Checkout monorepo (full history)
+      # The tag comes from the pushed ref or the typed input. It reaches the
+      # shell only through env, and must match the push trigger's semver shape.
+      - name: Resolve tag
+        id: tag
+        env:
+          TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          if [[ ! "${TAG}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]]; then
+            # The raw value is not echoed, so it cannot inject a workflow command.
+            echo "::error::The tag is not a release tag like 0.1.0 or 0.2.0-beta.1."
+            exit 1
+          fi
+          if ! git ls-remote --exit-code --tags "https://github.com/${GITHUB_REPOSITORY}.git" "refs/tags/${TAG}" >/dev/null; then
+            echo "::error::Tag '${TAG}' does not exist in ${GITHUB_REPOSITORY}. Push the tag first."
+            exit 1
+          fi
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout monorepo at the tag (full history)
         uses: actions/checkout@v4
         with:
+          ref: refs/tags/${{ steps.tag.outputs.tag }}
           fetch-depth: 0   # subtree/splitsh need the whole history
+          fetch-tags: true
 
       - name: Install splitsh-lite
         run: |
@@ -109,10 +138,6 @@ jobs:
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.SPLIT_KEY_CODEGEN }}
-
-      - name: Resolve tag
-        id: tag
-        run: echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
 
       - name: Split and push ${{ matrix.pkg.slug }}
         env:

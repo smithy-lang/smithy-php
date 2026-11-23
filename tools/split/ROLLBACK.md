@@ -74,7 +74,13 @@ any other release.
 When `split.sh` exits with code 4, the mirror's `main` or tag holds something
 the split did not produce. Compare the mirror with the monorepo, decide which
 commit is right, and move the mirror by hand with a lease pinned to the SHA it
-holds now. Then re-run the release job.
+holds now. Then retry the release (below).
+
+## Retry a release
+
+**Actions -> Split packages -> Run workflow**, then enter the existing tag,
+e.g. `0.1.0`. The tag must already exist in the monorepo. Mirrors that already
+hold the split and tag are left alone; the rest are pushed.
 
 ## Verify (clean-room install probe)
 
