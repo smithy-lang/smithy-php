@@ -52,15 +52,62 @@ jobs:
             | tar -xz -C /usr/local/bin splitsh-lite
           splitsh-lite --version || true
 
-      - name: Add deploy key for ${{ matrix.pkg.slug }}
+      # One write-deploy-key secret per split repo. Each step names its secret
+      # statically so the runner receives only that one secret. Store each in
+      # repo/org secrets before enabling.
+      - name: Add deploy key (Async)
+        if: matrix.pkg.subdir == 'Async'
         uses: webfactory/ssh-agent@v0.9.0
         with:
-          # One write-deploy-key secret per split repo (names are
-          # case-insensitive): SPLIT_KEY_ASYNC, SPLIT_KEY_CORE, SPLIT_KEY_CODEC,
-          # SPLIT_KEY_HTTP, SPLIT_KEY_AUTH, SPLIT_KEY_PROTOCOL,
-          # SPLIT_KEY_PROTOCOLAWS, SPLIT_KEY_CLIENT, SPLIT_KEY_CODEGEN.
-          # Store each in repo/org secrets before enabling.
-          ssh-private-key: ${{ secrets[format('SPLIT_KEY_{0}', matrix.pkg.subdir)] }}
+          ssh-private-key: ${{ secrets.SPLIT_KEY_ASYNC }}
+
+      - name: Add deploy key (Core)
+        if: matrix.pkg.subdir == 'Core'
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SPLIT_KEY_CORE }}
+
+      - name: Add deploy key (Codec)
+        if: matrix.pkg.subdir == 'Codec'
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SPLIT_KEY_CODEC }}
+
+      - name: Add deploy key (Http)
+        if: matrix.pkg.subdir == 'Http'
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SPLIT_KEY_HTTP }}
+
+      - name: Add deploy key (Auth)
+        if: matrix.pkg.subdir == 'Auth'
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SPLIT_KEY_AUTH }}
+
+      - name: Add deploy key (Protocol)
+        if: matrix.pkg.subdir == 'Protocol'
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SPLIT_KEY_PROTOCOL }}
+
+      - name: Add deploy key (ProtocolAws)
+        if: matrix.pkg.subdir == 'ProtocolAws'
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SPLIT_KEY_PROTOCOLAWS }}
+
+      - name: Add deploy key (Client)
+        if: matrix.pkg.subdir == 'Client'
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SPLIT_KEY_CLIENT }}
+
+      - name: Add deploy key (Codegen)
+        if: matrix.pkg.subdir == 'Codegen'
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SPLIT_KEY_CODEGEN }}
 
       - name: Resolve tag
         id: tag
