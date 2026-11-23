@@ -13,7 +13,7 @@ Order matters: stop new installs first, then clean up refs, then fix forward.
 For EACH of the 9 packages on packagist.org:
 
 - [ ] Open `packagist.org/packages/smithy/<pkg>`.
-- [ ] Delete the bad version (e.g. `0.1.0-preview`), OR abandon the package if
+- [ ] Delete the bad version (e.g. `0.1.0`), OR abandon the package if
       the whole release is bad. **This is a human action** - there is no API
       token in this tooling and it is intentionally manual.
 
@@ -28,21 +28,21 @@ Per split repo (scriptable; `$SPLIT_ORG` is the real org):
 ```
 for slug in async core codec http auth protocol protocol-aws client codegen; do
   git push "git@github.com:${SPLIT_ORG}/smithy-php-${slug}.git" \
-    :refs/tags/0.1.0-preview
+    :refs/tags/0.1.0
 done
 ```
 
-- [ ] Confirm each tag is gone: `git ls-remote --tags <remote> | grep 0.1.0-preview`
+- [ ] Confirm each tag is gone: `git ls-remote <remote> refs/tags/0.1.0`
       returns nothing.
 
 ## 3. Delete the tag from the monorepo
 
 ```
-git push origin :refs/tags/0.1.0-preview   # delete remote tag
-git tag -d 0.1.0-preview                    # delete local tag
+git push origin :refs/tags/0.1.0   # delete remote tag
+git tag -d 0.1.0                   # delete local tag
 ```
 
-- [ ] Confirm: `git ls-remote --tags origin | grep 0.1.0-preview` is empty.
+- [ ] Confirm: `git ls-remote origin refs/tags/0.1.0` is empty.
 
 ## 4. Revert the release commit if needed
 
@@ -58,7 +58,7 @@ Do NOT force-push `main` to erase the commit; revert instead.
 ## 5. Fix forward
 
 - [ ] Fix the defect on `main`.
-- [ ] Tag a NEW higher version (e.g. `0.1.1-preview`). Never re-use the yanked
+- [ ] Tag a NEW higher version (e.g. `0.1.1`). Never re-use the yanked
       tag string - re-using a deleted tag confuses Packagist and consumers.
 - [ ] Let `split.yml` propagate it; verify one clean install.
 
