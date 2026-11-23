@@ -332,7 +332,7 @@ final class AwsErrorContractTest extends TestCase
             $protocol,
             $operation,
             429,
-            [$headers + ['retry-after' => '2'], $payload]
+            [$headers + ['x-amz-retry-after' => '2000'], $payload]
         );
 
         $this->assertInstanceOf($modeled['InvalidGreeting'], $error);
@@ -364,7 +364,7 @@ final class AwsErrorContractTest extends TestCase
             $protocol,
             $operation,
             503,
-            [$headers + ['retry-after' => '3'], $payload]
+            [$headers + ['x-amz-retry-after' => '3000'], $payload]
         );
 
         $this->assertSame($serviceException, $error::class);
@@ -379,6 +379,60 @@ final class AwsErrorContractTest extends TestCase
         $this->assertSame(RetrySafety::Yes, $error->getRetrySafety());
     }
 
+    /**
+     * @param array<string, class-string> $modeled
+     */
+    #[DataProvider('protocolProvider')]
+    public function testHttpRetryAfterGivesNoHint(
+        ProtocolInterface $protocol,
+        OperationInterface $operation,
+        string $serviceException,
+        array $modeled,
+        \Closure $body
+    ): void
+    {
+        [$headers, $payload] = $body('SlowDown', 'Slow down');
+        $error = $this->deserialize(
+            $protocol,
+            $operation,
+            503,
+            [$headers + ['retry-after' => '3'], $payload]
+        );
+
+        $this->assertSame($serviceException, $error::class);
+        $this->assertNull($error->getRetryAfter());
+    }
+
+    /**
+     * @param array<string, class-string> $modeled
+     */
+    #[DataProvider('protocolProvider')]
+    public function testAmzRetryAfterIsUsedWithHttpRetryAfter(
+        ProtocolInterface $protocol,
+        OperationInterface $operation,
+        string $serviceException,
+        array $modeled,
+        \Closure $body
+    ): void
+    {
+        [$headers, $payload] = $body('SlowDown', 'Slow down');
+        $error = $this->deserialize(
+            $protocol,
+            $operation,
+            503,
+            [
+                $headers + [
+                    'retry-after' => '9',
+                    'x-amz-retry-after' => '1500'
+                ],
+                $payload
+            ]
+        );
+
+        $this->assertSame($serviceException, $error::class);
+        $this->assertSame(1.5, $error->getRetryAfter());
+    }
+
     public function testUnmodeledErrorUsesSdkBaseException(): void
     {
         $operation = $this->createStub(OperationInterface::class);
@@ -391,7 +445,7 @@ final class AwsErrorContractTest extends TestCase
                 [
                     'x-amzn-errortype' => 'SlowDown',
                     'x-amzn-requestid' => self::REQUEST_ID,
-                    'retry-after' => '3'
+                    'x-amz-retry-after' => '3000'
                 ],
                 '{"message":"Slow down"}'
             ));

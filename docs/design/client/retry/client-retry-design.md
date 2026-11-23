@@ -86,9 +86,9 @@ treats 429 as a retryable throttle. Codegen emits an override for a modeled
 `@retryable` error, forcing it retryable (and a throttle when the trait says
 so).
 
-A `Retry-After` / `x-amz-retry-after` header is captured for unmodeled errors
-during deserialization. Capturing it for modeled errors is a known limitation,
-deferred to a follow-up.
+An `x-amz-retry-after` header (milliseconds) is captured for modeled and
+unmodeled errors during deserialization. It is the only retry hint header
+read; the standard HTTP `Retry-After` header is left to the transport.
 
 `StandardRetryStrategy` retries any error classified as retryable. It does not
 yet promote classification by operation idempotency: raising a `Maybe` to
