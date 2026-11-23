@@ -3,9 +3,9 @@
 # One line per package. Lines starting with # are ignored.
 # The split repo URL is built as: git@github.com:${SPLIT_ORG}/<split-repo-slug>.git
 #
-# Design target is 9 packages. If a <src-subdir> is missing from the working
-# tree (e.g. ProtocolAws before PR #137 merges) the split script skips it and
-# logs a notice, so the tooling degrades gracefully.
+# Rows are in dependency order (a package comes after the packages it needs).
+# If a <src-subdir> is missing from the working tree the split script skips it
+# and logs a notice.
 
 Async       smithy/async        smithy-php-async
 Core        smithy/core         smithy-php-core

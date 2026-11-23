@@ -62,6 +62,20 @@ Do NOT force-push `main` to erase the commit; revert instead.
       tag string - re-using a deleted tag confuses Packagist and consumers.
 - [ ] Let `split.yml` propagate it; verify one clean install.
 
+## First push and a stopped push
+
+The first release replaces each mirror's README-only "Initial commit". The
+lease is pinned to that commit's SHA, so the push only lands while `main` still
+holds exactly that commit. The replaced commit holds only GitHub's generated
+README, and the job log names its SHA ("replacing README-only initial commit
+<sha>"). A bad first release is rolled back with steps 1-5 above, the same as
+any other release.
+
+When `split.sh` exits with code 4, the mirror's `main` or tag holds something
+the split did not produce. Compare the mirror with the monorepo, decide which
+commit is right, and move the mirror by hand with a lease pinned to the SHA it
+holds now. Then re-run the release job.
+
 ## Verify (clean-room install probe)
 
 ```

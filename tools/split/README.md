@@ -23,16 +23,33 @@ scratch rehearsal. Set `PUSH=1` only in CI / a real release.
 ## Target repos
 
 The 9 split targets are `smithy-lang/smithy-php-<pkg>` (async, core, codec,
-http, auth, protocol, protocol-aws, client, codegen). They are **empty, public,
-read-only mirror repos** that an org admin must create (via an internal
-repo-provisioning ticket) before the first real release. See `TAGGING.md`
-for Packagist registration and deploy keys.
+http, auth, protocol, protocol-aws, client, codegen). They are read-only mirror
+repos with a `main` branch. Each one starts with a single README-only
+"Initial commit" from GitHub. See `TAGGING.md` for Packagist registration and
+deploy keys.
+
+## How a push works
+
+With `PUSH=1`, `split.sh` reads the mirror's `main` before it pushes:
+
+| Remote `main` | Action |
+|---------------|--------|
+| missing | plain push |
+| equal to the split | nothing to do |
+| ancestor of the split | plain push (fast-forward) |
+| one parentless commit holding only `README.md` | `--force-with-lease=main:<that sha>` |
+| anything else | stop with exit code 4 |
+
+The lease row covers the first release only: it replaces GitHub's
+"Initial commit" and nothing else. The split is deterministic, so every later
+release is a fast-forward. Tags follow the same idea: a missing tag is pushed,
+a matching tag is left alone, and a tag at another commit stops the run.
 
 ## Future: trusted publishing
 
 Composer [trusted publishing](https://blog.packagist.com/trusted-publishing/)
 is coming and will let Packagist pull a package straight from a monorepo
 subdirectory via OIDC, removing the need for the 9 mirror repos and the
-subtree-split/force-push mechanism entirely. This subtree approach is the
+subtree-split/push mechanism entirely. This subtree approach is the
 **interim** path until trusted publishing is generally available; do not build
 for it yet.

@@ -21,8 +21,9 @@ org, created by an org admin before the first release:
 | `smithy/codegen` | `smithy-lang/smithy-php-codegen` |
 
 The monorepo `smithy-lang/smithy-php` stays the single source of truth and keeps
-all development; the split tooling force-pushes the computed branch and tag into
-these mirrors. Nobody commits to a mirror directly.
+all development; the split tooling pushes the computed branch and tag into
+these mirrors as fast-forwards (see "How a push works" in README.md). Nobody
+commits to a mirror directly.
 
 ## How the 9 packages share one version
 
@@ -58,7 +59,9 @@ locally. It only matters once the packages are split and published.
 3. **The tag push triggers `.github/workflows/split.yml`** (guarded to the
    canonical repo). For each package it:
    - computes the subtree split for `src/<Pkg>`,
-   - force-pushes the split history to `main` of the per-package repo,
+   - pushes the split history to `main` of the per-package repo (a
+     fast-forward; the first release replaces the README-only initial commit
+     with a lease pinned to its SHA),
    - pushes the SAME tag (`v0.1.0-preview`) to that repo.
 
 4. **Packagist publishes each tag.** Each split repo is registered on Packagist
@@ -98,7 +101,7 @@ monorepo tag v0.1.0-preview
 Composer [trusted publishing](https://blog.packagist.com/trusted-publishing/)
 (currently "coming soon") will let Packagist pull each package straight from a
 monorepo subdirectory over OIDC - no mirror repos, no subtree split, no
-force-push, no per-repo deploy keys. When it lands it **replaces** the
+per-repo deploy keys. When it lands it **replaces** the
 subtree-split/push mechanism documented here. Until then, this subtree flow is
 the interim path. Do not build for trusted publishing yet; just know it is the
 intended destination.

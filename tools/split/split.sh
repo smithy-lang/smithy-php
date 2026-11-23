@@ -93,6 +93,65 @@ echo "=== push:       ${PUSH} (0 = dry run, nothing is pushed)"
 echo "=== work dir:   ${WORK_DIR}"
 echo
 
+# --- push helpers -----------------------------------------------------------
+# A split is deterministic, so every release after the first is a fast-forward
+# and needs no force. The one exception is the first push to a repo that GitHub
+# created with a single README-only "Initial commit": that commit is replaced
+# with --force-with-lease pinned to its exact SHA. Any other remote state is
+# refused so a mirror is never overwritten by accident.
+
+# Prints the SHA of a remote ref, or nothing when the ref does not exist.
+remote_sha() {
+  git -C "$1" ls-remote origin "$2" | awk '{print $1}'
+}
+
+# Succeeds when <sha> is a parentless commit whose tree is exactly README.md.
+is_readme_only_root() {
+  local clone="$1" sha="$2"
+  [[ "$(git -C "${clone}" rev-list --count "${sha}")" == "1" ]] || return 1
+  [[ "$(git -C "${clone}" ls-tree --name-only "${sha}")" == "README.md" ]]
+}
+
+push_branch() {
+  local clone="$1" pkg="$2" sha="$3" current
+  current="$(remote_sha "${clone}" "refs/heads/${BRANCH}")"
+
+  if [[ -z "${current}" ]]; then
+    echo "      ${pkg}: remote ${BRANCH} is empty; first push."
+    git -C "${clone}" push origin "${BRANCH}"
+  elif [[ "${current}" == "${sha}" ]]; then
+    echo "      ${pkg}: remote ${BRANCH} already at ${sha}."
+  else
+    git -C "${clone}" fetch -q origin "refs/heads/${BRANCH}"
+    if git -C "${clone}" merge-base --is-ancestor "${current}" "${sha}"; then
+      echo "      ${pkg}: fast-forward ${current} -> ${sha}."
+      git -C "${clone}" push origin "${BRANCH}"
+    elif is_readme_only_root "${clone}" "${current}"; then
+      echo "      ${pkg}: replacing README-only initial commit ${current}."
+      git -C "${clone}" push --force-with-lease="${BRANCH}:${current}" origin "${BRANCH}"
+    else
+      echo "ERROR: ${pkg}: remote ${BRANCH} is at ${current}, which is not an" >&2
+      echo "       ancestor of the split and not a README-only initial commit." >&2
+      echo "       Refusing to overwrite it. See tools/split/ROLLBACK.md." >&2
+      exit 4
+    fi
+  fi
+}
+
+push_tag() {
+  local clone="$1" pkg="$2" sha="$3" current
+  current="$(remote_sha "${clone}" "refs/tags/${TAG}")"
+
+  if [[ -z "${current}" ]]; then
+    git -C "${clone}" push origin "refs/tags/${TAG}"
+  elif [[ "${current}" == "${sha}" ]]; then
+    echo "      ${pkg}: tag ${TAG} already at ${sha}."
+  else
+    echo "ERROR: ${pkg}: tag ${TAG} already exists at ${current}; refusing to move it." >&2
+    exit 4
+  fi
+}
+
 # --- produce one split per package ------------------------------------------
 split_count=0
 skipped_count=0
@@ -150,8 +209,8 @@ while read -r subdir pkg slug || [[ -n "${subdir}" ]]; do
 
   if [[ "${PUSH}" == "1" ]]; then
     echo "      PUSH  ${remote}  (${BRANCH}${TAG:+ + ${TAG}})"
-    git -C "${pkg_clone}" push --force origin "${BRANCH}"
-    [[ -n "${TAG}" ]] && git -C "${pkg_clone}" push --force origin "refs/tags/${TAG}"
+    push_branch "${pkg_clone}" "${pkg}" "${sha}"
+    [[ -n "${TAG}" ]] && push_tag "${pkg_clone}" "${pkg}" "${sha}"
   else
     echo "      DRY RUN: would push ${BRANCH}${TAG:+ + tag ${TAG}} to ${remote}"
   fi

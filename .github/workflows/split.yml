@@ -34,6 +34,7 @@ jobs:
           - { subdir: Core,        slug: smithy-php-core }
           - { subdir: Codec,       slug: smithy-php-codec }
           - { subdir: Http,        slug: smithy-php-http }
+          - { subdir: Auth,        slug: smithy-php-auth }
           - { subdir: Protocol,    slug: smithy-php-protocol }
           - { subdir: ProtocolAws, slug: smithy-php-protocol-aws }
           - { subdir: Client,      slug: smithy-php-client }
@@ -54,7 +55,10 @@ jobs:
       - name: Add deploy key for ${{ matrix.pkg.slug }}
         uses: webfactory/ssh-agent@v0.9.0
         with:
-          # One write-deploy-key secret per split repo, e.g. SPLIT_KEY_ASYNC.
+          # One write-deploy-key secret per split repo (names are
+          # case-insensitive): SPLIT_KEY_ASYNC, SPLIT_KEY_CORE, SPLIT_KEY_CODEC,
+          # SPLIT_KEY_HTTP, SPLIT_KEY_AUTH, SPLIT_KEY_PROTOCOL,
+          # SPLIT_KEY_PROTOCOLAWS, SPLIT_KEY_CLIENT, SPLIT_KEY_CODEGEN.
           # Store each in repo/org secrets before enabling.
           ssh-private-key: ${{ secrets[format('SPLIT_KEY_{0}', matrix.pkg.subdir)] }}
 
