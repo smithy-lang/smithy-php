@@ -82,7 +82,8 @@ if [[ -z "${WORK_DIR:-}" ]]; then
   CLEANUP_WORK=1
 fi
 mkdir -p "${WORK_DIR}"
-cleanup() { [[ "${CLEANUP_WORK}" == "1" ]] && rm -rf "${WORK_DIR}"; }
+# An if (not &&) keeps the exit status 0 when WORK_DIR was given by the caller.
+cleanup() { if [[ "${CLEANUP_WORK}" == "1" ]]; then rm -rf "${WORK_DIR}"; fi; }
 trap cleanup EXIT
 
 echo "=== monorepo:   ${MONOREPO}"
