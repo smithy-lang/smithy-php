@@ -17,6 +17,7 @@ use Smithy\Client\Dynamic\{
     DynamicOperation
 };
 use Smithy\Client\Plugin\IdempotencyTokenPlugin;
+use Smithy\Core\Context\Context;
 use Smithy\Core\Model\SmithyModel;
 use Smithy\Core\Serde\{
     Schema,
@@ -58,10 +59,10 @@ final class DynamicClientProtocolTest extends RestXmlClientProtocolTestCase
             endpoint: $endpoint,
             supportedAuthSchemes: [NoAuthScheme::instance()],
             authSchemeResolver: StaticAuthSchemeResolver::noAuth(),
-            context: [
-                IdempotencyTokenPlugin::CONFIG_IDEMPOTENCY_TOKEN_PROVIDER
-                    => '00000000-0000-4000-8000-000000000000'
-            ]
+            context: (new Context())->with(
+                IdempotencyTokenPlugin::tokenProviderKey(),
+                '00000000-0000-4000-8000-000000000000'
+            )
         );
     }
 

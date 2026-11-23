@@ -136,7 +136,8 @@ Endpoint functions come from the runtime registry and explicit caller
 arguments. Endpoint auth aliases map rule result names to canonical Smithy
 auth scheme IDs.
 
-Client endpoint parameters are stored in `ClientConfig::$context`. The
+Client endpoint parameters are stored in `ClientConfig::$context` under
+`EndpointContextKeys::parameters()`. The
 endpoint resolver combines them with operation static context, operation
 context paths, and input context parameters. See
 [Endpoint Resolution](../endpoint/endpoint-resolution.md) for bytecode compilation,

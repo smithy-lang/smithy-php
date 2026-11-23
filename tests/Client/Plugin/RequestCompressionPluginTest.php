@@ -20,6 +20,10 @@ use Smithy\Client\Interceptor\{
     RequestContext
 };
 use Smithy\Client\Plugin\RequestCompressionPlugin;
+use Smithy\Core\Context\{
+    Context,
+    MutableContext
+};
 use Smithy\Core\Endpoint\Endpoint;
 use Smithy\Core\Serde\Schema;
 use Smithy\Core\Shape\OperationInterface;
@@ -37,10 +41,6 @@ use Smithy\Tests\Utils\Http\MockHttpClient;
 #[CoversClass(RequestCompressionPlugin::class)]
 final class RequestCompressionPluginTest extends TestCase
 {
-    private const DISABLE =
-        RequestCompressionPlugin::CONFIG_DISABLE_REQUEST_COMPRESSION;
-    private const MIN_SIZE =
-        RequestCompressionPlugin::CONFIG_REQUEST_MIN_COMPRESSION_SIZE_BYTES;
     private const MAX_SIZE =
         RequestCompressionPlugin::MAX_MIN_COMPRESSION_SIZE_BYTES;
 
@@ -61,9 +61,7 @@ final class RequestCompressionPluginTest extends TestCase
     {
         $updated = $this->requestAfterRetryLoop(
             new RequestCompressionPlugin(),
-            [
-                self::DISABLE => true
-            ],
+            $this->context(disable: true),
             \str_repeat('a', 11000)
         );
 
@@ -74,10 +72,7 @@ final class RequestCompressionPluginTest extends TestCase
     {
         $updated = $this->requestAfterRetryLoop(
             new RequestCompressionPlugin(),
-            [
-                self::DISABLE => 'false',
-                self::MIN_SIZE => '0'
-            ],
+            $this->context(disable: 'false', minSize: '0'),
             'payload'
         );
 
@@ -94,10 +89,7 @@ final class RequestCompressionPluginTest extends TestCase
                 disabled: false,
                 minCompressionSizeBytes: 0
             ),
-            [
-                self::DISABLE => true,
-                self::MIN_SIZE => self::MAX_SIZE
-            ],
+            $this->context(disable: true, minSize: self::MAX_SIZE),
             'payload'
         );
 
@@ -109,9 +101,7 @@ final class RequestCompressionPluginTest extends TestCase
 
     public function testRejectsInvalidDisableSetting(): void
     {
-        $config = $this->config([
-            self::DISABLE => 'TRUE'
-        ]);
+        $config = $this->config($this->context(disable: 'TRUE'));
 
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage(
@@ -123,12 +113,10 @@ final class RequestCompressionPluginTest extends TestCase
 
     #[DataProvider('invalidMinimumCompressionSizeProvider')]
     public function testRejectsInvalidMinimumCompressionSize(
-        mixed $size
+        int|string $size
     ): void
     {
-        $config = $this->config([
-            self::MIN_SIZE => $size
-        ]);
+        $config = $this->config($this->context(minSize: $size));
 
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage(
@@ -140,7 +128,7 @@ final class RequestCompressionPluginTest extends TestCase
     }
 
     /**
-     * @return iterable<string, array{mixed}>
+     * @return iterable<string, array{int|string}>
      */
     public static function invalidMinimumCompressionSizeProvider(): iterable
     {
@@ -148,15 +136,11 @@ final class RequestCompressionPluginTest extends TestCase
         yield 'non-numeric string' => ['ten'];
         yield 'negative integer' => [-1];
         yield 'integer above maximum' => [10485761];
-        yield 'boolean' => [true];
     }
 
-    /**
-     * @param array<string, mixed> $context
-     */
     private function requestAfterRetryLoop(
         RequestCompressionPlugin $plugin,
-        array $context,
+        Context $context,
         string $body
     ): RequestInterface
     {
@@ -180,10 +164,29 @@ final class RequestCompressionPluginTest extends TestCase
         )->request;
     }
 
-    /**
-     * @param array<string, mixed> $context
-     */
-    private function config(array $context = []): ClientConfig
+    private function context(
+        bool|string|null $disable = null,
+        int|string|null $minSize = null
+    ): Context
+    {
+        $context = new Context();
+        if ($disable !== null) {
+            $context = $context->with(
+                RequestCompressionPlugin::disableRequestCompressionKey(),
+                $disable
+            );
+        }
+        if ($minSize !== null) {
+            $context = $context->with(
+                RequestCompressionPlugin::minCompressionSizeBytesKey(),
+                $minSize
+            );
+        }
+
+        return $context;
+    }
+
+    private function config(Context $context = new Context()): ClientConfig
     {
         return new ClientConfig(
             protocol: new FakeProtocol(),
@@ -221,6 +224,7 @@ final class RequestCompressionPluginTest extends TestCase
             $operation,
             $input,
             $config,
+            new MutableContext(),
             new HttpTransportRequest($request)
         );
     }

@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace Smithy\Auth;
 
+use Smithy\Core\Context\Context;
 use Smithy\Core\Shape\OperationInterface;
 
 /**
@@ -36,7 +37,7 @@ final readonly class HttpBearerAuthScheme implements AuthSchemeInterface
     }
 
     /** @inheritDoc */
-    public function getIdentityProperties(array $context): array
+    public function getIdentityProperties(Context $context): array
     {
         return [];
     }
@@ -52,7 +53,7 @@ final readonly class HttpBearerAuthScheme implements AuthSchemeInterface
 
     /** @inheritDoc */
     public function getSignerProperties(
-        array $context,
+        Context $context,
         ?OperationInterface $operation = null
     ): array
     {

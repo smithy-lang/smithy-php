@@ -53,12 +53,14 @@ use Smithy\Client\Interceptor\{
 };
 use Smithy\Client\Retry\{
     NoRetryStrategy,
+    RetryContextKeys,
     RetryState,
     StandardRetryStrategy,
     RetryRequestFlagResolverInterface,
     RetryStrategyInterface,
     TokenAcquisitionFailedException
 };
+use Smithy\Core\Context\Context;
 use Smithy\Core\Endpoint\{
     Endpoint,
     EndpointAuthScheme
@@ -98,6 +100,7 @@ use Smithy\Tests\Client\Fake\{
     RecordingInterceptor,
     TestAuthSchemeFixture
 };
+use Smithy\Tests\Client\Utils\CallAttributesInterceptorFixture;
 use Smithy\Tests\Http\Client\Curl\Utils\TestStreamFixture;
 use Smithy\Tests\Utils\Http\GenericPsrRequest;
 use Smithy\Tests\Utils\Http\MockHttpClient;
@@ -1077,7 +1080,7 @@ final class ClientPipelineTest extends TestCase
                 return 'smithy.api#httpBearerAuth';
             }
 
-            public function getIdentityProperties(array $context): array
+            public function getIdentityProperties(Context $context): array
             {
                 return [];
             }
@@ -1090,7 +1093,7 @@ final class ClientPipelineTest extends TestCase
             }
 
             public function getSignerProperties(
-                array $context,
+                Context $context,
                 ?\Smithy\Core\Shape\OperationInterface $operation = null
             ): array
             {
@@ -1139,7 +1142,7 @@ final class ClientPipelineTest extends TestCase
                 return 'smithy.api#httpBearerAuth';
             }
 
-            public function getIdentityProperties(array $context): array
+            public function getIdentityProperties(Context $context): array
             {
                 return [];
             }
@@ -1152,7 +1155,7 @@ final class ClientPipelineTest extends TestCase
             }
 
             public function getSignerProperties(
-                array $context,
+                Context $context,
                 ?\Smithy\Core\Shape\OperationInterface $operation = null
             ): array
             {
@@ -2078,9 +2081,10 @@ final class ClientPipelineTest extends TestCase
                 new Endpoint('https://example.test')
             ),
             retryStrategy: $strategy,
-            context: [
-                RetryRequestFlagResolverInterface::CONFIG_KEY => $resolver
-            ]
+            context: (new Context())->with(
+                RetryContextKeys::requestFlagResolver(),
+                $resolver
+            )
         );
         $pipeline = new ClientPipeline($config);
 
@@ -2121,9 +2125,10 @@ final class ClientPipelineTest extends TestCase
                 new RecordingInterceptor()
             ),
             retryStrategy: $strategy,
-            context: [
-                RetryRequestFlagResolverInterface::CONFIG_KEY => $resolver
-            ]
+            context: (new Context())->with(
+                RetryContextKeys::requestFlagResolver(),
+                $resolver
+            )
         );
         $pipeline = new ClientPipeline($config);
 
@@ -2394,6 +2399,65 @@ final class ClientPipelineTest extends TestCase
         }
 
         $this->assertTrue($sawSecondHook);
+    }
+
+    public function testAttributesSetBeforeExecutionAreReadableInLaterHooks(): void
+    {
+        $interceptor = new CallAttributesInterceptorFixture();
+        [$pipeline] = $this->buildPipeline([$interceptor]);
+
+        $pipeline->execute(FakeOperation::instance(), new FakeInput('one'));
+
+        $this->assertSame(
+            [
+                'before:one:none',
+                'request:one:one',
+                'response:one:one',
+                'after:one:one',
+            ],
+            $interceptor->records
+        );
+    }
+
+    public function testConcurrentCallsKeepSeparateAttributes(): void
+    {
+        $interceptor = new CallAttributesInterceptorFixture();
+        [$pipeline] = $this->buildPipeline([$interceptor]);
+
+        Async::all(
+            fn() => $pipeline->execute(
+                FakeOperation::instance(),
+                new FakeInput('first')
+            ),
+            fn() => $pipeline->execute(
+                FakeOperation::instance(),
+                new FakeInput('second')
+            )
+        );
+
+        $records = $interceptor->records;
+        $this->assertContains('before:first:none', $records);
+        $this->assertContains('before:second:none', $records);
+        $this->assertContains('after:first:first', $records);
+        $this->assertContains('after:second:second', $records);
+        $this->assertContains('response:first:first', $records);
+        $this->assertContains('response:second:second', $records);
+        // Both calls set their value before either one finished.
+        $this->assertLessThan(
+            \array_search('after:first:first', $records, true),
+            \array_search('before:second:none', $records, true)
+        );
+    }
+
+    public function testSequentialCallsStartWithEmptyAttributes(): void
+    {
+        $interceptor = new CallAttributesInterceptorFixture();
+        [$pipeline] = $this->buildPipeline([$interceptor]);
+
+        $pipeline->execute(FakeOperation::instance(), new FakeInput('one'));
+        $pipeline->execute(FakeOperation::instance(), new FakeInput('two'));
+
+        $this->assertContains('before:two:none', $interceptor->records);
     }
 
     /**

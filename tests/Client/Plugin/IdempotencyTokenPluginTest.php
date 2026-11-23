@@ -18,6 +18,10 @@ use Smithy\Client\Interceptor\{
     InputContext
 };
 use Smithy\Client\Plugin\IdempotencyTokenPlugin;
+use Smithy\Core\Context\{
+    Context,
+    MutableContext
+};
 use Smithy\Core\Endpoint\Endpoint;
 use Smithy\Tests\Client\Utils\{
     IdempotentTestInputFixture,
@@ -56,42 +60,60 @@ final class IdempotencyTokenPluginTest extends TestCase
     public function testResolvesStringProvider(): void
     {
         $config = IdempotencyTokenPlugin::instance()->configure(
-            $this->config([
-                IdempotencyTokenPlugin::CONFIG_IDEMPOTENCY_TOKEN_PROVIDER
-                    => 'fixed-token'
-            ])
+            $this->config('fixed-token')
         );
         $output = $config->interceptorChain->modifyBeforeSerialization(
             new InputContext(
                 IdempotentTestOperationFixture::instance(),
                 new IdempotentTestInputFixture(),
-                $config
+                $config,
+                new MutableContext()
             )
         );
 
         self::assertSame('fixed-token', $output->token);
     }
 
-    public function testRejectsInvalidProvider(): void
+    public function testResolvesCallableProvider(): void
+    {
+        $config = IdempotencyTokenPlugin::instance()->configure(
+            $this->config(static fn(): string => 'callable-token')
+        );
+        $output = $config->interceptorChain->modifyBeforeSerialization(
+            new InputContext(
+                IdempotentTestOperationFixture::instance(),
+                new IdempotentTestInputFixture(),
+                $config,
+                new MutableContext()
+            )
+        );
+
+        self::assertSame('callable-token', $output->token);
+    }
+
+    public function testRejectsEmptyStringProvider(): void
     {
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage(
-            'IdempotencyTokenProvider must be a non-empty string or callable.'
+            'IdempotencyTokenProvider must not be an empty string.'
         );
 
-        IdempotencyTokenPlugin::instance()->configure(
-            $this->config([
-                IdempotencyTokenPlugin::CONFIG_IDEMPOTENCY_TOKEN_PROVIDER
-                    => 123
-            ])
-        );
+        IdempotencyTokenPlugin::instance()->configure($this->config(''));
     }
 
     /**
-     * @param array<string, mixed> $context
+     * @param string|callable(): string|null $provider
      */
-    private function config(array $context = []): ClientConfig
+    private function config(string|callable|null $provider = null): ClientConfig
     {
+        $context = new Context();
+        if ($provider !== null) {
+            $context = $context->with(
+                IdempotencyTokenPlugin::tokenProviderKey(),
+                $provider
+            );
+        }
+
         return new ClientConfig(
             protocol: new IdempotentTestProtocolFixture(),
             transport: new \Smithy\Http\Client\HttpClientTransport(

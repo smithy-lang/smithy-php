@@ -18,11 +18,12 @@ use Smithy\Core\Shape\OperationInterface;
  * Implementations run once per SDK operation invocation, before the
  * first attempt begins. The returned bitset is threaded into
  * {@see RetryStrategyInterface::begin()} via {@see RetryState}.
+ *
+ * Register an implementation in the client config context under
+ * {@see RetryContextKeys::requestFlagResolver()}.
  */
 interface RetryRequestFlagResolverInterface
 {
-    public const CONFIG_KEY = 'smithy.client.retryRequestFlagResolver';
-
     /**
      * Return retry-strategy flags for `$operation`.
      */

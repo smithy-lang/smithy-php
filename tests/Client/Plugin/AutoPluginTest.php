@@ -57,9 +57,9 @@ final class AutoPluginTest extends TestCase
 
         self::assertSame(
             ['auto'],
-            $client->getConfig()->context[
-                AutoPluginFixture::CONTEXT_KEY
-            ]
+            $client->getConfig()->context->get(
+                AutoPluginFixture::contextKey()
+            )
         );
         self::assertSame(1, AutoPluginFixture::$constructionCount);
         self::assertSame(1, AutoPluginFixture::$configurationCount);
@@ -78,9 +78,9 @@ final class AutoPluginTest extends TestCase
 
         self::assertSame(
             ['secondary', 'auto'],
-            $client->getConfig()->context[
-                AutoPluginFixture::CONTEXT_KEY
-            ]
+            $client->getConfig()->context->get(
+                AutoPluginFixture::contextKey()
+            )
         );
     }
 
@@ -111,9 +111,9 @@ final class AutoPluginTest extends TestCase
 
         self::assertSame(
             ['auto'],
-            $client->getConfig()->context[
-                AutoPluginFixture::CONTEXT_KEY
-            ]
+            $client->getConfig()->context->get(
+                AutoPluginFixture::contextKey()
+            )
         );
         self::assertSame(1, AutoPluginFixture::$configurationCount);
     }
@@ -128,9 +128,10 @@ final class AutoPluginTest extends TestCase
             $this->config()->withoutAutoPlugins()
         );
 
-        self::assertArrayNotHasKey(
-            AutoPluginFixture::CONTEXT_KEY,
-            $client->getConfig()->context
+        self::assertFalse(
+            $client->getConfig()->context->has(
+                AutoPluginFixture::contextKey()
+            )
         );
         self::assertSame(0, AutoPluginFixture::$constructionCount);
         self::assertSame(0, AutoPluginFixture::$configurationCount);

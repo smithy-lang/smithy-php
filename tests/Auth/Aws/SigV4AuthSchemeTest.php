@@ -15,6 +15,7 @@ use Smithy\Auth\AnonymousIdentityResolver;
 use Smithy\Auth\Aws\AwsCredentialsIdentityInterface;
 use Smithy\Auth\Aws\SigV4AuthScheme;
 use Smithy\Auth\IdentityResolvers;
+use Smithy\Core\Context\Context;
 use Smithy\Core\Serde\Schema;
 use Smithy\Core\Shape\OperationInterface;
 use Smithy\Core\Shape\ShapeType;
@@ -28,7 +29,7 @@ final class SigV4AuthSchemeTest extends TestCase
 
         $this->assertSame(
             ['signingName' => 's3', 'signingRegion' => 'us-west-2'],
-            $scheme->getSignerProperties([])
+            $scheme->getSignerProperties(new Context())
         );
     }
 
@@ -38,7 +39,7 @@ final class SigV4AuthSchemeTest extends TestCase
 
         $this->assertSame(
             ['signingName' => 's3', 'signingRegion' => 'us-west-2'],
-            $scheme->getSignerProperties([], $this->operation([]))
+            $scheme->getSignerProperties(new Context(), $this->operation([]))
         );
     }
 
@@ -53,7 +54,7 @@ final class SigV4AuthSchemeTest extends TestCase
                 'unsignedPayload' => true,
             ],
             $scheme->getSignerProperties(
-                [],
+                new Context(),
                 $this->operation([SigV4AuthScheme::UNSIGNED_PAYLOAD_TRAIT => []])
             )
         );
@@ -62,7 +63,10 @@ final class SigV4AuthSchemeTest extends TestCase
     public function testProvidesIdentityAndSignerPropertiesSeparately(): void
     {
         $identityProperties = ['region' => 'us-east-1', 'useFips' => true];
-        $context = [SigV4AuthScheme::IDENTITY_CONTEXT_KEY => $identityProperties];
+        $context = (new Context())->with(
+            SigV4AuthScheme::identityContextKey(),
+            $identityProperties
+        );
         $resolver = AnonymousIdentityResolver::instance();
         $scheme = new SigV4AuthScheme('test', 'us-west-2');
 

@@ -24,6 +24,7 @@ use Smithy\Client\Waiter\{
     WaiterSchemaExtension,
     WaiterSchemaExtensionProvider
 };
+use Smithy\Core\Context\MutableContext;
 use Smithy\Core\Serde\SerializableStructInterface;
 use Smithy\Core\Shape\OperationInterface;
 
@@ -101,26 +102,37 @@ abstract class AbstractClient implements ClientInterface
             ? $this->config
             : $overrides->plugins->apply($this->config);
         $interceptor = $callConfig->interceptorChain->forOperation($operation);
-        if (!$interceptor->isEmpty()) {
-            $callConfig = $interceptor->modifyBeforeCall(
-                new CallContext($operation, $input, $callConfig)
-            );
-            $interceptor = $callConfig->interceptorChain
-                ->forOperation($operation);
+        if ($interceptor->isEmpty()) {
+            $pipeline = $callConfig === $this->config
+                ? $this->pipeline
+                : new ClientPipeline($callConfig);
+
+            return $pipeline->execute($operation, $input, $overrides);
         }
 
+        $attributes = new MutableContext();
+        $callConfig = $interceptor->modifyBeforeCall(
+            new CallContext($operation, $input, $callConfig, $attributes)
+        );
+        $interceptor = $callConfig->interceptorChain->forOperation($operation);
         $pipeline = $callConfig === $this->config
             ? $this->pipeline
             : new ClientPipeline($callConfig);
 
         if (!$interceptor->interceptCalls()) {
-            return $pipeline->execute($operation, $input, $overrides);
+            return $pipeline->execute(
+                $operation,
+                $input,
+                $overrides,
+                $attributes
+            );
         }
 
         $ctx = new InputContext(
             $operation,
             $input,
             $callConfig,
+            $attributes,
             $this
         );
 
@@ -130,7 +142,8 @@ abstract class AbstractClient implements ClientInterface
                 $pipeline->execute(
                     $operation,
                     $ctx->input,
-                    $overrides
+                    $overrides,
+                    $ctx->attributes
                 )
         );
     }

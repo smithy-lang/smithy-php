@@ -14,6 +14,7 @@ use Smithy\Client\Auth\StaticAuthSchemeResolver;
 use Smithy\Client\ClientInterface;
 use Smithy\Client\Endpoint\StaticEndpointResolver;
 use Smithy\Client\Plugin\IdempotencyTokenPlugin;
+use Smithy\Core\Context\Context;
 use Smithy\Core\Endpoint\Endpoint;
 use Smithy\Core\Exception\ApiException;
 use Smithy\Core\Serde\SerializableStructInterface;
@@ -108,10 +109,10 @@ XML
                 protocol: new RestXmlProtocol(),
                 supportedAuthSchemes: [NoAuthScheme::instance()],
                 authSchemeResolver: StaticAuthSchemeResolver::noAuth(),
-                context: [
-                    IdempotencyTokenPlugin::CONFIG_IDEMPOTENCY_TOKEN_PROVIDER
-                        => '00000000-0000-4000-8000-000000000000'
-                ]
+                context: (new Context())->with(
+                    IdempotencyTokenPlugin::tokenProviderKey(),
+                    '00000000-0000-4000-8000-000000000000'
+                )
             )
         );
     }

@@ -68,6 +68,39 @@ codec call surface.
 Protocols and transports depend on these contracts without depending on the
 client runtime. Endpoint resolvers live in `Smithy\Client\Endpoint`.
 
+## Typed Context
+
+`Smithy\Core\Context` holds typed key-value maps used by clients and
+plugins:
+
+| Class | Responsibility |
+|---|---|
+| `ContextKey<T>` | Typed key with a readable name; keys match by identity |
+| `Context` | Immutable map; `with()` returns a copy |
+| `MutableContext` | Mutable map for state scoped to one operation call |
+
+Share one key instance between writer and reader, usually through a static
+accessor that caches it:
+
+```php
+use Smithy\Core\Context\{Context, ContextKey};
+
+final class ExampleSettings
+{
+    /** @var ContextKey<int>|null */
+    private static ?ContextKey $maxItems = null;
+
+    /** @return ContextKey<int> */
+    public static function maxItems(): ContextKey
+    {
+        return self::$maxItems ??= new ContextKey('example.maxItems');
+    }
+}
+
+$context = (new Context())->with(ExampleSettings::maxItems(), 25);
+$context->get(ExampleSettings::maxItems()); // int|null
+```
+
 ## Sensitive Diagnostic Output
 
 Generated structures and unions that can contain `@sensitive` data provide

@@ -11,6 +11,7 @@ namespace Smithy\Client\Interceptor;
 
 use Smithy\Client\AbstractClientConfig;
 use Smithy\Client\ClientInterface;
+use Smithy\Core\Context\MutableContext;
 use Smithy\Core\Serde\SerializableStructInterface;
 use Smithy\Core\Shape\OperationInterface;
 
@@ -21,6 +22,9 @@ use Smithy\Core\Shape\OperationInterface;
  * `modifyBeforeSerialization`, and `readBeforeSerialization`. The `client`
  * property is populated for `interceptCall` so wrappers can re-enter the
  * client when needed.
+ *
+ * `attributes` is the per-call {@see MutableContext}. Every hook of the
+ * same operation call receives the same instance; each call gets a new one.
  */
 final class InputContext
 {
@@ -31,6 +35,7 @@ final class InputContext
         public OperationInterface $operation,
         public SerializableStructInterface $input,
         public AbstractClientConfig $config,
+        public MutableContext $attributes,
         public ?ClientInterface $client = null
     ) {}
 
@@ -56,6 +61,7 @@ final class InputContext
                 $this->operation,
                 $input,
                 $this->config,
+                $this->attributes,
                 $this->client
             );
     }

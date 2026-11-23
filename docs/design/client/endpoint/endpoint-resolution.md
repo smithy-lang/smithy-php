@@ -83,11 +83,15 @@ interface EndpointResolverInterface
 }
 ```
 
-`EndpointResolverInterface::CONTEXT_PARAMETERS` names the
-`ClientConfig::$context` entry used for client endpoint parameters:
+`EndpointContextKeys::parameters()` is the typed `ClientConfig::$context`
+key for client endpoint parameters, an `array<string, mixed>` keyed by
+parameter name:
 
 ```php
-'smithy.endpointParameters'
+$config = $config->withContext(
+    EndpointContextKeys::parameters(),
+    ['Region' => 'us-west-2']
+);
 ```
 
 ### `Endpoint`
@@ -374,11 +378,11 @@ rules-engine property map is retained on the resulting `Endpoint`.
 
 Endpoint decision tracing is opt-in. Configure an
 `EndpointResolutionTraceSinkInterface` through
-`EndpointResolverInterface::CONTEXT_TRACE_SINK`:
+`EndpointContextKeys::traceSink()`:
 
 ```php
 $config = $config->withContext(
-    EndpointResolverInterface::CONTEXT_TRACE_SINK,
+    EndpointContextKeys::traceSink(),
     $traceSink
 );
 ```

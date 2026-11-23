@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace Smithy\Auth;
 
+use Smithy\Core\Context\Context;
 use Smithy\Core\Shape\OperationInterface;
 
 /**
@@ -20,8 +21,8 @@ use Smithy\Core\Shape\OperationInterface;
  * from its own configuration or from the supplied
  * {@see IdentityResolversInterface}.
  *
- * The property methods receive the client `context` bag (the array built
- * by `ClientConfig::withContext()`), so an auth scheme depends only on the
+ * The property methods receive the client config {@see Context} (built
+ * with `ClientConfig::withContext()`), so an auth scheme depends only on the
  * context and the identity resolver repository.
  *
  * Scheme IDs follow Smithy convention: `smithy.api#httpBearerAuth`,
@@ -37,10 +38,10 @@ interface AuthSchemeInterface
     /**
      * Return default properties used to resolve an identity.
      *
-     * @param array<string, mixed> $context Client context bag.
+     * @param Context $context Client config context.
      * @return array<string, mixed>
      */
-    public function getIdentityProperties(array $context): array;
+    public function getIdentityProperties(Context $context): array;
 
     /**
      * Return the identity resolver for this scheme, or null when the scheme's
@@ -56,13 +57,13 @@ interface AuthSchemeInterface
     /**
      * Return default properties used to sign a request.
      *
-     * @param array<string, mixed> $context Client context bag.
+     * @param Context $context Client config context.
      * @param OperationInterface|null $operation Operation being signed, when
      *     the caller resolves properties for one.
      * @return array<string, mixed>
      */
     public function getSignerProperties(
-        array $context,
+        Context $context,
         ?OperationInterface $operation = null
     ): array;
 

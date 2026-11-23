@@ -30,6 +30,7 @@ use Smithy\Client\Plugin\{
     RetrySafetyPlugin
 };
 use Smithy\Client\Retry\StandardRetryStrategy;
+use Smithy\Core\Context\MutableContext;
 use Smithy\Core\Endpoint\Endpoint;
 use Smithy\Core\Exception\{
     ApiException,
@@ -386,6 +387,7 @@ final class RetrySafetyInterceptorTest extends TestCase
             $operation,
             new FakeInput(),
             $this->config([]),
+            new MutableContext(),
             null,
             null,
             $output

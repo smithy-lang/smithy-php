@@ -13,6 +13,10 @@ use Smithy\Auth\AuthSchemeInterface;
 use Smithy\Auth\IdentityResolverInterface;
 use Smithy\Auth\IdentityResolversInterface;
 use Smithy\Auth\SignerInterface;
+use Smithy\Core\Context\{
+    Context,
+    ContextKey
+};
 use Smithy\Core\Shape\OperationInterface;
 
 /**
@@ -28,20 +32,30 @@ final class SigV4AuthScheme implements AuthSchemeInterface
     public const SCHEME_ID = 'aws.auth#sigv4';
 
     /**
-     * Client context key holding the identity properties that the
-     * client config builds.
-     */
-    public const IDENTITY_CONTEXT_KEY = 'aws.identityContext';
-
-    /**
      * Operation trait requesting an unsigned request payload over HTTPS.
      */
     public const UNSIGNED_PAYLOAD_TRAIT = 'aws.auth#unsignedPayload';
+
+    /** @var ContextKey<array<string, mixed>>|null */
+    private static ?ContextKey $identityContextKey = null;
 
     public function __construct(
         private readonly string $signingName,
         private readonly string $signingRegion,
     ) {}
+
+    /**
+     * Client config context key holding the identity properties that the
+     * client config builds.
+     *
+     * @return ContextKey<array<string, mixed>>
+     */
+    public static function identityContextKey(): ContextKey
+    {
+        return self::$identityContextKey ??= new ContextKey(
+            'aws.identityContext'
+        );
+    }
 
     public function getSchemeId(): string
     {
@@ -49,12 +63,11 @@ final class SigV4AuthScheme implements AuthSchemeInterface
     }
 
     /**
-     * @param array<string, mixed> $context
      * @return array<string, mixed>
      */
-    public function getIdentityProperties(array $context): array
+    public function getIdentityProperties(Context $context): array
     {
-        return $context[self::IDENTITY_CONTEXT_KEY] ?? [];
+        return $context->get(self::identityContextKey()) ?? [];
     }
 
     public function getIdentityResolver(
@@ -67,11 +80,10 @@ final class SigV4AuthScheme implements AuthSchemeInterface
     }
 
     /**
-     * @param array<string, mixed> $context
      * @return array<string, mixed>
      */
     public function getSignerProperties(
-        array $context,
+        Context $context,
         ?OperationInterface $operation = null
     ): array
     {

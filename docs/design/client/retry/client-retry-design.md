@@ -102,8 +102,9 @@ object through the invocation.
 ## Request Flags
 
 `RetryRequestFlagResolverInterface` can derive one bitset from the operation
-and call configuration before `begin()`. The resolver is registered through
-the client context because it is an optional provider integration.
+and call configuration before `begin()`. The resolver is registered in the
+client config context under `RetryContextKeys::requestFlagResolver()` because
+it is an optional provider integration.
 
 Core currently defines `RetryRequestFlags::LONG_POLLING`. Providers decide how
 that flag changes quota, terminal delay, or classification.

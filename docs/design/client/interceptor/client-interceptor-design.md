@@ -129,11 +129,15 @@ even when another interceptor fails.
 
 | Context | Values |
 |---|---|
-| `CallContext` | Operation, input, call configuration |
-| `InputContext` | Operation, input, configuration, and current client |
-| `RequestContext` | Operation, input, configuration, request |
-| `ResponseContext` | Operation, input, configuration, request, response |
-| `OutputContext` | Operation, input, configuration, nullable request/response/output, attempt identity and resolver |
+| `CallContext` | Operation, input, call configuration, call attributes |
+| `InputContext` | Operation, input, configuration, call attributes, and current client |
+| `RequestContext` | Operation, input, configuration, call attributes, request |
+| `ResponseContext` | Operation, input, configuration, call attributes, request, response |
+| `OutputContext` | Operation, input, configuration, call attributes, nullable request/response/output, attempt identity and resolver |
+
+`attributes` is a `MutableContext` created once per operation call and shared
+by every hook of that call, so a value stored in an early hook is readable in
+a later one. Each call starts with an empty bag.
 
 Contexts belong to one execution path. Interceptor instances belong to the
 client and can be reused concurrently. Shared mutable interceptor properties

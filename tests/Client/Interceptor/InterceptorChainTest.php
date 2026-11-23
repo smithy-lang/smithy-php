@@ -30,6 +30,10 @@ use Smithy\Client\Interceptor\{
     RequestContext,
     ResponseContext
 };
+use Smithy\Core\Context\{
+    ContextKey,
+    MutableContext
+};
 use Smithy\Core\Endpoint\Endpoint;
 use Smithy\Core\Transport\{
     TransportRequestInterface,
@@ -56,17 +60,23 @@ final class InterceptorChainTest extends TestCase
     public function testModifyBeforeCallThreadsConfiguration(): void
     {
         $alternate = new FakeProtocol(requestPrefix: 'alternate:');
-        $first = new class extends AbstractInterceptor {
+        $key = new ContextKey('first');
+        $first = new class($key) extends AbstractInterceptor {
+            /** @param ContextKey<bool> $key */
+            public function __construct(private readonly ContextKey $key) {}
+
             public function modifyBeforeCall(
                 CallContext $ctx
             ): ClientConfig
             {
-                return $ctx->config->withContext('first', true);
+                return $ctx->config->withContext($this->key, true);
             }
         };
-        $second = new class($alternate) extends AbstractInterceptor {
+        $second = new class($alternate, $key) extends AbstractInterceptor {
+            /** @param ContextKey<bool> $key */
             public function __construct(
-                private readonly FakeProtocol $protocol
+                private readonly FakeProtocol $protocol,
+                private readonly ContextKey $key
             ) {}
 
             public function modifyBeforeCall(
@@ -74,7 +84,7 @@ final class InterceptorChainTest extends TestCase
             ): ClientConfig
             {
                 \PHPUnit\Framework\Assert::assertTrue(
-                    $ctx->config->context['first']
+                    $ctx->config->context->get($this->key)
                 );
 
                 return $ctx->config->withProtocol($this->protocol);
@@ -86,10 +96,11 @@ final class InterceptorChainTest extends TestCase
             ->modifyBeforeCall(new CallContext(
                 FakeOperation::instance(),
                 new FakeInput(),
-                $config
+                $config,
+                new MutableContext()
             ));
 
-        self::assertTrue($result->context['first']);
+        self::assertTrue($result->context->get($key));
         self::assertSame($alternate, $result->getProtocol());
     }
 
@@ -810,7 +821,8 @@ final class InterceptorChainTest extends TestCase
         return new InputContext(
             FakeOperation::instance(),
             $input ?? new FakeInput(),
-            $this->config()
+            $this->config(),
+            new MutableContext()
         );
     }
 
@@ -854,6 +866,7 @@ final class InterceptorChainTest extends TestCase
             FakeOperation::instance(),
             new FakeInput(),
             $this->config(),
+            new MutableContext(),
             $request ?? new HttpTransportRequest(
                 $this->createStub(RequestInterface::class)
             )
@@ -869,6 +882,7 @@ final class InterceptorChainTest extends TestCase
             FakeOperation::instance(),
             new FakeInput(),
             $this->config(),
+            new MutableContext(),
             $request ?? new HttpTransportRequest(
                 $this->createStub(RequestInterface::class)
             ),
@@ -888,6 +902,7 @@ final class InterceptorChainTest extends TestCase
             FakeOperation::instance(),
             new FakeInput(),
             $this->config(),
+            new MutableContext(),
             $request,
             $response,
             $output ?? new FakeOutput()

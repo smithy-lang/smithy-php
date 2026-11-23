@@ -33,6 +33,10 @@ use Smithy\Client\Retry\{
     RetryStrategyInterface,
     StandardRetryStrategy
 };
+use Smithy\Core\Context\{
+    Context,
+    ContextKey
+};
 use Smithy\Core\Endpoint\Endpoint;
 use Smithy\Core\Serde\Schema;
 use Smithy\Core\Shape\{
@@ -573,21 +577,38 @@ final class ClientConfigTest extends TestCase
 
     public function testWithContextStoresValueUnderKey(): void
     {
+        $key = new ContextKey('trace-id');
         $orig = $this->baseConfig();
 
-        $new = $orig->withContext('trace-id', 'abc-123');
+        $new = $orig->withContext($key, 'abc-123');
 
-        $this->assertSame('abc-123', $new->context['trace-id']);
-        $this->assertArrayNotHasKey('trace-id', $orig->context);
+        $this->assertSame('abc-123', $new->context->get($key));
+        $this->assertFalse($orig->context->has($key));
     }
 
     public function testWithContextPreservesOtherKeys(): void
     {
-        $orig = $this->baseConfig()->withContext('one', 1);
+        $one = new ContextKey('one');
+        $two = new ContextKey('two');
+        $orig = $this->baseConfig()->withContext($one, 1);
 
-        $new = $orig->withContext('two', 2);
+        $new = $orig->withContext($two, 2);
 
-        $this->assertSame(['one' => 1, 'two' => 2], $new->context);
+        $this->assertSame(1, $new->context->get($one));
+        $this->assertSame(2, $new->context->get($two));
+    }
+
+    public function testConstructorAcceptsContext(): void
+    {
+        $key = new ContextKey('seeded');
+
+        $config = new ClientConfig(
+            transport: new HttpClientTransport(new MockHttpClient()),
+            endpoint: 'https://example.test',
+            context: (new Context())->with($key, 'yes')
+        );
+
+        $this->assertSame('yes', $config->context->get($key));
     }
 
     /**
@@ -612,7 +633,7 @@ final class ClientConfigTest extends TestCase
         $new = $orig->withAuthSchemePreference(['sigv4'])
             ->withRetryScope('scope')
             ->withInterceptor(new RecordingInterceptor())
-            ->withContext('foo', 'bar')
+            ->withContext(new ContextKey('foo'), 'bar')
             ->withTransport($transport);
 
         // Every inherited withXxx() call preserves the subclass field.

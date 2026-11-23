@@ -17,6 +17,7 @@ use Smithy\Auth\{
     NoAuthScheme,
     NullSigner
 };
+use Smithy\Core\Context\Context;
 
 #[CoversClass(NoAuthScheme::class)]
 final class NoAuthSchemeTest extends TestCase
@@ -27,8 +28,8 @@ final class NoAuthSchemeTest extends TestCase
 
         self::assertSame($scheme, NoAuthScheme::instance());
         self::assertSame(NoAuthScheme::ID, $scheme->getSchemeId());
-        self::assertSame([], $scheme->getIdentityProperties([]));
-        self::assertSame([], $scheme->getSignerProperties([]));
+        self::assertSame([], $scheme->getIdentityProperties(new Context()));
+        self::assertSame([], $scheme->getSignerProperties(new Context()));
         self::assertSame(
             AnonymousIdentityResolver::instance(),
             $scheme->getIdentityResolver(new IdentityResolvers())

@@ -18,6 +18,7 @@ use Smithy\Core\Transport\{
     TransportRequestInterface,
     TransportResponseInterface
 };
+use Smithy\Core\Context\MutableContext;
 use Smithy\Core\Serde\SerializableStructInterface;
 use Smithy\Core\Shape\OperationInterface;
 
@@ -41,6 +42,9 @@ use Smithy\Core\Shape\OperationInterface;
  * `identity` and `identityResolver` identify the exact attempt-scoped
  * identity and resolver selected for signing. They are null when execution
  * fails before identity resolution or when the operation does not use auth.
+ *
+ * `attributes` is the per-call {@see MutableContext}. Every hook of the
+ * same operation call receives the same instance; each call gets a new one.
  */
 final class OutputContext
 {
@@ -51,6 +55,7 @@ final class OutputContext
         public OperationInterface $operation,
         public SerializableStructInterface $input,
         public AbstractClientConfig $config,
+        public MutableContext $attributes,
         public ?TransportRequestInterface $request,
         public ?TransportResponseInterface $response,
         public ?SerializableStructInterface $output,
@@ -91,6 +96,7 @@ final class OutputContext
                 $this->operation,
                 $this->input,
                 $this->config,
+                $this->attributes,
                 $this->request,
                 $this->response,
                 $output,
@@ -112,6 +118,7 @@ final class OutputContext
                 $this->operation,
                 $this->input,
                 $this->config,
+                $this->attributes,
                 $this->request,
                 $response,
                 $this->output,

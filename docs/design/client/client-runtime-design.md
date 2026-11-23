@@ -149,9 +149,18 @@ plugins and wrappers again.
 `withXxx()` methods return copied configurations. The pipeline treats the
 configuration selected for one call as immutable.
 
-The extension context carries optional runtime integrations such as retry
-request-flag resolution. Runtime dependencies shared by every client should
-become explicit properties instead of anonymous context entries.
+The extension context is an immutable `Smithy\Core\Context\Context` that
+carries optional runtime integrations such as retry request-flag resolution.
+Each value lives under a typed `ContextKey<T>`, so static analysis knows the
+value type at every read. Keys match by identity and are published through
+static accessors such as `RetryContextKeys::requestFlagResolver()`. Runtime
+dependencies shared by every client should become explicit properties instead
+of context entries.
+
+Each operation call also gets a fresh `MutableContext`, exposed to every
+interceptor hook of that call as `$ctx->attributes`. A value set in
+`modifyBeforeCall` or `readBeforeExecution` is readable in
+`readAfterExecution` of the same call and in no other call.
 
 ## Execution scopes
 

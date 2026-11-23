@@ -11,17 +11,32 @@ namespace Smithy\Client\Plugin;
 
 use Smithy\Client\AbstractClientConfig;
 use Smithy\Client\Interceptor\IdempotencyTokenInterceptor;
+use Smithy\Core\Context\ContextKey;
 
 /**
  * Register idempotency-token autofill for modeled request inputs.
  */
 final class IdempotencyTokenPlugin extends AbstractPlugin
 {
-    public const CONFIG_IDEMPOTENCY_TOKEN_PROVIDER = 'IdempotencyTokenProvider';
-
     private static ?self $instance = null;
 
+    /** @var ContextKey<string|callable(): string>|null */
+    private static ?ContextKey $tokenProviderKey = null;
+
     private function __construct() {}
+
+    /**
+     * Key for the token provider: a fixed non-empty token or a callable
+     * that returns one.
+     *
+     * @return ContextKey<string|callable(): string>
+     */
+    public static function tokenProviderKey(): ContextKey
+    {
+        return self::$tokenProviderKey ??= new ContextKey(
+            'IdempotencyTokenProvider'
+        );
+    }
 
     /**
      * Access the shared plugin instance.
@@ -53,8 +68,7 @@ final class IdempotencyTokenPlugin extends AbstractPlugin
 
     private function resolveTokenProvider(AbstractClientConfig $config): ?\Closure
     {
-        $provider = $config->context[self::CONFIG_IDEMPOTENCY_TOKEN_PROVIDER]
-            ?? null;
+        $provider = $config->context->get(self::tokenProviderKey());
 
         if ($provider === null) {
             return null;
@@ -63,21 +77,13 @@ final class IdempotencyTokenPlugin extends AbstractPlugin
         if (\is_string($provider)) {
             if ($provider === '') {
                 throw new \InvalidArgumentException(
-                    self::CONFIG_IDEMPOTENCY_TOKEN_PROVIDER
-                    . ' must not be an empty string.'
+                    'IdempotencyTokenProvider must not be an empty string.'
                 );
             }
 
             return static fn(): string => $provider;
         }
 
-        if (\is_callable($provider)) {
-            return \Closure::fromCallable($provider);
-        }
-
-        throw new \InvalidArgumentException(
-            self::CONFIG_IDEMPOTENCY_TOKEN_PROVIDER
-            . ' must be a non-empty string or callable.'
-        );
+        return \Closure::fromCallable($provider);
     }
 }

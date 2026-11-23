@@ -37,6 +37,7 @@ use Smithy\Client\Waiter\{
     WaiterFailureException
 };
 use Smithy\Codec\Cbor\CborCodec;
+use Smithy\Core\Context\Context;
 use Smithy\Core\Endpoint\Endpoint;
 use Smithy\Core\Exception\ApiException;
 use Smithy\Core\Model\SmithyModel;
@@ -66,9 +67,6 @@ use Smithy\Tests\Utils\Http\MockHttpClient;
 #[CoversClass(DynamicService::class)]
 final class DynamicClientTest extends TestCase
 {
-    private const MIN_COMPRESSION_SIZE =
-        RequestCompressionPlugin::CONFIG_REQUEST_MIN_COMPRESSION_SIZE_BYTES;
-
     public function testCreatesAndCallsWithResolvedDependencies(): void
     {
         $http = $this->httpClient();
@@ -159,9 +157,10 @@ final class DynamicClientTest extends TestCase
             ]),
             httpClient: $http,
             endpoint: 'https://example.com',
-            context: [
-                self::MIN_COMPRESSION_SIZE => 0
-            ]
+            context: (new Context())->with(
+                RequestCompressionPlugin::minCompressionSizeBytesKey(),
+                0
+            )
         );
 
         $output = $client->call('Echo', ['message' => 'hello']);
@@ -198,9 +197,10 @@ final class DynamicClientTest extends TestCase
             ]),
             httpClient: $http,
             endpoint: 'https://example.com',
-            context: [
-                self::MIN_COMPRESSION_SIZE => 0
-            ],
+            context: (new Context())->with(
+                RequestCompressionPlugin::minCompressionSizeBytesKey(),
+                0
+            ),
             plugins: new PluginCollection(
                 new RequestCompressionPlugin(disabled: true)
             )

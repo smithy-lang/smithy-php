@@ -36,6 +36,10 @@ use Smithy\Client\Protocol\{
 use Smithy\Client\Retry\NoRetryStrategy;
 use Smithy\Client\Retry\RetryStrategyInterface;
 use Smithy\Client\Retry\StandardRetryStrategy;
+use Smithy\Core\Context\{
+    Context,
+    ContextKey
+};
 use Smithy\Core\Endpoint\Endpoint;
 use Smithy\Core\Transport\TransportInterface;
 use Smithy\Core\Shape\ServiceInterface;
@@ -48,8 +52,9 @@ use Smithy\Protocol\ProtocolInterface;
  * protocol, transport, endpoint resolver, retry strategy, auth
  * schemes, and interceptors. `withXxx()` helpers return copies.
  *
- * The `context` associative bag stores extension state for
- * interceptors and generated client config subclasses.
+ * The immutable {@see Context} stores extension state for plugins,
+ * interceptors, and generated client config subclasses under typed
+ * {@see ContextKey} keys.
  *
  * Each concrete subclass implements {@see copyWith()} to copy its own
  * fields. {@see ClientConfig} is the general-purpose implementation.
@@ -86,8 +91,7 @@ abstract class AbstractClientConfig
 
     public readonly EndpointResolverInterface $endpointResolver;
 
-    /** @var array<string, mixed> */
-    public readonly array $context;
+    public readonly Context $context;
 
     /**
      * @param TransportInterface $transport Transport for serialized protocol
@@ -115,8 +119,8 @@ abstract class AbstractClientConfig
      *                                    to disable retries.
      * @param string $retryScope Retry scope identifier shared across
      *               executions.
-     * @param array<string, mixed> $context Extension bag for
-     *                      interceptor state or forward-compatible fields.
+     * @param Context $context Typed extension values for plugins,
+     *                interceptors, and config subclasses.
      * @param ServiceInterface|null $service Runtime service metadata.
      * @param PluginState|null $pluginState Internal plugin application state.
      * @param bool|null $protocolIsExplicit Internal protocol provenance.
@@ -142,7 +146,7 @@ abstract class AbstractClientConfig
         ?AuthSchemeResolverInterface $authSchemeResolver = null,
         ?RetryStrategyInterface $retryStrategy = null,
         string $retryScope = '',
-        array $context = [],
+        Context $context = new Context(),
         array $authSchemePreference = [],
         public readonly ?ServiceInterface $service = null,
         ?PluginState $pluginState = null,
@@ -669,12 +673,16 @@ abstract class AbstractClientConfig
     }
 
     /**
-     * Create a config with a value stored in the `context` bag.
+     * Create a config with `$value` stored in the context under `$key`.
+     *
+     * @template T
+     * @param ContextKey<T> $key
+     * @param T $value
      */
-    public function withContext(string $key, mixed $value): static
+    public function withContext(ContextKey $key, mixed $value): static
     {
         return $this->copyWith([
-            'context' => [...$this->context, $key => $value]
+            'context' => $this->context->with($key, $value)
         ]);
     }
 

@@ -64,7 +64,7 @@ dynamic operation metadata expose effective auth schemes through
 
 | Type | Responsibility |
 |---|---|
-| `AuthSchemeInterface` | Bind a scheme ID to an identity resolver and signer. It receives the client context bag for property defaults and an `IdentityResolversInterface` for resolver lookup. |
+| `AuthSchemeInterface` | Bind a scheme ID to an identity resolver and signer. It receives the client config `Context` for property defaults and an `IdentityResolversInterface` for resolver lookup. |
 | `AuthSchemeOption` | Carry one candidate ID plus independent identity and signer property overrides. |
 | `AuthSchemeResolverInterface` | Select modeled auth, then reconcile endpoint auth for an attempt. |
 | `ResolvedAuthScheme` | Carry the selected implementation and effective identity and signer properties. |
@@ -297,7 +297,8 @@ the AWS credentials identity:
 | `SigV4AuthScheme` | `AuthSchemeInterface` for `aws.auth#sigv4` |
 
 `SigV4AuthScheme` is built with a signing name and signing region. It reads
-identity properties from the `aws.identityContext` client context key, looks up
+identity properties from the `SigV4AuthScheme::identityContextKey()` client
+config context key, looks up
 the `AwsCredentialsIdentityInterface` resolver in the
 `IdentityResolversInterface` repository, and returns a `SigV4Signer`.
 

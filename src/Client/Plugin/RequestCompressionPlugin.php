@@ -11,18 +11,21 @@ namespace Smithy\Client\Plugin;
 
 use Smithy\Client\AbstractClientConfig;
 use Smithy\Client\Interceptor\RequestCompressionInterceptor;
+use Smithy\Core\Context\ContextKey;
 
 /**
  * Register modeled request compression.
  */
 final class RequestCompressionPlugin extends AbstractPlugin
 {
-    public const CONFIG_DISABLE_REQUEST_COMPRESSION =
-        'DisableRequestCompression';
-    public const CONFIG_REQUEST_MIN_COMPRESSION_SIZE_BYTES =
-        'RequestMinCompressionSizeBytes';
     public const DEFAULT_MIN_COMPRESSION_SIZE_BYTES = 10240;
     public const MAX_MIN_COMPRESSION_SIZE_BYTES = 10485760;
+
+    /** @var ContextKey<bool|string>|null */
+    private static ?ContextKey $disableRequestCompressionKey = null;
+
+    /** @var ContextKey<int|string>|null */
+    private static ?ContextKey $minCompressionSizeBytesKey = null;
 
     /**
      * @param bool|null $disabled Override the configured disable setting.
@@ -32,6 +35,32 @@ final class RequestCompressionPlugin extends AbstractPlugin
         private readonly ?bool $disabled = null,
         private readonly ?int $minCompressionSizeBytes = null
     ) {}
+
+    /**
+     * Key for the disable setting: a bool, or `"true"` / `"false"` as read
+     * from a configuration source.
+     *
+     * @return ContextKey<bool|string>
+     */
+    public static function disableRequestCompressionKey(): ContextKey
+    {
+        return self::$disableRequestCompressionKey ??= new ContextKey(
+            'DisableRequestCompression'
+        );
+    }
+
+    /**
+     * Key for the minimum body size to compress: an int, or a string of
+     * digits as read from a configuration source.
+     *
+     * @return ContextKey<int|string>
+     */
+    public static function minCompressionSizeBytesKey(): ContextKey
+    {
+        return self::$minCompressionSizeBytesKey ??= new ContextKey(
+            'RequestMinCompressionSizeBytes'
+        );
+    }
 
     /**
      * @inheritDoc
@@ -63,9 +92,7 @@ final class RequestCompressionPlugin extends AbstractPlugin
             return $this->disabled;
         }
 
-        $value = $config->context[
-            self::CONFIG_DISABLE_REQUEST_COMPRESSION
-        ] ?? null;
+        $value = $config->context->get(self::disableRequestCompressionKey());
         if ($value === null) {
             return false;
         }
@@ -79,8 +106,7 @@ final class RequestCompressionPlugin extends AbstractPlugin
         }
 
         throw new \InvalidArgumentException(
-            self::CONFIG_DISABLE_REQUEST_COMPRESSION
-            . ' must be true or false.'
+            'DisableRequestCompression must be true or false.'
         );
     }
 
@@ -89,14 +115,14 @@ final class RequestCompressionPlugin extends AbstractPlugin
     ): int
     {
         $value = $this->minCompressionSizeBytes
-            ?? $config->context[self::CONFIG_REQUEST_MIN_COMPRESSION_SIZE_BYTES]
+            ?? $config->context->get(self::minCompressionSizeBytesKey())
             ?? self::DEFAULT_MIN_COMPRESSION_SIZE_BYTES;
 
         if (!\is_int($value)) {
-            if (!\is_string($value) || $value === '' || !\ctype_digit($value)) {
+            if ($value === '' || !\ctype_digit($value)) {
                 throw new \InvalidArgumentException(
-                    self::CONFIG_REQUEST_MIN_COMPRESSION_SIZE_BYTES
-                    . ' must be an integer between 0 and '
+                    'RequestMinCompressionSizeBytes must be an integer'
+                    . ' between 0 and '
                     . self::MAX_MIN_COMPRESSION_SIZE_BYTES
                     . '.'
                 );
@@ -107,8 +133,8 @@ final class RequestCompressionPlugin extends AbstractPlugin
 
         if ($value < 0 || $value > self::MAX_MIN_COMPRESSION_SIZE_BYTES) {
             throw new \InvalidArgumentException(
-                self::CONFIG_REQUEST_MIN_COMPRESSION_SIZE_BYTES
-                . ' must be an integer between 0 and '
+                'RequestMinCompressionSizeBytes must be an integer'
+                . ' between 0 and '
                 . self::MAX_MIN_COMPRESSION_SIZE_BYTES
                 . '.'
             );

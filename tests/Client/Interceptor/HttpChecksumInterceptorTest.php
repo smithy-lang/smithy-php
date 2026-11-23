@@ -21,6 +21,7 @@ use Smithy\Client\Interceptor\{
     RequestCompressionInterceptor,
     RequestContext
 };
+use Smithy\Core\Context\MutableContext;
 use Smithy\Core\Endpoint\Endpoint;
 use Smithy\Core\Transport\TransportRequestInterface;
 use Smithy\Core\Serde\Schema;
@@ -464,6 +465,7 @@ final class HttpChecksumInterceptorTest extends TestCase
             $operation,
             $input,
             $config,
+            new MutableContext(),
             new HttpTransportRequest($request)
         );
     }

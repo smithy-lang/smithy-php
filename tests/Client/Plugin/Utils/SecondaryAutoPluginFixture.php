@@ -31,15 +31,11 @@ final class SecondaryAutoPluginFixture extends AbstractPlugin implements
     {
         ++self::$configurationCount;
 
+        $key = AutoPluginFixture::contextKey();
+
         return $config->withContext(
-            AutoPluginFixture::CONTEXT_KEY,
-            [
-                ...(
-                    $config->context[AutoPluginFixture::CONTEXT_KEY]
-                    ?? []
-                ),
-                'secondary'
-            ]
+            $key,
+            [...$config->context->get($key) ?? [], 'secondary']
         );
     }
 

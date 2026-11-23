@@ -18,6 +18,7 @@ use Smithy\Client\Plugin\{
     PluginCollection,
     RequestCompressionPlugin
 };
+use Smithy\Core\Context\Context;
 use Smithy\Core\Endpoint\Endpoint;
 use Smithy\Core\Exception\ApiException;
 use Smithy\Core\Serde\SerializableStructInterface;
@@ -144,10 +145,10 @@ XML
                 ),
                 supportedAuthSchemes: [NoAuthScheme::instance()],
                 authSchemeResolver: StaticAuthSchemeResolver::noAuth(),
-                context: [
-                    IdempotencyTokenPlugin::CONFIG_IDEMPOTENCY_TOKEN_PROVIDER
-                        => '00000000-0000-4000-8000-000000000000'
-                ]
+                context: (new Context())->with(
+                    IdempotencyTokenPlugin::tokenProviderKey(),
+                    '00000000-0000-4000-8000-000000000000'
+                )
             ),
             new PluginCollection(
                 new RequestCompressionPlugin()

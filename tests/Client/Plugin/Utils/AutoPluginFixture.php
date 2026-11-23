@@ -14,11 +14,13 @@ use Smithy\Client\Plugin\{
     AbstractPlugin,
     AutoPluginInterface
 };
+use Smithy\Core\Context\ContextKey;
 
 final class AutoPluginFixture extends AbstractPlugin implements
     AutoPluginInterface
 {
-    public const CONTEXT_KEY = 'smithy.tests.auto_plugins';
+    /** @var ContextKey<list<string>>|null */
+    private static ?ContextKey $contextKey = null;
 
     public static int $constructionCount = 0;
     public static int $configurationCount = 0;
@@ -29,14 +31,26 @@ final class AutoPluginFixture extends AbstractPlugin implements
         ++self::$constructionCount;
     }
 
+    /**
+     * Key for the names of the auto plugins applied, in order.
+     *
+     * @return ContextKey<list<string>>
+     */
+    public static function contextKey(): ContextKey
+    {
+        return self::$contextKey ??= new ContextKey(
+            'smithy.tests.auto_plugins'
+        );
+    }
+
     public function configure(AbstractClientConfig $config): AbstractClientConfig
     {
         ++self::$configurationCount;
 
         return $config->withContext(
-            self::CONTEXT_KEY,
+            self::contextKey(),
             [
-                ...($config->context[self::CONTEXT_KEY] ?? []),
+                ...$config->context->get(self::contextKey()) ?? [],
                 $this->name
             ]
         );

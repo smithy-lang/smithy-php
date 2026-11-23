@@ -19,6 +19,7 @@ use Smithy\Client\Interceptor\{
     RequestCompressionInterceptor,
     RequestContext
 };
+use Smithy\Core\Context\MutableContext;
 use Smithy\Core\Endpoint\Endpoint;
 use Smithy\Core\Serde\Schema;
 use Smithy\Core\Shape\OperationInterface;
@@ -676,6 +677,7 @@ final class RequestCompressionInterceptorTest extends TestCase
             $operation,
             $input,
             $config,
+            new MutableContext(),
             new HttpTransportRequest($request)
         );
     }

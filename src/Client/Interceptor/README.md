@@ -242,16 +242,62 @@ attempt.
 
 | Context | Available values |
 |---|---|
-| `CallContext` | Operation, input, and call configuration |
-| `InputContext` | Operation, input, client configuration, and current client for call wrappers |
-| `RequestContext` | Operation, input, configuration, and request |
-| `ResponseContext` | Operation, input, configuration, request, and response |
-| `OutputContext` | Operation, input, configuration, nullable request, nullable response, and nullable output |
+| `CallContext` | Operation, input, call configuration, and call attributes |
+| `InputContext` | Operation, input, client configuration, call attributes, and current client for call wrappers |
+| `RequestContext` | Operation, input, configuration, call attributes, and request |
+| `ResponseContext` | Operation, input, configuration, call attributes, request, and response |
+| `OutputContext` | Operation, input, configuration, call attributes, nullable request, nullable response, and nullable output |
 
 Call-configuration hooks return an `AbstractClientConfig`. Call wrappers use
 `withInput()` to continue with a replacement input. Other modify hooks return
 their replacement value. The chain passes each returned value to later
 interceptors.
+
+## Per-call Attributes
+
+Every context exposes `attributes`, a `MutableContext` that the client creates
+for each operation call. All hooks of one call share it, and each call starts
+with an empty one, so concurrent calls never see each other's values. Store
+values under a typed `ContextKey` that the interceptor owns:
+
+```php
+use Smithy\Client\Interceptor\AbstractInterceptor;
+use Smithy\Client\Interceptor\InputContext;
+use Smithy\Client\Interceptor\OutputContext;
+use Smithy\Core\Context\ContextKey;
+
+final class TimingInterceptor extends AbstractInterceptor
+{
+    /** @var ContextKey<float> */
+    private readonly ContextKey $startKey;
+
+    public function __construct()
+    {
+        $this->startKey = new ContextKey('example.callStart');
+    }
+
+    public function readBeforeExecution(InputContext $ctx): void
+    {
+        $ctx->attributes->set($this->startKey, microtime(true));
+    }
+
+    public function readAfterExecution(
+        OutputContext $ctx,
+        ?\Throwable $error
+    ): void
+    {
+        $start = $ctx->attributes->get($this->startKey);
+        error_log(sprintf(
+            '%s took %.3fs',
+            $ctx->operation->getName(),
+            microtime(true) - $start
+        ));
+    }
+}
+```
+
+Use the client config context (`withContext()`) for settings that apply to
+every call, and `attributes` for state that belongs to one call.
 
 ## Errors and Completion
 

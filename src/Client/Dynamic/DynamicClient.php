@@ -27,6 +27,7 @@ use Smithy\Client\Pagination\Paginator;
 use Smithy\Client\Plugin\PluginCollection;
 use Smithy\Client\Protocol\ProtocolResolverInterface;
 use Smithy\Client\Retry\RetryStrategyInterface;
+use Smithy\Core\Context\Context;
 use Smithy\Core\Transport\TransportInterface;
 use Smithy\Client\Waiter\{
     WaiterConfig,
@@ -136,7 +137,6 @@ class DynamicClient extends AbstractClient
      * @param array<string, RulesFunctionInterface> $endpointFunctions
      * @param array<string, string> $endpointAuthSchemeIds
      * @param array<string, mixed> $endpointParameters
-     * @param array<string, mixed> $context
      */
     public static function create(
         SmithyModel|string $model,
@@ -158,7 +158,7 @@ class DynamicClient extends AbstractClient
         ?array $authSchemePreference = null,
         ?RetryStrategyInterface $retryStrategy = null,
         string $retryScope = '',
-        array $context = [],
+        Context $context = new Context(),
         PluginCollection $plugins = new PluginCollection()
     ): static
     {
@@ -197,7 +197,6 @@ class DynamicClient extends AbstractClient
      *
      * @param list<AuthSchemeInterface> $supportedAuthSchemes
      * @param list<string>|null $authSchemePreference
-     * @param array<string, mixed> $context
      * @param string|null $endpoint Endpoint URL the config wraps in a
      *        static resolver. Set this or `$endpointResolver`.
      *
@@ -218,7 +217,7 @@ class DynamicClient extends AbstractClient
         ?array $authSchemePreference,
         ?RetryStrategyInterface $retryStrategy,
         string $retryScope,
-        array $context,
+        Context $context,
         ?string $endpoint = null
     ): AbstractClientConfig
     {

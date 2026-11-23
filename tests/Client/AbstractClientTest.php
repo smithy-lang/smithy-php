@@ -58,6 +58,7 @@ use Smithy\Tests\Client\Plugin\Utils\{
     RegisteringPluginFixture,
     SecondaryRecordingPluginFixture
 };
+use Smithy\Tests\Client\Utils\CallAttributesInterceptorFixture;
 use Smithy\Tests\Utils\Http\MockHttpClient;
 
 #[CoversClass(AbstractClient::class)]
@@ -226,6 +227,33 @@ final class AbstractClientTest extends TestCase
 
         self::assertInstanceOf(FakeOutput::class, $output);
         self::assertSame('result', $output->value);
+    }
+
+    public function testAttributesSetBeforeCallReachExecutionHooks(): void
+    {
+        $interceptor = new CallAttributesInterceptorFixture(
+            setInModifyBeforeCall: true
+        );
+        $client = new TestClientFixture($this->config(
+            interceptors: new InterceptorChain($interceptor)
+        ));
+
+        $client->executeOperation(FakeOperation::instance(), new FakeInput('a'));
+        $client->executeOperation(FakeOperation::instance(), new FakeInput('b'));
+
+        $this->assertSame(
+            [
+                'before:a:call:a',
+                'request:a:call:a',
+                'response:a:call:a',
+                'after:a:call:a',
+                'before:b:call:b',
+                'request:b:call:b',
+                'response:b:call:b',
+                'after:b:call:b',
+            ],
+            $interceptor->records
+        );
     }
 
     public function testCallInterceptorCanShortCircuitPipeline(): void

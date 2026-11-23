@@ -17,6 +17,7 @@ use Smithy\Auth\{
     NullSigner,
     SignerInterface
 };
+use Smithy\Core\Context\Context;
 use Smithy\Core\Shape\OperationInterface;
 
 /**
@@ -37,7 +38,7 @@ final class TestAuthSchemeFixture implements AuthSchemeInterface
         return $this->id;
     }
 
-    public function getIdentityProperties(array $context): array
+    public function getIdentityProperties(Context $context): array
     {
         return $this->identityProperties;
     }
@@ -51,7 +52,7 @@ final class TestAuthSchemeFixture implements AuthSchemeInterface
     }
 
     public function getSignerProperties(
-        array $context,
+        Context $context,
         ?OperationInterface $operation = null
     ): array
     {

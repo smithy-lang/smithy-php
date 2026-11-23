@@ -25,6 +25,10 @@ use Smithy\Client\Auth\{
 };
 use Smithy\Client\ClientConfig;
 use Smithy\Client\Endpoint\StaticEndpointResolver;
+use Smithy\Core\Context\{
+    Context,
+    ContextKey
+};
 use Smithy\Core\Endpoint\{
     Endpoint,
     EndpointAuthScheme
@@ -115,7 +119,7 @@ final class AuthSchemeResolverTest extends TestCase
                 return 'aws.auth#sigv4';
             }
 
-            public function getIdentityProperties(array $context): array
+            public function getIdentityProperties(Context $context): array
             {
                 return [];
             }
@@ -128,7 +132,7 @@ final class AuthSchemeResolverTest extends TestCase
             }
 
             public function getSignerProperties(
-                array $context,
+                Context $context,
                 ?OperationInterface $operation = null
             ): array
             {
@@ -164,16 +168,18 @@ final class AuthSchemeResolverTest extends TestCase
 
     public function testPassesClientContextToSchemeProperties(): void
     {
-        $scheme = new class implements \Smithy\Auth\AuthSchemeInterface {
+        $token = new ContextKey('token');
+        $scheme = new class($token) implements \Smithy\Auth\AuthSchemeInterface {
+            /** @param ContextKey<string> $token */
+            public function __construct(private readonly ContextKey $token) {}
+
             public function getSchemeId(): string
             {
                 return 'aws.auth#sigv4';
             }
-
-            /** @param array<string, mixed> $context */
-            public function getIdentityProperties(array $context): array
+            public function getIdentityProperties(Context $context): array
             {
-                return ['identityContext' => $context['token'] ?? null];
+                return ['identityContext' => $context->get($this->token)];
             }
 
             public function getIdentityResolver(
@@ -182,14 +188,12 @@ final class AuthSchemeResolverTest extends TestCase
             {
                 return \Smithy\Auth\AnonymousIdentityResolver::instance();
             }
-
-            /** @param array<string, mixed> $context */
             public function getSignerProperties(
-                array $context,
+                Context $context,
                 ?\Smithy\Core\Shape\OperationInterface $operation = null
             ): array
             {
-                return ['signerContext' => $context['token'] ?? null];
+                return ['signerContext' => $context->get($this->token)];
             }
 
             public function getSigner(): \Smithy\Auth\SignerInterface
@@ -206,7 +210,7 @@ final class AuthSchemeResolverTest extends TestCase
                 new Endpoint('https://example.test')
             ),
             supportedAuthSchemes: [$scheme]
-        ))->withContext('token', 'from-context');
+        ))->withContext($token, 'from-context');
 
         $resolved = $config->authSchemeResolver->resolveAuthScheme(
             $this->operation([self::SIGV4]),
@@ -674,7 +678,7 @@ final class AuthSchemeResolverTest extends TestCase
                 return $this->id;
             }
 
-            public function getIdentityProperties(array $context): array
+            public function getIdentityProperties(Context $context): array
             {
                 return [];
             }
@@ -687,7 +691,7 @@ final class AuthSchemeResolverTest extends TestCase
             }
 
             public function getSignerProperties(
-                array $context,
+                Context $context,
                 ?\Smithy\Core\Shape\OperationInterface $operation = null
             ): array
             {

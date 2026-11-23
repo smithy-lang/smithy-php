@@ -17,6 +17,7 @@ use Smithy\Client\Interceptor\{
     IdempotencyTokenInterceptor,
     InputContext
 };
+use Smithy\Core\Context\MutableContext;
 use Smithy\Core\Endpoint\Endpoint;
 use Smithy\Tests\Client\Fake\{
     FakeInput,
@@ -86,7 +87,8 @@ final class IdempotencyTokenInterceptorTest extends TestCase
         $context = new InputContext(
             FakeOperation::instance(),
             $input,
-            $config
+            $config,
+            new MutableContext()
         );
 
         $output = (new IdempotencyTokenInterceptor())
@@ -139,7 +141,8 @@ final class IdempotencyTokenInterceptorTest extends TestCase
         return new InputContext(
             IdempotentTestOperationFixture::instance(),
             $input,
-            $this->config()
+            $this->config(),
+            new MutableContext()
         );
     }
 

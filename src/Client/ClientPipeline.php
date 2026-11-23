@@ -21,13 +21,14 @@ use Smithy\Client\Interceptor\InterceptorInterface;
 use Smithy\Client\Interceptor\OutputContext;
 use Smithy\Client\Interceptor\RequestContext;
 use Smithy\Client\Interceptor\ResponseContext;
-use Smithy\Client\Retry\RetryRequestFlagResolverInterface;
+use Smithy\Client\Retry\RetryContextKeys;
 use Smithy\Client\Retry\TokenAcquisitionFailedException;
 use Smithy\Core\Transport\{
     TransportContext,
     TransportRequestInterface,
     TransportResponseInterface
 };
+use Smithy\Core\Context\MutableContext;
 use Smithy\Core\Serde\SerializableStructInterface;
 use Smithy\Core\Shape\OperationInterface;
 
@@ -70,11 +71,15 @@ final class ClientPipeline
 
     /**
      * Run the operation and return its output.
+     *
+     * @param MutableContext|null $attributes Per-call values shared by every
+     *        interceptor hook of this call. A new one is created when null.
      */
     public function execute(
         OperationInterface $operation,
         SerializableStructInterface $input,
-        ?RequestOverrideConfig $overrides = null
+        ?RequestOverrideConfig $overrides = null,
+        ?MutableContext $attributes = null
     ): SerializableStructInterface
     {
         $config = $this->config;
@@ -95,12 +100,18 @@ final class ClientPipeline
             );
         }
 
+        $attributes ??= new MutableContext();
         $error = null;
         $reqCtx = null;
         $outCtx = null;
 
         try {
-            $inputCtx = new InputContext($operation, $input, $config);
+            $inputCtx = new InputContext(
+                $operation,
+                $input,
+                $config,
+                $attributes
+            );
             $interceptor->readBeforeExecution($inputCtx);
             $transportContext = new TransportContext(
                 $operation,
@@ -120,6 +131,7 @@ final class ClientPipeline
                 $operation,
                 $input,
                 $config,
+                $attributes,
                 $request
             );
 
@@ -208,6 +220,7 @@ final class ClientPipeline
             $operation,
             $input,
             $config,
+            $attributes,
             $reqCtx?->request,
             null,
             null
@@ -417,6 +430,7 @@ final class ClientPipeline
                 $reqCtx->operation,
                 $reqCtx->input,
                 $reqCtx->config,
+                $reqCtx->attributes,
                 $request,
                 null,
                 null
@@ -470,6 +484,7 @@ final class ClientPipeline
                 $reqCtx->operation,
                 $reqCtx->input,
                 $reqCtx->config,
+                $reqCtx->attributes,
                 $request,
                 $response
             );
@@ -497,6 +512,7 @@ final class ClientPipeline
                 $reqCtx->operation,
                 $reqCtx->input,
                 $reqCtx->config,
+                $reqCtx->attributes,
                 $request,
                 $response,
                 $output,
@@ -524,6 +540,7 @@ final class ClientPipeline
             $reqCtx->operation,
             $reqCtx->input,
             $reqCtx->config,
+            $reqCtx->attributes,
             $request,
             $response,
             $output,
@@ -643,13 +660,8 @@ final class ClientPipeline
         AbstractClientConfig $config
     ): int
     {
-        $resolver = $config->context[
-            RetryRequestFlagResolverInterface::CONFIG_KEY
-        ] ?? null;
-        if (!$resolver instanceof RetryRequestFlagResolverInterface) {
-            return 0;
-        }
-
-        return $resolver->resolve($operation, $config);
+        return $config->context
+            ->get(RetryContextKeys::requestFlagResolver())
+            ?->resolve($operation, $config) ?? 0;
     }
 }

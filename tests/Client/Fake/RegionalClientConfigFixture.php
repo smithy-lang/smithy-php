@@ -20,6 +20,7 @@ use Smithy\Client\Interceptor\InterceptorChain;
 use Smithy\Client\Plugin\PluginState;
 use Smithy\Client\Protocol\ProtocolResolverInterface;
 use Smithy\Client\Retry\RetryStrategyInterface;
+use Smithy\Core\Context\Context;
 use Smithy\Core\Transport\TransportInterface;
 use Smithy\Core\Shape\ServiceInterface;
 use Smithy\Protocol\ProtocolInterface;
@@ -33,7 +34,6 @@ final class RegionalClientConfigFixture extends ClientConfig
      * @param ProtocolInterface|null $protocol
      * @param list<AuthSchemeInterface> $supportedAuthSchemes
      * @param list<string> $authSchemePreference
-     * @param array<string, mixed> $context
      * @param array<string, bool>|null $explicitFields
      */
     public function __construct(
@@ -47,7 +47,7 @@ final class RegionalClientConfigFixture extends ClientConfig
         ?AuthSchemeResolverInterface $authSchemeResolver = null,
         ?RetryStrategyInterface $retryStrategy = null,
         string $retryScope = '',
-        array $context = [],
+        Context $context = new Context(),
         array $authSchemePreference = [],
         public readonly string $region = '',
         ?ServiceInterface $service = null,

@@ -14,6 +14,7 @@ use Smithy\Core\Transport\{
     TransportRequestInterface,
     TransportResponseInterface
 };
+use Smithy\Core\Context\MutableContext;
 use Smithy\Core\Serde\SerializableStructInterface;
 use Smithy\Core\Shape\OperationInterface;
 
@@ -23,6 +24,9 @@ use Smithy\Core\Shape\OperationInterface;
  *
  * Supplied to `readAfterTransmit`, `modifyBeforeDeserialization`, and
  * `readBeforeDeserialization`.
+ *
+ * `attributes` is the per-call {@see MutableContext}. Every hook of the
+ * same operation call receives the same instance; each call gets a new one.
  */
 final class ResponseContext
 {
@@ -33,6 +37,7 @@ final class ResponseContext
         public OperationInterface $operation,
         public SerializableStructInterface $input,
         public AbstractClientConfig $config,
+        public MutableContext $attributes,
         public TransportRequestInterface $request,
         public TransportResponseInterface $response
     ) {}
@@ -58,6 +63,7 @@ final class ResponseContext
                 $this->operation,
                 $this->input,
                 $this->config,
+                $this->attributes,
                 $this->request,
                 $response
             );

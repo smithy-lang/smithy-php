@@ -26,20 +26,11 @@ use Smithy\Core\Shape\OperationInterface;
 interface EndpointResolverInterface
 {
     /**
-     * AbstractClientConfig::context key containing endpoint parameter values.
-     */
-    public const CONTEXT_PARAMETERS = 'smithy.endpointParameters';
-
-    /**
-     * AbstractClientConfig::context key containing an endpoint resolution trace sink.
-     */
-    public const CONTEXT_TRACE_SINK = 'smithy.endpointResolutionTraceSink';
-
-    /**
      * Resolve the endpoint for a request attempt.
      *
      * Modeled endpoint resolvers combine operation and input traits with
-     * endpoint parameters stored in `config`. Static resolvers ignore all
+     * endpoint parameters stored in the `config` context under
+     * {@see EndpointContextKeys::parameters()}. Static resolvers ignore all
      * arguments.
      */
     public function resolveEndpoint(

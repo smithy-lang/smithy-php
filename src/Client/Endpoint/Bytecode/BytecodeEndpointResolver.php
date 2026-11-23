@@ -11,7 +11,10 @@ namespace Smithy\Client\Endpoint\Bytecode;
 
 use JmesPath\Env;
 use Smithy\Client\AbstractClientConfig;
-use Smithy\Client\Endpoint\EndpointResolverInterface;
+use Smithy\Client\Endpoint\{
+    EndpointContextKeys,
+    EndpointResolverInterface
+};
 use Smithy\Core\Endpoint\Endpoint;
 use Smithy\Core\Serde\{
     Schema,
@@ -290,45 +293,17 @@ final class BytecodeEndpointResolver implements EndpointResolverInterface
     }
 
     /**
-     * Validate and remember the endpoint context of a client config.
-     *
-     * @throws \InvalidArgumentException When the endpoint parameters or trace
-     *                                   sink are invalid.
+     * Remember the endpoint context of a client config.
      */
     private function readConfigContext(AbstractClientConfig $config): void
     {
-        $context = $config->context[
-            EndpointResolverInterface::CONTEXT_PARAMETERS
-        ] ?? [];
-        if (!\is_array($context)) {
-            throw new \InvalidArgumentException(
-                'Endpoint parameters must be an associative array.'
-            );
-        }
-
-        $parameters = [];
-        foreach ($context as $name => $value) {
-            if (\is_string($name)) {
-                $parameters[$name] = $value;
-            }
-        }
-
-        $traceSink = $config->context[
-            EndpointResolverInterface::CONTEXT_TRACE_SINK
-        ] ?? null;
-        if ($traceSink !== null
-            && !$traceSink instanceof EndpointResolutionTraceSinkInterface
-        ) {
-            throw new \InvalidArgumentException(
-                'Endpoint resolution trace sink must implement '
-                    . EndpointResolutionTraceSinkInterface::class
-                    . '.'
-            );
-        }
-
         $this->lastConfig = $config;
-        $this->lastConfigParameters = $parameters;
-        $this->lastTraceSink = $traceSink;
+        $this->lastConfigParameters = $config->context->get(
+            EndpointContextKeys::parameters()
+        ) ?? [];
+        $this->lastTraceSink = $config->context->get(
+            EndpointContextKeys::traceSink()
+        );
     }
 
     /**

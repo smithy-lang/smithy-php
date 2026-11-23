@@ -15,12 +15,14 @@ use Smithy\Client\Endpoint\{
     Bytecode\BytecodeEndpointResolver,
     Bytecode\Compiler\BddCompiler,
     Bytecode\RulesFunctionInterface,
+    EndpointContextKeys,
     EndpointResolverInterface
 };
 use Smithy\Client\Interceptor\InterceptorChain;
 use Smithy\Client\Plugin\PluginCollection;
 use Smithy\Client\Protocol\ProtocolResolver;
 use Smithy\Client\Retry\RetryStrategyInterface;
+use Smithy\Core\Context\Context;
 use Smithy\Core\Transport\TransportInterface;
 use Smithy\Core\Model\SmithyModel;
 use Smithy\Http\Client\HttpClientInterface;
@@ -50,7 +52,6 @@ final class DynamicClientFactory
      * @param array<string, RulesFunctionInterface> $endpointFunctions
      * @param array<string, string> $endpointAuthSchemeIds
      * @param array<string, mixed> $endpointParameters
-     * @param array<string, mixed> $context
      * @param class-string<T> $clientClass
      *
      * @return T
@@ -79,7 +80,7 @@ final class DynamicClientFactory
         ?array $authSchemePreference = null,
         ?RetryStrategyInterface $retryStrategy = null,
         string $retryScope = '',
-        array $context = [],
+        Context $context = new Context(),
         PluginCollection $plugins = new PluginCollection(),
         string $clientClass = DynamicClient::class
     ): DynamicClient
@@ -178,26 +179,18 @@ final class DynamicClientFactory
     }
 
     /**
-     * Store client endpoint parameters in the generic config context.
+     * Store client endpoint parameters in the config context.
      *
-     * @param array<string, mixed> $context
      * @param array<string, mixed> $parameters
      *
-     * @return array<string, mixed>
+     * @throws \InvalidArgumentException When a parameter name is not a
+     *                                   string.
      */
     private static function withEndpointParameters(
-        array $context,
+        Context $context,
         array $parameters
-    ): array
+    ): Context
     {
-        $configured = $context[
-            EndpointResolverInterface::CONTEXT_PARAMETERS
-        ] ?? [];
-        if (!\is_array($configured)) {
-            throw new \InvalidArgumentException(
-                'Endpoint parameters must be an associative array.'
-            );
-        }
         foreach ($parameters as $name => $_) {
             if (!\is_string($name)) {
                 throw new \InvalidArgumentException(
@@ -206,16 +199,16 @@ final class DynamicClientFactory
             }
         }
 
-        if ($configured === [] && $parameters === []) {
+        if ($parameters === []) {
             return $context;
         }
 
-        $context[EndpointResolverInterface::CONTEXT_PARAMETERS] = [
-            ...$configured,
-            ...$parameters
-        ];
+        $key = EndpointContextKeys::parameters();
 
-        return $context;
+        return $context->with($key, [
+            ...$context->get($key) ?? [],
+            ...$parameters
+        ]);
     }
 
     /**

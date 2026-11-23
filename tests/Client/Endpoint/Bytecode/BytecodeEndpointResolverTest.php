@@ -13,13 +13,18 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Smithy\Client\ClientConfig;
-use Smithy\Client\Endpoint\EndpointResolverInterface;
+use Smithy\Client\Endpoint\{
+    EndpointContextKeys,
+    EndpointResolverInterface
+};
 use Smithy\Client\Endpoint\Bytecode\{
     Bytecode,
     BytecodeEndpointResolver,
     Compiler\BddCompiler,
+    EndpointResolutionTraceSinkInterface,
     StdFunctions
 };
+use Smithy\Core\Context\Context;
 use Smithy\Core\Endpoint\Endpoint;
 use Smithy\Core\Serde\{
     Schema,
@@ -327,31 +332,6 @@ final class BytecodeEndpointResolverTest extends TestCase
         self::assertSame('https://configured.example', $endpoint->url);
     }
 
-    public function testRejectsNonArrayConfiguredParameters(): void
-    {
-        $inputSchema = $this->inputSchema();
-        $operation = $this->operation($inputSchema);
-        $input = StructDocument::fromMembers(
-            $inputSchema,
-            ['input.example']
-        );
-        $resolver = $this->resolver();
-
-        $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage(
-            'Endpoint parameters must be an associative array.'
-        );
-
-        $resolver->resolveEndpoint(
-            ...$this->params(
-                $resolver,
-                $operation,
-                $input,
-                'invalid'
-            )
-        );
-    }
-
     public function testConsecutiveCallsUseL1CacheWhenL2IsDisabled(): void
     {
         $inputSchema = $this->inputSchema();
@@ -490,24 +470,6 @@ final class BytecodeEndpointResolverTest extends TestCase
         self::assertSame([[1, $first]], $sink->traces[0]->results);
         self::assertSame([[1, $second]], $sink->traces[1]->results);
         self::assertSame(1, $this->countSharedCacheEntries());
-    }
-
-    public function testRejectsInvalidEndpointResolutionTraceSink(): void
-    {
-        $resolver = new BytecodeEndpointResolver(
-            $this->compileTrivialBytecode()
-        );
-        $params = $this->sharedCacheParams(
-            ['Region' => 'us-east-1'],
-            new \stdClass()
-        );
-
-        $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage(
-            'Endpoint resolution trace sink must implement '
-        );
-
-        $resolver->resolveEndpoint(...$params);
     }
 
     public function testDifferentStaticContextsAreCacheIsolated(): void
@@ -960,7 +922,7 @@ final class BytecodeEndpointResolverTest extends TestCase
      */
     private function sharedCacheParams(
         array $parameters,
-        mixed $traceSink = null
+        ?EndpointResolutionTraceSinkInterface $traceSink = null
     ): array
     {
         $operation = $this->createStub(OperationInterface::class);
@@ -974,11 +936,15 @@ final class BytecodeEndpointResolverTest extends TestCase
             new Schema('example#Input', ShapeType::Structure)
         );
 
-        $context = [
-            EndpointResolverInterface::CONTEXT_PARAMETERS => $parameters
-        ];
+        $context = (new Context())->with(
+            EndpointContextKeys::parameters(),
+            $parameters
+        );
         if ($traceSink !== null) {
-            $context[EndpointResolverInterface::CONTEXT_TRACE_SINK] = $traceSink;
+            $context = $context->with(
+                EndpointContextKeys::traceSink(),
+                $traceSink
+            );
         }
 
         return [
@@ -1008,13 +974,15 @@ final class BytecodeEndpointResolverTest extends TestCase
     }
 
     /**
+     * @param array<string, mixed> $endpointParameters
+     *
      * @return array{OperationInterface, SerializableStructInterface, ClientConfig}
      */
     private function params(
         BytecodeEndpointResolver $resolver,
         OperationInterface $operation,
         SerializableStructInterface $input,
-        mixed $endpointParameters = []
+        array $endpointParameters = []
     ): array
     {
         return [
@@ -1026,10 +994,10 @@ final class BytecodeEndpointResolverTest extends TestCase
                     $this->createStub(HttpClientInterface::class)
                 ),
                 endpointResolver: $resolver,
-                context: [
-                    EndpointResolverInterface::CONTEXT_PARAMETERS =>
-                        $endpointParameters
-                ]
+                context: (new Context())->with(
+                    EndpointContextKeys::parameters(),
+                    $endpointParameters
+                )
             )
         ];
     }

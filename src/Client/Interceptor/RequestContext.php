@@ -11,6 +11,7 @@ namespace Smithy\Client\Interceptor;
 
 use Smithy\Client\AbstractClientConfig;
 use Smithy\Core\Transport\TransportRequestInterface;
+use Smithy\Core\Context\MutableContext;
 use Smithy\Core\Serde\SerializableStructInterface;
 use Smithy\Core\Shape\OperationInterface;
 
@@ -21,6 +22,9 @@ use Smithy\Core\Shape\OperationInterface;
  * Supplied to `readAfterSerialization`, `modifyBeforeRetryLoop`,
  * `readBeforeAttempt`, `modifyBeforeSigning`, `readAfterSigning`,
  * `modifyBeforeTransmit`, and `readBeforeTransmit`.
+ *
+ * `attributes` is the per-call {@see MutableContext}. Every hook of the
+ * same operation call receives the same instance; each call gets a new one.
  */
 final class RequestContext
 {
@@ -31,6 +35,7 @@ final class RequestContext
         public OperationInterface $operation,
         public SerializableStructInterface $input,
         public AbstractClientConfig $config,
+        public MutableContext $attributes,
         public TransportRequestInterface $request
     ) {}
 
@@ -55,6 +60,7 @@ final class RequestContext
                 $this->operation,
                 $this->input,
                 $this->config,
+                $this->attributes,
                 $request
             );
     }
