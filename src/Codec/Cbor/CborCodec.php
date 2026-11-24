@@ -65,8 +65,6 @@ final class CborCodec extends AbstractCodec
 
     /**
      * Borrow a reusable serializer.
-     *
-     * @internal
      */
     public function acquireSerializer(): CborSerializer
     {
@@ -79,8 +77,6 @@ final class CborCodec extends AbstractCodec
 
     /**
      * Return a borrowed serializer to the pool.
-     *
-     * @internal
      *
      * @return void
      */

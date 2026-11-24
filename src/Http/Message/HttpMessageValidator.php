@@ -11,8 +11,6 @@ namespace Smithy\Http\Message;
 
 /**
  * Validate values stored in HTTP messages.
- *
- * @internal
  */
 final class HttpMessageValidator
 {

@@ -14,8 +14,6 @@ use Smithy\Core\Serde\TimestampFormat;
 
 /**
  * Carry precomputed HTTP binding metadata for a structure or union schema.
- *
- * @internal Runtime metadata attached to HTTP-bound structure schemas.
  */
 final class HttpStructBindingExtension
 {

@@ -20,8 +20,6 @@ use Smithy\Core\Shape\Document\StructDocument;
 
 /**
  * Deserialize HTTP-bound response data into positional shape members.
- *
- * @internal Runtime deserializer for HTTP binding protocols.
  */
 final class HttpBindingDeserializer implements ShapeDeserializerInterface
 {

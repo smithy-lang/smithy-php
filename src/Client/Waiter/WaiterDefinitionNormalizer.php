@@ -11,8 +11,6 @@ namespace Smithy\Client\Waiter;
 
 /**
  * Normalize modeled waiter definitions for runtime and code generation.
- *
- * @internal
  */
 final class WaiterDefinitionNormalizer
 {

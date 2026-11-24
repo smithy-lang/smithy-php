@@ -61,9 +61,7 @@ final class FormUrlEncodedCodec extends AbstractCodec
     }
 
     /**
-     * Borrow a reusable serializer for internal callers.
-     *
-     * @internal
+     * Borrow a reusable serializer.
      */
     public function acquireSerializer(): FormUrlEncodedSerializer
     {
@@ -75,9 +73,7 @@ final class FormUrlEncodedCodec extends AbstractCodec
     }
 
     /**
-     * Return an internally borrowed serializer to this codec.
-     *
-     * @internal
+     * Return a borrowed serializer to the pool.
      *
      * @return void
      */
