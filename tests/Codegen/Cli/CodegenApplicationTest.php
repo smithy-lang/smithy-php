@@ -257,7 +257,7 @@ final class CodegenApplicationTest extends TestCase
 
     public function testPackagedCommandIsExecutable(): void
     {
-        $command = __DIR__ . '/../../../bin/smithy-php-codegen';
+        $command = __DIR__ . '/../../../src/Codegen/bin/smithy-php-codegen';
 
         $this->assertFileExists($command);
         [$status, $stdout, $stderr] = $this->runPhpCommand(

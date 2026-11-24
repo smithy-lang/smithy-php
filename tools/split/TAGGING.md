@@ -68,6 +68,8 @@ locally. It only matters once the packages are split and published.
    with a GitHub webhook (or auto-update), so the new tag appears as an
    installable version within a minute. `composer require smithy/core:^0.1`
    now resolves from Packagist with no path repositories.
+   Register only the 9 mirror packages. Do not register the monorepo
+   `smithy/smithy-php`; it ships tests and tooling.
 
 5. **Verify** one clean install (see ROLLBACK.md "verify" for the exact probe):
    ```
