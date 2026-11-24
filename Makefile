@@ -20,7 +20,7 @@ test: ## Run the test suite
 	$(COMPOSER) test $(if $(ARGS),-- $(ARGS))
 
 lint: ## Check PHP syntax
-	$(PHP) tools/lint.php src tests tools benchmarks codegen-output bin/smithy-php-codegen
+	$(PHP) tools/lint.php src tests tools benchmarks codegen-output src/Codegen/bin/smithy-php-codegen
 
 static-analysis: ## Run PHPStan
 	$(COMPOSER) static-analysis $(if $(ARGS),-- $(ARGS))

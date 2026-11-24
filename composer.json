@@ -63,12 +63,12 @@
         }
     },
     "bin": [
-        "bin/smithy-php-codegen"
+        "src/Codegen/bin/smithy-php-codegen"
     ],
     "scripts": {
         "test": "phpunit",
         "static-analysis": "phpstan analyse --no-progress",
-        "codegen": "php bin/smithy-php-codegen",
+        "codegen": "php src/Codegen/bin/smithy-php-codegen",
         "codegen-output": "php tools/codegen-output/generate.php",
         "codegen-output:check": "php tools/codegen-output/generate.php --check",
         "license:check": "php tools/check-license-headers.php",

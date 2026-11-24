@@ -27,7 +27,7 @@ $command = [
     '--exclude-standard',
     '--',
     '*.php',
-    'bin/smithy-php-codegen'
+    'src/Codegen/bin/smithy-php-codegen'
 ];
 $process = \proc_open(
     $command,
