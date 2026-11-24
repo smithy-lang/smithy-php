@@ -10,6 +10,7 @@ Splits the smithy-php monorepo into 9 standalone, read-only Composer packages so
 | `.github/workflows/split.yml` | Runs the split when a semver tag such as `0.1.0` is pushed, or by hand for an existing tag; guarded to the canonical repo. |
 | `TAGGING.md` | How one monorepo tag becomes one version across all 9 packages. |
 | `ROLLBACK.md` | Checklist to retract a bad release. |
+| `RETIRED_TAGS` | Yanked tags, one per line. `split.sh` refuses them. |
 
 ## Quick start (dry run, nothing pushed)
 
@@ -18,7 +19,9 @@ MONOREPO=/path/to/monorepo bash tools/split/split.sh
 ```
 
 The org defaults to `smithy-lang`; override with `SPLIT_ORG=my-org` for a
-scratch rehearsal. Set `PUSH=1` only in CI / a real release.
+scratch rehearsal. For local or scratch mirrors, set `REMOTE_BASE` to a URL
+template, e.g. `REMOTE_BASE=/tmp/mirrors/__SLUG__.git`. Set `PUSH=1` only in
+CI / a real release. With `TAG=<tag>`, the commit that tag points at is split.
 
 ## Target repos
 
@@ -52,6 +55,10 @@ cause and run it again for the same tag: **Actions -> Split packages -> Run
 workflow**, then enter the existing tag, e.g. `0.1.0`. The tag must already
 exist in the monorepo. Mirrors that already hold the split and tag are left
 alone; the rest are pushed.
+
+By hand: `TAG=0.1.0 PUSH=1 bash tools/split/split.sh`. A local run stops at the
+first failed mirror (the workflow runs all 9 independently). Fix the cause and
+run the same command again; a rerun is safe.
 
 ## Future: trusted publishing
 

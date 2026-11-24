@@ -16,14 +16,16 @@
 # Usage:
 #   ./split.sh                                  # local split, org=smithy-lang
 #   SPLIT_ORG=my-org ./split.sh                 # local split against another org
-#   TAG=0.1.0 ./split.sh                        # local split for a specific tag
+#   TAG=0.1.0 ./split.sh                        # local split of the commit tag 0.1.0 points at
 #   PUSH=1 ./split.sh                           # actually push (CI / release)
 #
 # Environment:
 #   SPLIT_ORG   (optional) GitHub org/user that owns the per-package repos.
 #               Default: smithy-lang.
-#   TAG         (optional) Tag to propagate to each split repo. Defaults to the
-#               tag pointing at HEAD, if any.
+#   TAG         (optional) Tag to propagate to each split repo. The commit the
+#               tag points at is the one that gets split (the tag must exist
+#               locally). Defaults to the tag pointing at HEAD, if any; with no
+#               tag, HEAD is split. A tag listed in RETIRED_TAGS is refused.
 #   BRANCH      (optional) Branch to push the split to. Default: main.
 #   PUSH        (optional) Set to 1 to actually push. Default: 0 (dry run).
 #   REMOTE_BASE (optional) Override the remote URL template. Default:
@@ -59,6 +61,21 @@ fi
 TAG="${TAG:-$(git describe --tags --exact-match 2>/dev/null || true)}"
 if [[ -z "${TAG}" ]]; then
   echo "NOTICE: no tag at HEAD and TAG not set; splitting branches only, no tag push."
+  SPLIT_REF="HEAD"
+else
+  if ! SPLIT_REF="$(git rev-parse --verify --quiet "${TAG}^{commit}")"; then
+    echo "ERROR: tag '${TAG}' does not exist locally; nothing was pushed." >&2
+    exit 5
+  fi
+  # RETIRED_TAGS lists yanked tags, one per line; '#' starts a comment.
+  RETIRED_FILE="${RETIRED_FILE:-${SCRIPT_DIR}/RETIRED_TAGS}"
+  if [[ -f "${RETIRED_FILE}" ]] \
+    && sed 's/#.*//; s/[[:space:]]//g' "${RETIRED_FILE}" | grep -qxF -- "${TAG}"
+  then
+    echo "ERROR: tag '${TAG}' is retired (see tools/split/RETIRED_TAGS); nothing was pushed." >&2
+    echo "       Release a new, higher tag instead." >&2
+    exit 6
+  fi
 fi
 
 # --- choose the split method ------------------------------------------------
@@ -177,10 +194,10 @@ while read -r subdir pkg slug || [[ -n "${subdir}" ]]; do
 
   # Compute the split commit SHA for this prefix.
   if [[ "${SPLIT_METHOD}" == "splitsh" ]]; then
-    sha="$(splitsh-lite --prefix="${prefix}/" --quiet)"
+    sha="$(splitsh-lite --prefix="${prefix}/" --origin="${SPLIT_REF}" --quiet)"
   else
     # git subtree split: --branch is avoided so the main repo gets no extra refs.
-    sha="$(git subtree split --prefix="${prefix}")"
+    sha="$(git subtree split --prefix="${prefix}" "${SPLIT_REF}")"
   fi
   echo "      split commit: ${sha}"
 
