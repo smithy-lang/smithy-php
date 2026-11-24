@@ -67,27 +67,27 @@ final class RpcV2JsonClient extends AbstractClient implements RpcV2JsonClientInt
     }
 
     public function bigDecimalOperation(
-        BigDecimalStructure $input,
+        ?BigDecimalStructure $input = null,
         ?RequestOverrideConfig $overrides = null
     ): BigDecimalStructure
     {
         /** @var BigDecimalStructure */
         return $this->executeOperation(
             BigDecimalOperationOperation::instance(),
-            $input,
+            $input ?? new BigDecimalStructure(),
             $overrides
         );
     }
 
     public function bigIntegerOperation(
-        BigIntegerStructure $input,
+        ?BigIntegerStructure $input = null,
         ?RequestOverrideConfig $overrides = null
     ): BigIntegerStructure
     {
         /** @var BigIntegerStructure */
         return $this->executeOperation(
             BigIntegerOperationOperation::instance(),
-            $input,
+            $input ?? new BigIntegerStructure(),
             $overrides
         );
     }
@@ -147,40 +147,40 @@ final class RpcV2JsonClient extends AbstractClient implements RpcV2JsonClientInt
     }
 
     public function operationWithDefaults(
-        OperationWithDefaultsInput $input,
+        ?OperationWithDefaultsInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): OperationWithDefaultsOutput
     {
         /** @var OperationWithDefaultsOutput */
         return $this->executeOperation(
             OperationWithDefaultsOperation::instance(),
-            $input,
+            $input ?? new OperationWithDefaultsInput(),
             $overrides
         );
     }
 
     public function optionalInputOutput(
-        SimpleStructure $input,
+        ?SimpleStructure $input = null,
         ?RequestOverrideConfig $overrides = null
     ): SimpleStructure
     {
         /** @var SimpleStructure */
         return $this->executeOperation(
             OptionalInputOutputOperation::instance(),
-            $input,
+            $input ?? new SimpleStructure(),
             $overrides
         );
     }
 
     public function recursiveShapes(
-        RecursiveShapesInputOutput $input,
+        ?RecursiveShapesInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): RecursiveShapesInputOutput
     {
         /** @var RecursiveShapesInputOutput */
         return $this->executeOperation(
             RecursiveShapesOperation::instance(),
-            $input,
+            $input ?? new RecursiveShapesInputOutput(),
             $overrides
         );
     }
@@ -189,14 +189,14 @@ final class RpcV2JsonClient extends AbstractClient implements RpcV2JsonClientInt
      * The example tests basic map serialization.
      */
     public function rpcV2JsonDenseMaps(
-        RpcV2JsonDenseMapsInputOutput $input,
+        ?RpcV2JsonDenseMapsInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): RpcV2JsonDenseMapsInputOutput
     {
         /** @var RpcV2JsonDenseMapsInputOutput */
         return $this->executeOperation(
             RpcV2JsonDenseMapsOperation::instance(),
-            $input,
+            $input ?? new RpcV2JsonDenseMapsInputOutput(),
             $overrides
         );
     }
@@ -206,53 +206,53 @@ final class RpcV2JsonClient extends AbstractClient implements RpcV2JsonClientInt
      * sets. 3. Lists of lists. 4. Lists of structures.
      */
     public function rpcV2JsonLists(
-        RpcV2JsonListInputOutput $input,
+        ?RpcV2JsonListInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): RpcV2JsonListInputOutput
     {
         /** @var RpcV2JsonListInputOutput */
         return $this->executeOperation(
             RpcV2JsonListsOperation::instance(),
-            $input,
+            $input ?? new RpcV2JsonListInputOutput(),
             $overrides
         );
     }
 
     public function rpcV2JsonSparseMaps(
-        RpcV2JsonSparseMapsInputOutput $input,
+        ?RpcV2JsonSparseMapsInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): RpcV2JsonSparseMapsInputOutput
     {
         /** @var RpcV2JsonSparseMapsInputOutput */
         return $this->executeOperation(
             RpcV2JsonSparseMapsOperation::instance(),
-            $input,
+            $input ?? new RpcV2JsonSparseMapsInputOutput(),
             $overrides
         );
     }
 
     public function simpleScalarProperties(
-        SimpleScalarStructure $input,
+        ?SimpleScalarStructure $input = null,
         ?RequestOverrideConfig $overrides = null
     ): SimpleScalarStructure
     {
         /** @var SimpleScalarStructure */
         return $this->executeOperation(
             SimpleScalarPropertiesOperation::instance(),
-            $input,
+            $input ?? new SimpleScalarStructure(),
             $overrides
         );
     }
 
     public function sparseNullsOperation(
-        SparseNullsOperationInputOutput $input,
+        ?SparseNullsOperationInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): SparseNullsOperationInputOutput
     {
         /** @var SparseNullsOperationInputOutput */
         return $this->executeOperation(
             SparseNullsOperationOperation::instance(),
-            $input,
+            $input ?? new SparseNullsOperationInputOutput(),
             $overrides
         );
     }
@@ -263,14 +263,14 @@ final class RpcV2JsonClient extends AbstractClient implements RpcV2JsonClientInt
      * (epoch-seconds) must all serialize as JSON numbers.
      */
     public function timestampFormatIgnored(
-        TimestampFormatIgnoredIO $input,
+        ?TimestampFormatIgnoredIO $input = null,
         ?RequestOverrideConfig $overrides = null
     ): TimestampFormatIgnoredIO
     {
         /** @var TimestampFormatIgnoredIO */
         return $this->executeOperation(
             TimestampFormatIgnoredOperation::instance(),
-            $input,
+            $input ?? new TimestampFormatIgnoredIO(),
             $overrides
         );
     }

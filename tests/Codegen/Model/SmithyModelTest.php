@@ -853,6 +853,50 @@ final class SmithyModelTest extends TestCase
         $this->assertSame('clientOptional', $ordered[array_key_last($ordered)]);
     }
 
+    public function testGetMembersOrderedPutsRequiredTraitFirstForInputs(): void
+    {
+        $required = ['smithy.api#required' => (object) []];
+        $model = SmithyModel::fromJson(\json_encode([
+            'smithy' => '2.0',
+            'shapes' => [
+                'smithy.example#HeadThingInput' => [
+                    'type' => 'structure',
+                    'members' => [
+                        'bucket' => [
+                            'target' => 'smithy.api#String',
+                            'traits' => $required
+                        ],
+                        'ifMatch' => ['target' => 'smithy.api#String'],
+                        'key' => [
+                            'target' => 'smithy.api#String',
+                            'traits' => $required
+                        ],
+                        'range' => ['target' => 'smithy.api#String']
+                    ],
+                    'traits' => ['smithy.api#input' => (object) []]
+                ]
+            ]
+        ], JSON_THROW_ON_ERROR));
+
+        $this->assertSame(
+            ['bucket', 'key', 'ifMatch', 'range'],
+            array_keys(
+                $model->getMembersOrdered('smithy.example#HeadThingInput')
+            )
+        );
+        $this->assertSame(
+            ['range', 'bucket', 'key', 'ifMatch'],
+            array_keys($model->getMembersOrdered(
+                'smithy.example#HeadThingInput',
+                ['range']
+            ))
+        );
+        // Client-optional semantics are unchanged.
+        $this->assertFalse(
+            $model->isMemberRequired('smithy.example#HeadThingInput', 'key')
+        );
+    }
+
     public function testGetMembersOrderedHonorsPreservedOrderThenAppendsNew(): void
     {
         $model = SmithyModel::fromFile(

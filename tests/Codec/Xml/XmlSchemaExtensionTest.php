@@ -147,7 +147,11 @@ final class XmlSchemaExtensionTest extends TestCase
 
         $info = $schema->getExtension(self::key());
 
-        $this->assertSame(['name'], array_keys($info->elementMembers));
+        $this->assertSame(
+            ['items', 'name'],
+            array_keys($info->elementMembers)
+        );
+        $this->assertSame($listSchema, $info->elementMembers['items']);
         $this->assertSame(1, $info->elementMembers['name']->memberIndex);
         $this->assertArrayHasKey('items', $info->flattenedLists);
         $this->assertSame(
@@ -187,7 +191,7 @@ final class XmlSchemaExtensionTest extends TestCase
 
         $info = $schema->getExtension(self::key());
 
-        $this->assertSame([], $info->elementMembers);
+        $this->assertSame(['tags' => $mapSchema], $info->elementMembers);
         $this->assertArrayHasKey('tags', $info->flattenedMaps);
         $this->assertSame($mapSchema, $info->flattenedMaps['tags']['member']);
         $this->assertSame('key', $info->flattenedMaps['tags']['keyName']);

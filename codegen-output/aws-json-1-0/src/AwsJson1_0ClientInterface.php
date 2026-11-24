@@ -35,7 +35,7 @@ interface AwsJson1_0ClientInterface extends ClientInterface
      * The example tests how servers must support requests containing a `Content-Type` header with parameters.
      */
     public function contentTypeParameters(
-        ContentTypeParametersInput $input,
+        ?ContentTypeParametersInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): ContentTypeParametersOutput;
 
@@ -62,7 +62,7 @@ interface AwsJson1_0ClientInterface extends ClientInterface
      * properly deserialize successful and error responses.
      */
     public function greetingWithErrors(
-        GreetingWithErrorsInput $input,
+        ?GreetingWithErrorsInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): GreetingWithErrorsOutput;
 
@@ -71,7 +71,10 @@ interface AwsJson1_0ClientInterface extends ClientInterface
     /**
      * This operation uses unions for inputs and outputs.
      */
-    public function jsonUnions(JsonUnionsInput $input, ?RequestOverrideConfig $overrides = null): JsonUnionsOutput;
+    public function jsonUnions(
+        ?JsonUnionsInput $input = null,
+        ?RequestOverrideConfig $overrides = null
+    ): JsonUnionsOutput;
 
     /**
      * The example tests how requests and responses are serialized when there's no request or response payload because the
@@ -89,14 +92,14 @@ interface AwsJson1_0ClientInterface extends ClientInterface
     ): NoInputAndOutputOutput;
 
     public function putWithContentEncoding(
-        PutWithContentEncodingInput $input,
+        ?PutWithContentEncodingInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): Unit;
 
     public function queryIncompatibleOperation(?Unit $input = null, ?RequestOverrideConfig $overrides = null): Unit;
 
     public function simpleScalarProperties(
-        SimpleScalarPropertiesInput $input,
+        ?SimpleScalarPropertiesInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): SimpleScalarPropertiesOutput;
 }

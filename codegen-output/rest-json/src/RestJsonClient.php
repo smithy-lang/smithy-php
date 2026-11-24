@@ -184,12 +184,15 @@ final class RestJsonClient extends AbstractClient implements RestJsonClientInter
     /**
      * This example uses all query string types.
      */
-    public function allQueryStringTypes(AllQueryStringTypesInput $input, ?RequestOverrideConfig $overrides = null): Unit
+    public function allQueryStringTypes(
+        ?AllQueryStringTypesInput $input = null,
+        ?RequestOverrideConfig $overrides = null
+    ): Unit
     {
         /** @var Unit */
         return $this->executeOperation(
             AllQueryStringTypesOperation::instance(),
-            $input,
+            $input ?? new AllQueryStringTypesInput(),
             $overrides
         );
     }
@@ -199,14 +202,14 @@ final class RestJsonClient extends AbstractClient implements RestJsonClientInter
      * variable parameters must both be serialized (implementations may need to merge them together).
      */
     public function constantAndVariableQueryString(
-        ConstantAndVariableQueryStringInput $input,
+        ?ConstantAndVariableQueryStringInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): Unit
     {
         /** @var Unit */
         return $this->executeOperation(
             ConstantAndVariableQueryStringOperation::instance(),
-            $input,
+            $input ?? new ConstantAndVariableQueryStringInput(),
             $overrides
         );
     }
@@ -230,14 +233,14 @@ final class RestJsonClient extends AbstractClient implements RestJsonClientInter
      * The example tests how servers must support requests containing a `Content-Type` header with parameters.
      */
     public function contentTypeParameters(
-        ContentTypeParametersInput $input,
+        ?ContentTypeParametersInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): ContentTypeParametersOutput
     {
         /** @var ContentTypeParametersOutput */
         return $this->executeOperation(
             ContentTypeParametersOperation::instance(),
-            $input,
+            $input ?? new ContentTypeParametersInput(),
             $overrides
         );
     }
@@ -259,14 +262,14 @@ final class RestJsonClient extends AbstractClient implements RestJsonClientInter
      * This example serializes a document as part of the payload.
      */
     public function documentType(
-        DocumentTypeInputOutput $input,
+        ?DocumentTypeInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): DocumentTypeInputOutput
     {
         /** @var DocumentTypeInputOutput */
         return $this->executeOperation(
             DocumentTypeOperation::instance(),
-            $input,
+            $input ?? new DocumentTypeInputOutput(),
             $overrides
         );
     }
@@ -275,14 +278,14 @@ final class RestJsonClient extends AbstractClient implements RestJsonClientInter
      * This example serializes documents as the value of maps.
      */
     public function documentTypeAsMapValue(
-        DocumentTypeAsMapValueInputOutput $input,
+        ?DocumentTypeAsMapValueInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): DocumentTypeAsMapValueInputOutput
     {
         /** @var DocumentTypeAsMapValueInputOutput */
         return $this->executeOperation(
             DocumentTypeAsMapValueOperation::instance(),
-            $input,
+            $input ?? new DocumentTypeAsMapValueInputOutput(),
             $overrides
         );
     }
@@ -291,24 +294,27 @@ final class RestJsonClient extends AbstractClient implements RestJsonClientInter
      * This example serializes a document as the entire HTTP payload.
      */
     public function documentTypeAsPayload(
-        DocumentTypeAsPayloadInputOutput $input,
+        ?DocumentTypeAsPayloadInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): DocumentTypeAsPayloadInputOutput
     {
         /** @var DocumentTypeAsPayloadInputOutput */
         return $this->executeOperation(
             DocumentTypeAsPayloadOperation::instance(),
-            $input,
+            $input ?? new DocumentTypeAsPayloadInputOutput(),
             $overrides
         );
     }
 
-    public function duplexStream(DuplexStreamInput $input, ?RequestOverrideConfig $overrides = null): DuplexStreamOutput
+    public function duplexStream(
+        ?DuplexStreamInput $input = null,
+        ?RequestOverrideConfig $overrides = null
+    ): DuplexStreamOutput
     {
         /** @var DuplexStreamOutput */
         return $this->executeOperation(
             DuplexStreamOperation::instance(),
-            $input,
+            $input ?? new DuplexStreamInput(),
             $overrides
         );
     }
@@ -412,14 +418,14 @@ final class RestJsonClient extends AbstractClient implements RestJsonClientInter
      * This example tests httpChecksumRequired trait
      */
     public function httpChecksumRequired(
-        HttpChecksumRequiredInputOutput $input,
+        ?HttpChecksumRequiredInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): HttpChecksumRequiredInputOutput
     {
         /** @var HttpChecksumRequiredInputOutput */
         return $this->executeOperation(
             HttpChecksumRequiredOperation::instance(),
-            $input,
+            $input ?? new HttpChecksumRequiredInputOutput(),
             $overrides
         );
     }
@@ -428,24 +434,27 @@ final class RestJsonClient extends AbstractClient implements RestJsonClientInter
      * Clients that perform this test extract all headers from the response.
      */
     public function httpEmptyPrefixHeaders(
-        HttpEmptyPrefixHeadersInput $input,
+        ?HttpEmptyPrefixHeadersInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): HttpEmptyPrefixHeadersOutput
     {
         /** @var HttpEmptyPrefixHeadersOutput */
         return $this->executeOperation(
             HttpEmptyPrefixHeadersOperation::instance(),
-            $input,
+            $input ?? new HttpEmptyPrefixHeadersInput(),
             $overrides
         );
     }
 
-    public function httpEnumPayload(EnumPayloadInput $input, ?RequestOverrideConfig $overrides = null): EnumPayloadInput
+    public function httpEnumPayload(
+        ?EnumPayloadInput $input = null,
+        ?RequestOverrideConfig $overrides = null
+    ): EnumPayloadInput
     {
         /** @var EnumPayloadInput */
         return $this->executeOperation(
             HttpEnumPayloadOperation::instance(),
-            $input,
+            $input ?? new EnumPayloadInput(),
             $overrides
         );
     }
@@ -455,14 +464,14 @@ final class RestJsonClient extends AbstractClient implements RestJsonClientInter
      * payload is not a structure or a union type.
      */
     public function httpPayloadTraits(
-        HttpPayloadTraitsInputOutput $input,
+        ?HttpPayloadTraitsInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): HttpPayloadTraitsInputOutput
     {
         /** @var HttpPayloadTraitsInputOutput */
         return $this->executeOperation(
             HttpPayloadTraitsOperation::instance(),
-            $input,
+            $input ?? new HttpPayloadTraitsInputOutput(),
             $overrides
         );
     }
@@ -472,14 +481,14 @@ final class RestJsonClient extends AbstractClient implements RestJsonClientInter
      * name to match the targeted structure.
      */
     public function httpPayloadWithStructure(
-        HttpPayloadWithStructureInputOutput $input,
+        ?HttpPayloadWithStructureInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): HttpPayloadWithStructureInputOutput
     {
         /** @var HttpPayloadWithStructureInputOutput */
         return $this->executeOperation(
             HttpPayloadWithStructureOperation::instance(),
-            $input,
+            $input ?? new HttpPayloadWithStructureInputOutput(),
             $overrides
         );
     }
@@ -488,14 +497,14 @@ final class RestJsonClient extends AbstractClient implements RestJsonClientInter
      * This example serializes a union in the payload.
      */
     public function httpPayloadWithUnion(
-        HttpPayloadWithUnionInputOutput $input,
+        ?HttpPayloadWithUnionInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): HttpPayloadWithUnionInputOutput
     {
         /** @var HttpPayloadWithUnionInputOutput */
         return $this->executeOperation(
             HttpPayloadWithUnionOperation::instance(),
-            $input,
+            $input ?? new HttpPayloadWithUnionInputOutput(),
             $overrides
         );
     }
@@ -504,14 +513,14 @@ final class RestJsonClient extends AbstractClient implements RestJsonClientInter
      * This examples adds headers to the input of a request and response by prefix.
      */
     public function httpPrefixHeaders(
-        HttpPrefixHeadersInput $input,
+        ?HttpPrefixHeadersInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): HttpPrefixHeadersOutput
     {
         /** @var HttpPrefixHeadersOutput */
         return $this->executeOperation(
             HttpPrefixHeadersOperation::instance(),
-            $input,
+            $input ?? new HttpPrefixHeadersInput(),
             $overrides
         );
     }
@@ -536,14 +545,14 @@ final class RestJsonClient extends AbstractClient implements RestJsonClientInter
      * This example tests httpQueryParams when no other query parameters exist.
      */
     public function httpQueryParamsOnlyOperation(
-        HttpQueryParamsOnlyInput $input,
+        ?HttpQueryParamsOnlyInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): Unit
     {
         /** @var Unit */
         return $this->executeOperation(
             HttpQueryParamsOnlyOperationOperation::instance(),
-            $input,
+            $input ?? new HttpQueryParamsOnlyInput(),
             $overrides
         );
     }
@@ -633,14 +642,14 @@ final class RestJsonClient extends AbstractClient implements RestJsonClientInter
     }
 
     public function httpStringPayload(
-        StringPayloadInput $input,
+        ?StringPayloadInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): StringPayloadInput
     {
         /** @var StringPayloadInput */
         return $this->executeOperation(
             HttpStringPayloadOperation::instance(),
-            $input,
+            $input ?? new StringPayloadInput(),
             $overrides
         );
     }
@@ -667,24 +676,24 @@ final class RestJsonClient extends AbstractClient implements RestJsonClientInter
      * HTTP header bindings.
      */
     public function inputAndOutputWithHeaders(
-        InputAndOutputWithHeadersIO $input,
+        ?InputAndOutputWithHeadersIO $input = null,
         ?RequestOverrideConfig $overrides = null
     ): InputAndOutputWithHeadersIO
     {
         /** @var InputAndOutputWithHeadersIO */
         return $this->executeOperation(
             InputAndOutputWithHeadersOperation::instance(),
-            $input,
+            $input ?? new InputAndOutputWithHeadersIO(),
             $overrides
         );
     }
 
-    public function inputStream(InputStreamInput $input, ?RequestOverrideConfig $overrides = null): Unit
+    public function inputStream(?InputStreamInput $input = null, ?RequestOverrideConfig $overrides = null): Unit
     {
         /** @var Unit */
         return $this->executeOperation(
             InputStreamOperation::instance(),
-            $input,
+            $input ?? new InputStreamInput(),
             $overrides
         );
     }
@@ -706,14 +715,14 @@ final class RestJsonClient extends AbstractClient implements RestJsonClientInter
      * Blobs are base64 encoded
      */
     public function jsonBlobs(
-        JsonBlobsInputOutput $input,
+        ?JsonBlobsInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): JsonBlobsInputOutput
     {
         /** @var JsonBlobsInputOutput */
         return $this->executeOperation(
             JsonBlobsOperation::instance(),
-            $input,
+            $input ?? new JsonBlobsInputOutput(),
             $overrides
         );
     }
@@ -722,14 +731,14 @@ final class RestJsonClient extends AbstractClient implements RestJsonClientInter
      * This example serializes enums as top level properties, in lists, sets, and maps.
      */
     public function jsonEnums(
-        JsonEnumsInputOutput $input,
+        ?JsonEnumsInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): JsonEnumsInputOutput
     {
         /** @var JsonEnumsInputOutput */
         return $this->executeOperation(
             JsonEnumsOperation::instance(),
-            $input,
+            $input ?? new JsonEnumsInputOutput(),
             $overrides
         );
     }
@@ -738,14 +747,14 @@ final class RestJsonClient extends AbstractClient implements RestJsonClientInter
      * This example serializes intEnums as top level properties, in lists, sets, and maps.
      */
     public function jsonIntEnums(
-        JsonIntEnumsInputOutput $input,
+        ?JsonIntEnumsInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): JsonIntEnumsInputOutput
     {
         /** @var JsonIntEnumsInputOutput */
         return $this->executeOperation(
             JsonIntEnumsOperation::instance(),
-            $input,
+            $input ?? new JsonIntEnumsInputOutput(),
             $overrides
         );
     }
@@ -755,14 +764,14 @@ final class RestJsonClient extends AbstractClient implements RestJsonClientInter
      * Normal JSON sets. 3. JSON lists of lists. 4. Lists of structures.
      */
     public function jsonLists(
-        JsonListsInputOutput $input,
+        ?JsonListsInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): JsonListsInputOutput
     {
         /** @var JsonListsInputOutput */
         return $this->executeOperation(
             JsonListsOperation::instance(),
-            $input,
+            $input ?? new JsonListsInputOutput(),
             $overrides
         );
     }
@@ -770,12 +779,15 @@ final class RestJsonClient extends AbstractClient implements RestJsonClientInter
     /**
      * The example tests basic map serialization.
      */
-    public function jsonMaps(JsonMapsInputOutput $input, ?RequestOverrideConfig $overrides = null): JsonMapsInputOutput
+    public function jsonMaps(
+        ?JsonMapsInputOutput $input = null,
+        ?RequestOverrideConfig $overrides = null
+    ): JsonMapsInputOutput
     {
         /** @var JsonMapsInputOutput */
         return $this->executeOperation(
             JsonMapsOperation::instance(),
-            $input,
+            $input ?? new JsonMapsInputOutput(),
             $overrides
         );
     }
@@ -785,14 +797,14 @@ final class RestJsonClient extends AbstractClient implements RestJsonClientInter
      * @timestampFormat trait values.
      */
     public function jsonTimestamps(
-        JsonTimestampsInputOutput $input,
+        ?JsonTimestampsInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): JsonTimestampsInputOutput
     {
         /** @var JsonTimestampsInputOutput */
         return $this->executeOperation(
             JsonTimestampsOperation::instance(),
-            $input,
+            $input ?? new JsonTimestampsInputOutput(),
             $overrides
         );
     }
@@ -800,12 +812,15 @@ final class RestJsonClient extends AbstractClient implements RestJsonClientInter
     /**
      * This operation uses unions for inputs and outputs.
      */
-    public function jsonUnions(UnionInputOutput $input, ?RequestOverrideConfig $overrides = null): UnionInputOutput
+    public function jsonUnions(
+        ?UnionInputOutput $input = null,
+        ?RequestOverrideConfig $overrides = null
+    ): UnionInputOutput
     {
         /** @var UnionInputOutput */
         return $this->executeOperation(
             JsonUnionsOperation::instance(),
-            $input,
+            $input ?? new UnionInputOutput(),
             $overrides
         );
     }
@@ -814,14 +829,14 @@ final class RestJsonClient extends AbstractClient implements RestJsonClientInter
      * This example ensures that mediaType strings are base64 encoded in headers.
      */
     public function mediaTypeHeader(
-        MediaTypeHeaderInput $input,
+        ?MediaTypeHeaderInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): MediaTypeHeaderOutput
     {
         /** @var MediaTypeHeaderOutput */
         return $this->executeOperation(
             MediaTypeHeaderOperation::instance(),
-            $input,
+            $input ?? new MediaTypeHeaderInput(),
             $overrides
         );
     }
@@ -861,14 +876,14 @@ final class RestJsonClient extends AbstractClient implements RestJsonClientInter
      * Null headers are not sent over the wire, empty headers are serialized to ""
      */
     public function nullAndEmptyHeadersClient(
-        NullAndEmptyHeadersIO $input,
+        ?NullAndEmptyHeadersIO $input = null,
         ?RequestOverrideConfig $overrides = null
     ): NullAndEmptyHeadersIO
     {
         /** @var NullAndEmptyHeadersIO */
         return $this->executeOperation(
             NullAndEmptyHeadersClientOperation::instance(),
-            $input,
+            $input ?? new NullAndEmptyHeadersIO(),
             $overrides
         );
     }
@@ -877,14 +892,14 @@ final class RestJsonClient extends AbstractClient implements RestJsonClientInter
      * Null headers are not sent over the wire, empty headers are serialized to ""
      */
     public function nullAndEmptyHeadersServer(
-        NullAndEmptyHeadersIO $input,
+        ?NullAndEmptyHeadersIO $input = null,
         ?RequestOverrideConfig $overrides = null
     ): NullAndEmptyHeadersIO
     {
         /** @var NullAndEmptyHeadersIO */
         return $this->executeOperation(
             NullAndEmptyHeadersServerOperation::instance(),
-            $input,
+            $input ?? new NullAndEmptyHeadersIO(),
             $overrides
         );
     }
@@ -893,14 +908,14 @@ final class RestJsonClient extends AbstractClient implements RestJsonClientInter
      * Omits null, but serializes empty string value.
      */
     public function omitsNullSerializesEmptyString(
-        OmitsNullSerializesEmptyStringInput $input,
+        ?OmitsNullSerializesEmptyStringInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): Unit
     {
         /** @var Unit */
         return $this->executeOperation(
             OmitsNullSerializesEmptyStringOperation::instance(),
-            $input,
+            $input ?? new OmitsNullSerializesEmptyStringInput(),
             $overrides
         );
     }
@@ -910,14 +925,14 @@ final class RestJsonClient extends AbstractClient implements RestJsonClientInter
      * as `Foo=` and instead must be omitted.
      */
     public function omitsSerializingEmptyLists(
-        OmitsSerializingEmptyListsInput $input,
+        ?OmitsSerializingEmptyListsInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): Unit
     {
         /** @var Unit */
         return $this->executeOperation(
             OmitsSerializingEmptyListsOperation::instance(),
-            $input,
+            $input ?? new OmitsSerializingEmptyListsInput(),
             $overrides
         );
     }
@@ -949,27 +964,27 @@ final class RestJsonClient extends AbstractClient implements RestJsonClientInter
      * This operation defines a union that uses jsonName on some members.
      */
     public function postUnionWithJsonName(
-        PostUnionWithJsonNameInput $input,
+        ?PostUnionWithJsonNameInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): PostUnionWithJsonNameOutput
     {
         /** @var PostUnionWithJsonNameOutput */
         return $this->executeOperation(
             PostUnionWithJsonNameOperation::instance(),
-            $input,
+            $input ?? new PostUnionWithJsonNameInput(),
             $overrides
         );
     }
 
     public function putWithContentEncoding(
-        PutWithContentEncodingInput $input,
+        ?PutWithContentEncodingInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): Unit
     {
         /** @var Unit */
         return $this->executeOperation(
             PutWithContentEncodingOperation::instance(),
-            $input,
+            $input ?? new PutWithContentEncodingInput(),
             $overrides
         );
     }
@@ -978,37 +993,37 @@ final class RestJsonClient extends AbstractClient implements RestJsonClientInter
      * Automatically adds idempotency tokens.
      */
     public function queryIdempotencyTokenAutoFill(
-        QueryIdempotencyTokenAutoFillInput $input,
+        ?QueryIdempotencyTokenAutoFillInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): Unit
     {
         /** @var Unit */
         return $this->executeOperation(
             QueryIdempotencyTokenAutoFillOperation::instance(),
-            $input,
+            $input ?? new QueryIdempotencyTokenAutoFillInput(),
             $overrides
         );
     }
 
     public function queryParamsAsStringListMap(
-        QueryParamsAsStringListMapInput $input,
+        ?QueryParamsAsStringListMapInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): Unit
     {
         /** @var Unit */
         return $this->executeOperation(
             QueryParamsAsStringListMapOperation::instance(),
-            $input,
+            $input ?? new QueryParamsAsStringListMapInput(),
             $overrides
         );
     }
 
-    public function queryPrecedence(QueryPrecedenceInput $input, ?RequestOverrideConfig $overrides = null): Unit
+    public function queryPrecedence(?QueryPrecedenceInput $input = null, ?RequestOverrideConfig $overrides = null): Unit
     {
         /** @var Unit */
         return $this->executeOperation(
             QueryPrecedenceOperation::instance(),
-            $input,
+            $input ?? new QueryPrecedenceInput(),
             $overrides
         );
     }
@@ -1017,14 +1032,14 @@ final class RestJsonClient extends AbstractClient implements RestJsonClientInter
      * Recursive shapes
      */
     public function recursiveShapes(
-        RecursiveShapesInputOutput $input,
+        ?RecursiveShapesInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): RecursiveShapesInputOutput
     {
         /** @var RecursiveShapesInputOutput */
         return $this->executeOperation(
             RecursiveShapesOperation::instance(),
-            $input,
+            $input ?? new RecursiveShapesInputOutput(),
             $overrides
         );
     }
@@ -1056,27 +1071,27 @@ final class RestJsonClient extends AbstractClient implements RestJsonClientInter
     }
 
     public function simpleScalarProperties(
-        SimpleScalarPropertiesInputOutput $input,
+        ?SimpleScalarPropertiesInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): SimpleScalarPropertiesInputOutput
     {
         /** @var SimpleScalarPropertiesInputOutput */
         return $this->executeOperation(
             SimpleScalarPropertiesOperation::instance(),
-            $input,
+            $input ?? new SimpleScalarPropertiesInputOutput(),
             $overrides
         );
     }
 
     public function sparseJsonLists(
-        SparseJsonListsInputOutput $input,
+        ?SparseJsonListsInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): SparseJsonListsInputOutput
     {
         /** @var SparseJsonListsInputOutput */
         return $this->executeOperation(
             SparseJsonListsOperation::instance(),
-            $input,
+            $input ?? new SparseJsonListsInputOutput(),
             $overrides
         );
     }
@@ -1085,14 +1100,14 @@ final class RestJsonClient extends AbstractClient implements RestJsonClientInter
      * This example tests sparse map serialization.
      */
     public function sparseJsonMaps(
-        SparseJsonMapsInputOutput $input,
+        ?SparseJsonMapsInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): SparseJsonMapsInputOutput
     {
         /** @var SparseJsonMapsInputOutput */
         return $this->executeOperation(
             SparseJsonMapsOperation::instance(),
-            $input,
+            $input ?? new SparseJsonMapsInputOutput(),
             $overrides
         );
     }
@@ -1102,14 +1117,14 @@ final class RestJsonClient extends AbstractClient implements RestJsonClientInter
      * used in all requests and that an "empty" body is an empty JSON document ({}).
      */
     public function testBodyStructure(
-        TestBodyStructureInputOutput $input,
+        ?TestBodyStructureInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): TestBodyStructureInputOutput
     {
         /** @var TestBodyStructureInputOutput */
         return $this->executeOperation(
             TestBodyStructureOperation::instance(),
-            $input,
+            $input ?? new TestBodyStructureInputOutput(),
             $overrides
         );
     }
@@ -1138,14 +1153,14 @@ final class RestJsonClient extends AbstractClient implements RestJsonClientInter
      * HTTP body.
      */
     public function testGetNoPayload(
-        TestNoPayloadInputOutput $input,
+        ?TestNoPayloadInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): TestNoPayloadInputOutput
     {
         /** @var TestNoPayloadInputOutput */
         return $this->executeOperation(
             TestGetNoPayloadOperation::instance(),
-            $input,
+            $input ?? new TestNoPayloadInputOutput(),
             $overrides
         );
     }
@@ -1156,14 +1171,14 @@ final class RestJsonClient extends AbstractClient implements RestJsonClientInter
      * application/octet-stream" header is used, and that we are not treating an empty body as an empty JSON document.
      */
     public function testPayloadBlob(
-        TestPayloadBlobInputOutput $input,
+        ?TestPayloadBlobInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): TestPayloadBlobInputOutput
     {
         /** @var TestPayloadBlobInputOutput */
         return $this->executeOperation(
             TestPayloadBlobOperation::instance(),
-            $input,
+            $input ?? new TestPayloadBlobInputOutput(),
             $overrides
         );
     }
@@ -1173,14 +1188,14 @@ final class RestJsonClient extends AbstractClient implements RestJsonClientInter
      * TestBodyStructure but with the body specified by the @httpPayload trait.
      */
     public function testPayloadStructure(
-        TestPayloadStructureInputOutput $input,
+        ?TestPayloadStructureInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): TestPayloadStructureInputOutput
     {
         /** @var TestPayloadStructureInputOutput */
         return $this->executeOperation(
             TestPayloadStructureOperation::instance(),
-            $input,
+            $input ?? new TestPayloadStructureInputOutput(),
             $overrides
         );
     }
@@ -1207,14 +1222,14 @@ final class RestJsonClient extends AbstractClient implements RestJsonClientInter
      * attach a body or related headers (Content-Type) to a POST operation with no modeled payload.
      */
     public function testPostNoPayload(
-        TestNoPayloadInputOutput $input,
+        ?TestNoPayloadInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): TestNoPayloadInputOutput
     {
         /** @var TestNoPayloadInputOutput */
         return $this->executeOperation(
             TestPostNoPayloadOperation::instance(),
-            $input,
+            $input ?? new TestNoPayloadInputOutput(),
             $overrides
         );
     }
@@ -1223,14 +1238,14 @@ final class RestJsonClient extends AbstractClient implements RestJsonClientInter
      * This example tests how timestamp request and response headers are serialized.
      */
     public function timestampFormatHeaders(
-        TimestampFormatHeadersIO $input,
+        ?TimestampFormatHeadersIO $input = null,
         ?RequestOverrideConfig $overrides = null
     ): TimestampFormatHeadersIO
     {
         /** @var TimestampFormatHeadersIO */
         return $this->executeOperation(
             TimestampFormatHeadersOperation::instance(),
-            $input,
+            $input ?? new TimestampFormatHeadersIO(),
             $overrides
         );
     }

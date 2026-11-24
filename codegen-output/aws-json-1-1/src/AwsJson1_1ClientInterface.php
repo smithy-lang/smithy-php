@@ -39,7 +39,7 @@ interface AwsJson1_1ClientInterface extends ClientInterface
      * The example tests how servers must support requests containing a `Content-Type` header with parameters.
      */
     public function contentTypeParameters(
-        ContentTypeParametersInput $input,
+        ?ContentTypeParametersInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): ContentTypeParametersOutput;
 
@@ -78,7 +78,7 @@ interface AwsJson1_1ClientInterface extends ClientInterface
      * This example serializes enums as top level properties, in lists, sets, and maps.
      */
     public function jsonEnums(
-        JsonEnumsInputOutput $input,
+        ?JsonEnumsInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): JsonEnumsInputOutput;
 
@@ -86,24 +86,30 @@ interface AwsJson1_1ClientInterface extends ClientInterface
      * This example serializes intEnums as top level properties, in lists, sets, and maps.
      */
     public function jsonIntEnums(
-        JsonIntEnumsInputOutput $input,
+        ?JsonIntEnumsInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): JsonIntEnumsInputOutput;
 
     /**
      * This operation uses unions for inputs and outputs.
      */
-    public function jsonUnions(UnionInputOutput $input, ?RequestOverrideConfig $overrides = null): UnionInputOutput;
+    public function jsonUnions(
+        ?UnionInputOutput $input = null,
+        ?RequestOverrideConfig $overrides = null
+    ): UnionInputOutput;
 
-    public function kitchenSinkOperation(KitchenSink $input, ?RequestOverrideConfig $overrides = null): KitchenSink;
+    public function kitchenSinkOperation(
+        ?KitchenSink $input = null,
+        ?RequestOverrideConfig $overrides = null
+    ): KitchenSink;
 
     public function nullOperation(
-        NullOperationInputOutput $input,
+        ?NullOperationInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): NullOperationInputOutput;
 
     public function operationWithOptionalInputOutput(
-        OperationWithOptionalInputOutputInput $input,
+        ?OperationWithOptionalInputOutputInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): OperationWithOptionalInputOutputOutput;
 
@@ -111,22 +117,22 @@ interface AwsJson1_1ClientInterface extends ClientInterface
      * This example serializes an inline document as part of the payload.
      */
     public function putAndGetInlineDocuments(
-        PutAndGetInlineDocumentsInputOutput $input,
+        ?PutAndGetInlineDocumentsInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): PutAndGetInlineDocumentsInputOutput;
 
     public function putWithContentEncoding(
-        PutWithContentEncodingInput $input,
+        ?PutWithContentEncodingInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): Unit;
 
     public function simpleScalarProperties(
-        SimpleScalarPropertiesInputOutput $input,
+        ?SimpleScalarPropertiesInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): SimpleScalarPropertiesInputOutput;
 
     public function sparseNullsOperation(
-        SparseNullsOperationInputOutput $input,
+        ?SparseNullsOperationInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): SparseNullsOperationInputOutput;
 }

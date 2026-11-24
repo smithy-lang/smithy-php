@@ -29,9 +29,7 @@ final class EnumPayloadInput implements SerializableStructInterface
     public function __construct(
         StringEnum|string|null $payload = null
     ) {
-        if ($payload !== null) {
-            $this->payload = $payload instanceof StringEnum ? $payload : StringEnum::fromValue($payload);
-        }
+        $this->payload = $payload === null || $payload instanceof StringEnum ? $payload : StringEnum::fromValue($payload);
     }
 
     /**
@@ -84,7 +82,7 @@ final class EnumPayloadInput implements SerializableStructInterface
     public function getMemberValue(Schema $member): mixed
     {
         return match ($member->memberIndex) {
-            0 => $this->payload ?? null,
+            0 => $this->payload,
             default => null,
         };
     }
@@ -95,7 +93,7 @@ final class EnumPayloadInput implements SerializableStructInterface
     public function withMemberValue(Schema $member, mixed $value): static
     {
         $members = [
-            $this->payload ?? null
+            $this->payload
         ];
         $members[$member->memberIndex] = $value;
 

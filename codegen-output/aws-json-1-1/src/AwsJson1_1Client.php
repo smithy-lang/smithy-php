@@ -75,14 +75,14 @@ final class AwsJson1_1Client extends AbstractClient implements AwsJson1_1ClientI
      * The example tests how servers must support requests containing a `Content-Type` header with parameters.
      */
     public function contentTypeParameters(
-        ContentTypeParametersInput $input,
+        ?ContentTypeParametersInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): ContentTypeParametersOutput
     {
         /** @var ContentTypeParametersOutput */
         return $this->executeOperation(
             ContentTypeParametersOperation::instance(),
-            $input,
+            $input ?? new ContentTypeParametersInput(),
             $overrides
         );
     }
@@ -178,14 +178,14 @@ final class AwsJson1_1Client extends AbstractClient implements AwsJson1_1ClientI
      * This example serializes enums as top level properties, in lists, sets, and maps.
      */
     public function jsonEnums(
-        JsonEnumsInputOutput $input,
+        ?JsonEnumsInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): JsonEnumsInputOutput
     {
         /** @var JsonEnumsInputOutput */
         return $this->executeOperation(
             JsonEnumsOperation::instance(),
-            $input,
+            $input ?? new JsonEnumsInputOutput(),
             $overrides
         );
     }
@@ -194,14 +194,14 @@ final class AwsJson1_1Client extends AbstractClient implements AwsJson1_1ClientI
      * This example serializes intEnums as top level properties, in lists, sets, and maps.
      */
     public function jsonIntEnums(
-        JsonIntEnumsInputOutput $input,
+        ?JsonIntEnumsInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): JsonIntEnumsInputOutput
     {
         /** @var JsonIntEnumsInputOutput */
         return $this->executeOperation(
             JsonIntEnumsOperation::instance(),
-            $input,
+            $input ?? new JsonIntEnumsInputOutput(),
             $overrides
         );
     }
@@ -209,48 +209,54 @@ final class AwsJson1_1Client extends AbstractClient implements AwsJson1_1ClientI
     /**
      * This operation uses unions for inputs and outputs.
      */
-    public function jsonUnions(UnionInputOutput $input, ?RequestOverrideConfig $overrides = null): UnionInputOutput
+    public function jsonUnions(
+        ?UnionInputOutput $input = null,
+        ?RequestOverrideConfig $overrides = null
+    ): UnionInputOutput
     {
         /** @var UnionInputOutput */
         return $this->executeOperation(
             JsonUnionsOperation::instance(),
-            $input,
+            $input ?? new UnionInputOutput(),
             $overrides
         );
     }
 
-    public function kitchenSinkOperation(KitchenSink $input, ?RequestOverrideConfig $overrides = null): KitchenSink
+    public function kitchenSinkOperation(
+        ?KitchenSink $input = null,
+        ?RequestOverrideConfig $overrides = null
+    ): KitchenSink
     {
         /** @var KitchenSink */
         return $this->executeOperation(
             KitchenSinkOperationOperation::instance(),
-            $input,
+            $input ?? new KitchenSink(),
             $overrides
         );
     }
 
     public function nullOperation(
-        NullOperationInputOutput $input,
+        ?NullOperationInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): NullOperationInputOutput
     {
         /** @var NullOperationInputOutput */
         return $this->executeOperation(
             NullOperationOperation::instance(),
-            $input,
+            $input ?? new NullOperationInputOutput(),
             $overrides
         );
     }
 
     public function operationWithOptionalInputOutput(
-        OperationWithOptionalInputOutputInput $input,
+        ?OperationWithOptionalInputOutputInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): OperationWithOptionalInputOutputOutput
     {
         /** @var OperationWithOptionalInputOutputOutput */
         return $this->executeOperation(
             OperationWithOptionalInputOutputOperation::instance(),
-            $input,
+            $input ?? new OperationWithOptionalInputOutputInput(),
             $overrides
         );
     }
@@ -259,53 +265,53 @@ final class AwsJson1_1Client extends AbstractClient implements AwsJson1_1ClientI
      * This example serializes an inline document as part of the payload.
      */
     public function putAndGetInlineDocuments(
-        PutAndGetInlineDocumentsInputOutput $input,
+        ?PutAndGetInlineDocumentsInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): PutAndGetInlineDocumentsInputOutput
     {
         /** @var PutAndGetInlineDocumentsInputOutput */
         return $this->executeOperation(
             PutAndGetInlineDocumentsOperation::instance(),
-            $input,
+            $input ?? new PutAndGetInlineDocumentsInputOutput(),
             $overrides
         );
     }
 
     public function putWithContentEncoding(
-        PutWithContentEncodingInput $input,
+        ?PutWithContentEncodingInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): Unit
     {
         /** @var Unit */
         return $this->executeOperation(
             PutWithContentEncodingOperation::instance(),
-            $input,
+            $input ?? new PutWithContentEncodingInput(),
             $overrides
         );
     }
 
     public function simpleScalarProperties(
-        SimpleScalarPropertiesInputOutput $input,
+        ?SimpleScalarPropertiesInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): SimpleScalarPropertiesInputOutput
     {
         /** @var SimpleScalarPropertiesInputOutput */
         return $this->executeOperation(
             SimpleScalarPropertiesOperation::instance(),
-            $input,
+            $input ?? new SimpleScalarPropertiesInputOutput(),
             $overrides
         );
     }
 
     public function sparseNullsOperation(
-        SparseNullsOperationInputOutput $input,
+        ?SparseNullsOperationInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): SparseNullsOperationInputOutput
     {
         /** @var SparseNullsOperationInputOutput */
         return $this->executeOperation(
             SparseNullsOperationOperation::instance(),
-            $input,
+            $input ?? new SparseNullsOperationInputOutput(),
             $overrides
         );
     }

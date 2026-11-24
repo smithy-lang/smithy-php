@@ -47,15 +47,9 @@ final class XmlEnumsResponse implements SerializableStructInterface
         public readonly ?array $fooEnumSet = null,
         public readonly ?array $fooEnumMap = null
     ) {
-        if ($fooEnum1 !== null) {
-            $this->fooEnum1 = $fooEnum1 instanceof FooEnum ? $fooEnum1 : FooEnum::fromValue($fooEnum1);
-        }
-        if ($fooEnum2 !== null) {
-            $this->fooEnum2 = $fooEnum2 instanceof FooEnum ? $fooEnum2 : FooEnum::fromValue($fooEnum2);
-        }
-        if ($fooEnum3 !== null) {
-            $this->fooEnum3 = $fooEnum3 instanceof FooEnum ? $fooEnum3 : FooEnum::fromValue($fooEnum3);
-        }
+        $this->fooEnum1 = $fooEnum1 === null || $fooEnum1 instanceof FooEnum ? $fooEnum1 : FooEnum::fromValue($fooEnum1);
+        $this->fooEnum2 = $fooEnum2 === null || $fooEnum2 instanceof FooEnum ? $fooEnum2 : FooEnum::fromValue($fooEnum2);
+        $this->fooEnum3 = $fooEnum3 === null || $fooEnum3 instanceof FooEnum ? $fooEnum3 : FooEnum::fromValue($fooEnum3);
     }
 
     /**
@@ -128,9 +122,9 @@ final class XmlEnumsResponse implements SerializableStructInterface
     public function getMemberValue(Schema $member): mixed
     {
         return match ($member->memberIndex) {
-            0 => $this->fooEnum1 ?? null,
-            1 => $this->fooEnum2 ?? null,
-            2 => $this->fooEnum3 ?? null,
+            0 => $this->fooEnum1,
+            1 => $this->fooEnum2,
+            2 => $this->fooEnum3,
             3 => $this->fooEnumList,
             4 => $this->fooEnumSet,
             5 => $this->fooEnumMap,
@@ -144,9 +138,9 @@ final class XmlEnumsResponse implements SerializableStructInterface
     public function withMemberValue(Schema $member, mixed $value): static
     {
         $members = [
-            $this->fooEnum1 ?? null,
-            $this->fooEnum2 ?? null,
-            $this->fooEnum3 ?? null,
+            $this->fooEnum1,
+            $this->fooEnum2,
+            $this->fooEnum3,
             $this->fooEnumList,
             $this->fooEnumSet,
             $this->fooEnumMap

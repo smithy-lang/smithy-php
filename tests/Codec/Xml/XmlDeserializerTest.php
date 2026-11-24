@@ -118,6 +118,32 @@ final class XmlDeserializerTest extends TestCase
         self::assertSame([100.0, 200.0], $output->checkpoints);
     }
 
+    public function testDeserializesFlattenedMembersOnPayloadMemberPath(): void
+    {
+        $deserializer = $this->createDeserializer(
+            '<SampleStruct><name>alpha</name><tag>flat-one</tag><tag>'
+            . 'flat-two</tag><scoreEntry><key>x</key><value>ex</value>'
+            . '</scoreEntry></SampleStruct>'
+        );
+        $payload = new Schema(
+            id: 'smithy.test#Output$sample',
+            type: ShapeType::Structure,
+            memberName: 'sample',
+            memberIndex: 0,
+            members: XmlSampleStructFixture::schema()->getMembers(),
+            traits: [Schema::T_HTTP_PAYLOAD => true],
+            targetClass: XmlSampleStructFixture::class
+        );
+        $members = \array_fill(0, $payload->getMemberCount(), null);
+
+        $deserializer->deserialize($payload, $members);
+        $output = XmlSampleStructFixture::fromMembers($members);
+
+        self::assertSame('alpha', $output->name);
+        self::assertSame(['flat-one', 'flat-two'], $output->flatTags);
+        self::assertSame(['x' => 'ex'], $output->flatScores);
+    }
+
     public function testDeserializesKnownRootUnionVariant(): void
     {
         XmlSampleUnionFixture::$indexedCreations = 0;

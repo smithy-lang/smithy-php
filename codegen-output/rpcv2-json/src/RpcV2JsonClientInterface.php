@@ -34,12 +34,12 @@ use Smithy\ProtocolTests\RpcV2Json\Shape\Unit;
 interface RpcV2JsonClientInterface extends ClientInterface
 {
     public function bigDecimalOperation(
-        BigDecimalStructure $input,
+        ?BigDecimalStructure $input = null,
         ?RequestOverrideConfig $overrides = null
     ): BigDecimalStructure;
 
     public function bigIntegerOperation(
-        BigIntegerStructure $input,
+        ?BigIntegerStructure $input = null,
         ?RequestOverrideConfig $overrides = null
     ): BigIntegerStructure;
 
@@ -66,17 +66,17 @@ interface RpcV2JsonClientInterface extends ClientInterface
     public function noInputOutput(?Unit $input = null, ?RequestOverrideConfig $overrides = null): Unit;
 
     public function operationWithDefaults(
-        OperationWithDefaultsInput $input,
+        ?OperationWithDefaultsInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): OperationWithDefaultsOutput;
 
     public function optionalInputOutput(
-        SimpleStructure $input,
+        ?SimpleStructure $input = null,
         ?RequestOverrideConfig $overrides = null
     ): SimpleStructure;
 
     public function recursiveShapes(
-        RecursiveShapesInputOutput $input,
+        ?RecursiveShapesInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): RecursiveShapesInputOutput;
 
@@ -84,7 +84,7 @@ interface RpcV2JsonClientInterface extends ClientInterface
      * The example tests basic map serialization.
      */
     public function rpcV2JsonDenseMaps(
-        RpcV2JsonDenseMapsInputOutput $input,
+        ?RpcV2JsonDenseMapsInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): RpcV2JsonDenseMapsInputOutput;
 
@@ -93,22 +93,22 @@ interface RpcV2JsonClientInterface extends ClientInterface
      * sets. 3. Lists of lists. 4. Lists of structures.
      */
     public function rpcV2JsonLists(
-        RpcV2JsonListInputOutput $input,
+        ?RpcV2JsonListInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): RpcV2JsonListInputOutput;
 
     public function rpcV2JsonSparseMaps(
-        RpcV2JsonSparseMapsInputOutput $input,
+        ?RpcV2JsonSparseMapsInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): RpcV2JsonSparseMapsInputOutput;
 
     public function simpleScalarProperties(
-        SimpleScalarStructure $input,
+        ?SimpleScalarStructure $input = null,
         ?RequestOverrideConfig $overrides = null
     ): SimpleScalarStructure;
 
     public function sparseNullsOperation(
-        SparseNullsOperationInputOutput $input,
+        ?SparseNullsOperationInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): SparseNullsOperationInputOutput;
 
@@ -118,7 +118,7 @@ interface RpcV2JsonClientInterface extends ClientInterface
      * (epoch-seconds) must all serialize as JSON numbers.
      */
     public function timestampFormatIgnored(
-        TimestampFormatIgnoredIO $input,
+        ?TimestampFormatIgnoredIO $input = null,
         ?RequestOverrideConfig $overrides = null
     ): TimestampFormatIgnoredIO;
 }

@@ -41,12 +41,12 @@ final class TrimmedPetStoreClient extends AbstractClient implements TrimmedPetSt
         );
     }
 
-    public function getPet(GetPetInput $input, ?RequestOverrideConfig $overrides = null): GetPetOutput
+    public function getPet(?GetPetInput $input = null, ?RequestOverrideConfig $overrides = null): GetPetOutput
     {
         /** @var GetPetOutput */
         return $this->executeOperation(
             GetPetOperation::instance(),
-            $input,
+            $input ?? new GetPetInput(),
             $overrides
         );
     }

@@ -47,15 +47,9 @@ final class XmlIntEnumsRequest implements SerializableStructInterface
         public readonly ?array $intEnumSet = null,
         public readonly ?array $intEnumMap = null
     ) {
-        if ($intEnum1 !== null) {
-            $this->intEnum1 = $intEnum1 instanceof IntegerEnum ? $intEnum1 : IntegerEnum::fromValue($intEnum1);
-        }
-        if ($intEnum2 !== null) {
-            $this->intEnum2 = $intEnum2 instanceof IntegerEnum ? $intEnum2 : IntegerEnum::fromValue($intEnum2);
-        }
-        if ($intEnum3 !== null) {
-            $this->intEnum3 = $intEnum3 instanceof IntegerEnum ? $intEnum3 : IntegerEnum::fromValue($intEnum3);
-        }
+        $this->intEnum1 = $intEnum1 === null || $intEnum1 instanceof IntegerEnum ? $intEnum1 : IntegerEnum::fromValue($intEnum1);
+        $this->intEnum2 = $intEnum2 === null || $intEnum2 instanceof IntegerEnum ? $intEnum2 : IntegerEnum::fromValue($intEnum2);
+        $this->intEnum3 = $intEnum3 === null || $intEnum3 instanceof IntegerEnum ? $intEnum3 : IntegerEnum::fromValue($intEnum3);
     }
 
     /**
@@ -128,9 +122,9 @@ final class XmlIntEnumsRequest implements SerializableStructInterface
     public function getMemberValue(Schema $member): mixed
     {
         return match ($member->memberIndex) {
-            0 => $this->intEnum1 ?? null,
-            1 => $this->intEnum2 ?? null,
-            2 => $this->intEnum3 ?? null,
+            0 => $this->intEnum1,
+            1 => $this->intEnum2,
+            2 => $this->intEnum3,
             3 => $this->intEnumList,
             4 => $this->intEnumSet,
             5 => $this->intEnumMap,
@@ -144,9 +138,9 @@ final class XmlIntEnumsRequest implements SerializableStructInterface
     public function withMemberValue(Schema $member, mixed $value): static
     {
         $members = [
-            $this->intEnum1 ?? null,
-            $this->intEnum2 ?? null,
-            $this->intEnum3 ?? null,
+            $this->intEnum1,
+            $this->intEnum2,
+            $this->intEnum3,
             $this->intEnumList,
             $this->intEnumSet,
             $this->intEnumMap

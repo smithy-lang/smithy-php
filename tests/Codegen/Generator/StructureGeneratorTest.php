@@ -77,7 +77,7 @@ final class StructureGeneratorTest extends TestCase
         );
     }
 
-    public function testGeneratesPrivateWritablePaginationMembers(): void
+    public function testGeneratesPublicReadonlyPaginationMembers(): void
     {
         $model = SmithyModel::fromFile(
             __DIR__
@@ -103,23 +103,55 @@ final class StructureGeneratorTest extends TestCase
             $file->content
         );
         $this->assertStringContainsString(
+            'public readonly ?string $nextToken = null,',
+            $file->content
+        );
+        $this->assertStringContainsString(
+            'public readonly ?int $pageSize = null',
+            $file->content
+        );
+        $this->assertStringNotContainsString(
             'private ?string $nextToken;',
             $file->content
         );
         $this->assertStringContainsString(
-            'private ?int $pageSize;',
+            'return $this->withMemberValue(self::$SCHEMA_NEXT_TOKEN, $token);',
+            $file->content
+        );
+        $this->assertStringContainsString(
+            'return $this->withMemberValue(self::$SCHEMA_PAGE_SIZE, $pageSize);',
+            $file->content
+        );
+    }
+
+    public function testSerializesDefaultedMembersWithoutIssetGuard(): void
+    {
+        $model = SmithyModel::fromFile(
+            __DIR__ . '/../../fixtures/effective-defaults-model.json'
+        );
+        $settings = new CodegenSettings(
+            namespace: 'Smithy\\Example',
+            outputDir: '/tmp/out',
+            organization: 'flat'
+        );
+        $generator = new StructureGenerator(
+            $model,
+            new PhpSymbolProvider($model, $settings),
+            $settings
+        );
+
+        $file = $generator->generate('smithy.example#EffectiveDefaults');
+
+        $this->assertStringContainsString(
+            'public readonly string $defaultString;',
             $file->content
         );
         $this->assertStringNotContainsString(
-            'public readonly ?string $nextToken',
+            'isset($this->defaultString)',
             $file->content
         );
         $this->assertStringContainsString(
-            '$copy->nextToken = $token;',
-            $file->content
-        );
-        $this->assertStringContainsString(
-            '$copy->pageSize = $pageSize;',
+            'isset($this->requiredString)',
             $file->content
         );
     }

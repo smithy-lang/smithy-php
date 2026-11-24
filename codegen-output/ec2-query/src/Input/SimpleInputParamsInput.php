@@ -56,9 +56,7 @@ final class SimpleInputParamsInput implements SerializableStructInterface
         public readonly ?string $distinctQueryAndXmlName = null,
         public readonly ?string $distinctXmlName = null
     ) {
-        if ($fooEnum !== null) {
-            $this->fooEnum = $fooEnum instanceof FooEnum ? $fooEnum : FooEnum::fromValue($fooEnum);
-        }
+        $this->fooEnum = $fooEnum === null || $fooEnum instanceof FooEnum ? $fooEnum : FooEnum::fromValue($fooEnum);
     }
 
     /**
@@ -170,7 +168,7 @@ final class SimpleInputParamsInput implements SerializableStructInterface
             4 => $this->floatValue,
             5 => $this->boo,
             6 => $this->qux,
-            7 => $this->fooEnum ?? null,
+            7 => $this->fooEnum,
             8 => $this->hasQueryName,
             9 => $this->hasQueryAndXmlName,
             10 => $this->usesXmlName,
@@ -194,7 +192,7 @@ final class SimpleInputParamsInput implements SerializableStructInterface
             $this->floatValue,
             $this->boo,
             $this->qux,
-            $this->fooEnum ?? null,
+            $this->fooEnum,
             $this->hasQueryName,
             $this->hasQueryAndXmlName,
             $this->usesXmlName,
