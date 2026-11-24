@@ -1,0 +1,152 @@
+name: Split packages
+
+# Splits the monorepo into per-package read-only repositories on every version
+# tag, propagating the SAME tag to each split repo so all packages share one
+# version. Release tags are plain semver with no prefix, e.g. 0.1.0, or a
+# Composer pre-release such as 0.2.0-beta.1 (-alpha.N, -beta.N, -RC.N).
+# splitsh-lite is the primary tool (installed in the job);
+# split.sh falls back to `git subtree split` if the binary is unavailable.
+# A manual run (Run workflow, enter a tag) retries the split for that tag.
+
+on:
+  push:
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+'
+      - '[0-9]+.[0-9]+.[0-9]+-*'
+  # Retry a release: re-runs the split for a tag that already exists.
+  # Mirrors that already hold the split are left alone.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing tag to split and push, e.g. 0.1.0'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  split:
+    name: Split ${{ matrix.pkg.slug }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    # GUARD: only run in the canonical upstream repo. Forks and clones that push
+    # a tag will NOT trigger the split (and have no SSH key or org access anyway).
+    if: github.repository == 'smithy-lang/smithy-php'
+
+    strategy:
+      fail-fast: false
+      matrix:
+        # One split repo per package. Keep in sync with tools/split/packages.map.
+        pkg:
+          - { subdir: Async,       slug: smithy-php-async }
+          - { subdir: Core,        slug: smithy-php-core }
+          - { subdir: Codec,       slug: smithy-php-codec }
+          - { subdir: Http,        slug: smithy-php-http }
+          - { subdir: Auth,        slug: smithy-php-auth }
+          - { subdir: Protocol,    slug: smithy-php-protocol }
+          - { subdir: ProtocolAws, slug: smithy-php-protocol-aws }
+          - { subdir: Client,      slug: smithy-php-client }
+          - { subdir: Codegen,     slug: smithy-php-codegen }
+
+    steps:
+      # The tag comes from the pushed ref or the typed input. It reaches the
+      # shell only through env, and must match the push trigger's semver shape.
+      - name: Resolve tag
+        id: tag
+        env:
+          TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          if [[ ! "${TAG}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]]; then
+            # The raw value is not echoed, so it cannot inject a workflow command.
+            echo "::error::The tag is not a release tag like 0.1.0 or 0.2.0-beta.1."
+            exit 1
+          fi
+          if ! git ls-remote --exit-code --tags "https://github.com/${GITHUB_REPOSITORY}.git" "refs/tags/${TAG}" >/dev/null; then
+            echo "::error::Tag '${TAG}' does not exist in ${GITHUB_REPOSITORY}. Push the tag first."
+            exit 1
+          fi
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout monorepo at the tag (full history)
+        uses: actions/checkout@v4
+        with:
+          ref: refs/tags/${{ steps.tag.outputs.tag }}
+          fetch-depth: 0   # subtree/splitsh need the whole history
+          fetch-tags: true
+
+      - name: Install splitsh-lite
+        run: |
+          curl -sSL https://github.com/splitsh/lite/releases/download/v2.0.0/lite_linux_amd64.tar.gz \
+            | tar -xz -C /usr/local/bin splitsh-lite
+          splitsh-lite --version || true
+
+      # One write-deploy-key secret per split repo. Each step names its secret
+      # statically so the runner receives only that one secret. Store each in
+      # repo/org secrets before enabling.
+      - name: Add deploy key (Async)
+        if: matrix.pkg.subdir == 'Async'
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SPLIT_KEY_ASYNC }}
+
+      - name: Add deploy key (Core)
+        if: matrix.pkg.subdir == 'Core'
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SPLIT_KEY_CORE }}
+
+      - name: Add deploy key (Codec)
+        if: matrix.pkg.subdir == 'Codec'
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SPLIT_KEY_CODEC }}
+
+      - name: Add deploy key (Http)
+        if: matrix.pkg.subdir == 'Http'
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SPLIT_KEY_HTTP }}
+
+      - name: Add deploy key (Auth)
+        if: matrix.pkg.subdir == 'Auth'
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SPLIT_KEY_AUTH }}
+
+      - name: Add deploy key (Protocol)
+        if: matrix.pkg.subdir == 'Protocol'
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SPLIT_KEY_PROTOCOL }}
+
+      - name: Add deploy key (ProtocolAws)
+        if: matrix.pkg.subdir == 'ProtocolAws'
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SPLIT_KEY_PROTOCOLAWS }}
+
+      - name: Add deploy key (Client)
+        if: matrix.pkg.subdir == 'Client'
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SPLIT_KEY_CLIENT }}
+
+      - name: Add deploy key (Codegen)
+        if: matrix.pkg.subdir == 'Codegen'
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SPLIT_KEY_CODEGEN }}
+
+      - name: Split and push ${{ matrix.pkg.slug }}
+        env:
+          SPLIT_ORG: ${{ vars.SPLIT_ORG || 'smithy-lang' }}   # org var overrides; defaults to smithy-lang
+          TAG: ${{ steps.tag.outputs.tag }}
+          BRANCH: main
+          PUSH: '1'
+          # Limit this matrix leg to one package by filtering the map at runtime.
+          MAP_FILE: ${{ runner.temp }}/one.map
+        run: |
+          grep -E "^${{ matrix.pkg.subdir }}[[:space:]]" tools/split/packages.map > "${MAP_FILE}"
+          bash tools/split/split.sh
