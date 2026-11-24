@@ -1,0 +1,3 @@
+# Yanked release tags, one per line. split.sh refuses to split or push them.
+# Add a tag here in the same commit that reverts its release (see ROLLBACK.md).
+# Text after '#' is a comment.
