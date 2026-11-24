@@ -13,6 +13,8 @@ use Psr\Http\Message\ResponseInterface;
 
 /**
  * Check HTTP response bodies.
+ *
+ * @internal Shared by the protocol implementations.
  */
 final class ResponseBody
 {

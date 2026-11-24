@@ -18,6 +18,8 @@ use Smithy\Http\Message\HttpMessageValidator;
 
 /**
  * Provide HTTP binding metadata for structure and union schemas.
+ *
+ * @internal Runtime metadata provider for HTTP-bound structure schemas.
  */
 final class HttpStructBindingExtensionProvider
     implements SchemaExtensionProviderInterface

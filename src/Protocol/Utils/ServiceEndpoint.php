@@ -18,6 +18,8 @@ use Smithy\Http\Message\{
 
 /**
  * Apply a resolved endpoint to a protocol-built HTTP request.
+ *
+ * @internal Shared by the protocol implementations.
  */
 final class ServiceEndpoint
 {

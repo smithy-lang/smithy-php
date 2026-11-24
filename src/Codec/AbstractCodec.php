@@ -20,6 +20,8 @@ use Smithy\Core\Serde\ShapeSerializerInterface;
  * Codecs translate between Smithy runtime shapes and body bytes. Protocols
  * remain responsible for HTTP metadata and use codecs only to encode and
  * decode request and response bodies.
+ *
+ * @internal Implementations are subject to change.
  */
 abstract class AbstractCodec
 {
@@ -58,6 +60,8 @@ abstract class AbstractCodec
      *
      * Codecs that pool serializers override this. The default creates a fresh
      * serializer.
+     *
+     * @internal
      */
     public function acquireSerializer(): ShapeSerializerInterface
     {
@@ -66,6 +70,8 @@ abstract class AbstractCodec
 
     /**
      * Return a serializer borrowed with {@see acquireSerializer()}.
+     *
+     * @internal
      *
      * @return void
      */

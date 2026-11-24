@@ -12,13 +12,15 @@ namespace Smithy\Protocol\Utils;
 use Psr\Http\Message\UriInterface;
 
 /**
- * Store pre-validated URI components for protocol-built requests.
+ * Store pre-validated URI components for internal protocol construction.
  *
  * No \parse_url() or regex filtering is done. Protocol serializers pass
  * components that were already assembled and encoded. Public mutation methods
  * preserve that trusted-input contract and do not validate or encode values.
  *
  * Immutable value object. All with*() methods return a new instance.
+ *
+ * @internal
  */
 final class ComponentUri implements UriInterface
 {

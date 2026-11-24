@@ -62,6 +62,8 @@ final class JsonCodec extends AbstractCodec
 
     /**
      * Borrow a reusable serializer.
+     *
+     * @internal
      */
     public function acquireSerializer(): JsonSerializer
     {
@@ -74,6 +76,8 @@ final class JsonCodec extends AbstractCodec
 
     /**
      * Return a borrowed serializer to the pool.
+     *
+     * @internal
      *
      * @return void
      */

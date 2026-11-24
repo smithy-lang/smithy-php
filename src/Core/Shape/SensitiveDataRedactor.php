@@ -14,6 +14,8 @@ use Smithy\Core\Serde\SerializableStructInterface;
 
 /**
  * Builds safe debug representations of modeled values.
+ *
+ * @internal
  */
 final class SensitiveDataRedactor
 {
