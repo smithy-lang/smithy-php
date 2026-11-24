@@ -129,40 +129,40 @@ final class RpcV2CborClient extends AbstractClient implements RpcV2CborClientInt
     }
 
     public function operationWithDefaults(
-        OperationWithDefaultsInput $input,
+        ?OperationWithDefaultsInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): OperationWithDefaultsOutput
     {
         /** @var OperationWithDefaultsOutput */
         return $this->executeOperation(
             OperationWithDefaultsOperation::instance(),
-            $input,
+            $input ?? new OperationWithDefaultsInput(),
             $overrides
         );
     }
 
     public function optionalInputOutput(
-        SimpleStructure $input,
+        ?SimpleStructure $input = null,
         ?RequestOverrideConfig $overrides = null
     ): SimpleStructure
     {
         /** @var SimpleStructure */
         return $this->executeOperation(
             OptionalInputOutputOperation::instance(),
-            $input,
+            $input ?? new SimpleStructure(),
             $overrides
         );
     }
 
     public function recursiveShapes(
-        RecursiveShapesInputOutput $input,
+        ?RecursiveShapesInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): RecursiveShapesInputOutput
     {
         /** @var RecursiveShapesInputOutput */
         return $this->executeOperation(
             RecursiveShapesOperation::instance(),
-            $input,
+            $input ?? new RecursiveShapesInputOutput(),
             $overrides
         );
     }
@@ -171,14 +171,14 @@ final class RpcV2CborClient extends AbstractClient implements RpcV2CborClientInt
      * The example tests basic map serialization.
      */
     public function rpcV2CborDenseMaps(
-        RpcV2CborDenseMapsInputOutput $input,
+        ?RpcV2CborDenseMapsInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): RpcV2CborDenseMapsInputOutput
     {
         /** @var RpcV2CborDenseMapsInputOutput */
         return $this->executeOperation(
             RpcV2CborDenseMapsOperation::instance(),
-            $input,
+            $input ?? new RpcV2CborDenseMapsInputOutput(),
             $overrides
         );
     }
@@ -188,27 +188,27 @@ final class RpcV2CborClient extends AbstractClient implements RpcV2CborClientInt
      * sets. 3. Lists of lists. 4. Lists of structures.
      */
     public function rpcV2CborLists(
-        RpcV2CborListInputOutput $input,
+        ?RpcV2CborListInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): RpcV2CborListInputOutput
     {
         /** @var RpcV2CborListInputOutput */
         return $this->executeOperation(
             RpcV2CborListsOperation::instance(),
-            $input,
+            $input ?? new RpcV2CborListInputOutput(),
             $overrides
         );
     }
 
     public function rpcV2CborSparseMaps(
-        RpcV2CborSparseMapsInputOutput $input,
+        ?RpcV2CborSparseMapsInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): RpcV2CborSparseMapsInputOutput
     {
         /** @var RpcV2CborSparseMapsInputOutput */
         return $this->executeOperation(
             RpcV2CborSparseMapsOperation::instance(),
-            $input,
+            $input ?? new RpcV2CborSparseMapsInputOutput(),
             $overrides
         );
     }
@@ -217,40 +217,40 @@ final class RpcV2CborClient extends AbstractClient implements RpcV2CborClientInt
      * This operation uses unions for inputs and outputs.
      */
     public function rpcV2CborUnions(
-        RpcV2CborUnionInputOutput $input,
+        ?RpcV2CborUnionInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): RpcV2CborUnionInputOutput
     {
         /** @var RpcV2CborUnionInputOutput */
         return $this->executeOperation(
             RpcV2CborUnionsOperation::instance(),
-            $input,
+            $input ?? new RpcV2CborUnionInputOutput(),
             $overrides
         );
     }
 
     public function simpleScalarProperties(
-        SimpleScalarStructure $input,
+        ?SimpleScalarStructure $input = null,
         ?RequestOverrideConfig $overrides = null
     ): SimpleScalarStructure
     {
         /** @var SimpleScalarStructure */
         return $this->executeOperation(
             SimpleScalarPropertiesOperation::instance(),
-            $input,
+            $input ?? new SimpleScalarStructure(),
             $overrides
         );
     }
 
     public function sparseNullsOperation(
-        SparseNullsOperationInputOutput $input,
+        ?SparseNullsOperationInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): SparseNullsOperationInputOutput
     {
         /** @var SparseNullsOperationInputOutput */
         return $this->executeOperation(
             SparseNullsOperationOperation::instance(),
-            $input,
+            $input ?? new SparseNullsOperationInputOutput(),
             $overrides
         );
     }

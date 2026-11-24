@@ -57,17 +57,17 @@ interface RpcV2CborClientInterface extends ClientInterface
     public function noInputOutput(?Unit $input = null, ?RequestOverrideConfig $overrides = null): Unit;
 
     public function operationWithDefaults(
-        OperationWithDefaultsInput $input,
+        ?OperationWithDefaultsInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): OperationWithDefaultsOutput;
 
     public function optionalInputOutput(
-        SimpleStructure $input,
+        ?SimpleStructure $input = null,
         ?RequestOverrideConfig $overrides = null
     ): SimpleStructure;
 
     public function recursiveShapes(
-        RecursiveShapesInputOutput $input,
+        ?RecursiveShapesInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): RecursiveShapesInputOutput;
 
@@ -75,7 +75,7 @@ interface RpcV2CborClientInterface extends ClientInterface
      * The example tests basic map serialization.
      */
     public function rpcV2CborDenseMaps(
-        RpcV2CborDenseMapsInputOutput $input,
+        ?RpcV2CborDenseMapsInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): RpcV2CborDenseMapsInputOutput;
 
@@ -84,12 +84,12 @@ interface RpcV2CborClientInterface extends ClientInterface
      * sets. 3. Lists of lists. 4. Lists of structures.
      */
     public function rpcV2CborLists(
-        RpcV2CborListInputOutput $input,
+        ?RpcV2CborListInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): RpcV2CborListInputOutput;
 
     public function rpcV2CborSparseMaps(
-        RpcV2CborSparseMapsInputOutput $input,
+        ?RpcV2CborSparseMapsInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): RpcV2CborSparseMapsInputOutput;
 
@@ -97,17 +97,17 @@ interface RpcV2CborClientInterface extends ClientInterface
      * This operation uses unions for inputs and outputs.
      */
     public function rpcV2CborUnions(
-        RpcV2CborUnionInputOutput $input,
+        ?RpcV2CborUnionInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): RpcV2CborUnionInputOutput;
 
     public function simpleScalarProperties(
-        SimpleScalarStructure $input,
+        ?SimpleScalarStructure $input = null,
         ?RequestOverrideConfig $overrides = null
     ): SimpleScalarStructure;
 
     public function sparseNullsOperation(
-        SparseNullsOperationInputOutput $input,
+        ?SparseNullsOperationInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): SparseNullsOperationInputOutput;
 }

@@ -185,75 +185,29 @@ final class Defaults implements SerializableStructInterface
      */
     public function serializeMembers(ShapeSerializerInterface $serializer): void
     {
-        if (isset($this->defaultString)) {
-            $serializer->serializeString(self::$SCHEMA_DEFAULT_STRING, $this->defaultString, 0);
-        }
-        if (isset($this->defaultBoolean)) {
-            $serializer->serializeBoolean(self::$SCHEMA_DEFAULT_BOOLEAN, $this->defaultBoolean, 1);
-        }
-        if (isset($this->defaultList)) {
-            $serializer->serializeList(self::$SCHEMA_DEFAULT_LIST, $this->defaultList, 2);
-        }
-        if (isset($this->defaultTimestamp)) {
-            $serializer->serializeTimestamp(self::$SCHEMA_DEFAULT_TIMESTAMP, $this->defaultTimestamp, 3);
-        }
-        if (isset($this->defaultBlob)) {
-            $serializer->serializeBlob(self::$SCHEMA_DEFAULT_BLOB, $this->defaultBlob, 4);
-        }
-        if (isset($this->defaultByte)) {
-            $serializer->serializeInteger(self::$SCHEMA_DEFAULT_BYTE, $this->defaultByte, 5);
-        }
-        if (isset($this->defaultShort)) {
-            $serializer->serializeInteger(self::$SCHEMA_DEFAULT_SHORT, $this->defaultShort, 6);
-        }
-        if (isset($this->defaultInteger)) {
-            $serializer->serializeInteger(self::$SCHEMA_DEFAULT_INTEGER, $this->defaultInteger, 7);
-        }
-        if (isset($this->defaultLong)) {
-            $serializer->serializeInteger(self::$SCHEMA_DEFAULT_LONG, $this->defaultLong, 8);
-        }
-        if (isset($this->defaultFloat)) {
-            $serializer->serializeFloat(self::$SCHEMA_DEFAULT_FLOAT, $this->defaultFloat, 9);
-        }
-        if (isset($this->defaultDouble)) {
-            $serializer->serializeFloat(self::$SCHEMA_DEFAULT_DOUBLE, $this->defaultDouble, 10);
-        }
-        if (isset($this->defaultMap)) {
-            $serializer->serializeMap(self::$SCHEMA_DEFAULT_MAP, $this->defaultMap, 11);
-        }
-        if (isset($this->defaultEnum)) {
-            $serializer->serializeString(self::$SCHEMA_DEFAULT_ENUM, $this->defaultEnum->value, 12);
-        }
-        if (isset($this->defaultIntEnum)) {
-            $serializer->serializeInteger(self::$SCHEMA_DEFAULT_INT_ENUM, $this->defaultIntEnum->value, 13);
-        }
-        if (isset($this->emptyString)) {
-            $serializer->serializeString(self::$SCHEMA_EMPTY_STRING, $this->emptyString, 14);
-        }
-        if (isset($this->falseBoolean)) {
-            $serializer->serializeBoolean(self::$SCHEMA_FALSE_BOOLEAN, $this->falseBoolean, 15);
-        }
-        if (isset($this->emptyBlob)) {
-            $serializer->serializeBlob(self::$SCHEMA_EMPTY_BLOB, $this->emptyBlob, 16);
-        }
-        if (isset($this->zeroByte)) {
-            $serializer->serializeInteger(self::$SCHEMA_ZERO_BYTE, $this->zeroByte, 17);
-        }
-        if (isset($this->zeroShort)) {
-            $serializer->serializeInteger(self::$SCHEMA_ZERO_SHORT, $this->zeroShort, 18);
-        }
-        if (isset($this->zeroInteger)) {
-            $serializer->serializeInteger(self::$SCHEMA_ZERO_INTEGER, $this->zeroInteger, 19);
-        }
-        if (isset($this->zeroLong)) {
-            $serializer->serializeInteger(self::$SCHEMA_ZERO_LONG, $this->zeroLong, 20);
-        }
-        if (isset($this->zeroFloat)) {
-            $serializer->serializeFloat(self::$SCHEMA_ZERO_FLOAT, $this->zeroFloat, 21);
-        }
-        if (isset($this->zeroDouble)) {
-            $serializer->serializeFloat(self::$SCHEMA_ZERO_DOUBLE, $this->zeroDouble, 22);
-        }
+        $serializer->serializeString(self::$SCHEMA_DEFAULT_STRING, $this->defaultString, 0);
+        $serializer->serializeBoolean(self::$SCHEMA_DEFAULT_BOOLEAN, $this->defaultBoolean, 1);
+        $serializer->serializeList(self::$SCHEMA_DEFAULT_LIST, $this->defaultList, 2);
+        $serializer->serializeTimestamp(self::$SCHEMA_DEFAULT_TIMESTAMP, $this->defaultTimestamp, 3);
+        $serializer->serializeBlob(self::$SCHEMA_DEFAULT_BLOB, $this->defaultBlob, 4);
+        $serializer->serializeInteger(self::$SCHEMA_DEFAULT_BYTE, $this->defaultByte, 5);
+        $serializer->serializeInteger(self::$SCHEMA_DEFAULT_SHORT, $this->defaultShort, 6);
+        $serializer->serializeInteger(self::$SCHEMA_DEFAULT_INTEGER, $this->defaultInteger, 7);
+        $serializer->serializeInteger(self::$SCHEMA_DEFAULT_LONG, $this->defaultLong, 8);
+        $serializer->serializeFloat(self::$SCHEMA_DEFAULT_FLOAT, $this->defaultFloat, 9);
+        $serializer->serializeFloat(self::$SCHEMA_DEFAULT_DOUBLE, $this->defaultDouble, 10);
+        $serializer->serializeMap(self::$SCHEMA_DEFAULT_MAP, $this->defaultMap, 11);
+        $serializer->serializeString(self::$SCHEMA_DEFAULT_ENUM, $this->defaultEnum->value, 12);
+        $serializer->serializeInteger(self::$SCHEMA_DEFAULT_INT_ENUM, $this->defaultIntEnum->value, 13);
+        $serializer->serializeString(self::$SCHEMA_EMPTY_STRING, $this->emptyString, 14);
+        $serializer->serializeBoolean(self::$SCHEMA_FALSE_BOOLEAN, $this->falseBoolean, 15);
+        $serializer->serializeBlob(self::$SCHEMA_EMPTY_BLOB, $this->emptyBlob, 16);
+        $serializer->serializeInteger(self::$SCHEMA_ZERO_BYTE, $this->zeroByte, 17);
+        $serializer->serializeInteger(self::$SCHEMA_ZERO_SHORT, $this->zeroShort, 18);
+        $serializer->serializeInteger(self::$SCHEMA_ZERO_INTEGER, $this->zeroInteger, 19);
+        $serializer->serializeInteger(self::$SCHEMA_ZERO_LONG, $this->zeroLong, 20);
+        $serializer->serializeFloat(self::$SCHEMA_ZERO_FLOAT, $this->zeroFloat, 21);
+        $serializer->serializeFloat(self::$SCHEMA_ZERO_DOUBLE, $this->zeroDouble, 22);
     }
 
     /**

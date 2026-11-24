@@ -89,7 +89,10 @@ interface Ec2QueryClientInterface extends ClientInterface
     /**
      * This test serializes nested and recursive structure members.
      */
-    public function nestedStructures(NestedStructuresInput $input, ?RequestOverrideConfig $overrides = null): Unit;
+    public function nestedStructures(
+        ?NestedStructuresInput $input = null,
+        ?RequestOverrideConfig $overrides = null
+    ): Unit;
 
     /**
      * The example tests how requests and responses are serialized when there's no request payload or response members.
@@ -101,7 +104,7 @@ interface Ec2QueryClientInterface extends ClientInterface
     ): NoInputAndOutputOutput;
 
     public function putWithContentEncoding(
-        PutWithContentEncodingInput $input,
+        ?PutWithContentEncodingInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): Unit;
 
@@ -109,21 +112,24 @@ interface Ec2QueryClientInterface extends ClientInterface
      * Automatically adds idempotency tokens.
      */
     public function queryIdempotencyTokenAutoFill(
-        QueryIdempotencyTokenAutoFillInput $input,
+        ?QueryIdempotencyTokenAutoFillInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): Unit;
 
     /**
      * This test serializes simple and complex lists.
      */
-    public function queryLists(QueryListsInput $input, ?RequestOverrideConfig $overrides = null): Unit;
+    public function queryLists(?QueryListsInput $input = null, ?RequestOverrideConfig $overrides = null): Unit;
 
     /**
      * This test serializes timestamps. 1. Timestamps are serialized as RFC 3339 date-time values by default. 2. A
      * timestampFormat trait on a member changes the format. 3. A timestampFormat trait on the shape targeted by the member
      * changes the format.
      */
-    public function queryTimestamps(QueryTimestampsInput $input, ?RequestOverrideConfig $overrides = null): Unit;
+    public function queryTimestamps(
+        ?QueryTimestampsInput $input = null,
+        ?RequestOverrideConfig $overrides = null
+    ): Unit;
 
     /**
      * Recursive shapes
@@ -136,7 +142,10 @@ interface Ec2QueryClientInterface extends ClientInterface
     /**
      * This test serializes strings, numbers, and boolean values.
      */
-    public function simpleInputParams(SimpleInputParamsInput $input, ?RequestOverrideConfig $overrides = null): Unit;
+    public function simpleInputParams(
+        ?SimpleInputParamsInput $input = null,
+        ?RequestOverrideConfig $overrides = null
+    ): Unit;
 
     public function simpleScalarXmlProperties(
         ?Unit $input = null,

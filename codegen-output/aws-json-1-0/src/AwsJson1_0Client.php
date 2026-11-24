@@ -65,14 +65,14 @@ final class AwsJson1_0Client extends AbstractClient implements AwsJson1_0ClientI
      * The example tests how servers must support requests containing a `Content-Type` header with parameters.
      */
     public function contentTypeParameters(
-        ContentTypeParametersInput $input,
+        ?ContentTypeParametersInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): ContentTypeParametersOutput
     {
         /** @var ContentTypeParametersOutput */
         return $this->executeOperation(
             ContentTypeParametersOperation::instance(),
-            $input,
+            $input ?? new ContentTypeParametersInput(),
             $overrides
         );
     }
@@ -124,14 +124,14 @@ final class AwsJson1_0Client extends AbstractClient implements AwsJson1_0ClientI
      * properly deserialize successful and error responses.
      */
     public function greetingWithErrors(
-        GreetingWithErrorsInput $input,
+        ?GreetingWithErrorsInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): GreetingWithErrorsOutput
     {
         /** @var GreetingWithErrorsOutput */
         return $this->executeOperation(
             GreetingWithErrorsOperation::instance(),
-            $input,
+            $input ?? new GreetingWithErrorsInput(),
             $overrides
         );
     }
@@ -149,12 +149,15 @@ final class AwsJson1_0Client extends AbstractClient implements AwsJson1_0ClientI
     /**
      * This operation uses unions for inputs and outputs.
      */
-    public function jsonUnions(JsonUnionsInput $input, ?RequestOverrideConfig $overrides = null): JsonUnionsOutput
+    public function jsonUnions(
+        ?JsonUnionsInput $input = null,
+        ?RequestOverrideConfig $overrides = null
+    ): JsonUnionsOutput
     {
         /** @var JsonUnionsOutput */
         return $this->executeOperation(
             JsonUnionsOperation::instance(),
-            $input,
+            $input ?? new JsonUnionsInput(),
             $overrides
         );
     }
@@ -191,14 +194,14 @@ final class AwsJson1_0Client extends AbstractClient implements AwsJson1_0ClientI
     }
 
     public function putWithContentEncoding(
-        PutWithContentEncodingInput $input,
+        ?PutWithContentEncodingInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): Unit
     {
         /** @var Unit */
         return $this->executeOperation(
             PutWithContentEncodingOperation::instance(),
-            $input,
+            $input ?? new PutWithContentEncodingInput(),
             $overrides
         );
     }
@@ -214,14 +217,14 @@ final class AwsJson1_0Client extends AbstractClient implements AwsJson1_0ClientI
     }
 
     public function simpleScalarProperties(
-        SimpleScalarPropertiesInput $input,
+        ?SimpleScalarPropertiesInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): SimpleScalarPropertiesOutput
     {
         /** @var SimpleScalarPropertiesOutput */
         return $this->executeOperation(
             SimpleScalarPropertiesOperation::instance(),
-            $input,
+            $input ?? new SimpleScalarPropertiesInput(),
             $overrides
         );
     }

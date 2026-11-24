@@ -73,12 +73,8 @@ final class InputAndOutputWithHeadersIO implements SerializableStructInterface
         IntegerEnum|int|null $headerIntegerEnum = null,
         public readonly ?array $headerIntegerEnumList = null
     ) {
-        if ($headerEnum !== null) {
-            $this->headerEnum = $headerEnum instanceof FooEnum ? $headerEnum : FooEnum::fromValue($headerEnum);
-        }
-        if ($headerIntegerEnum !== null) {
-            $this->headerIntegerEnum = $headerIntegerEnum instanceof IntegerEnum ? $headerIntegerEnum : IntegerEnum::fromValue($headerIntegerEnum);
-        }
+        $this->headerEnum = $headerEnum === null || $headerEnum instanceof FooEnum ? $headerEnum : FooEnum::fromValue($headerEnum);
+        $this->headerIntegerEnum = $headerIntegerEnum === null || $headerIntegerEnum instanceof IntegerEnum ? $headerIntegerEnum : IntegerEnum::fromValue($headerIntegerEnum);
     }
 
     /**
@@ -213,9 +209,9 @@ final class InputAndOutputWithHeadersIO implements SerializableStructInterface
             11 => $this->headerIntegerList,
             12 => $this->headerBooleanList,
             13 => $this->headerTimestampList,
-            14 => $this->headerEnum ?? null,
+            14 => $this->headerEnum,
             15 => $this->headerEnumList,
-            16 => $this->headerIntegerEnum ?? null,
+            16 => $this->headerIntegerEnum,
             17 => $this->headerIntegerEnumList,
             default => null,
         };
@@ -241,9 +237,9 @@ final class InputAndOutputWithHeadersIO implements SerializableStructInterface
             $this->headerIntegerList,
             $this->headerBooleanList,
             $this->headerTimestampList,
-            $this->headerEnum ?? null,
+            $this->headerEnum,
             $this->headerEnumList,
-            $this->headerIntegerEnum ?? null,
+            $this->headerIntegerEnum,
             $this->headerIntegerEnumList
         ];
         $members[$member->memberIndex] = $value;

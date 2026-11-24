@@ -95,7 +95,7 @@ interface RestJsonClientInterface extends ClientInterface
      * This example uses all query string types.
      */
     public function allQueryStringTypes(
-        AllQueryStringTypesInput $input,
+        ?AllQueryStringTypesInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): Unit;
 
@@ -104,7 +104,7 @@ interface RestJsonClientInterface extends ClientInterface
      * variable parameters must both be serialized (implementations may need to merge them together).
      */
     public function constantAndVariableQueryString(
-        ConstantAndVariableQueryStringInput $input,
+        ?ConstantAndVariableQueryStringInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): Unit;
 
@@ -122,7 +122,7 @@ interface RestJsonClientInterface extends ClientInterface
      * The example tests how servers must support requests containing a `Content-Type` header with parameters.
      */
     public function contentTypeParameters(
-        ContentTypeParametersInput $input,
+        ?ContentTypeParametersInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): ContentTypeParametersOutput;
 
@@ -135,7 +135,7 @@ interface RestJsonClientInterface extends ClientInterface
      * This example serializes a document as part of the payload.
      */
     public function documentType(
-        DocumentTypeInputOutput $input,
+        ?DocumentTypeInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): DocumentTypeInputOutput;
 
@@ -143,7 +143,7 @@ interface RestJsonClientInterface extends ClientInterface
      * This example serializes documents as the value of maps.
      */
     public function documentTypeAsMapValue(
-        DocumentTypeAsMapValueInputOutput $input,
+        ?DocumentTypeAsMapValueInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): DocumentTypeAsMapValueInputOutput;
 
@@ -151,12 +151,12 @@ interface RestJsonClientInterface extends ClientInterface
      * This example serializes a document as the entire HTTP payload.
      */
     public function documentTypeAsPayload(
-        DocumentTypeAsPayloadInputOutput $input,
+        ?DocumentTypeAsPayloadInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): DocumentTypeAsPayloadInputOutput;
 
     public function duplexStream(
-        DuplexStreamInput $input,
+        ?DuplexStreamInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): DuplexStreamOutput;
 
@@ -203,7 +203,7 @@ interface RestJsonClientInterface extends ClientInterface
      * This example tests httpChecksumRequired trait
      */
     public function httpChecksumRequired(
-        HttpChecksumRequiredInputOutput $input,
+        ?HttpChecksumRequiredInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): HttpChecksumRequiredInputOutput;
 
@@ -211,12 +211,12 @@ interface RestJsonClientInterface extends ClientInterface
      * Clients that perform this test extract all headers from the response.
      */
     public function httpEmptyPrefixHeaders(
-        HttpEmptyPrefixHeadersInput $input,
+        ?HttpEmptyPrefixHeadersInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): HttpEmptyPrefixHeadersOutput;
 
     public function httpEnumPayload(
-        EnumPayloadInput $input,
+        ?EnumPayloadInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): EnumPayloadInput;
 
@@ -225,7 +225,7 @@ interface RestJsonClientInterface extends ClientInterface
      * payload is not a structure or a union type.
      */
     public function httpPayloadTraits(
-        HttpPayloadTraitsInputOutput $input,
+        ?HttpPayloadTraitsInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): HttpPayloadTraitsInputOutput;
 
@@ -234,7 +234,7 @@ interface RestJsonClientInterface extends ClientInterface
      * name to match the targeted structure.
      */
     public function httpPayloadWithStructure(
-        HttpPayloadWithStructureInputOutput $input,
+        ?HttpPayloadWithStructureInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): HttpPayloadWithStructureInputOutput;
 
@@ -242,7 +242,7 @@ interface RestJsonClientInterface extends ClientInterface
      * This example serializes a union in the payload.
      */
     public function httpPayloadWithUnion(
-        HttpPayloadWithUnionInputOutput $input,
+        ?HttpPayloadWithUnionInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): HttpPayloadWithUnionInputOutput;
 
@@ -250,7 +250,7 @@ interface RestJsonClientInterface extends ClientInterface
      * This examples adds headers to the input of a request and response by prefix.
      */
     public function httpPrefixHeaders(
-        HttpPrefixHeadersInput $input,
+        ?HttpPrefixHeadersInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): HttpPrefixHeadersOutput;
 
@@ -266,7 +266,7 @@ interface RestJsonClientInterface extends ClientInterface
      * This example tests httpQueryParams when no other query parameters exist.
      */
     public function httpQueryParamsOnlyOperation(
-        HttpQueryParamsOnlyInput $input,
+        ?HttpQueryParamsOnlyInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): Unit;
 
@@ -307,7 +307,7 @@ interface RestJsonClientInterface extends ClientInterface
     ): HttpResponseCodeOutput;
 
     public function httpStringPayload(
-        StringPayloadInput $input,
+        ?StringPayloadInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): StringPayloadInput;
 
@@ -325,11 +325,11 @@ interface RestJsonClientInterface extends ClientInterface
      * HTTP header bindings.
      */
     public function inputAndOutputWithHeaders(
-        InputAndOutputWithHeadersIO $input,
+        ?InputAndOutputWithHeadersIO $input = null,
         ?RequestOverrideConfig $overrides = null
     ): InputAndOutputWithHeadersIO;
 
-    public function inputStream(InputStreamInput $input, ?RequestOverrideConfig $overrides = null): Unit;
+    public function inputStream(?InputStreamInput $input = null, ?RequestOverrideConfig $overrides = null): Unit;
 
     public function inputStreamWithInitialRequest(
         InputStreamWithInitialRequestInput $input,
@@ -340,7 +340,7 @@ interface RestJsonClientInterface extends ClientInterface
      * Blobs are base64 encoded
      */
     public function jsonBlobs(
-        JsonBlobsInputOutput $input,
+        ?JsonBlobsInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): JsonBlobsInputOutput;
 
@@ -348,7 +348,7 @@ interface RestJsonClientInterface extends ClientInterface
      * This example serializes enums as top level properties, in lists, sets, and maps.
      */
     public function jsonEnums(
-        JsonEnumsInputOutput $input,
+        ?JsonEnumsInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): JsonEnumsInputOutput;
 
@@ -356,7 +356,7 @@ interface RestJsonClientInterface extends ClientInterface
      * This example serializes intEnums as top level properties, in lists, sets, and maps.
      */
     public function jsonIntEnums(
-        JsonIntEnumsInputOutput $input,
+        ?JsonIntEnumsInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): JsonIntEnumsInputOutput;
 
@@ -365,34 +365,40 @@ interface RestJsonClientInterface extends ClientInterface
      * Normal JSON sets. 3. JSON lists of lists. 4. Lists of structures.
      */
     public function jsonLists(
-        JsonListsInputOutput $input,
+        ?JsonListsInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): JsonListsInputOutput;
 
     /**
      * The example tests basic map serialization.
      */
-    public function jsonMaps(JsonMapsInputOutput $input, ?RequestOverrideConfig $overrides = null): JsonMapsInputOutput;
+    public function jsonMaps(
+        ?JsonMapsInputOutput $input = null,
+        ?RequestOverrideConfig $overrides = null
+    ): JsonMapsInputOutput;
 
     /**
      * This tests how timestamps are serialized, including using the default format of date-time and various
      * @timestampFormat trait values.
      */
     public function jsonTimestamps(
-        JsonTimestampsInputOutput $input,
+        ?JsonTimestampsInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): JsonTimestampsInputOutput;
 
     /**
      * This operation uses unions for inputs and outputs.
      */
-    public function jsonUnions(UnionInputOutput $input, ?RequestOverrideConfig $overrides = null): UnionInputOutput;
+    public function jsonUnions(
+        ?UnionInputOutput $input = null,
+        ?RequestOverrideConfig $overrides = null
+    ): UnionInputOutput;
 
     /**
      * This example ensures that mediaType strings are base64 encoded in headers.
      */
     public function mediaTypeHeader(
-        MediaTypeHeaderInput $input,
+        ?MediaTypeHeaderInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): MediaTypeHeaderOutput;
 
@@ -415,7 +421,7 @@ interface RestJsonClientInterface extends ClientInterface
      * Null headers are not sent over the wire, empty headers are serialized to ""
      */
     public function nullAndEmptyHeadersClient(
-        NullAndEmptyHeadersIO $input,
+        ?NullAndEmptyHeadersIO $input = null,
         ?RequestOverrideConfig $overrides = null
     ): NullAndEmptyHeadersIO;
 
@@ -423,7 +429,7 @@ interface RestJsonClientInterface extends ClientInterface
      * Null headers are not sent over the wire, empty headers are serialized to ""
      */
     public function nullAndEmptyHeadersServer(
-        NullAndEmptyHeadersIO $input,
+        ?NullAndEmptyHeadersIO $input = null,
         ?RequestOverrideConfig $overrides = null
     ): NullAndEmptyHeadersIO;
 
@@ -431,7 +437,7 @@ interface RestJsonClientInterface extends ClientInterface
      * Omits null, but serializes empty string value.
      */
     public function omitsNullSerializesEmptyString(
-        OmitsNullSerializesEmptyStringInput $input,
+        ?OmitsNullSerializesEmptyStringInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): Unit;
 
@@ -440,7 +446,7 @@ interface RestJsonClientInterface extends ClientInterface
      * as `Foo=` and instead must be omitted.
      */
     public function omitsSerializingEmptyLists(
-        OmitsSerializingEmptyListsInput $input,
+        ?OmitsSerializingEmptyListsInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): Unit;
 
@@ -455,12 +461,12 @@ interface RestJsonClientInterface extends ClientInterface
      * This operation defines a union that uses jsonName on some members.
      */
     public function postUnionWithJsonName(
-        PostUnionWithJsonNameInput $input,
+        ?PostUnionWithJsonNameInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): PostUnionWithJsonNameOutput;
 
     public function putWithContentEncoding(
-        PutWithContentEncodingInput $input,
+        ?PutWithContentEncodingInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): Unit;
 
@@ -468,22 +474,25 @@ interface RestJsonClientInterface extends ClientInterface
      * Automatically adds idempotency tokens.
      */
     public function queryIdempotencyTokenAutoFill(
-        QueryIdempotencyTokenAutoFillInput $input,
+        ?QueryIdempotencyTokenAutoFillInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): Unit;
 
     public function queryParamsAsStringListMap(
-        QueryParamsAsStringListMapInput $input,
+        ?QueryParamsAsStringListMapInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): Unit;
 
-    public function queryPrecedence(QueryPrecedenceInput $input, ?RequestOverrideConfig $overrides = null): Unit;
+    public function queryPrecedence(
+        ?QueryPrecedenceInput $input = null,
+        ?RequestOverrideConfig $overrides = null
+    ): Unit;
 
     /**
      * Recursive shapes
      */
     public function recursiveShapes(
-        RecursiveShapesInputOutput $input,
+        ?RecursiveShapesInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): RecursiveShapesInputOutput;
 
@@ -498,12 +507,12 @@ interface RestJsonClientInterface extends ClientInterface
     ): ResponseCodeRequiredOutput;
 
     public function simpleScalarProperties(
-        SimpleScalarPropertiesInputOutput $input,
+        ?SimpleScalarPropertiesInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): SimpleScalarPropertiesInputOutput;
 
     public function sparseJsonLists(
-        SparseJsonListsInputOutput $input,
+        ?SparseJsonListsInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): SparseJsonListsInputOutput;
 
@@ -511,7 +520,7 @@ interface RestJsonClientInterface extends ClientInterface
      * This example tests sparse map serialization.
      */
     public function sparseJsonMaps(
-        SparseJsonMapsInputOutput $input,
+        ?SparseJsonMapsInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): SparseJsonMapsInputOutput;
 
@@ -520,7 +529,7 @@ interface RestJsonClientInterface extends ClientInterface
      * used in all requests and that an "empty" body is an empty JSON document ({}).
      */
     public function testBodyStructure(
-        TestBodyStructureInputOutput $input,
+        ?TestBodyStructureInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): TestBodyStructureInputOutput;
 
@@ -540,7 +549,7 @@ interface RestJsonClientInterface extends ClientInterface
      * HTTP body.
      */
     public function testGetNoPayload(
-        TestNoPayloadInputOutput $input,
+        ?TestNoPayloadInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): TestNoPayloadInputOutput;
 
@@ -550,7 +559,7 @@ interface RestJsonClientInterface extends ClientInterface
      * application/octet-stream" header is used, and that we are not treating an empty body as an empty JSON document.
      */
     public function testPayloadBlob(
-        TestPayloadBlobInputOutput $input,
+        ?TestPayloadBlobInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): TestPayloadBlobInputOutput;
 
@@ -559,7 +568,7 @@ interface RestJsonClientInterface extends ClientInterface
      * TestBodyStructure but with the body specified by the @httpPayload trait.
      */
     public function testPayloadStructure(
-        TestPayloadStructureInputOutput $input,
+        ?TestPayloadStructureInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): TestPayloadStructureInputOutput;
 
@@ -577,7 +586,7 @@ interface RestJsonClientInterface extends ClientInterface
      * attach a body or related headers (Content-Type) to a POST operation with no modeled payload.
      */
     public function testPostNoPayload(
-        TestNoPayloadInputOutput $input,
+        ?TestNoPayloadInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): TestNoPayloadInputOutput;
 
@@ -585,7 +594,7 @@ interface RestJsonClientInterface extends ClientInterface
      * This example tests how timestamp request and response headers are serialized.
      */
     public function timestampFormatHeaders(
-        TimestampFormatHeadersIO $input,
+        ?TimestampFormatHeadersIO $input = null,
         ?RequestOverrideConfig $overrides = null
     ): TimestampFormatHeadersIO;
 

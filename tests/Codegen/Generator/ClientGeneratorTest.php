@@ -606,6 +606,78 @@ final class ClientGeneratorTest extends TestCase
         );
     }
 
+    public function testInputIsOptionalWhenNoMemberIsRequired(): void
+    {
+        $model = SmithyModel::fromJson(\json_encode([
+            'smithy' => '2.0',
+            'shapes' => [
+                'smithy.example#Example' => [
+                    'type' => 'service',
+                    'version' => '2026-11-24',
+                    'operations' => [
+                        ['target' => 'smithy.example#ListThings'],
+                        ['target' => 'smithy.example#GetThing']
+                    ]
+                ],
+                'smithy.example#ListThings' => [
+                    'type' => 'operation',
+                    'input' => ['target' => 'smithy.example#ListThingsInput']
+                ],
+                'smithy.example#ListThingsInput' => [
+                    'type' => 'structure',
+                    'members' => [
+                        'prefix' => ['target' => 'smithy.api#String']
+                    ],
+                    'traits' => ['smithy.api#input' => (object) []]
+                ],
+                'smithy.example#GetThing' => [
+                    'type' => 'operation',
+                    'input' => ['target' => 'smithy.example#GetThingInput']
+                ],
+                'smithy.example#GetThingInput' => [
+                    'type' => 'structure',
+                    'members' => [
+                        'id' => [
+                            'target' => 'smithy.api#String',
+                            'traits' => ['smithy.api#required' => (object) []]
+                        ]
+                    ],
+                    'traits' => ['smithy.api#input' => (object) []]
+                ]
+            ]
+        ], JSON_THROW_ON_ERROR));
+        $settings = new CodegenSettings(
+            namespace: 'Smithy\\Example',
+            outputDir: '/tmp/out'
+        );
+
+        $file = (new ClientGenerator(
+            $model,
+            new PhpSymbolProvider($model, $settings),
+            $settings
+        ))->generate(
+            'smithy.example#Example',
+            $this->projection($model)
+        );
+
+        $this->assertStringContainsString(
+            '?ListThingsInput $input = null,',
+            $file->content
+        );
+        $this->assertStringContainsString(
+            '$input ?? new ListThingsInput(),',
+            $file->content
+        );
+        $this->assertStringContainsString(
+            'GetThingInput $input,',
+            $file->content
+        );
+        $this->assertStringNotContainsString(
+            '?GetThingInput $input',
+            $file->content
+        );
+    }
+
     public function testDelegatesModeledBehaviorToRuntimePlugins(): void
     {
         $model = SmithyModel::fromJson(\json_encode([

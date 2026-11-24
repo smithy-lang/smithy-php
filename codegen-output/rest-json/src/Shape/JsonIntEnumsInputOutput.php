@@ -46,15 +46,9 @@ final class JsonIntEnumsInputOutput implements SerializableStructInterface
         public readonly ?array $integerEnumSet = null,
         public readonly ?array $integerEnumMap = null
     ) {
-        if ($integerEnum1 !== null) {
-            $this->integerEnum1 = $integerEnum1 instanceof IntegerEnum ? $integerEnum1 : IntegerEnum::fromValue($integerEnum1);
-        }
-        if ($integerEnum2 !== null) {
-            $this->integerEnum2 = $integerEnum2 instanceof IntegerEnum ? $integerEnum2 : IntegerEnum::fromValue($integerEnum2);
-        }
-        if ($integerEnum3 !== null) {
-            $this->integerEnum3 = $integerEnum3 instanceof IntegerEnum ? $integerEnum3 : IntegerEnum::fromValue($integerEnum3);
-        }
+        $this->integerEnum1 = $integerEnum1 === null || $integerEnum1 instanceof IntegerEnum ? $integerEnum1 : IntegerEnum::fromValue($integerEnum1);
+        $this->integerEnum2 = $integerEnum2 === null || $integerEnum2 instanceof IntegerEnum ? $integerEnum2 : IntegerEnum::fromValue($integerEnum2);
+        $this->integerEnum3 = $integerEnum3 === null || $integerEnum3 instanceof IntegerEnum ? $integerEnum3 : IntegerEnum::fromValue($integerEnum3);
     }
 
     /**
@@ -127,9 +121,9 @@ final class JsonIntEnumsInputOutput implements SerializableStructInterface
     public function getMemberValue(Schema $member): mixed
     {
         return match ($member->memberIndex) {
-            0 => $this->integerEnum1 ?? null,
-            1 => $this->integerEnum2 ?? null,
-            2 => $this->integerEnum3 ?? null,
+            0 => $this->integerEnum1,
+            1 => $this->integerEnum2,
+            2 => $this->integerEnum3,
             3 => $this->integerEnumList,
             4 => $this->integerEnumSet,
             5 => $this->integerEnumMap,
@@ -143,9 +137,9 @@ final class JsonIntEnumsInputOutput implements SerializableStructInterface
     public function withMemberValue(Schema $member, mixed $value): static
     {
         $members = [
-            $this->integerEnum1 ?? null,
-            $this->integerEnum2 ?? null,
-            $this->integerEnum3 ?? null,
+            $this->integerEnum1,
+            $this->integerEnum2,
+            $this->integerEnum3,
             $this->integerEnumList,
             $this->integerEnumSet,
             $this->integerEnumMap

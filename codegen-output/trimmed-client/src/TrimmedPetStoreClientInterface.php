@@ -22,7 +22,7 @@ use Smithy\CodegenOutput\TrimmedPetStore\Output\GetPetOutput;
  */
 interface TrimmedPetStoreClientInterface extends ClientInterface
 {
-    public function getPet(GetPetInput $input, ?RequestOverrideConfig $overrides = null): GetPetOutput;
+    public function getPet(?GetPetInput $input = null, ?RequestOverrideConfig $overrides = null): GetPetOutput;
 
     /**
      * Wait until {@see self::getPet()} reports the pet as existing.

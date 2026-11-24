@@ -668,11 +668,9 @@ final class CodeGeneratorTest extends TestCase
             $content
         );
 
-        $this->assertStringContainsString('if ($status !== null) {', $content);
-        $this->assertStringContainsString('if ($priority !== null) {', $content);
-        $this->assertStringContainsString('if ($marker !== null) {', $content);
+        $this->assertStringNotContainsString('if ($status !== null) {', $content);
         $this->assertStringContainsString(
-            '$this->marker = $marker instanceof Status '
+            '$this->marker = $marker === null || $marker instanceof Status '
                 . '? $marker : Status::fromValue($marker);',
             $content
         );

@@ -84,12 +84,8 @@ final class AllQueryStringTypesInput implements SerializableStructInterface
         public readonly ?array $queryIntegerEnumList = null,
         public readonly ?array $queryParamsMapOfStringList = null
     ) {
-        if ($queryEnum !== null) {
-            $this->queryEnum = $queryEnum instanceof FooEnum ? $queryEnum : FooEnum::fromValue($queryEnum);
-        }
-        if ($queryIntegerEnum !== null) {
-            $this->queryIntegerEnum = $queryIntegerEnum instanceof IntegerEnum ? $queryIntegerEnum : IntegerEnum::fromValue($queryIntegerEnum);
-        }
+        $this->queryEnum = $queryEnum === null || $queryEnum instanceof FooEnum ? $queryEnum : FooEnum::fromValue($queryEnum);
+        $this->queryIntegerEnum = $queryIntegerEnum === null || $queryIntegerEnum instanceof IntegerEnum ? $queryIntegerEnum : IntegerEnum::fromValue($queryIntegerEnum);
     }
 
     /**
@@ -238,9 +234,9 @@ final class AllQueryStringTypesInput implements SerializableStructInterface
             13 => $this->queryBooleanList,
             14 => $this->queryTimestamp,
             15 => $this->queryTimestampList,
-            16 => $this->queryEnum ?? null,
+            16 => $this->queryEnum,
             17 => $this->queryEnumList,
-            18 => $this->queryIntegerEnum ?? null,
+            18 => $this->queryIntegerEnum,
             19 => $this->queryIntegerEnumList,
             20 => $this->queryParamsMapOfStringList,
             default => null,
@@ -269,9 +265,9 @@ final class AllQueryStringTypesInput implements SerializableStructInterface
             $this->queryBooleanList,
             $this->queryTimestamp,
             $this->queryTimestampList,
-            $this->queryEnum ?? null,
+            $this->queryEnum,
             $this->queryEnumList,
-            $this->queryIntegerEnum ?? null,
+            $this->queryIntegerEnum,
             $this->queryIntegerEnumList,
             $this->queryParamsMapOfStringList
         ];

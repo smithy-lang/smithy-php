@@ -192,12 +192,15 @@ final class RestXmlClient extends AbstractClient implements RestXmlClientInterfa
     /**
      * This example uses all query string types.
      */
-    public function allQueryStringTypes(AllQueryStringTypesInput $input, ?RequestOverrideConfig $overrides = null): Unit
+    public function allQueryStringTypes(
+        ?AllQueryStringTypesInput $input = null,
+        ?RequestOverrideConfig $overrides = null
+    ): Unit
     {
         /** @var Unit */
         return $this->executeOperation(
             AllQueryStringTypesOperation::instance(),
-            $input,
+            $input ?? new AllQueryStringTypesInput(),
             $overrides
         );
     }
@@ -206,14 +209,14 @@ final class RestXmlClient extends AbstractClient implements RestXmlClientInterfa
      * The following example serializes a body that uses an XML name, changing the wrapper name.
      */
     public function bodyWithXmlName(
-        BodyWithXmlNameInputOutput $input,
+        ?BodyWithXmlNameInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): BodyWithXmlNameInputOutput
     {
         /** @var BodyWithXmlNameInputOutput */
         return $this->executeOperation(
             BodyWithXmlNameOperation::instance(),
-            $input,
+            $input ?? new BodyWithXmlNameInputOutput(),
             $overrides
         );
     }
@@ -223,14 +226,14 @@ final class RestXmlClient extends AbstractClient implements RestXmlClientInterfa
      * variable parameters must both be serialized (implementations may need to merge them together).
      */
     public function constantAndVariableQueryString(
-        ConstantAndVariableQueryStringInput $input,
+        ?ConstantAndVariableQueryStringInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): Unit
     {
         /** @var Unit */
         return $this->executeOperation(
             ConstantAndVariableQueryStringOperation::instance(),
-            $input,
+            $input ?? new ConstantAndVariableQueryStringInput(),
             $overrides
         );
     }
@@ -254,14 +257,14 @@ final class RestXmlClient extends AbstractClient implements RestXmlClientInterfa
      * The example tests how servers must support requests containing a `Content-Type` header with parameters.
      */
     public function contentTypeParameters(
-        ContentTypeParametersInput $input,
+        ?ContentTypeParametersInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): ContentTypeParametersOutput
     {
         /** @var ContentTypeParametersOutput */
         return $this->executeOperation(
             ContentTypeParametersOperation::instance(),
-            $input,
+            $input ?? new ContentTypeParametersInput(),
             $overrides
         );
     }
@@ -337,14 +340,14 @@ final class RestXmlClient extends AbstractClient implements RestXmlClientInterfa
      * Flattened maps
      */
     public function flattenedXmlMap(
-        FlattenedXmlMapRequest $input,
+        ?FlattenedXmlMapRequest $input = null,
         ?RequestOverrideConfig $overrides = null
     ): FlattenedXmlMapResponse
     {
         /** @var FlattenedXmlMapResponse */
         return $this->executeOperation(
             FlattenedXmlMapOperation::instance(),
-            $input,
+            $input ?? new FlattenedXmlMapRequest(),
             $overrides
         );
     }
@@ -353,14 +356,14 @@ final class RestXmlClient extends AbstractClient implements RestXmlClientInterfa
      * Flattened maps with @xmlName
      */
     public function flattenedXmlMapWithXmlName(
-        FlattenedXmlMapWithXmlNameRequest $input,
+        ?FlattenedXmlMapWithXmlNameRequest $input = null,
         ?RequestOverrideConfig $overrides = null
     ): FlattenedXmlMapWithXmlNameResponse
     {
         /** @var FlattenedXmlMapWithXmlNameResponse */
         return $this->executeOperation(
             FlattenedXmlMapWithXmlNameOperation::instance(),
-            $input,
+            $input ?? new FlattenedXmlMapWithXmlNameRequest(),
             $overrides
         );
     }
@@ -416,24 +419,27 @@ final class RestXmlClient extends AbstractClient implements RestXmlClientInterfa
      * Clients that perform this test extract all headers from the response.
      */
     public function httpEmptyPrefixHeaders(
-        HttpEmptyPrefixHeadersInput $input,
+        ?HttpEmptyPrefixHeadersInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): HttpEmptyPrefixHeadersOutput
     {
         /** @var HttpEmptyPrefixHeadersOutput */
         return $this->executeOperation(
             HttpEmptyPrefixHeadersOperation::instance(),
-            $input,
+            $input ?? new HttpEmptyPrefixHeadersInput(),
             $overrides
         );
     }
 
-    public function httpEnumPayload(EnumPayloadInput $input, ?RequestOverrideConfig $overrides = null): EnumPayloadInput
+    public function httpEnumPayload(
+        ?EnumPayloadInput $input = null,
+        ?RequestOverrideConfig $overrides = null
+    ): EnumPayloadInput
     {
         /** @var EnumPayloadInput */
         return $this->executeOperation(
             HttpEnumPayloadOperation::instance(),
-            $input,
+            $input ?? new EnumPayloadInput(),
             $overrides
         );
     }
@@ -443,14 +449,14 @@ final class RestXmlClient extends AbstractClient implements RestXmlClientInterfa
      * payload is not a structure or a union type.
      */
     public function httpPayloadTraits(
-        HttpPayloadTraitsInputOutput $input,
+        ?HttpPayloadTraitsInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): HttpPayloadTraitsInputOutput
     {
         /** @var HttpPayloadTraitsInputOutput */
         return $this->executeOperation(
             HttpPayloadTraitsOperation::instance(),
-            $input,
+            $input ?? new HttpPayloadTraitsInputOutput(),
             $overrides
         );
     }
@@ -459,14 +465,14 @@ final class RestXmlClient extends AbstractClient implements RestXmlClientInterfa
      * The following example serializes a payload that uses an XML name on the member, changing the wrapper name.
      */
     public function httpPayloadWithMemberXmlName(
-        HttpPayloadWithMemberXmlNameInputOutput $input,
+        ?HttpPayloadWithMemberXmlNameInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): HttpPayloadWithMemberXmlNameInputOutput
     {
         /** @var HttpPayloadWithMemberXmlNameInputOutput */
         return $this->executeOperation(
             HttpPayloadWithMemberXmlNameOperation::instance(),
-            $input,
+            $input ?? new HttpPayloadWithMemberXmlNameInputOutput(),
             $overrides
         );
     }
@@ -476,14 +482,14 @@ final class RestXmlClient extends AbstractClient implements RestXmlClientInterfa
      * name to match the targeted structure.
      */
     public function httpPayloadWithStructure(
-        HttpPayloadWithStructureInputOutput $input,
+        ?HttpPayloadWithStructureInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): HttpPayloadWithStructureInputOutput
     {
         /** @var HttpPayloadWithStructureInputOutput */
         return $this->executeOperation(
             HttpPayloadWithStructureOperation::instance(),
-            $input,
+            $input ?? new HttpPayloadWithStructureInputOutput(),
             $overrides
         );
     }
@@ -492,14 +498,14 @@ final class RestXmlClient extends AbstractClient implements RestXmlClientInterfa
      * This example serializes a union in the payload.
      */
     public function httpPayloadWithUnion(
-        HttpPayloadWithUnionInputOutput $input,
+        ?HttpPayloadWithUnionInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): HttpPayloadWithUnionInputOutput
     {
         /** @var HttpPayloadWithUnionInputOutput */
         return $this->executeOperation(
             HttpPayloadWithUnionOperation::instance(),
-            $input,
+            $input ?? new HttpPayloadWithUnionInputOutput(),
             $overrides
         );
     }
@@ -508,14 +514,14 @@ final class RestXmlClient extends AbstractClient implements RestXmlClientInterfa
      * The following example serializes a payload that uses an XML name, changing the wrapper name.
      */
     public function httpPayloadWithXmlName(
-        HttpPayloadWithXmlNameInputOutput $input,
+        ?HttpPayloadWithXmlNameInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): HttpPayloadWithXmlNameInputOutput
     {
         /** @var HttpPayloadWithXmlNameInputOutput */
         return $this->executeOperation(
             HttpPayloadWithXmlNameOperation::instance(),
-            $input,
+            $input ?? new HttpPayloadWithXmlNameInputOutput(),
             $overrides
         );
     }
@@ -524,14 +530,14 @@ final class RestXmlClient extends AbstractClient implements RestXmlClientInterfa
      * The following example serializes a payload that uses an XML namespace.
      */
     public function httpPayloadWithXmlNamespace(
-        HttpPayloadWithXmlNamespaceInputOutput $input,
+        ?HttpPayloadWithXmlNamespaceInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): HttpPayloadWithXmlNamespaceInputOutput
     {
         /** @var HttpPayloadWithXmlNamespaceInputOutput */
         return $this->executeOperation(
             HttpPayloadWithXmlNamespaceOperation::instance(),
-            $input,
+            $input ?? new HttpPayloadWithXmlNamespaceInputOutput(),
             $overrides
         );
     }
@@ -540,14 +546,14 @@ final class RestXmlClient extends AbstractClient implements RestXmlClientInterfa
      * The following example serializes a payload that uses an XML namespace.
      */
     public function httpPayloadWithXmlNamespaceAndPrefix(
-        HttpPayloadWithXmlNamespaceAndPrefixInputOutput $input,
+        ?HttpPayloadWithXmlNamespaceAndPrefixInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): HttpPayloadWithXmlNamespaceAndPrefixInputOutput
     {
         /** @var HttpPayloadWithXmlNamespaceAndPrefixInputOutput */
         return $this->executeOperation(
             HttpPayloadWithXmlNamespaceAndPrefixOperation::instance(),
-            $input,
+            $input ?? new HttpPayloadWithXmlNamespaceAndPrefixInputOutput(),
             $overrides
         );
     }
@@ -556,14 +562,14 @@ final class RestXmlClient extends AbstractClient implements RestXmlClientInterfa
      * This examples adds headers to the input of a request and response by prefix.
      */
     public function httpPrefixHeaders(
-        HttpPrefixHeadersInputOutput $input,
+        ?HttpPrefixHeadersInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): HttpPrefixHeadersInputOutput
     {
         /** @var HttpPrefixHeadersInputOutput */
         return $this->executeOperation(
             HttpPrefixHeadersOperation::instance(),
-            $input,
+            $input ?? new HttpPrefixHeadersInputOutput(),
             $overrides
         );
     }
@@ -640,14 +646,14 @@ final class RestXmlClient extends AbstractClient implements RestXmlClientInterfa
     }
 
     public function httpStringPayload(
-        StringPayloadInput $input,
+        ?StringPayloadInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): StringPayloadInput
     {
         /** @var StringPayloadInput */
         return $this->executeOperation(
             HttpStringPayloadOperation::instance(),
-            $input,
+            $input ?? new StringPayloadInput(),
             $overrides
         );
     }
@@ -674,14 +680,14 @@ final class RestXmlClient extends AbstractClient implements RestXmlClientInterfa
      * HTTP header bindings.
      */
     public function inputAndOutputWithHeaders(
-        InputAndOutputWithHeadersIO $input,
+        ?InputAndOutputWithHeadersIO $input = null,
         ?RequestOverrideConfig $overrides = null
     ): InputAndOutputWithHeadersIO
     {
         /** @var InputAndOutputWithHeadersIO */
         return $this->executeOperation(
             InputAndOutputWithHeadersOperation::instance(),
-            $input,
+            $input ?? new InputAndOutputWithHeadersIO(),
             $overrides
         );
     }
@@ -750,14 +756,14 @@ final class RestXmlClient extends AbstractClient implements RestXmlClientInterfa
      * Null headers are not sent over the wire, empty headers are serialized to ""
      */
     public function nullAndEmptyHeadersClient(
-        NullAndEmptyHeadersIO $input,
+        ?NullAndEmptyHeadersIO $input = null,
         ?RequestOverrideConfig $overrides = null
     ): NullAndEmptyHeadersIO
     {
         /** @var NullAndEmptyHeadersIO */
         return $this->executeOperation(
             NullAndEmptyHeadersClientOperation::instance(),
-            $input,
+            $input ?? new NullAndEmptyHeadersIO(),
             $overrides
         );
     }
@@ -766,14 +772,14 @@ final class RestXmlClient extends AbstractClient implements RestXmlClientInterfa
      * Null headers are not sent over the wire, empty headers are serialized to ""
      */
     public function nullAndEmptyHeadersServer(
-        NullAndEmptyHeadersIO $input,
+        ?NullAndEmptyHeadersIO $input = null,
         ?RequestOverrideConfig $overrides = null
     ): NullAndEmptyHeadersIO
     {
         /** @var NullAndEmptyHeadersIO */
         return $this->executeOperation(
             NullAndEmptyHeadersServerOperation::instance(),
-            $input,
+            $input ?? new NullAndEmptyHeadersIO(),
             $overrides
         );
     }
@@ -782,27 +788,27 @@ final class RestXmlClient extends AbstractClient implements RestXmlClientInterfa
      * Omits null, but serializes empty string value.
      */
     public function omitsNullSerializesEmptyString(
-        OmitsNullSerializesEmptyStringInput $input,
+        ?OmitsNullSerializesEmptyStringInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): Unit
     {
         /** @var Unit */
         return $this->executeOperation(
             OmitsNullSerializesEmptyStringOperation::instance(),
-            $input,
+            $input ?? new OmitsNullSerializesEmptyStringInput(),
             $overrides
         );
     }
 
     public function putWithContentEncoding(
-        PutWithContentEncodingInput $input,
+        ?PutWithContentEncodingInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): Unit
     {
         /** @var Unit */
         return $this->executeOperation(
             PutWithContentEncodingOperation::instance(),
-            $input,
+            $input ?? new PutWithContentEncodingInput(),
             $overrides
         );
     }
@@ -811,37 +817,37 @@ final class RestXmlClient extends AbstractClient implements RestXmlClientInterfa
      * Automatically adds idempotency tokens.
      */
     public function queryIdempotencyTokenAutoFill(
-        QueryIdempotencyTokenAutoFillInput $input,
+        ?QueryIdempotencyTokenAutoFillInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): Unit
     {
         /** @var Unit */
         return $this->executeOperation(
             QueryIdempotencyTokenAutoFillOperation::instance(),
-            $input,
+            $input ?? new QueryIdempotencyTokenAutoFillInput(),
             $overrides
         );
     }
 
     public function queryParamsAsStringListMap(
-        QueryParamsAsStringListMapInput $input,
+        ?QueryParamsAsStringListMapInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): Unit
     {
         /** @var Unit */
         return $this->executeOperation(
             QueryParamsAsStringListMapOperation::instance(),
-            $input,
+            $input ?? new QueryParamsAsStringListMapInput(),
             $overrides
         );
     }
 
-    public function queryPrecedence(QueryPrecedenceInput $input, ?RequestOverrideConfig $overrides = null): Unit
+    public function queryPrecedence(?QueryPrecedenceInput $input = null, ?RequestOverrideConfig $overrides = null): Unit
     {
         /** @var Unit */
         return $this->executeOperation(
             QueryPrecedenceOperation::instance(),
-            $input,
+            $input ?? new QueryPrecedenceInput(),
             $overrides
         );
     }
@@ -850,14 +856,14 @@ final class RestXmlClient extends AbstractClient implements RestXmlClientInterfa
      * Recursive shapes
      */
     public function recursiveShapes(
-        RecursiveShapesRequest $input,
+        ?RecursiveShapesRequest $input = null,
         ?RequestOverrideConfig $overrides = null
     ): RecursiveShapesResponse
     {
         /** @var RecursiveShapesResponse */
         return $this->executeOperation(
             RecursiveShapesOperation::instance(),
-            $input,
+            $input ?? new RecursiveShapesRequest(),
             $overrides
         );
     }
@@ -879,14 +885,14 @@ final class RestXmlClient extends AbstractClient implements RestXmlClientInterfa
      * The example tests how timestamp request and response headers are serialized.
      */
     public function timestampFormatHeaders(
-        TimestampFormatHeadersIO $input,
+        ?TimestampFormatHeadersIO $input = null,
         ?RequestOverrideConfig $overrides = null
     ): TimestampFormatHeadersIO
     {
         /** @var TimestampFormatHeadersIO */
         return $this->executeOperation(
             TimestampFormatHeadersOperation::instance(),
-            $input,
+            $input ?? new TimestampFormatHeadersIO(),
             $overrides
         );
     }
@@ -913,14 +919,14 @@ final class RestXmlClient extends AbstractClient implements RestXmlClientInterfa
      * languages like C# where attribute writing must happen before child elements.
      */
     public function xmlAttributesInMiddle(
-        XmlAttributesInMiddleRequest $input,
+        ?XmlAttributesInMiddleRequest $input = null,
         ?RequestOverrideConfig $overrides = null
     ): XmlAttributesInMiddleResponse
     {
         /** @var XmlAttributesInMiddleResponse */
         return $this->executeOperation(
             XmlAttributesInMiddleOperation::instance(),
-            $input,
+            $input ?? new XmlAttributesInMiddleRequest(),
             $overrides
         );
     }
@@ -929,14 +935,14 @@ final class RestXmlClient extends AbstractClient implements RestXmlClientInterfa
      * This example serializes an XML attributes on a document targeted by httpPayload.
      */
     public function xmlAttributesOnPayload(
-        XmlAttributesOnPayloadRequest $input,
+        ?XmlAttributesOnPayloadRequest $input = null,
         ?RequestOverrideConfig $overrides = null
     ): XmlAttributesOnPayloadResponse
     {
         /** @var XmlAttributesOnPayloadResponse */
         return $this->executeOperation(
             XmlAttributesOnPayloadOperation::instance(),
-            $input,
+            $input ?? new XmlAttributesOnPayloadRequest(),
             $overrides
         );
     }
@@ -944,12 +950,12 @@ final class RestXmlClient extends AbstractClient implements RestXmlClientInterfa
     /**
      * Blobs are base64 encoded
      */
-    public function xmlBlobs(XmlBlobsRequest $input, ?RequestOverrideConfig $overrides = null): XmlBlobsResponse
+    public function xmlBlobs(?XmlBlobsRequest $input = null, ?RequestOverrideConfig $overrides = null): XmlBlobsResponse
     {
         /** @var XmlBlobsResponse */
         return $this->executeOperation(
             XmlBlobsOperation::instance(),
-            $input,
+            $input ?? new XmlBlobsRequest(),
             $overrides
         );
     }
@@ -958,14 +964,14 @@ final class RestXmlClient extends AbstractClient implements RestXmlClientInterfa
      * Blobs are base64 encoded
      */
     public function xmlEmptyBlobs(
-        XmlEmptyBlobsRequest $input,
+        ?XmlEmptyBlobsRequest $input = null,
         ?RequestOverrideConfig $overrides = null
     ): XmlEmptyBlobsResponse
     {
         /** @var XmlEmptyBlobsResponse */
         return $this->executeOperation(
             XmlEmptyBlobsOperation::instance(),
-            $input,
+            $input ?? new XmlEmptyBlobsRequest(),
             $overrides
         );
     }
@@ -984,27 +990,27 @@ final class RestXmlClient extends AbstractClient implements RestXmlClientInterfa
     }
 
     public function xmlEmptyMaps(
-        XmlEmptyMapsRequest $input,
+        ?XmlEmptyMapsRequest $input = null,
         ?RequestOverrideConfig $overrides = null
     ): XmlEmptyMapsResponse
     {
         /** @var XmlEmptyMapsResponse */
         return $this->executeOperation(
             XmlEmptyMapsOperation::instance(),
-            $input,
+            $input ?? new XmlEmptyMapsRequest(),
             $overrides
         );
     }
 
     public function xmlEmptyStrings(
-        XmlEmptyStringsRequest $input,
+        ?XmlEmptyStringsRequest $input = null,
         ?RequestOverrideConfig $overrides = null
     ): XmlEmptyStringsResponse
     {
         /** @var XmlEmptyStringsResponse */
         return $this->executeOperation(
             XmlEmptyStringsOperation::instance(),
-            $input,
+            $input ?? new XmlEmptyStringsRequest(),
             $overrides
         );
     }
@@ -1073,25 +1079,25 @@ final class RestXmlClient extends AbstractClient implements RestXmlClientInterfa
     /**
      * The example tests basic map serialization.
      */
-    public function xmlMaps(XmlMapsRequest $input, ?RequestOverrideConfig $overrides = null): XmlMapsResponse
+    public function xmlMaps(?XmlMapsRequest $input = null, ?RequestOverrideConfig $overrides = null): XmlMapsResponse
     {
         /** @var XmlMapsResponse */
         return $this->executeOperation(
             XmlMapsOperation::instance(),
-            $input,
+            $input ?? new XmlMapsRequest(),
             $overrides
         );
     }
 
     public function xmlMapsXmlName(
-        XmlMapsXmlNameRequest $input,
+        ?XmlMapsXmlNameRequest $input = null,
         ?RequestOverrideConfig $overrides = null
     ): XmlMapsXmlNameResponse
     {
         /** @var XmlMapsXmlNameResponse */
         return $this->executeOperation(
             XmlMapsXmlNameOperation::instance(),
-            $input,
+            $input ?? new XmlMapsXmlNameRequest(),
             $overrides
         );
     }
@@ -1126,12 +1132,15 @@ final class RestXmlClient extends AbstractClient implements RestXmlClientInterfa
         );
     }
 
-    public function xmlUnions(XmlUnionsRequest $input, ?RequestOverrideConfig $overrides = null): XmlUnionsResponse
+    public function xmlUnions(
+        ?XmlUnionsRequest $input = null,
+        ?RequestOverrideConfig $overrides = null
+    ): XmlUnionsResponse
     {
         /** @var XmlUnionsResponse */
         return $this->executeOperation(
             XmlUnionsOperation::instance(),
-            $input,
+            $input ?? new XmlUnionsRequest(),
             $overrides
         );
     }

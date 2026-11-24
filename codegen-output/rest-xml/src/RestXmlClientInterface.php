@@ -109,7 +109,7 @@ interface RestXmlClientInterface extends ClientInterface
      * This example uses all query string types.
      */
     public function allQueryStringTypes(
-        AllQueryStringTypesInput $input,
+        ?AllQueryStringTypesInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): Unit;
 
@@ -117,7 +117,7 @@ interface RestXmlClientInterface extends ClientInterface
      * The following example serializes a body that uses an XML name, changing the wrapper name.
      */
     public function bodyWithXmlName(
-        BodyWithXmlNameInputOutput $input,
+        ?BodyWithXmlNameInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): BodyWithXmlNameInputOutput;
 
@@ -126,7 +126,7 @@ interface RestXmlClientInterface extends ClientInterface
      * variable parameters must both be serialized (implementations may need to merge them together).
      */
     public function constantAndVariableQueryString(
-        ConstantAndVariableQueryStringInput $input,
+        ?ConstantAndVariableQueryStringInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): Unit;
 
@@ -144,7 +144,7 @@ interface RestXmlClientInterface extends ClientInterface
      * The example tests how servers must support requests containing a `Content-Type` header with parameters.
      */
     public function contentTypeParameters(
-        ContentTypeParametersInput $input,
+        ?ContentTypeParametersInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): ContentTypeParametersOutput;
 
@@ -179,7 +179,7 @@ interface RestXmlClientInterface extends ClientInterface
      * Flattened maps
      */
     public function flattenedXmlMap(
-        FlattenedXmlMapRequest $input,
+        ?FlattenedXmlMapRequest $input = null,
         ?RequestOverrideConfig $overrides = null
     ): FlattenedXmlMapResponse;
 
@@ -187,7 +187,7 @@ interface RestXmlClientInterface extends ClientInterface
      * Flattened maps with @xmlName
      */
     public function flattenedXmlMapWithXmlName(
-        FlattenedXmlMapWithXmlNameRequest $input,
+        ?FlattenedXmlMapWithXmlNameRequest $input = null,
         ?RequestOverrideConfig $overrides = null
     ): FlattenedXmlMapWithXmlNameResponse;
 
@@ -218,12 +218,12 @@ interface RestXmlClientInterface extends ClientInterface
      * Clients that perform this test extract all headers from the response.
      */
     public function httpEmptyPrefixHeaders(
-        HttpEmptyPrefixHeadersInput $input,
+        ?HttpEmptyPrefixHeadersInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): HttpEmptyPrefixHeadersOutput;
 
     public function httpEnumPayload(
-        EnumPayloadInput $input,
+        ?EnumPayloadInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): EnumPayloadInput;
 
@@ -232,7 +232,7 @@ interface RestXmlClientInterface extends ClientInterface
      * payload is not a structure or a union type.
      */
     public function httpPayloadTraits(
-        HttpPayloadTraitsInputOutput $input,
+        ?HttpPayloadTraitsInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): HttpPayloadTraitsInputOutput;
 
@@ -240,7 +240,7 @@ interface RestXmlClientInterface extends ClientInterface
      * The following example serializes a payload that uses an XML name on the member, changing the wrapper name.
      */
     public function httpPayloadWithMemberXmlName(
-        HttpPayloadWithMemberXmlNameInputOutput $input,
+        ?HttpPayloadWithMemberXmlNameInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): HttpPayloadWithMemberXmlNameInputOutput;
 
@@ -249,7 +249,7 @@ interface RestXmlClientInterface extends ClientInterface
      * name to match the targeted structure.
      */
     public function httpPayloadWithStructure(
-        HttpPayloadWithStructureInputOutput $input,
+        ?HttpPayloadWithStructureInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): HttpPayloadWithStructureInputOutput;
 
@@ -257,7 +257,7 @@ interface RestXmlClientInterface extends ClientInterface
      * This example serializes a union in the payload.
      */
     public function httpPayloadWithUnion(
-        HttpPayloadWithUnionInputOutput $input,
+        ?HttpPayloadWithUnionInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): HttpPayloadWithUnionInputOutput;
 
@@ -265,7 +265,7 @@ interface RestXmlClientInterface extends ClientInterface
      * The following example serializes a payload that uses an XML name, changing the wrapper name.
      */
     public function httpPayloadWithXmlName(
-        HttpPayloadWithXmlNameInputOutput $input,
+        ?HttpPayloadWithXmlNameInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): HttpPayloadWithXmlNameInputOutput;
 
@@ -273,7 +273,7 @@ interface RestXmlClientInterface extends ClientInterface
      * The following example serializes a payload that uses an XML namespace.
      */
     public function httpPayloadWithXmlNamespace(
-        HttpPayloadWithXmlNamespaceInputOutput $input,
+        ?HttpPayloadWithXmlNamespaceInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): HttpPayloadWithXmlNamespaceInputOutput;
 
@@ -281,7 +281,7 @@ interface RestXmlClientInterface extends ClientInterface
      * The following example serializes a payload that uses an XML namespace.
      */
     public function httpPayloadWithXmlNamespaceAndPrefix(
-        HttpPayloadWithXmlNamespaceAndPrefixInputOutput $input,
+        ?HttpPayloadWithXmlNamespaceAndPrefixInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): HttpPayloadWithXmlNamespaceAndPrefixInputOutput;
 
@@ -289,7 +289,7 @@ interface RestXmlClientInterface extends ClientInterface
      * This examples adds headers to the input of a request and response by prefix.
      */
     public function httpPrefixHeaders(
-        HttpPrefixHeadersInputOutput $input,
+        ?HttpPrefixHeadersInputOutput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): HttpPrefixHeadersInputOutput;
 
@@ -325,7 +325,7 @@ interface RestXmlClientInterface extends ClientInterface
     ): HttpResponseCodeOutput;
 
     public function httpStringPayload(
-        StringPayloadInput $input,
+        ?StringPayloadInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): StringPayloadInput;
 
@@ -343,7 +343,7 @@ interface RestXmlClientInterface extends ClientInterface
      * HTTP header bindings.
      */
     public function inputAndOutputWithHeaders(
-        InputAndOutputWithHeadersIO $input,
+        ?InputAndOutputWithHeadersIO $input = null,
         ?RequestOverrideConfig $overrides = null
     ): InputAndOutputWithHeadersIO;
 
@@ -379,7 +379,7 @@ interface RestXmlClientInterface extends ClientInterface
      * Null headers are not sent over the wire, empty headers are serialized to ""
      */
     public function nullAndEmptyHeadersClient(
-        NullAndEmptyHeadersIO $input,
+        ?NullAndEmptyHeadersIO $input = null,
         ?RequestOverrideConfig $overrides = null
     ): NullAndEmptyHeadersIO;
 
@@ -387,7 +387,7 @@ interface RestXmlClientInterface extends ClientInterface
      * Null headers are not sent over the wire, empty headers are serialized to ""
      */
     public function nullAndEmptyHeadersServer(
-        NullAndEmptyHeadersIO $input,
+        ?NullAndEmptyHeadersIO $input = null,
         ?RequestOverrideConfig $overrides = null
     ): NullAndEmptyHeadersIO;
 
@@ -395,12 +395,12 @@ interface RestXmlClientInterface extends ClientInterface
      * Omits null, but serializes empty string value.
      */
     public function omitsNullSerializesEmptyString(
-        OmitsNullSerializesEmptyStringInput $input,
+        ?OmitsNullSerializesEmptyStringInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): Unit;
 
     public function putWithContentEncoding(
-        PutWithContentEncodingInput $input,
+        ?PutWithContentEncodingInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): Unit;
 
@@ -408,22 +408,25 @@ interface RestXmlClientInterface extends ClientInterface
      * Automatically adds idempotency tokens.
      */
     public function queryIdempotencyTokenAutoFill(
-        QueryIdempotencyTokenAutoFillInput $input,
+        ?QueryIdempotencyTokenAutoFillInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): Unit;
 
     public function queryParamsAsStringListMap(
-        QueryParamsAsStringListMapInput $input,
+        ?QueryParamsAsStringListMapInput $input = null,
         ?RequestOverrideConfig $overrides = null
     ): Unit;
 
-    public function queryPrecedence(QueryPrecedenceInput $input, ?RequestOverrideConfig $overrides = null): Unit;
+    public function queryPrecedence(
+        ?QueryPrecedenceInput $input = null,
+        ?RequestOverrideConfig $overrides = null
+    ): Unit;
 
     /**
      * Recursive shapes
      */
     public function recursiveShapes(
-        RecursiveShapesRequest $input,
+        ?RecursiveShapesRequest $input = null,
         ?RequestOverrideConfig $overrides = null
     ): RecursiveShapesResponse;
 
@@ -436,7 +439,7 @@ interface RestXmlClientInterface extends ClientInterface
      * The example tests how timestamp request and response headers are serialized.
      */
     public function timestampFormatHeaders(
-        TimestampFormatHeadersIO $input,
+        ?TimestampFormatHeadersIO $input = null,
         ?RequestOverrideConfig $overrides = null
     ): TimestampFormatHeadersIO;
 
@@ -454,7 +457,7 @@ interface RestXmlClientInterface extends ClientInterface
      * languages like C# where attribute writing must happen before child elements.
      */
     public function xmlAttributesInMiddle(
-        XmlAttributesInMiddleRequest $input,
+        ?XmlAttributesInMiddleRequest $input = null,
         ?RequestOverrideConfig $overrides = null
     ): XmlAttributesInMiddleResponse;
 
@@ -462,20 +465,23 @@ interface RestXmlClientInterface extends ClientInterface
      * This example serializes an XML attributes on a document targeted by httpPayload.
      */
     public function xmlAttributesOnPayload(
-        XmlAttributesOnPayloadRequest $input,
+        ?XmlAttributesOnPayloadRequest $input = null,
         ?RequestOverrideConfig $overrides = null
     ): XmlAttributesOnPayloadResponse;
 
     /**
      * Blobs are base64 encoded
      */
-    public function xmlBlobs(XmlBlobsRequest $input, ?RequestOverrideConfig $overrides = null): XmlBlobsResponse;
+    public function xmlBlobs(
+        ?XmlBlobsRequest $input = null,
+        ?RequestOverrideConfig $overrides = null
+    ): XmlBlobsResponse;
 
     /**
      * Blobs are base64 encoded
      */
     public function xmlEmptyBlobs(
-        XmlEmptyBlobsRequest $input,
+        ?XmlEmptyBlobsRequest $input = null,
         ?RequestOverrideConfig $overrides = null
     ): XmlEmptyBlobsResponse;
 
@@ -485,12 +491,12 @@ interface RestXmlClientInterface extends ClientInterface
     ): XmlEmptyListsResponse;
 
     public function xmlEmptyMaps(
-        XmlEmptyMapsRequest $input,
+        ?XmlEmptyMapsRequest $input = null,
         ?RequestOverrideConfig $overrides = null
     ): XmlEmptyMapsResponse;
 
     public function xmlEmptyStrings(
-        XmlEmptyStringsRequest $input,
+        ?XmlEmptyStringsRequest $input = null,
         ?RequestOverrideConfig $overrides = null
     ): XmlEmptyStringsResponse;
 
@@ -532,10 +538,10 @@ interface RestXmlClientInterface extends ClientInterface
     /**
      * The example tests basic map serialization.
      */
-    public function xmlMaps(XmlMapsRequest $input, ?RequestOverrideConfig $overrides = null): XmlMapsResponse;
+    public function xmlMaps(?XmlMapsRequest $input = null, ?RequestOverrideConfig $overrides = null): XmlMapsResponse;
 
     public function xmlMapsXmlName(
-        XmlMapsXmlNameRequest $input,
+        ?XmlMapsXmlNameRequest $input = null,
         ?RequestOverrideConfig $overrides = null
     ): XmlMapsXmlNameResponse;
 
@@ -553,5 +559,8 @@ interface RestXmlClientInterface extends ClientInterface
         ?RequestOverrideConfig $overrides = null
     ): XmlTimestampsResponse;
 
-    public function xmlUnions(XmlUnionsRequest $input, ?RequestOverrideConfig $overrides = null): XmlUnionsResponse;
+    public function xmlUnions(
+        ?XmlUnionsRequest $input = null,
+        ?RequestOverrideConfig $overrides = null
+    ): XmlUnionsResponse;
 }

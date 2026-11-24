@@ -190,6 +190,34 @@ final class XmlSerializerTest extends TestCase
         );
     }
 
+    public function testSerializeStructWritesFlattenedMembersOnPayloadMemberPath(): void
+    {
+        $serializer = $this->createSerializer();
+        $payload = new Schema(
+            id: 'smithy.test#Input$sample',
+            type: ShapeType::Structure,
+            memberName: 'sample',
+            memberIndex: 0,
+            members: XmlSampleStructFixture::schema()->getMembers(),
+            traits: [Schema::T_HTTP_PAYLOAD => true],
+            targetClass: XmlSampleStructFixture::class
+        );
+        $value = new XmlSampleStructFixture(
+            name: 'alpha',
+            flatTags: ['flat-one', 'flat-two'],
+            flatScores: ['x' => 'ex']
+        );
+
+        $serializer->serializeStruct($payload, $value, 0);
+
+        self::assertSame(
+            '<SampleStruct><name>alpha</name>'
+            . '<tag>flat-one</tag><tag>flat-two</tag><scoreEntry><key>x'
+            . '</key><value>ex</value></scoreEntry></SampleStruct>',
+            $serializer->flush()
+        );
+    }
+
     public function testSerializeUnionFallsBackToUnknownTag(): void
     {
         $serializer = $this->createSerializer();
