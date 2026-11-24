@@ -3,10 +3,9 @@
 # split.sh - Split the smithy-php monorepo into per-package histories and push
 #            each to its own read-only repository.
 #
-# Primary tool:  splitsh-lite (fast C reimplementation of `git subtree split`,
-#                the de-facto standard used by Symfony/Laravel). Auto-detected.
-# Fallback:      `git subtree split` (ships with git, portable, slower). Used
-#                automatically when splitsh-lite is not on PATH.
+# Each package history is produced with `git subtree split`, which ships with
+# git. A full 9-package local run takes about 3 minutes; CI splits one package
+# per job.
 #
 # This script NEVER pushes unless PUSH=1 is set in the environment. By default
 # it performs the split locally and prints what it WOULD push. The target org
@@ -35,7 +34,6 @@
 #               Default: the repo containing this script.
 #   WORK_DIR    (optional) Scratch dir for per-package working clones.
 #               Default: a mktemp dir, removed on exit.
-#   SPLIT_METHOD(optional) Force 'splitsh' or 'subtree'. Default: auto-detect.
 
 set -euo pipefail
 
@@ -76,20 +74,6 @@ else
     echo "       Release a new, higher tag instead." >&2
     exit 6
   fi
-fi
-
-# --- choose the split method ------------------------------------------------
-SPLIT_METHOD="${SPLIT_METHOD:-auto}"
-if [[ "${SPLIT_METHOD}" == "auto" ]]; then
-  if command -v splitsh-lite >/dev/null 2>&1; then
-    SPLIT_METHOD="splitsh"
-  else
-    SPLIT_METHOD="subtree"
-  fi
-fi
-echo "=== split method: ${SPLIT_METHOD} (splitsh-lite primary, git subtree fallback) ==="
-if [[ "${SPLIT_METHOD}" == "subtree" ]]; then
-  echo "    NOTE: splitsh-lite not in use; git subtree split preserves history but is slower."
 fi
 
 # --- scratch work dir for per-package clones --------------------------------
@@ -192,13 +176,9 @@ while read -r subdir pkg slug || [[ -n "${subdir}" ]]; do
 
   echo "---- splitting ${pkg}  (${prefix} -> ${slug}) ----"
 
-  # Compute the split commit SHA for this prefix.
-  if [[ "${SPLIT_METHOD}" == "splitsh" ]]; then
-    sha="$(splitsh-lite --prefix="${prefix}/" --origin="${SPLIT_REF}" --quiet)"
-  else
-    # git subtree split: --branch is avoided so the main repo gets no extra refs.
-    sha="$(git subtree split --prefix="${prefix}" "${SPLIT_REF}")"
-  fi
+  # Compute the split commit SHA for this prefix. --branch is avoided so the
+  # main repo gets no extra refs.
+  sha="$(git subtree split --prefix="${prefix}" "${SPLIT_REF}")"
   echo "      split commit: ${sha}"
 
   # Build a standalone clone that contains ONLY the split history.
