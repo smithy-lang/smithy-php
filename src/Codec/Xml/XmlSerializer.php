@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace Smithy\Codec\Xml;
 
+use Smithy\Codec\CodecSerializerInterface;
 use Smithy\Codec\Exception\SerializationException;
 use Smithy\Core\Serde\Schema;
 use Smithy\Core\Shape\ShapeType;
@@ -32,7 +33,7 @@ use Smithy\Core\Shape\UnionInterface;
  *           depend on {@see ShapeSerializerInterface}. The concrete writer
  *           choice is a private detail of the codec.
  */
-final class XmlSerializer implements ShapeSerializerInterface
+final class XmlSerializer implements CodecSerializerInterface
 {
     private const STRING_ESCAPE_MAP = [
         '&' => '&amp;',

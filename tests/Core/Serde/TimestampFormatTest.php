@@ -110,6 +110,31 @@ final class TimestampFormatTest extends TestCase
         );
     }
 
+    #[DataProvider('nonNumericEpochSeconds')]
+    public function testParseEpochSecondsThrowsOnNonNumericString(
+        string $value
+    ): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage(
+            "Invalid EpochSeconds timestamp '{$value}'."
+        );
+
+        TimestampFormat::EpochSeconds->parse($value);
+    }
+
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function nonNumericEpochSeconds(): array
+    {
+        return [
+            'empty' => [''],
+            'letters' => ['abc'],
+            'numeric prefix' => ['12abc']
+        ];
+    }
+
     public function testParseDateTimeHandlesFractionalSecondsBeforeZ(): void
     {
         // The DateTime branch has a dedicated fractional-seconds path when

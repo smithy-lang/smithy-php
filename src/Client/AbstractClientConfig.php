@@ -53,6 +53,8 @@ use Smithy\Protocol\ProtocolInterface;
  *
  * Each concrete subclass implements {@see copyWith()} to copy its own
  * fields. {@see ClientConfig} is the general-purpose implementation.
+ *
+ * @phpstan-consistent-constructor
  */
 abstract class AbstractClientConfig
 {

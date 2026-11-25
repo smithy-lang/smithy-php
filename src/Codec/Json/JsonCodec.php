@@ -11,6 +11,7 @@ namespace Smithy\Codec\Json;
 
 use Psr\Http\Message\StreamInterface;
 use Smithy\Codec\AbstractCodec;
+use Smithy\Codec\CodecSerializerInterface;
 use Smithy\Core\Serde\Schema;
 use Smithy\Core\Serde\ShapeDeserializerInterface;
 use Smithy\Core\Serde\ShapeSerializerInterface;
@@ -32,7 +33,7 @@ final class JsonCodec extends AbstractCodec
     /**
      * Create a JSON serializer.
      */
-    public function createSerializer(): ShapeSerializerInterface
+    public function createSerializer(): CodecSerializerInterface
     {
         return new JsonSerializer($this->settings);
     }

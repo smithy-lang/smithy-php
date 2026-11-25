@@ -30,7 +30,9 @@ use Smithy\Tests\Core\Shape\Utils\Utils\{
     ArrayShapeSerializerDocumentFixture,
     ArrayShapeSerializerEmptyFixture,
     ArrayShapeSerializerFloatFixture,
+    ArrayShapeSerializerInvalidSchemaFixture,
     ArrayShapeSerializerListFixture,
+    ArrayShapeSerializerNoSchemaFixture,
     ArrayShapeSerializerScalarFixture,
     ArrayShapeSerializerTimestampFixture,
     ArrayShapeSerializerUnionFixture,
@@ -139,6 +141,46 @@ final class ArrayShapeSerializerTest extends TestCase
         self::assertSame(
             ['items' => [['name' => 'one']]],
             ArrayShapeSerializer::toArray($container)
+        );
+    }
+
+    public function testFromArrayRejectsClassWithoutStaticSchema(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage(
+            ArrayShapeSerializerNoSchemaFixture::class
+                . ' must be a generated shape with a static schema() method.'
+        );
+
+        ArrayShapeSerializer::fromArray(
+            ArrayShapeSerializerNoSchemaFixture::class,
+            []
+        );
+    }
+
+    public function testFromArrayRejectsInstanceSchemaMethod(): void
+    {
+        // AbstractDocument::schema() is an instance method.
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage(
+            StructDocument::class
+                . ' must be a generated shape with a static schema() method.'
+        );
+
+        ArrayShapeSerializer::fromArray(StructDocument::class, []);
+    }
+
+    public function testFromArrayRejectsSchemaMethodReturningNonSchema(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage(
+            ArrayShapeSerializerInvalidSchemaFixture::class
+                . '::schema() must return a Schema.'
+        );
+
+        ArrayShapeSerializer::fromArray(
+            ArrayShapeSerializerInvalidSchemaFixture::class,
+            []
         );
     }
 

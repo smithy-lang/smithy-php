@@ -11,6 +11,7 @@ namespace Smithy\Protocol;
 
 use Psr\Http\Message\StreamInterface;
 use Smithy\Codec\AbstractCodec;
+use Smithy\Codec\CodecSerializerInterface;
 use Smithy\Core\Serde\Schema;
 use Smithy\Core\Serde\SerializableStructInterface;
 use Smithy\Core\Serde\ShapeSerializerInterface;
@@ -51,7 +52,7 @@ final class HttpBindingSerializer implements ShapeSerializerInterface
      */
     private mixed $payload = null;
     private bool $hasPayload = false;
-    private ?ShapeSerializerInterface $codecSerializer = null;
+    private ?CodecSerializerInterface $codecSerializer = null;
     /**
      * Fused per-member write table: `memberIndex => [route, target]`.
      *

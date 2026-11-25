@@ -9,10 +9,10 @@ declare(strict_types=1);
 
 namespace Smithy\Codec\Json;
 
+use Smithy\Codec\CodecSerializerInterface;
 use Smithy\Codec\Exception\SerializationException;
 use Smithy\Core\Serde\Schema;
 use Smithy\Core\Serde\SerializableStructInterface;
-use Smithy\Core\Serde\ShapeSerializerInterface;
 use Smithy\Core\Shape\ShapeType;
 use Smithy\Core\Serde\TimestampFormat;
 use Smithy\Core\Shape\BigDecimal;
@@ -24,7 +24,7 @@ use Smithy\Core\Shape\UnionInterface;
 /**
  * Serialize Smithy shapes into JSON-compatible PHP values.
  */
-final class JsonSerializer implements ShapeSerializerInterface
+final class JsonSerializer implements CodecSerializerInterface
 {
     /**
      * Per-process big-number placeholder prefix. The random part keeps user

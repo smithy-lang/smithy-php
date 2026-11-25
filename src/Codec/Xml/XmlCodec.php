@@ -12,6 +12,7 @@ namespace Smithy\Codec\Xml;
 use Psr\Http\Message\StreamInterface;
 use Smithy\Codec\Exception\CodecException;
 use Smithy\Codec\AbstractCodec;
+use Smithy\Codec\CodecSerializerInterface;
 use Smithy\Core\Serde\Schema;
 use Smithy\Core\Serde\ShapeDeserializerInterface;
 use Smithy\Core\Serde\ShapeSerializerInterface;
@@ -39,7 +40,7 @@ final class XmlCodec extends AbstractCodec
     /**
      * Create an XML serializer.
      */
-    public function createSerializer(): ShapeSerializerInterface
+    public function createSerializer(): CodecSerializerInterface
     {
         $writer = \array_pop($this->writerPool) ?? new \XMLWriter();
         $writer->openMemory();
