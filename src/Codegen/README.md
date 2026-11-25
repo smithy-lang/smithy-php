@@ -188,7 +188,11 @@ Every generated service includes a `<ServiceName>Exception`. Modeled errors
 extend it, and protocols use it for unmodeled service errors. It extends
 `Smithy\Core\Exception\ApiException` by default. `serviceExceptionClass`
 changes the generated class name, while `baseServiceException` changes its
-parent.
+parent. When the parent implements `Smithy\Protocol\Aws\AwsErrorInterface`, the
+generated class declares `fromAwsError()` with `new self()`, so unmodeled errors
+keep the service type. That parent's constructor takes the named parameters
+`message`, `fault`, `previous`, `awsErrorCode`, `requestId` and
+`httpStatusCode`.
 
 ## Stability
 

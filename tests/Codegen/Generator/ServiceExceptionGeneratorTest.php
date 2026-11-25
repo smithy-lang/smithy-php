@@ -12,6 +12,8 @@ namespace Smithy\Tests\Codegen\Generator;
 use PHPUnit\Framework\TestCase;
 use Smithy\Codegen\CodegenSettings;
 use Smithy\Codegen\Generator\ServiceExceptionGenerator;
+use Smithy\Core\Exception\ErrorFault;
+use Smithy\Protocol\Aws\AwsProtocolException;
 
 final class ServiceExceptionGeneratorTest extends TestCase
 {
@@ -151,5 +153,62 @@ final class ServiceExceptionGeneratorTest extends TestCase
                 . 'S3Exception.php',
             $file->path
         );
+    }
+
+    public function testAwsErrorParentGetsServiceFactory(): void
+    {
+        $settings = new CodegenSettings(
+            namespace: 'Aws\\S3',
+            outputDir: '/tmp/out',
+            organization: 'flat',
+            baseServiceException: AwsProtocolException::class
+        );
+
+        $file = (new ServiceExceptionGenerator($settings))->generate();
+
+        $this->assertStringContainsString(
+            'use Smithy\\Core\\Exception\\ErrorFault;',
+            $file->content
+        );
+        $this->assertStringContainsString(
+            "class S3Exception extends AwsProtocolException\n{\n",
+            $file->content
+        );
+        $this->assertStringContainsString(
+            "        ?int \$httpStatusCode\n    ): self\n    {\n"
+                . "        return new self(\n",
+            $file->content
+        );
+    }
+
+    public function testGeneratedFactoryReturnsServiceException(): void
+    {
+        $namespace = 'Smithy\\Tests\\Codegen\\Generated\\Factory'
+            . \bin2hex(\random_bytes(4));
+        $settings = new CodegenSettings(
+            namespace: $namespace,
+            outputDir: '/tmp/out',
+            organization: 'flat',
+            serviceExceptionClass: 'FactoryException',
+            baseServiceException: AwsProtocolException::class
+        );
+        $file = (new ServiceExceptionGenerator($settings))->generate();
+        eval(\substr($file->content, \strlen('<?php')));
+
+        $class = $namespace . '\\FactoryException';
+        $error = $class::fromAwsError(
+            'denied',
+            ErrorFault::Client,
+            null,
+            'AccessDenied',
+            'req-1',
+            403
+        );
+
+        $this->assertSame($class, $error::class);
+        $this->assertSame('denied', $error->getMessage());
+        $this->assertSame('AccessDenied', $error->getAwsErrorCode());
+        $this->assertSame('req-1', $error->getAwsRequestId());
+        $this->assertSame(403, $error->getHttpStatusCode());
     }
 }

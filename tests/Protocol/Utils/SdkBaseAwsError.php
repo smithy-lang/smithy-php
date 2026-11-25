@@ -18,8 +18,6 @@ use Smithy\Protocol\Aws\{
 
 /**
  * Test fixture: an SDK-style base exception outside `AwsProtocolException`.
- *
- * @phpstan-consistent-constructor
  */
 class SdkBaseAwsError extends ApiException implements AwsErrorInterface
 {
@@ -58,9 +56,9 @@ class SdkBaseAwsError extends ApiException implements AwsErrorInterface
         ?string $awsErrorCode,
         ?string $requestId,
         ?int $httpStatusCode
-    ): static
+    ): self
     {
-        return new static($message, $fault, $previous, $awsErrorCode, $requestId, $httpStatusCode);
+        return new self($message, $fault, $previous, $awsErrorCode, $requestId, $httpStatusCode);
     }
 
     public function setAwsErrorMetadata(
