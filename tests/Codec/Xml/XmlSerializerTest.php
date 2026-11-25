@@ -71,6 +71,22 @@ final class XmlSerializerTest extends TestCase
         );
     }
 
+    public function testFlushResetsSerializerForReuse(): void
+    {
+        $serializer = $this->createSerializer();
+        $expected = '<SampleStruct xmlns="urn:test" id="a"><name>b</name></SampleStruct>';
+
+        foreach ([1, 2] as $_) {
+            $serializer->serializeStruct(
+                XmlSampleStructFixture::schema(),
+                new XmlSampleStructFixture(id: 'a', name: 'b'),
+                0
+            );
+
+            self::assertSame($expected, $serializer->flush());
+        }
+    }
+
     public function testEncodesXmlEndOfLineCharacters(): void
     {
         $cases = [

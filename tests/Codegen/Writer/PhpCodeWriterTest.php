@@ -416,6 +416,24 @@ final class PhpCodeWriterTest extends TestCase
         $this->assertSame([$left, $right], $result);
     }
 
+    public function testWrapDocLineKeepsParamTypeAndNameTogether(): void
+    {
+        $type = 'list<\\' . str_repeat('Long', 25) . '>|null';
+        $input = "@param {$type} \$members The member list.";
+
+        $this->assertSame(
+            ["@param {$type} \$members", 'The member list.'],
+            PhpCodeWriter::wrapDocLine($input)
+        );
+    }
+
+    public function testWrapDocLineKeepsLongParamLineWithoutDescription(): void
+    {
+        $input = '@param list<\\' . str_repeat('Long', 30) . '>|null $members';
+
+        $this->assertSame([$input], PhpCodeWriter::wrapDocLine($input));
+    }
+
     public function testWrapDocLineFallsBackToHardBreakWhenNoWhitespace(): void
     {
         // No whitespace in the whole line - the wrapper must still make

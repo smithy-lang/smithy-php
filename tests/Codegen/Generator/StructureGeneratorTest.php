@@ -455,6 +455,102 @@ JSON);
         );
     }
 
+    public function testKeepsLongParamTypeAndNameOnOneLine(): void
+    {
+        $model = SmithyModel::fromJson(<<<'JSON'
+{
+    "smithy": "2.0",
+    "shapes": {
+        "smithy.example#DescribeAssociationsResult": {
+            "type": "structure",
+            "members": {
+                "transitGatewayMulticastDomainAssociations": {
+                    "target": "smithy.example#TransitGatewayMulticastDomainAssociationList",
+                    "traits": {
+                        "smithy.api#documentation": "Information about the multicast domain associations."
+                    }
+                }
+            }
+        },
+        "smithy.example#TransitGatewayMulticastDomainAssociationList": {
+            "type": "list",
+            "member": {
+                "target": "smithy.example#TransitGatewayMulticastDomainAssociation"
+            }
+        },
+        "smithy.example#TransitGatewayMulticastDomainAssociation": {
+            "type": "structure"
+        }
+    }
+}
+JSON);
+        $settings = new CodegenSettings(
+            namespace: 'Smithy\\Example\\LongServiceNamespace',
+            outputDir: '/tmp/out'
+        );
+        $generator = new StructureGenerator(
+            $model,
+            new PhpSymbolProvider($model, $settings),
+            $settings
+        );
+
+        $content = $generator->generate(
+            'smithy.example#DescribeAssociationsResult'
+        )->content;
+
+        $this->assertStringContainsString(
+            '     * @param list<\\Smithy\\Example\\LongServiceNamespace\\Shape\\'
+                . 'TransitGatewayMulticastDomainAssociation>|null '
+                . "\$transitGatewayMulticastDomainAssociations\n",
+            $content
+        );
+    }
+
+    public function testWrapsDocumentationAfterLongParamName(): void
+    {
+        $model = SmithyModel::fromJson(<<<'JSON'
+{
+    "smithy": "2.0",
+    "shapes": {
+        "smithy.example#DescribeAssociationsResult": {
+            "type": "structure",
+            "members": {
+                "transitGatewayMulticastDomainAssociationDescription": {
+                    "target": "smithy.example#TransitGatewayMulticastDomainAssociationDescriptionWithOptions",
+                    "traits": {
+                        "smithy.api#documentation": "Information about the multicast domain association."
+                    }
+                }
+            }
+        },
+        "smithy.example#TransitGatewayMulticastDomainAssociationDescriptionWithOptions": {
+            "type": "structure"
+        }
+    }
+}
+JSON);
+        $settings = new CodegenSettings(
+            namespace: 'Smithy\\Example',
+            outputDir: '/tmp/out'
+        );
+        $generator = new StructureGenerator(
+            $model,
+            new PhpSymbolProvider($model, $settings),
+            $settings
+        );
+
+        $content = $generator->generate(
+            'smithy.example#DescribeAssociationsResult'
+        )->content;
+
+        $this->assertStringContainsString(
+            '     * @param ?TransitGatewayMulticastDomainAssociationDescriptionWithOptions '
+                . "\$transitGatewayMulticastDomainAssociationDescription\n"
+                . "     *        Information about the multicast domain association.\n",
+            $content
+        );
+    }
+
     public function testPhpDocTypeDoesNotCollideWithGeneratedClass(): void
     {
         $model = SmithyModel::fromJson(<<<'JSON'

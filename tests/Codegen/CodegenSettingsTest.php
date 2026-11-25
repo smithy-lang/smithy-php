@@ -588,6 +588,33 @@ final class CodegenSettingsTest extends TestCase
         CodegenSettings::fromArray(['namespace' => 'Aws\\X']);
     }
 
+    public function testFromArrayRejectsNonArrayRulesFunctions(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('rulesFunctions must be an array');
+
+        CodegenSettings::fromArray([
+            'namespace' => 'Smithy\\Example',
+            'outputDir' => '/tmp/x',
+            'rulesFunctions' => 'aws.partition'
+        ]);
+    }
+
+    public function testFromArrayRejectsInvalidRulesFunction(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage(
+            'rulesFunctions must contain RulesFunctionInterface instances, '
+                . 'got aws.partition'
+        );
+
+        CodegenSettings::fromArray([
+            'namespace' => 'Smithy\\Example',
+            'outputDir' => '/tmp/x',
+            'rulesFunctions' => ['aws.partition' => 'not-a-function']
+        ]);
+    }
+
     public function testFromArrayRejectsUnknownSetting(): void
     {
         $this->expectException(\InvalidArgumentException::class);
