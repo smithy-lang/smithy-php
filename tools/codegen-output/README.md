@@ -15,6 +15,12 @@ Check that the output is current without modifying it:
 composer codegen-output:check
 ```
 
+## AWS error factory
+
+`AwsErrorFactoryIntegration.php` gives each AWS protocol test service
+exception a `fromAwsError()` factory through the `serviceExceptionMembers()`
+codegen hook, so unmodeled errors keep the service type.
+
 ## Trimmed client
 
 The committed model at `models/trimmed-client.json` contains three operations.

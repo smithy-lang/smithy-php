@@ -10,23 +10,27 @@ declare(strict_types=1);
 namespace Smithy\Codegen\Generator;
 
 use Smithy\Codegen\CodegenSettings;
+use Smithy\Codegen\Integration\CodegenIntegrationInterface;
 use Smithy\Codegen\Writer\PhpCodeWriter;
 
 /**
  * Generate the service-level exception class.
  *
  * This is a catch-all exception for any error from a specific service.
- * All modeled error shapes for the service extend this class.
+ * All modeled error shapes for the service extend this class. Integrations
+ * add class members through
+ * {@see CodegenIntegrationInterface::serviceExceptionMembers()}.
  */
 final class ServiceExceptionGenerator
 {
-    private const AWS_ERROR_INTERFACE = 'Smithy\\Protocol\\Aws\\AwsErrorInterface';
-
     /**
+     * @param iterable<CodegenIntegrationInterface> $integrations
+     *
      * @internal
      */
     public function __construct(
-        private readonly CodegenSettings $settings
+        private readonly CodegenSettings $settings,
+        private readonly iterable $integrations = []
     ) {}
 
     /**
@@ -71,13 +75,24 @@ final class ServiceExceptionGenerator
         ]);
 
         $declaration = "class {$className} extends {$parentClass}";
-        if (self::implementsAwsError($parentFqcn)) {
-            $this->writeAwsErrorFactory(
-                $writer,
-                $className,
-                $declaration,
-                $serviceName
-            );
+        $memberWriters = [];
+        foreach ($this->integrations as $integration) {
+            foreach ($integration->serviceExceptionMembers($this->settings)
+                as $memberWriter
+            ) {
+                $memberWriters[] = $memberWriter;
+            }
+        }
+        if ($memberWriters !== []) {
+            $writer->writeLine($declaration);
+            $writer->openBlock('{');
+            foreach ($memberWriters as $index => $memberWriter) {
+                if ($index > 0) {
+                    $writer->writeLine();
+                }
+                $memberWriter($writer, $className);
+            }
+            $writer->closeBlock();
         } elseif (\strlen($declaration . ' {}')
             <= PhpCodeWriter::MAX_GENERATED_LINE_WIDTH
         ) {
@@ -93,66 +108,6 @@ final class ServiceExceptionGenerator
             path: $filePath,
             content: $writer->toFileContent()
         );
-    }
-
-    /**
-     * Report whether the parent carries AWS error metadata.
-     *
-     * The interface is named by string so codegen keeps no package
-     * dependency on `smithy/protocol-aws`.
-     */
-    private static function implementsAwsError(string $parentFqcn): bool
-    {
-        return \is_a(\ltrim($parentFqcn, '\\'), self::AWS_ERROR_INTERFACE, true);
-    }
-
-    /**
-     * Write the class body with a `fromAwsError()` factory.
-     *
-     * The factory builds the service exception itself, so unmodeled errors
-     * keep the service type while modeled errors keep their own constructors.
-     */
-    private function writeAwsErrorFactory(
-        PhpCodeWriter $writer,
-        string $className,
-        string $declaration,
-        string $serviceName
-    ): void
-    {
-        $fault = $writer->addImportReference(
-            'Smithy\\Core\\Exception\\ErrorFault',
-            'ErrorFault',
-            [$className]
-        );
-
-        $writer->writeLine($declaration);
-        $writer->openBlock('{');
-        $writer->writeDocBlock([
-            "Create an unmodeled {$serviceName} error from AWS error metadata."
-        ]);
-        $writer->writeLine('public static function fromAwsError(');
-        $writer->pushIndent();
-        $writer->writeLine('string $message,');
-        $writer->writeLine("{$fault} \$fault,");
-        $writer->writeLine('?\\Throwable $previous,');
-        $writer->writeLine('?string $awsErrorCode,');
-        $writer->writeLine('?string $requestId,');
-        $writer->writeLine('?int $httpStatusCode');
-        $writer->popIndent();
-        $writer->writeLine('): self');
-        $writer->openBlock('{');
-        $writer->writeLine('return new self(');
-        $writer->pushIndent();
-        $writer->writeLine('message: $message,');
-        $writer->writeLine('fault: $fault,');
-        $writer->writeLine('previous: $previous,');
-        $writer->writeLine('awsErrorCode: $awsErrorCode,');
-        $writer->writeLine('requestId: $requestId,');
-        $writer->writeLine('httpStatusCode: $httpStatusCode');
-        $writer->popIndent();
-        $writer->writeLine(');');
-        $writer->closeBlock();
-        $writer->closeBlock();
     }
 
     private static function shortClassName(string $class): string

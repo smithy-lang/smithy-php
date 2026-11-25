@@ -13,6 +13,7 @@ use Smithy\Codegen\CodegenSettings;
 use Smithy\Codegen\Model\SmithyModel;
 use Smithy\Core\Serde\Schema;
 use Smithy\Protocol\Aws\AwsProtocolException;
+use Smithy\Tools\CodegenOutput\AwsErrorFactoryIntegration;
 use Smithy\Tools\CodegenOutput\CodegenOutput;
 
 $root = \dirname(__DIR__, 2);
@@ -26,6 +27,7 @@ if (!\is_file($autoload)) {
 
 require $autoload;
 require __DIR__ . '/CodegenOutput.php';
+require __DIR__ . '/AwsErrorFactoryIntegration.php';
 
 $arguments = \array_slice($argv, 1);
 $check = $arguments === ['--check'];
@@ -158,7 +160,8 @@ foreach ($cases as $name => $case) {
 
     $count = (new CodeGenerator(
         $case['settings']($stagingDir),
-        SmithyModel::fromFile($case['model'])
+        SmithyModel::fromFile($case['model']),
+        [new AwsErrorFactoryIntegration()]
     ))->generateAndWrite();
 
     CodegenOutput::lintPhpFiles($stagingDir);

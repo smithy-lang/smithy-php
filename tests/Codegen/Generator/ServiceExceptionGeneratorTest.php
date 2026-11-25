@@ -12,8 +12,7 @@ namespace Smithy\Tests\Codegen\Generator;
 use PHPUnit\Framework\TestCase;
 use Smithy\Codegen\CodegenSettings;
 use Smithy\Codegen\Generator\ServiceExceptionGenerator;
-use Smithy\Core\Exception\ErrorFault;
-use Smithy\Protocol\Aws\AwsProtocolException;
+use Smithy\Tests\Codegen\Fixtures\ServiceExceptionMemberIntegration;
 
 final class ServiceExceptionGeneratorTest extends TestCase
 {
@@ -155,60 +154,46 @@ final class ServiceExceptionGeneratorTest extends TestCase
         );
     }
 
-    public function testAwsErrorParentGetsServiceFactory(): void
+    public function testIntegrationsWriteServiceExceptionMembers(): void
     {
         $settings = new CodegenSettings(
             namespace: 'Aws\\S3',
             outputDir: '/tmp/out',
-            organization: 'flat',
-            baseServiceException: AwsProtocolException::class
+            organization: 'flat'
         );
+        $generator = new ServiceExceptionGenerator($settings, [
+            new ServiceExceptionMemberIntegration(['FIRST', 'SECOND'])
+        ]);
 
-        $file = (new ServiceExceptionGenerator($settings))->generate();
+        $file = $generator->generate();
 
+        $this->assertStringContainsString('use Countable;', $file->content);
         $this->assertStringContainsString(
-            'use Smithy\\Core\\Exception\\ErrorFault;',
-            $file->content
-        );
-        $this->assertStringContainsString(
-            "class S3Exception extends AwsProtocolException\n{\n",
-            $file->content
-        );
-        $this->assertStringContainsString(
-            "        ?int \$httpStatusCode\n    ): self\n    {\n"
-                . "        return new self(\n",
+            "class S3Exception extends ApiException\n{\n"
+                . "    public const FIRST = 'S3Exception:Countable';\n"
+                . "\n"
+                . "    public const SECOND = 'S3Exception:Countable';\n"
+                . "}\n",
             $file->content
         );
     }
 
-    public function testGeneratedFactoryReturnsServiceException(): void
+    public function testIntegrationWithoutMembersKeepsEmptyClass(): void
     {
-        $namespace = 'Smithy\\Tests\\Codegen\\Generated\\Factory'
-            . \bin2hex(\random_bytes(4));
         $settings = new CodegenSettings(
-            namespace: $namespace,
+            namespace: 'Aws\\S3',
             outputDir: '/tmp/out',
-            organization: 'flat',
-            serviceExceptionClass: 'FactoryException',
-            baseServiceException: AwsProtocolException::class
+            organization: 'flat'
         );
-        $file = (new ServiceExceptionGenerator($settings))->generate();
-        eval(\substr($file->content, \strlen('<?php')));
+        $generator = new ServiceExceptionGenerator($settings, [
+            new ServiceExceptionMemberIntegration([])
+        ]);
 
-        $class = $namespace . '\\FactoryException';
-        $error = $class::fromAwsError(
-            'denied',
-            ErrorFault::Client,
-            null,
-            'AccessDenied',
-            'req-1',
-            403
+        $file = $generator->generate();
+
+        $this->assertStringContainsString(
+            'class S3Exception extends ApiException {}',
+            $file->content
         );
-
-        $this->assertSame($class, $error::class);
-        $this->assertSame('denied', $error->getMessage());
-        $this->assertSame('AccessDenied', $error->getAwsErrorCode());
-        $this->assertSame('req-1', $error->getAwsRequestId());
-        $this->assertSame(403, $error->getHttpStatusCode());
     }
 }
