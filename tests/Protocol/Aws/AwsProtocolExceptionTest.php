@@ -14,6 +14,7 @@ use PHPUnit\Framework\TestCase;
 use Smithy\Core\Exception\ErrorFault;
 use Smithy\Core\Retry\{RetryInfoInterface, RetrySafety};
 use Smithy\Protocol\Aws\AwsProtocolException;
+use Smithy\Tests\Protocol\Aws\Utils\CustomConstructorProtocolError;
 
 /**
  * `AwsErrorRetryTrait`, used by `AwsProtocolException`, refines the
@@ -100,5 +101,23 @@ final class AwsProtocolExceptionTest extends TestCase
         $this->assertSame('req-1', $error->getAwsRequestId());
         $this->assertSame(404, $error->getHttpStatusCode());
         $this->assertSame('host-1', $error->getExtendedRequestId());
+    }
+
+    public function testFromAwsErrorIgnoresSubclassConstructor(): void
+    {
+        $error = CustomConstructorProtocolError::fromAwsError(
+            'denied',
+            ErrorFault::Client,
+            null,
+            'AccessDenied',
+            'req-2',
+            403
+        );
+
+        $this->assertSame(AwsProtocolException::class, $error::class);
+        $this->assertSame('denied', $error->getMessage());
+        $this->assertSame('AccessDenied', $error->getAwsErrorCode());
+        $this->assertSame('req-2', $error->getAwsRequestId());
+        $this->assertSame(403, $error->getHttpStatusCode());
     }
 }

@@ -12,6 +12,7 @@ namespace Smithy\Tests\Codegen\Generator;
 use PHPUnit\Framework\TestCase;
 use Smithy\Codegen\CodegenSettings;
 use Smithy\Codegen\Generator\ServiceExceptionGenerator;
+use Smithy\Tests\Codegen\Fixtures\ServiceExceptionMemberIntegration;
 
 final class ServiceExceptionGeneratorTest extends TestCase
 {
@@ -150,6 +151,49 @@ final class ServiceExceptionGeneratorTest extends TestCase
                 . DIRECTORY_SEPARATOR
                 . 'S3Exception.php',
             $file->path
+        );
+    }
+
+    public function testIntegrationsWriteServiceExceptionMembers(): void
+    {
+        $settings = new CodegenSettings(
+            namespace: 'Aws\\S3',
+            outputDir: '/tmp/out',
+            organization: 'flat'
+        );
+        $generator = new ServiceExceptionGenerator($settings, [
+            new ServiceExceptionMemberIntegration(['FIRST', 'SECOND'])
+        ]);
+
+        $file = $generator->generate();
+
+        $this->assertStringContainsString('use Countable;', $file->content);
+        $this->assertStringContainsString(
+            "class S3Exception extends ApiException\n{\n"
+                . "    public const FIRST = 'S3Exception:Countable';\n"
+                . "\n"
+                . "    public const SECOND = 'S3Exception:Countable';\n"
+                . "}\n",
+            $file->content
+        );
+    }
+
+    public function testIntegrationWithoutMembersKeepsEmptyClass(): void
+    {
+        $settings = new CodegenSettings(
+            namespace: 'Aws\\S3',
+            outputDir: '/tmp/out',
+            organization: 'flat'
+        );
+        $generator = new ServiceExceptionGenerator($settings, [
+            new ServiceExceptionMemberIntegration([])
+        ]);
+
+        $file = $generator->generate();
+
+        $this->assertStringContainsString(
+            'class S3Exception extends ApiException {}',
+            $file->content
         );
     }
 }
