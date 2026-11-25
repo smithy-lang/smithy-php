@@ -9,10 +9,10 @@ declare(strict_types=1);
 
 namespace Smithy\Codec\FormUrlEncoded;
 
-use Smithy\Codec\CodecSerializerInterface;
 use Smithy\Codec\Exception\SerializationException;
 use Smithy\Core\Serde\Schema;
 use Smithy\Core\Serde\SerializableStructInterface;
+use Smithy\Core\Serde\ShapeSerializerInterface;
 use Smithy\Core\Serde\TimestampFormat;
 use Smithy\Core\Shape\BigDecimal;
 use Smithy\Core\Shape\BigInteger;
@@ -27,7 +27,7 @@ use Smithy\Core\Shape\UnionInterface;
  *
  * @internal Instantiated only by {@see FormUrlEncodedCodec}.
  */
-final class FormUrlEncodedSerializer implements CodecSerializerInterface
+final class FormUrlEncodedSerializer implements ShapeSerializerInterface
 {
     private readonly FormUrlEncodedCodecSettings $settings;
     private readonly bool $honorTimestampFormatTrait;

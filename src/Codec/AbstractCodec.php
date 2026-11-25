@@ -41,10 +41,10 @@ abstract class AbstractCodec
     /**
      * Create a serializer for this codec's format.
      *
-     * @return CodecSerializerInterface Fresh serializer ready to receive
+     * @return ShapeSerializerInterface Fresh serializer ready to receive
      *                                  serialization calls.
      */
-    abstract public function createSerializer(): CodecSerializerInterface;
+    abstract public function createSerializer(): ShapeSerializerInterface;
 
     /**
      * Create a deserializer for this codec's format.
@@ -63,7 +63,7 @@ abstract class AbstractCodec
      *
      * @internal
      */
-    public function acquireSerializer(): CodecSerializerInterface
+    public function acquireSerializer(): ShapeSerializerInterface
     {
         return $this->createSerializer();
     }

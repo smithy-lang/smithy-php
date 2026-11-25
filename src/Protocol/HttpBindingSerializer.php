@@ -11,7 +11,6 @@ namespace Smithy\Protocol;
 
 use Psr\Http\Message\StreamInterface;
 use Smithy\Codec\AbstractCodec;
-use Smithy\Codec\CodecSerializerInterface;
 use Smithy\Core\Serde\Schema;
 use Smithy\Core\Serde\SerializableStructInterface;
 use Smithy\Core\Serde\ShapeSerializerInterface;
@@ -52,7 +51,7 @@ final class HttpBindingSerializer implements ShapeSerializerInterface
      */
     private mixed $payload = null;
     private bool $hasPayload = false;
-    private ?CodecSerializerInterface $codecSerializer = null;
+    private ?ShapeSerializerInterface $codecSerializer = null;
     /**
      * Fused per-member write table: `memberIndex => [route, target]`.
      *
@@ -615,6 +614,27 @@ final class HttpBindingSerializer implements ShapeSerializerInterface
         }
 
         return '';
+    }
+
+    /**
+     * Return the encoded request body and reset the serializer for reuse.
+     *
+     * Read the path, query string, and headers first: this call clears them.
+     * A stream payload is read into a string; use {@see serializeBody()} to
+     * keep the stream.
+     */
+    public function flush(): string
+    {
+        $body = $this->serializeBody();
+
+        $this->headers = [];
+        $this->queryString = '';
+        $this->labels = [];
+        $this->payload = null;
+        $this->hasPayload = false;
+        $this->codecSerializer?->beginStruct($this->bindingInfo->bodySchema, 0);
+
+        return \is_string($body) ? $body : (string) $body;
     }
 
     /**

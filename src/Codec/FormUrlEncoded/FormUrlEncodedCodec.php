@@ -11,7 +11,6 @@ namespace Smithy\Codec\FormUrlEncoded;
 
 use Psr\Http\Message\StreamInterface;
 use Smithy\Codec\AbstractCodec;
-use Smithy\Codec\CodecSerializerInterface;
 use Smithy\Codec\Exception\CodecException;
 use Smithy\Core\Serde\ShapeDeserializerInterface;
 use Smithy\Core\Serde\ShapeSerializerInterface;
@@ -41,7 +40,7 @@ final class FormUrlEncodedCodec extends AbstractCodec
     /**
      * Create a form-urlencoded serializer.
      */
-    public function createSerializer(): CodecSerializerInterface
+    public function createSerializer(): ShapeSerializerInterface
     {
         return new FormUrlEncodedSerializer($this->settings);
     }

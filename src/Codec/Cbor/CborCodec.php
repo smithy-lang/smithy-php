@@ -11,7 +11,6 @@ namespace Smithy\Codec\Cbor;
 
 use Psr\Http\Message\StreamInterface;
 use Smithy\Codec\AbstractCodec;
-use Smithy\Codec\CodecSerializerInterface;
 use Smithy\Core\Serde\Schema;
 use Smithy\Core\Serde\ShapeDeserializerInterface;
 use Smithy\Core\Serde\ShapeSerializerInterface;
@@ -36,7 +35,7 @@ final class CborCodec extends AbstractCodec
     /**
      * Create a CBOR serializer.
      */
-    public function createSerializer(): CodecSerializerInterface
+    public function createSerializer(): ShapeSerializerInterface
     {
         return new CborSerializer($this->settings);
     }

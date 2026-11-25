@@ -34,6 +34,21 @@ use Smithy\Tests\Codec\FormUrlEncoded\Utils\{
 
 final class FormUrlEncodedSerializerTest extends TestCase
 {
+    public function testFlushResetsSerializerForReuse(): void
+    {
+        $serializer = new FormUrlEncodedSerializer();
+
+        foreach (['one', 'two'] as $name) {
+            $serializer->beginRootStruct(
+                FormUrlEncodedSampleStructFixture::schema()
+            );
+            (new FormUrlEncodedSampleStructFixture(name: $name))
+                ->serializeMembers($serializer);
+
+            self::assertSame("name={$name}", $serializer->flush());
+        }
+    }
+
     public function testBeginRootStructSerializesScalarMembers(): void
     {
         $serializer = new FormUrlEncodedSerializer();

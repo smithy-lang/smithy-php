@@ -27,16 +27,13 @@ abstract class AbstractCodec
 {
     public function createMembersBuffer(Schema $schema): array;
 
-    abstract public function createSerializer(): CodecSerializerInterface;
+    abstract public function createSerializer(): ShapeSerializerInterface;
 
     abstract public function createDeserializer(
         StreamInterface $source
     ): ShapeDeserializerInterface;
 }
 ```
-
-`CodecSerializerInterface` extends `ShapeSerializerInterface` with
-`flush(): string`, which returns the encoded payload.
 
 JSON, XML, and CBOR codecs override `createMembersBuffer()` with a cached
 positional template from their schema extension.

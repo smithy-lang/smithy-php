@@ -11,8 +11,10 @@ namespace Smithy\Tests\Codec\Utils;
 
 use Psr\Http\Message\StreamInterface;
 use Smithy\Codec\AbstractCodec;
-use Smithy\Codec\CodecSerializerInterface;
-use Smithy\Core\Serde\ShapeDeserializerInterface;
+use Smithy\Core\Serde\{
+    ShapeDeserializerInterface,
+    ShapeSerializerInterface
+};
 
 /**
  * Expose inherited codec behavior for direct testing.
@@ -26,7 +28,7 @@ final class CodecFixture extends AbstractCodec
     ) {}
 
     /** @inheritDoc */
-    public function createSerializer(): CodecSerializerInterface
+    public function createSerializer(): ShapeSerializerInterface
     {
         throw new \LogicException('No serializer configured.');
     }

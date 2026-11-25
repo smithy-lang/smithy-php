@@ -35,6 +35,21 @@ use Smithy\Tests\Codec\Json\Fixture\{
 
 final class JsonSerializerTest extends TestCase
 {
+    public function testFlushResetsSerializerForReuse(): void
+    {
+        $schema = new Schema(
+            id: 'smithy.test#BigIntegerValue',
+            type: ShapeType::BigInteger
+        );
+        $serializer = new JsonSerializer();
+
+        $serializer->serializeBigInteger($schema, new BigInteger('1'), 0);
+        self::assertSame('1', $serializer->flush());
+
+        $serializer->serializeBigInteger($schema, new BigInteger('2'), 0);
+        self::assertSame('2', $serializer->flush());
+    }
+
     public function testSerializeTopLevelBigIntegerNormalizesLeadingZeros(): void
     {
         $serializer = new JsonSerializer();

@@ -9,10 +9,10 @@ declare(strict_types=1);
 
 namespace Smithy\Codec\Cbor;
 
-use Smithy\Codec\CodecSerializerInterface;
 use Smithy\Codec\Exception\SerializationException;
 use Smithy\Core\Serde\Schema;
 use Smithy\Core\Serde\SerializableStructInterface;
+use Smithy\Core\Serde\ShapeSerializerInterface;
 use Smithy\Core\Shape\ShapeType;
 use Smithy\Core\Serde\TimestampFormat;
 use Smithy\Core\Shape\BigDecimal;
@@ -24,7 +24,7 @@ use Smithy\Core\Shape\UnionInterface;
 /**
  * Serialize Smithy shapes into definite-length CBOR bytes.
  */
-final class CborSerializer implements CodecSerializerInterface
+final class CborSerializer implements ShapeSerializerInterface
 {
     private const TOKEN_FALSE = "\xF4";
     private const TOKEN_TRUE = "\xF5";
@@ -646,13 +646,16 @@ final class CborSerializer implements CodecSerializerInterface
     }
 
     /**
-     * Return the encoded CBOR payload.
+     * Return the encoded CBOR payload and reset the serializer for reuse.
      *
      * @return string
      */
     public function flush(): string
     {
-        return $this->buffer;
+        $encoded = $this->buffer;
+        $this->reset();
+
+        return $encoded;
     }
 
     /**

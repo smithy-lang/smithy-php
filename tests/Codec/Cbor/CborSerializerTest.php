@@ -76,6 +76,18 @@ final class CborSerializerTest extends TestCase
         );
     }
 
+    public function testFlushResetsSerializerForReuse(): void
+    {
+        $schema = new Schema(id: 'smithy.test#T', type: ShapeType::Timestamp);
+        $serializer = new CborSerializer();
+
+        $serializer->serializeTimestamp($schema, 100.0, 0);
+        self::assertSame('c11864', \bin2hex($serializer->flush()));
+
+        $serializer->serializeTimestamp($schema, 100.0, 0);
+        self::assertSame('c11864', \bin2hex($serializer->flush()));
+    }
+
     public function testSerializesTimestampUsingCodecSettingsDefault(): void
     {
         $schema = new Schema(id: 'smithy.test#T', type: ShapeType::Timestamp);

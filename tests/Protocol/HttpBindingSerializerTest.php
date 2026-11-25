@@ -15,6 +15,7 @@ use Smithy\Core\Serde\{Schema, TimestampFormat};
 use Smithy\Core\Shape\ShapeType;
 use Smithy\Codec\Json\JsonCodec;
 use Smithy\Codec\Json\JsonCodecSettings;
+use Smithy\Http\Message\StringRequestStream;
 use Smithy\Protocol\{
     HttpBindingSerializer,
     HttpPathLabelPolicy,
@@ -69,6 +70,63 @@ final class HttpBindingSerializerTest extends TestCase
             $serializer->serializeHeaders()
         );
         self::assertSame('{"body":"body text"}', $serializer->serializeBody());
+    }
+
+    public function testFlushReturnsBodyAndResetsForReuse(): void
+    {
+        $schema = HttpBindingFixtureSchemas::request();
+        $members = $schema->getMembersByIndex();
+        $bindingInfo = $schema->getExtension(
+            HttpStructBindingExtensionProvider::key()
+        );
+        $serializer = new HttpBindingSerializer(new JsonCodec(), $bindingInfo);
+
+        $serializer->serializeString($members[0], 'plain text', 0);
+        $serializer->serializeMap($members[4], ['mode' => 'on'], 4);
+        $serializer->serializeString($members[5], 'first', 5);
+
+        self::assertSame('{"body":"first"}', $serializer->flush());
+        self::assertSame([], $serializer->serializeHeaders());
+        self::assertSame('', $serializer->serializeQueryString());
+
+        $serializer->serializeString($members[5], 'second', 5);
+
+        self::assertSame('{"body":"second"}', $serializer->flush());
+    }
+
+    public function testFlushReturnsPayloadAndResetsForReuse(): void
+    {
+        $schema = HttpBindingFixtureSchemas::payloadRequest();
+        $bindingInfo = $schema->getExtension(
+            HttpStructBindingExtensionProvider::key()
+        );
+        $serializer = new HttpBindingSerializer(new JsonCodec(), $bindingInfo);
+
+        $serializer->serializeString(
+            $schema->getMemberByIndex(0),
+            'payload body',
+            0
+        );
+
+        self::assertSame('payload body', $serializer->flush());
+        self::assertSame('', $serializer->flush());
+    }
+
+    public function testFlushReadsStreamPayloadIntoString(): void
+    {
+        $schema = HttpBindingFixtureSchemas::payloadRequest();
+        $bindingInfo = $schema->getExtension(
+            HttpStructBindingExtensionProvider::key()
+        );
+        $serializer = new HttpBindingSerializer(new JsonCodec(), $bindingInfo);
+
+        $serializer->serializeBlob(
+            $schema->getMemberByIndex(0),
+            new StringRequestStream('streamed body'),
+            0
+        );
+
+        self::assertSame('streamed body', $serializer->flush());
     }
 
     public function testSerializesGeneratedInputShape(): void
