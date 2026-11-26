@@ -41,6 +41,46 @@ final class SchemaTest extends TestCase
         $this->assertSame(30, Schema::T_WAITABLE);
     }
 
+    public function testRejectsMemberWithoutIndex(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage(
+            'Member schema smithy.test#S$a needs a memberName and memberIndex.'
+        );
+
+        new Schema(
+            id: 'smithy.test#S',
+            type: ShapeType::Structure,
+            members: [
+                new Schema(
+                    id: 'smithy.test#S$a',
+                    type: ShapeType::String_,
+                    memberName: 'a'
+                )
+            ]
+        );
+    }
+
+    public function testRejectsMemberWithoutName(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage(
+            'Member schema smithy.test#S$a needs a memberName and memberIndex.'
+        );
+
+        new Schema(
+            id: 'smithy.test#S',
+            type: ShapeType::Structure,
+            members: [
+                new Schema(
+                    id: 'smithy.test#S$a',
+                    type: ShapeType::String_,
+                    memberIndex: 0
+                )
+            ]
+        );
+    }
+
     public function testStoresIdAndUnwrapsShapeTypeToInt(): void
     {
         // `$type` is declared as `int`, not ShapeType, so codec switches

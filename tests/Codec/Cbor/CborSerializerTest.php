@@ -20,6 +20,7 @@ use Smithy\Core\Serde\{
     TimestampFormat
 };
 use Smithy\Core\Shape\ShapeType;
+use Smithy\Http\Message\StringRequestStream;
 use Smithy\Core\Shape\{
     BigDecimal,
     BigInteger
@@ -58,6 +59,19 @@ final class CborSerializerTest extends TestCase
             $expected,
             \bin2hex($serializer->flush())
         );
+    }
+
+    public function testSerializeBlobReadsStreamValue(): void
+    {
+        $serializer = new CborSerializer();
+
+        $serializer->serializeBlob(
+            new Schema(id: 'smithy.api#Blob', type: ShapeType::Blob),
+            new StringRequestStream('payload'),
+            0
+        );
+
+        self::assertSame('477061796c6f6164', \bin2hex($serializer->flush()));
     }
 
     public function testSerializesTimestampIntegerAndFractional(): void

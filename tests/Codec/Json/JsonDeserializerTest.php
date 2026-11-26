@@ -119,6 +119,29 @@ final class JsonDeserializerTest extends TestCase
         self::assertSame(2, $members[0]->value());
     }
 
+    public function testDeserializerReturnsListForUntypedListGivenObject(): void
+    {
+        $schema = new Schema(
+            id: 'smithy.test#UntypedListContainer',
+            type: ShapeType::Structure,
+            members: [
+                new Schema(
+                    id: 'smithy.test#UntypedListContainer$items',
+                    type: ShapeType::List_,
+                    memberName: 'items',
+                    memberIndex: 0
+                )
+            ]
+        );
+
+        $fields = [null];
+        (new JsonCodec())->createDeserializer(
+            new StringRequestStream('{"items":{"a":1,"b":2}}')
+        )->deserialize($schema, $fields);
+
+        self::assertSame([1, 2], $fields[0]);
+    }
+
     public function testDeserializerPreservesLargeBigIntegerTokens(): void
     {
         $schema = new Schema(

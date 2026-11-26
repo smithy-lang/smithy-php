@@ -1,5 +1,5 @@
 parameters:
-    level: 6
+    level: 7
     # Report dead checks only when native types prove them, so runtime
     # guards on caller input stay in place.
     treatPhpDocTypesAsCertain: false

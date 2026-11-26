@@ -168,6 +168,19 @@ final class StructDocumentTest extends TestCase
         $this->assertSame('after', $copy->getMemberValue($member));
     }
 
+    public function testWithMemberValueRejectsNonMemberSchema(): void
+    {
+        $document = StructDocument::fromMembers($this->schema(), ['before']);
+        $root = new Schema(id: 'com.example#Other', type: ShapeType::String_);
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage(
+            'Schema com.example#Other is not a member schema.'
+        );
+
+        $document->withMemberValue($root, 'after');
+    }
+
     private function schema(): Schema
     {
         return new Schema(

@@ -37,6 +37,7 @@ use Smithy\Tests\Core\Shape\Utils\Utils\{
     ArrayShapeSerializerTimestampFixture,
     ArrayShapeSerializerUnionFixture,
     ArrayShapeSerializerUnionHolderFixture,
+    ArrayShapeSerializerUnionTextFixture,
     ArrayShapeSerializerV3CompatFixture
 };
 
@@ -556,6 +557,21 @@ final class ArrayShapeSerializerTest extends TestCase
 
         $this->assertSame('text', $union->tag());
         $this->assertSame('hello', $union->value());
+    }
+
+    public function testFromArrayRejectsVariantClassForOtherVariant(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage(
+            ArrayShapeSerializerUnionTextFixture::class
+            . ' does not match the union variant in the data;'
+            . ' pass the union base class.'
+        );
+
+        ArrayShapeSerializer::fromArray(
+            ArrayShapeSerializerUnionTextFixture::class,
+            ['mystery' => 'value']
+        );
     }
 
     public function testToArrayUnwrapsRootUnionStructVariant(): void

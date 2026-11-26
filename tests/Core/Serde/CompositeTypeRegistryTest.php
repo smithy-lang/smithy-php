@@ -113,6 +113,20 @@ final class CompositeTypeRegistryTest extends TestCase
         );
     }
 
+    public function testDeserializeRejectsDiscriminatorOfNonShapeClass(): void
+    {
+        $this->expectException(InvalidShapeValueException::class);
+        $this->expectExceptionMessage(
+            "Discriminator 'smithy.test#E' names ArrayObject, which is not a"
+            . ' structure or union.'
+        );
+
+        // Registries also map enums, which documents cannot hydrate.
+        $this->registry(['smithy.test#E' => \ArrayObject::class])->deserialize(
+            new MapDocument([], null, 'smithy.test#E')
+        );
+    }
+
     public function testRuntimeRegistryImplementsInterfaceWithoutClasses(): void
     {
         $model = SmithyModel::fromArray([

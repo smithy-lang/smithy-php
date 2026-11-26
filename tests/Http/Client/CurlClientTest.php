@@ -427,6 +427,16 @@ final class CurlClientTest extends TestCase
         $client->sendRequest($request, $options);
     }
 
+    public function testRejectsRequestWithoutUri(): void
+    {
+        $client = new CurlClient();
+
+        $this->expectException(RequestException::class);
+        $this->expectExceptionMessage('HTTP requests need a method and a URI.');
+
+        $client->sendRequest(new Request('GET', ''));
+    }
+
     public function testSendsStringBodyOnBufferedPath(): void
     {
         $server = LocalServerFixture::start();

@@ -19,7 +19,7 @@ final class OpcodeHandlerFixture implements OpcodeHandlerInterface
      * Push the constant selected by the custom opcode operand.
      *
      * @param list<int> $code
-     * @param list<mixed> $stack
+     * @param array<int, mixed> $stack
      * @param array<int, mixed> $regs
      * @param list<mixed> $constants
      */
