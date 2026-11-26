@@ -72,7 +72,7 @@ final class IntegerEnum implements EnumInterface
         return [self::a(), self::b(), self::c()];
     }
 
-    public function getValue(): string|int
+    public function getValue(): int
     {
         return $this->value;
     }

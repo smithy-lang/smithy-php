@@ -66,7 +66,7 @@ final class TestIntEnum implements EnumInterface
         return [self::one(), self::two()];
     }
 
-    public function getValue(): string|int
+    public function getValue(): int
     {
         return $this->value;
     }

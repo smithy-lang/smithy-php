@@ -72,7 +72,7 @@ final class TestEnum implements EnumInterface
         return [self::foo(), self::bar(), self::baz()];
     }
 
-    public function getValue(): string|int
+    public function getValue(): string
     {
         return $this->value;
     }

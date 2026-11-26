@@ -12,6 +12,7 @@ namespace Smithy\CodegenOutput\TrimmedPetStore\Shape;
 use Smithy\Core\Serde\Schema;
 use Smithy\Core\Serde\SerializableStructInterface;
 use Smithy\Core\Serde\ShapeSerializerInterface;
+use Smithy\Core\Shape\ArraySerializableTrait;
 use Smithy\Core\Shape\FromMembersTrait;
 use Smithy\Core\Shape\ShapeType;
 
@@ -20,6 +21,7 @@ use Smithy\Core\Shape\ShapeType;
  */
 final class Unit implements SerializableStructInterface
 {
+    use ArraySerializableTrait;
     use FromMembersTrait;
 
     /** @var Schema|null */

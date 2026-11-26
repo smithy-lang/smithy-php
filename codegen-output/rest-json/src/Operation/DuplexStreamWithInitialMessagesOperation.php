@@ -53,7 +53,7 @@ final class DuplexStreamWithInitialMessagesOperation implements OperationInterfa
         return self::ID;
     }
 
-    public function getServiceId(): ?string
+    public function getServiceId(): string
     {
         return self::SERVICE_ID;
     }
@@ -150,12 +150,12 @@ final class DuplexStreamWithInitialMessagesOperation implements OperationInterfa
         };
     }
 
-    public function getInputStreamMember(): ?Schema
+    public function getInputStreamMember(): Schema
     {
         return DuplexStreamWithInitialMessagesInput::schema()->getMembersByIndex()[1];
     }
 
-    public function getOutputStreamMember(): ?Schema
+    public function getOutputStreamMember(): Schema
     {
         return DuplexStreamWithInitialMessagesOutput::schema()->getMembersByIndex()[1];
     }

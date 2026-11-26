@@ -14,10 +14,12 @@ use Smithy\Core\Exception\ErrorFault;
 use Smithy\Core\Serde\Schema;
 use Smithy\Core\Serde\SerializableStructInterface;
 use Smithy\Core\Serde\ShapeSerializerInterface;
+use Smithy\Core\Shape\ArraySerializableTrait;
 use Smithy\Core\Shape\FromMembersTrait;
 
 final class CommonErrorException extends TrimmedPetStoreException implements SerializableStructInterface
 {
+    use ArraySerializableTrait;
     use FromMembersTrait;
 
     public const SHAPE_ID = 'smithy.example#CommonError';

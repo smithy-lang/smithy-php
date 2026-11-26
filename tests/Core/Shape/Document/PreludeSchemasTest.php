@@ -100,4 +100,23 @@ final class PreludeSchemasTest extends TestCase
         yield 'Enum' => [ShapeType::Enum, 'smithy.api#Enum'];
         yield 'IntEnum' => [ShapeType::IntEnum, 'smithy.api#IntEnum'];
     }
+
+    #[DataProvider('nonDataTypes')]
+    public function testForRejectsTypesWithoutPreludeSchema(ShapeType $type): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage("{$type->name} has no prelude schema.");
+
+        PreludeSchemas::for($type);
+    }
+
+    /**
+     * @return iterable<string, array{ShapeType}>
+     */
+    public static function nonDataTypes(): iterable
+    {
+        yield 'Operation' => [ShapeType::Operation];
+        yield 'Resource' => [ShapeType::Resource];
+        yield 'Service' => [ShapeType::Service];
+    }
 }

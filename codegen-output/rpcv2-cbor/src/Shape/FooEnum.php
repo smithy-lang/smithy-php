@@ -84,7 +84,7 @@ final class FooEnum implements EnumInterface
         return [self::foo(), self::baz(), self::bar(), self::one(), self::zero()];
     }
 
-    public function getValue(): string|int
+    public function getValue(): string
     {
         return $this->value;
     }

@@ -9,14 +9,23 @@ declare(strict_types=1);
 
 namespace Smithy\CodegenOutput\TrimmedPetStore\Shape;
 
+use JsonSerializable;
 use Smithy\CodegenOutput\TrimmedPetStore\Schemas;
 use Smithy\Core\Serde\Schema;
 use Smithy\Core\Serde\SerializableStructInterface;
 use Smithy\Core\Serde\ShapeSerializerInterface;
+use Smithy\Core\Shape\ArraySerializableTrait;
 use Smithy\Core\Shape\FromMembersTrait;
+use Smithy\Core\Shape\SensitiveStringableTrait;
 
-final class PetDetails implements SerializableStructInterface
+/**
+ *
+ * @sensitive Contains sensitive data. Do not log.
+ */
+final class PetDetails implements SerializableStructInterface, JsonSerializable
 {
+    use ArraySerializableTrait;
+    use SensitiveStringableTrait;
     use FromMembersTrait;
 
     public const SHAPE_ID = 'smithy.example#PetDetails';

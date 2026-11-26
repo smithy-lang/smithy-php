@@ -80,7 +80,7 @@ final class Schemas
             type: ShapeType::Structure,
             members: [
                 new Schema(id: 'smithy.example#Pet$name', type: ShapeType::String_, memberName: 'name', memberIndex: 0),
-                new Schema(id: 'smithy.example#Pet$details', type: ShapeType::Structure, memberName: 'details', memberIndex: 1, members: self::petDetails()->getMembers(), targetClass: PetDetails::class)
+                new Schema(id: 'smithy.example#Pet$details', type: ShapeType::Structure, memberName: 'details', memberIndex: 1, members: self::petDetails()->getMembers(), traits: [20 => true], targetClass: PetDetails::class)
             ],
             targetClass: Pet::class
         );
@@ -97,7 +97,7 @@ final class Schemas
             type: ShapeType::Structure,
             members: [
                 new Schema(id: 'smithy.example#PetDetails$breed', type: ShapeType::String_, memberName: 'breed', memberIndex: 0)
-            ],
+            ], traits: [20 => true],
             targetClass: PetDetails::class
         );
     }
