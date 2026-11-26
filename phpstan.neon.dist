@@ -1,4 +1,10 @@
 parameters:
-    level: 3
+    level: 4
+    # Report dead checks only when native types prove them, so runtime
+    # guards on caller input stay in place.
+    treatPhpDocTypesAsCertain: false
     paths:
         - src
+        # Generated clients use the runtime shape traits; analysing them
+        # checks those traits and the code the generator emits.
+        - codegen-output

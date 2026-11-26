@@ -198,6 +198,9 @@ final class OperationGeneratorTest extends TestCase
         $this->assertStringContainsString(
             'return ExampleException::class;',
             $file->content
+        );        $this->assertStringContainsString(
+            'public function getServiceId(): string',
+            $file->content
         );
     }
 
@@ -669,6 +672,14 @@ PHP);
                     . '->getMembersByIndex()[1];',
                 $content
             );
+            $this->assertStringContainsString(
+                'public function getInputStreamMember(): Schema',
+                $content
+            );
+            $this->assertStringContainsString(
+                'public function getOutputStreamMember(): ?Schema',
+                $content
+            );
         } finally {
             @\unlink($schemasPath);
             @\rmdir($outputDir);
@@ -806,6 +817,10 @@ PHP);
         );
         $this->assertStringContainsString(
             'return self::TARGET;',
+            $file->content
+        );
+        $this->assertStringContainsString(
+            'public function getRequestTarget(): string',
             $file->content
         );
     }

@@ -73,10 +73,9 @@ final class EnumGeneratorTest extends TestCase
             'private function __construct(string $value)',
             $file->content
         );
-        // The value-returning API is `string|int` (satisfies both enum
-        // flavors).
+        // getValue() returns the backing type.
         $this->assertStringContainsString(
-            'public function getValue(): string|int',
+            'public function getValue(): string',
             $file->content
         );
     }
@@ -107,6 +106,9 @@ final class EnumGeneratorTest extends TestCase
         // The backing type is `int` for intEnum, not `string`.
         $this->assertStringContainsString(
             'private function __construct(int $value)',
+            $file->content
+        );        $this->assertStringContainsString(
+            'public function getValue(): int',
             $file->content
         );
     }

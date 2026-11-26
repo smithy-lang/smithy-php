@@ -51,7 +51,7 @@ final class PutAndGetInlineDocumentsOperation implements OperationInterface
         return self::ID;
     }
 
-    public function getServiceId(): ?string
+    public function getServiceId(): string
     {
         return self::SERVICE_ID;
     }

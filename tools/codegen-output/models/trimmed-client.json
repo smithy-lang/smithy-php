@@ -111,7 +111,8 @@
             "type": "structure",
             "members": {
                 "breed": {"target": "smithy.api#String"}
-            }
+            },
+            "traits": {"smithy.api#sensitive": {}}
         },
         "smithy.example#PetList": {
             "type": "list",

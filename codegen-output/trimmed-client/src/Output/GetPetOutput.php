@@ -9,16 +9,23 @@ declare(strict_types=1);
 
 namespace Smithy\CodegenOutput\TrimmedPetStore\Output;
 
+use JsonSerializable;
 use Smithy\CodegenOutput\TrimmedPetStore\Schemas;
 use Smithy\CodegenOutput\TrimmedPetStore\Shape\Pet;
 use Smithy\CodegenOutput\TrimmedPetStore\Shape\UnitUnion;
 use Smithy\Core\Serde\Schema;
 use Smithy\Core\Serde\SerializableStructInterface;
 use Smithy\Core\Serde\ShapeSerializerInterface;
+use Smithy\Core\Shape\ArraySerializableTrait;
 use Smithy\Core\Shape\FromMembersTrait;
+use Smithy\Core\Shape\ReadonlyArrayAccessTrait;
+use Smithy\Core\Shape\SensitiveStringableTrait;
 
-final class GetPetOutput implements SerializableStructInterface
+final class GetPetOutput implements SerializableStructInterface, \ArrayAccess, JsonSerializable
 {
+    use ReadonlyArrayAccessTrait;
+    use ArraySerializableTrait;
+    use SensitiveStringableTrait;
     use FromMembersTrait;
 
     public const SHAPE_ID = 'smithy.example#GetPetOutput';

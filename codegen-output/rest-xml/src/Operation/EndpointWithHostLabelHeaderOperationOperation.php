@@ -49,7 +49,7 @@ final class EndpointWithHostLabelHeaderOperationOperation implements OperationIn
         return self::ID;
     }
 
-    public function getServiceId(): ?string
+    public function getServiceId(): string
     {
         return self::SERVICE_ID;
     }

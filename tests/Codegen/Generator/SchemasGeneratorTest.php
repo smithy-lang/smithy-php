@@ -751,6 +751,47 @@ final class SchemasGeneratorTest extends TestCase
         );
     }
 
+    public function testReadsSharedMemberAfterFirstUseInSameMethod(): void
+    {
+        $model = SmithyModel::fromJson(\json_encode([
+            'smithy' => '2.0',
+            'shapes' => [
+                'smithy.example#Container' => [
+                    'type' => 'structure',
+                    'members' => [
+                        'first' => ['target' => 'smithy.example#Names'],
+                        'second' => ['target' => 'smithy.example#Names']
+                    ]
+                ],
+                'smithy.example#Names' => [
+                    'type' => 'list',
+                    'member' => ['target' => 'smithy.api#String']
+                ]
+            ]
+        ], JSON_THROW_ON_ERROR));
+        $settings = new CodegenSettings(
+            namespace: 'Smithy\\Example',
+            outputDir: '/tmp/out',
+            organization: 'flat'
+        );
+        $generator = new SchemasGenerator(
+            $model,
+            new PhpSymbolProvider($model, $settings),
+            $settings
+        );
+
+        $content = $generator->generate([
+            'smithy.example#Container' => true
+        ])->content;
+
+        $shared = "SchemasMembers::\$shared['smithy.example#Names\$member']";
+        $this->assertSame(1, \substr_count($content, "{$shared} ??= "));
+        $this->assertStringContainsString(
+            "memberName: 'second', memberIndex: 1, listMember: {$shared})",
+            $content
+        );
+    }
+
     public function testPropagatesConfiguredTargetTraitsToMembers(): void
     {
         $model = SmithyModel::fromJson(\json_encode([

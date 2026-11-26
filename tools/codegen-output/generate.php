@@ -143,6 +143,11 @@ $cases = [
                 namespace: 'Smithy\\CodegenOutput\\TrimmedPetStore',
                 outputDir: $outputDir,
                 organization: 'categorized',
+                arrayAccess: ['enabled' => true, 'categories' => ['output']],
+                arraySerialization: [
+                    'enabled' => true,
+                    'categories' => ['all']
+                ],
                 preserveExistingMemberOrder: false,
                 operationSet: ['GetPet']
             )

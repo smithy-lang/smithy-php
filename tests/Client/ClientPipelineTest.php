@@ -966,6 +966,66 @@ final class ClientPipelineTest extends TestCase
         );
     }
 
+    public function testFailedEndpointResolutionLeavesAttemptWithoutIdentity(): void
+    {
+        $modeledResolver = $this->createMock(
+            IdentityResolverInterface::class
+        );
+        $modeledResolver->method('resolveIdentity')->willReturn(
+            IdentityResult::success(new class implements IdentityInterface {
+                public function getExpirationTime(): ?float
+                {
+                    return null;
+                }
+            })
+        );
+        $endpointResolver = $this->createMock(
+            EndpointResolverInterface::class
+        );
+        $endpointResolver->method('resolveEndpoint')->willThrowException(
+            new \RuntimeException('endpoint failed')
+        );
+        $observer = new class extends AbstractInterceptor {
+            public ?OutputContext $attempt = null;
+
+            public function readAfterAttempt(
+                OutputContext $ctx,
+                ?\Throwable $error
+            ): void
+            {
+                $this->attempt ??= $ctx;
+            }
+        };
+        $pipeline = new ClientPipeline(new ClientConfig(
+            protocol: new FakeProtocol(),
+            transport: new \Smithy\Http\Client\HttpClientTransport(
+                (new MockHttpClient())->willReturn('body')
+            ),
+            endpointResolver: $endpointResolver,
+            interceptors: new InterceptorChain($observer),
+            supportedAuthSchemes: [
+                new TestAuthSchemeFixture(
+                    'smithy.test#modeled',
+                    $modeledResolver
+                )
+            ],
+            authSchemeResolver: new StaticAuthSchemeResolver([
+                'smithy.test#modeled'
+            ])
+        ));
+
+        try {
+            $pipeline->execute(FakeOperation::instance(), new FakeInput());
+            $this->fail('Expected endpoint resolution to fail.');
+        } catch (\RuntimeException $error) {
+            $this->assertSame('endpoint failed', $error->getMessage());
+        }
+
+        $this->assertNotNull($observer->attempt);
+        $this->assertNull($observer->attempt->identity);
+        $this->assertNull($observer->attempt->identityResolver);
+    }
+
     public function testFailedEndpointIdentityDoesNotKeepModeledIdentity(): void
     {
         $modeledIdentity = new class implements IdentityInterface {

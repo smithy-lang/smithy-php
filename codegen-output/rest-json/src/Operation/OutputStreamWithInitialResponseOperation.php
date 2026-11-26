@@ -49,7 +49,7 @@ final class OutputStreamWithInitialResponseOperation implements OperationInterfa
         return self::ID;
     }
 
-    public function getServiceId(): ?string
+    public function getServiceId(): string
     {
         return self::SERVICE_ID;
     }
@@ -144,7 +144,7 @@ final class OutputStreamWithInitialResponseOperation implements OperationInterfa
         return null;
     }
 
-    public function getOutputStreamMember(): ?Schema
+    public function getOutputStreamMember(): Schema
     {
         return OutputStreamWithInitialResponseOutput::schema()->getMembersByIndex()[1];
     }

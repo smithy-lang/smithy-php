@@ -60,7 +60,7 @@ final class StringEnum implements EnumInterface
         return [self::v()];
     }
 
-    public function getValue(): string|int
+    public function getValue(): string
     {
         return $this->value;
     }
