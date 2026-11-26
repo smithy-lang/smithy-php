@@ -18,6 +18,7 @@ final class IntegerEnum implements EnumInterface
 {
     public const SHAPE_ID = 'aws.protocoltests.shared#IntegerEnum';
 
+    /** @var array<int, self> */
     private static array $known = [];
 
     public readonly int $value;

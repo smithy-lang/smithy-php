@@ -52,6 +52,27 @@ final class PaginatorTest extends TestCase
         $this->assertSame([null, 'one', 'two'], $client->tokens);
     }
 
+    public function testRejectsPageOfAnotherOutputClass(): void
+    {
+        $client = new MockClient([
+            new PaginationOutput('first', new PaginationResult(null))
+        ]);
+        $paginator = new Paginator(
+            $client,
+            PaginationOperation::instance(),
+            new PaginationInput(),
+            PaginationResult::class
+        );
+
+        $this->expectException(\UnexpectedValueException::class);
+        $this->expectExceptionMessage(
+            'returned ' . PaginationOutput::class
+                . ' instead of ' . PaginationResult::class . '.'
+        );
+
+        \iterator_to_array($paginator, false);
+    }
+
     public function testSupportsMapTokensAndStopsOnEmptyMap(): void
     {
         $token = ['pk' => ['S' => 'one']];

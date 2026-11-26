@@ -18,6 +18,7 @@ final class TestEnum implements EnumInterface
 {
     public const SHAPE_ID = 'smithy.protocoltests.rpcv2Json#TestEnum';
 
+    /** @var array<array-key, self> */
     private static array $known = [];
 
     public readonly string $value;

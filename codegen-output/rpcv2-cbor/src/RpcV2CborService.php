@@ -64,6 +64,9 @@ final class RpcV2CborService implements ServiceInterface
         );
     }
 
+    /**
+     * @return list<class-string>
+     */
     public static function operations(): array
     {
         return [

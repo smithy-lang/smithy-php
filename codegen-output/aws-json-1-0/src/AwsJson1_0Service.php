@@ -64,6 +64,9 @@ final class AwsJson1_0Service implements ServiceInterface
         );
     }
 
+    /**
+     * @return list<class-string>
+     */
     public static function operations(): array
     {
         return [

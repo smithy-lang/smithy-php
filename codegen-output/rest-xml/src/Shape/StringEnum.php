@@ -18,6 +18,7 @@ final class StringEnum implements EnumInterface
 {
     public const SHAPE_ID = 'aws.protocoltests.restxml#StringEnum';
 
+    /** @var array<array-key, self> */
     private static array $known = [];
 
     public readonly string $value;

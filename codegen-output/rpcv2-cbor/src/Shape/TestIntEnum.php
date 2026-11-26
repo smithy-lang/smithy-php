@@ -18,6 +18,7 @@ final class TestIntEnum implements EnumInterface
 {
     public const SHAPE_ID = 'smithy.protocoltests.rpcv2Cbor#TestIntEnum';
 
+    /** @var array<int, self> */
     private static array $known = [];
 
     public readonly int $value;

@@ -50,6 +50,9 @@ final class TrimmedPetStoreService implements ServiceInterface
         );
     }
 
+    /**
+     * @return list<class-string>
+     */
     public static function operations(): array
     {
         return [

@@ -193,6 +193,36 @@ final class ClientGeneratorTest extends TestCase
         );
     }
 
+    public function testPaginatorBindsOperationOutputClass(): void
+    {
+        $model = SmithyModel::fromFile(
+            __DIR__ . '/../../fixtures/trimmed-client-model.json'
+        );
+        $settings = new CodegenSettings(
+            namespace: 'Smithy\\PetStore',
+            outputDir: '/tmp/out',
+            organization: 'flat'
+        );
+        $generator = new ClientGenerator(
+            $model,
+            new PhpSymbolProvider($model, $settings),
+            $settings
+        );
+
+        $file = $generator->generate(
+            'smithy.example#PetStore',
+            $this->projection($model)
+        );
+
+        $this->assertStringContainsString(
+            "ListPetsOperation::instance(),\n"
+                . "            \$input ?? new ListPetsInput(),\n"
+                . "            ListPetsOutput::class\n"
+                . '        );',
+            $file->content
+        );
+    }
+
     public function testImportsAbstractClientBaseClass(): void
     {
         // The generated client is a thin subclass of Smithy's AbstractClient.

@@ -21,6 +21,9 @@ use Smithy\Core\Shape\FromMembersTrait;
 use Smithy\Core\Shape\ReadonlyArrayAccessTrait;
 use Smithy\Core\Shape\SensitiveStringableTrait;
 
+/**
+ * @implements \ArrayAccess<string, mixed>
+ */
 final class GetPetOutput implements SerializableStructInterface, \ArrayAccess, JsonSerializable
 {
     use ReadonlyArrayAccessTrait;
