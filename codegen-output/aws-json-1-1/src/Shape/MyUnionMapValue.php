@@ -12,6 +12,9 @@ namespace Smithy\ProtocolTests\AwsJson1_1\Shape;
 /** @internal */
 final readonly class MyUnionMapValue extends MyUnion
 {
+    /**
+     * @param array<string, string> $value
+     */
     public function __construct(public array $value) {}
 
     public function getMemberIndex(): int
@@ -24,6 +27,9 @@ final readonly class MyUnionMapValue extends MyUnion
         return 'mapValue';
     }
 
+    /**
+     * @return array<string, string>
+     */
     public function value(): array
     {
         return $this->value;

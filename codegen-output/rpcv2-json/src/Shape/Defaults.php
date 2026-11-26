@@ -48,6 +48,9 @@ final class Defaults implements SerializableStructInterface
 
     public readonly string $defaultString;
     public readonly bool $defaultBoolean;
+    /**
+     * @var list<string>
+     */
     public readonly array $defaultList;
     public readonly float $defaultTimestamp;
     public readonly string $defaultBlob;
@@ -57,6 +60,9 @@ final class Defaults implements SerializableStructInterface
     public readonly int $defaultLong;
     public readonly float $defaultFloat;
     public readonly float $defaultDouble;
+    /**
+     * @var array<string, string>
+     */
     public readonly array $defaultMap;
     public readonly TestEnum $defaultEnum;
     public readonly TestIntEnum $defaultIntEnum;

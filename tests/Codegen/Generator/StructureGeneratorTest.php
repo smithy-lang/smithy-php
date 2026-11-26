@@ -103,6 +103,11 @@ final class StructureGeneratorTest extends TestCase
             $file->content
         );
         $this->assertStringContainsString(
+            '@param string|array<array-key, mixed>|null $token Token of type '
+                . '`string|null`.',
+            $file->content
+        );
+        $this->assertStringContainsString(
             'public readonly ?string $nextToken = null,',
             $file->content
         );

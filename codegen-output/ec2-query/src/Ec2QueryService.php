@@ -83,6 +83,9 @@ final class Ec2QueryService implements ServiceInterface
         );
     }
 
+    /**
+     * @return list<class-string>
+     */
     public static function operations(): array
     {
         return [

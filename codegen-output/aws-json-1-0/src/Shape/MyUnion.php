@@ -74,11 +74,17 @@ abstract readonly class MyUnion implements UnionInterface
         return new MyUnionIntEnumValue($value);
     }
 
+    /**
+     * @param list<string> $value
+     */
     public static function listValue(array $value): self
     {
         return new MyUnionListValue($value);
     }
 
+    /**
+     * @param array<string, string> $value
+     */
     public static function mapValue(array $value): self
     {
         return new MyUnionMapValue($value);
