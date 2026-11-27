@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace Smithy\Client;
 
+use Psr\Log\LoggerInterface;
 use Smithy\Auth\AuthSchemeInterface;
 use Smithy\Auth\IdentityResolverInterface;
 use Smithy\Auth\IdentityResolvers;
@@ -24,6 +25,7 @@ use Smithy\Client\Interceptor\InterceptorChain;
 use Smithy\Client\Interceptor\InterceptorInterface;
 use Smithy\Client\Plugin\{
     AutoPlugin,
+    LoggingPlugin,
     PluginCollection,
     PluginInterface,
     PluginResolver,
@@ -127,6 +129,9 @@ abstract class AbstractClientConfig
      * @param string|null $endpoint Endpoint URL for every operation, wrapped
      *        in a {@see StaticEndpointResolver}. Set this or
      *        `$endpointResolver`.
+     * @param LoggerInterface|null $logger PSR-3 logger for client calls.
+     *        When set, the client registers a {@see LoggingPlugin} at
+     *        construction. When null, the client adds no logging.
      *
      * @throws \InvalidArgumentException When both or neither of
      *         `$endpointResolver` and `$endpoint` are set.
@@ -149,7 +154,8 @@ abstract class AbstractClientConfig
         ?bool $protocolIsExplicit = null,
         ?array $explicitFields = null,
         ?IdentityResolversInterface $identityResolvers = null,
-        ?string $endpoint = null
+        ?string $endpoint = null,
+        public readonly ?LoggerInterface $logger = null
     ) {
         $this->endpointResolver = self::resolveEndpointOption(
             $endpointResolver,
@@ -665,6 +671,16 @@ abstract class AbstractClientConfig
     ): ?AuthSchemeInterface
     {
         return $this->supportedAuthSchemesById[$schemeId] ?? null;
+    }
+
+    /**
+     * Create a config with the PSR-3 logger replaced.
+     *
+     * A client reads the logger when it is constructed.
+     */
+    public function withLogger(LoggerInterface $logger): static
+    {
+        return $this->copyWith(['logger' => $logger]);
     }
 
     /**

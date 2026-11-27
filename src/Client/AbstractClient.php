@@ -15,6 +15,7 @@ use Smithy\Client\Interceptor\{
 };
 use Smithy\Client\Pagination\Paginator;
 use Smithy\Client\Plugin\{
+    LoggingPlugin,
     ModeledBehaviorPlugin,
     PluginCollection
 };
@@ -48,17 +49,23 @@ abstract class AbstractClient implements ClientInterface
 
     /**
      * Resolve and apply client plugins.
+     *
+     * A config with a logger also registers a {@see LoggingPlugin}.
      */
     public function __construct(
         AbstractClientConfig $config,
         PluginCollection $plugins = new PluginCollection()
     )
     {
-        $this->config = $config
+        $config = $config
             ->resolveProtocol()
             ->withPluginCollection($plugins)
-            ->withPlugin(ModeledBehaviorPlugin::instance())
-            ->resolvePlugins();
+            ->withPlugin(ModeledBehaviorPlugin::instance());
+        // A LoggingPlugin registered above takes precedence over this one.
+        if ($config->logger !== null) {
+            $config = $config->withPlugin(new LoggingPlugin());
+        }
+        $this->config = $config->resolvePlugins();
         $this->pipeline = new ClientPipeline($this->config);
     }
 

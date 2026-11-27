@@ -50,6 +50,7 @@ use Smithy\Tests\Client\Fake\{
     RegionalClientConfigFixture,
     TestAuthSchemeFixture
 };
+use Smithy\Tests\Client\Utils\RecordingLoggerFixture;
 use Smithy\Tests\Utils\Http\MockHttpClient;
 
 /**
@@ -343,6 +344,34 @@ final class ClientConfigTest extends TestCase
 
         $this->assertSame('client-scope', $new->retryScope);
         $this->assertSame('', $orig->retryScope);
+    }
+
+    public function testLoggerDefaultsToNull(): void
+    {
+        $this->assertNull($this->baseConfig()->logger);
+    }
+
+    public function testWithLoggerReplacesOnlyLogger(): void
+    {
+        $logger = new RecordingLoggerFixture();
+        $orig = $this->baseConfig();
+        $new = $orig->withLogger($logger);
+
+        $this->assertSame($logger, $new->logger);
+        $this->assertNull($orig->logger);
+        $this->assertSame($orig->transport, $new->transport);
+        $this->assertSame($orig->interceptorChain, $new->interceptorChain);
+    }
+
+    public function testCopiesKeepLogger(): void
+    {
+        $logger = new RecordingLoggerFixture();
+        $config = $this->baseConfig()
+            ->withLogger($logger)
+            ->withRetryScope('scope')
+            ->withContext('key', 'value');
+
+        $this->assertSame($logger, $config->logger);
     }
 
     public function testWithAuthSchemeResolverReplacesOnlyResolver(): void

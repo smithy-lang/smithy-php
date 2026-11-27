@@ -25,12 +25,14 @@ use Smithy\Client\Interceptor\{
     IdempotencyTokenInterceptor,
     InputContext,
     InterceptorChain,
+    LoggingInterceptor,
     RequestCompressionInterceptor
 };
 use Smithy\Client\Plugin\{
     AbstractPlugin,
     HttpChecksumPlugin,
     IdempotencyTokenPlugin,
+    LoggingPlugin,
     PluginCollection,
     PluginInterface
 };
@@ -57,6 +59,10 @@ use Smithy\Tests\Client\Plugin\Utils\{
     RecordingPluginFixture,
     RegisteringPluginFixture,
     SecondaryRecordingPluginFixture
+};
+use Smithy\Tests\Client\Utils\{
+    InputLogContextProviderFixture,
+    RecordingLoggerFixture
 };
 use Smithy\Tests\Utils\Http\MockHttpClient;
 
@@ -226,6 +232,64 @@ final class AbstractClientTest extends TestCase
 
         self::assertInstanceOf(FakeOutput::class, $output);
         self::assertSame('result', $output->value);
+    }
+
+    public function testAddsNoLoggingWithoutLogger(): void
+    {
+        $config = (new TestClientFixture($this->config()))->getConfig();
+
+        self::assertArrayNotHasKey(
+            LoggingPlugin::class,
+            $config->getPluginState()->appliedClasses
+        );
+        self::assertFalse(
+            $config->interceptorChain->contains(LoggingInterceptor::class)
+        );
+    }
+
+    public function testAddsLoggingPluginWhenLoggerIsSet(): void
+    {
+        $logger = new RecordingLoggerFixture();
+        $client = new TestClientFixture(
+            $this->config('result')->withLogger($logger)
+        );
+
+        $client->executeOperation(
+            FakeOperation::instance(),
+            new FakeInput('request')
+        );
+
+        self::assertArrayHasKey(
+            LoggingPlugin::class,
+            $client->getConfig()->getPluginState()->appliedClasses
+        );
+        self::assertSame(
+            LoggingInterceptor::MESSAGE_CALL_SUCCEEDED,
+            $logger->records[\count($logger->records) - 1]['message']
+        );
+    }
+
+    public function testRegisteredLoggingPluginTakesPrecedence(): void
+    {
+        $logger = new RecordingLoggerFixture();
+        $client = new TestClientFixture(
+            $this->config('result')->withLogger($logger),
+            new PluginCollection(new LoggingPlugin(
+                contextProviders: [
+                    new InputLogContextProviderFixture(['source' => 'custom'])
+                ]
+            ))
+        );
+
+        $client->executeOperation(
+            FakeOperation::instance(),
+            new FakeInput('request')
+        );
+
+        self::assertNotEmpty($logger->records);
+        foreach ($logger->records as $record) {
+            self::assertSame('custom', $record['context']['source']);
+        }
     }
 
     public function testCallInterceptorCanShortCircuitPipeline(): void

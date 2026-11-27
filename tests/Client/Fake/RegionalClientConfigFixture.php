@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace Smithy\Tests\Client\Fake;
 
+use Psr\Log\LoggerInterface;
 use Smithy\Auth\{
     AuthSchemeInterface,
     IdentityResolversInterface
@@ -54,7 +55,8 @@ final class RegionalClientConfigFixture extends ClientConfig
         ?PluginState $pluginState = null,
         ?bool $protocolIsExplicit = null,
         ?array $explicitFields = null,
-        ?IdentityResolversInterface $identityResolvers = null
+        ?IdentityResolversInterface $identityResolvers = null,
+        ?LoggerInterface $logger = null
     )
     {
         parent::__construct(
@@ -74,7 +76,8 @@ final class RegionalClientConfigFixture extends ClientConfig
             pluginState: $pluginState,
             protocolIsExplicit: $protocolIsExplicit,
             explicitFields: $explicitFields,
-            identityResolvers: $identityResolvers
+            identityResolvers: $identityResolvers,
+            logger: $logger
         );
     }
 
@@ -113,7 +116,8 @@ final class RegionalClientConfigFixture extends ClientConfig
                 ?? $this->hasExplicitProtocol(),
             explicitFields: $this->explicitFieldsFor($overrides),
             identityResolvers: $overrides['identityResolvers']
-                ?? $this->identityResolvers
+                ?? $this->identityResolvers,
+            logger: $overrides['logger'] ?? $this->logger
         );
     }
 }
