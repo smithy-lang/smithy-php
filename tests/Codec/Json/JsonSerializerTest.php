@@ -36,6 +36,16 @@ use Smithy\Tests\Codec\Json\Fixture\{
 
 final class JsonSerializerTest extends TestCase
 {
+    public function testEndStructWithoutBeginStructThrows(): void
+    {
+        $this->expectException(SerializationException::class);
+        $this->expectExceptionMessage(
+            'endStruct() was called without a matching beginStruct().'
+        );
+
+        (new JsonSerializer())->endStruct();
+    }
+
     public function testFlushResetsSerializerForReuse(): void
     {
         $schema = new Schema(

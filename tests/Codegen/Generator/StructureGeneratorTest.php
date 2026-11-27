@@ -254,6 +254,52 @@ final class StructureGeneratorTest extends TestCase
         );
     }
 
+    public function testRequiredEnumMemberKeepsNullInput(): void
+    {
+        $model = SmithyModel::fromArray([
+            'smithy' => '2.0',
+            'shapes' => [
+                'smithy.example#Status' => [
+                    'type' => 'enum',
+                    'members' => [
+                        'ACTIVE' => [
+                            'target' => 'smithy.api#Unit',
+                            'traits' => ['smithy.api#enumValue' => 'active']
+                        ]
+                    ]
+                ],
+                'smithy.example#Job' => [
+                    'type' => 'structure',
+                    'members' => [
+                        'status' => [
+                            'target' => 'smithy.example#Status',
+                            'traits' => ['smithy.api#required' => []]
+                        ]
+                    ]
+                ]
+            ]
+        ]);
+        $settings = new CodegenSettings(
+            namespace: 'Smithy\\Example',
+            outputDir: '/tmp/out',
+            organization: 'flat'
+        );
+        $generator = new StructureGenerator(
+            $model,
+            new PhpSymbolProvider($model, $settings),
+            $settings
+        );
+
+        $content = $generator->generate('smithy.example#Job')->content;
+
+        // An omitted required member is stored as null, like other members.
+        $this->assertStringContainsString(
+            '$this->status = $status === null || $status instanceof Status'
+                . ' ? $status : Status::fromValue($status);',
+            $content
+        );
+    }
+
     public function testRequiredMembersRenderAsReadonlyPropertiesInOrder(): void
     {
         // Human has three @required members (name, age, address) plus two

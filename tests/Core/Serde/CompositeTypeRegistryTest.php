@@ -22,6 +22,7 @@ use Smithy\Core\Serde\TypeRegistryInterface;
 use Smithy\Core\Shape\Document\AbstractDocument;
 use Smithy\Core\Shape\Document\MapDocument;
 use Smithy\Core\Shape\Exception\InvalidShapeValueException;
+use Smithy\Tests\Core\Serde\Utils\RegistryStatusEnumFixture;
 use Smithy\Tests\Core\Shape\Document\Fixture\WidgetFixture;
 
 #[CoversClass(CompositeTypeRegistry::class)]
@@ -113,18 +114,19 @@ final class CompositeTypeRegistryTest extends TestCase
         );
     }
 
-    public function testDeserializeRejectsDiscriminatorOfNonShapeClass(): void
+    public function testDeserializeRejectsDiscriminatorOfEnumClass(): void
     {
         $this->expectException(InvalidShapeValueException::class);
         $this->expectExceptionMessage(
-            "Discriminator 'smithy.test#E' names ArrayObject, which is not a"
-            . ' structure or union.'
+            "Discriminator 'smithy.test#E' names '"
+            . RegistryStatusEnumFixture::class
+            . "', which is not a structure or union."
         );
 
         // Registries also map enums, which documents cannot hydrate.
-        $this->registry(['smithy.test#E' => \ArrayObject::class])->deserialize(
-            new MapDocument([], null, 'smithy.test#E')
-        );
+        $this->registry([
+            'smithy.test#E' => RegistryStatusEnumFixture::class
+        ])->deserialize(new MapDocument([], null, 'smithy.test#E'));
     }
 
     public function testRuntimeRegistryImplementsInterfaceWithoutClasses(): void
