@@ -147,6 +147,9 @@ must therefore be concurrency-safe. Local wrapper state is preferred.
   representation before signing
 - `HttpChecksumInterceptor` buffers non-replayable bodies before the retry
   loop when needed and computes the checksum before signing
+- `LoggingInterceptor` writes PSR-3 records for calls and attempts from read
+  hooks when a client config has a logger; see
+  [Plugins](../plugin/client-plugin-design.md#logging)
 
 The default dynamic-client registration orders compression before checksum.
 Custom plugin collections must preserve that order when both traits apply.

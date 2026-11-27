@@ -108,6 +108,48 @@ checksum describes the transmitted representation. The compression plugin
 runs in `BeforeApply`, while the checksum plugin runs in `Apply`, so phase
 ordering preserves this invariant regardless of registration order.
 
+## Logging
+
+Logging is opt-in through the `logger` config option, a PSR-3
+`LoggerInterface`. When the option is set, `AbstractClient` registers a
+`LoggingPlugin` at construction, and the plugin adds one
+`LoggingInterceptor` in the `Last` phase. When the option is null, the client
+registers no plugin and no interceptor, so the request path is the same as a
+client built without logging.
+
+`LoggingInterceptor` uses read hooks only. It writes these records:
+
+| Event | Level |
+| --- | --- |
+| Call start | `debug` |
+| First attempt start | `debug` |
+| Attempt end, with method, URL, status code, and duration | `debug` |
+| Retry attempt start, with the error that caused it | `warning` |
+| Call success, with attempt count and duration | `info` |
+| Call failure, with the error and an `exception` context entry | `error` |
+
+Messages use PSR-3 `{placeholder}` syntax and carry their values in the
+context array. Level filtering belongs to the application's logger.
+
+Records exclude message bodies, query strings, URL user info, and URL
+fragments. Header logging is off by default. With `logHeaders: true`, the
+interceptor adds request and response headers and replaces the values of
+`Authorization`, `Proxy-Authorization`, `Cookie`, and `Set-Cookie` with
+`[REDACTED]`.
+
+Two extension points keep service-specific behavior outside the runtime:
+
+- `LogContextProviderInterface` implementations add fields to every record,
+  such as a request ID read from the response.
+- `redactedHeaders` names more headers whose values are redacted.
+
+A layer passes both to its own `LoggingPlugin` instance. Plugin
+deduplication applies the first registered instance, so a layer that
+registers a configured `LoggingPlugin` replaces the default one.
+
+One interceptor instance serves concurrent calls. It keeps per-call timing
+and attempt counts in a stack for each fiber.
+
 ## Concurrency
 
 Plugin instances can be shared across clients and calls. Implementations

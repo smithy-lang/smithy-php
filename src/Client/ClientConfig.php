@@ -74,7 +74,8 @@ class ClientConfig extends AbstractClientConfig
             service: $service,
             pluginState: $pluginState,
             explicitFields: $explicitFields,
-            identityResolvers: $identityResolvers
+            identityResolvers: $identityResolvers,
+            logger: $overrides['logger'] ?? $this->logger
         );
     }
 }

@@ -130,7 +130,8 @@ final class ClientConfigGenerator
             '        ?? $this->getPluginState(),',
             '    explicitFields: $this->explicitFieldsFor($overrides),',
             '    identityResolvers: $overrides[\'identityResolvers\']',
-            '        ?? $this->identityResolvers',
+            '        ?? $this->identityResolvers,',
+            '    logger: $overrides[\'logger\'] ?? $this->logger',
             ');'
         ] as $line) {
             $writer->writeLine($line);

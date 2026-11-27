@@ -139,6 +139,10 @@ final class ClientConfigGeneratorTest extends TestCase
                 . "    {\n",
             $file->content
         );
+        $this->assertStringContainsString(
+            "logger: \$overrides['logger'] ?? \$this->logger\n",
+            $file->content
+        );
     }
 
     public function testGenerateRaisesForUnknownServiceShapeId(): void
