@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace Smithy\Tests\Client\Interceptor;
 
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\{
     RequestInterface,
@@ -672,6 +673,47 @@ final class InterceptorChainTest extends TestCase
             $this->outputContext(),
             $error
         );
+    }
+
+    #[DataProvider('completionChainProvider')]
+    public function testAttemptCompletionRejectsMissingOutput(
+        InterceptorChain $chain
+    ): void
+    {
+        $this->expectException(\LogicException::class);
+        $this->expectExceptionMessage('Output is not set.');
+
+        $chain->modifyBeforeAttemptCompletion(
+            $this->outputContext()->withOutput(null),
+            null
+        );
+    }
+
+    #[DataProvider('completionChainProvider')]
+    public function testExecutionCompletionRejectsMissingOutput(
+        InterceptorChain $chain
+    ): void
+    {
+        $this->expectException(\LogicException::class);
+        $this->expectExceptionMessage('Output is not set.');
+
+        $chain->modifyBeforeCompletion(
+            $this->outputContext()->withOutput(null),
+            null
+        );
+    }
+
+    /**
+     * Provide an empty chain and one that runs the default completion hooks.
+     *
+     * @return iterable<string, array{InterceptorChain}>
+     */
+    public static function completionChainProvider(): iterable
+    {
+        yield 'empty chain' => [new InterceptorChain()];
+        yield 'default hooks' => [
+            new InterceptorChain(new RecordingInterceptor())
+        ];
     }
 
     public function testAttemptCompletionRecoversAfterForwardedError(): void

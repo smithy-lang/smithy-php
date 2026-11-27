@@ -50,6 +50,20 @@ final class FormUrlEncodedSerializerTest extends TestCase
         }
     }
 
+    public function testSerializeScalarOutsideStructureThrows(): void
+    {
+        $this->expectException(SerializationException::class);
+        $this->expectExceptionMessage(
+            'No form-urlencoded wire name for member index 0'
+        );
+
+        (new FormUrlEncodedSerializer())->serializeBoolean(
+            new Schema(id: 'smithy.api#Boolean', type: ShapeType::Boolean),
+            true,
+            0
+        );
+    }
+
     public function testSerializeBlobReadsStreamValue(): void
     {
         $serializer = new FormUrlEncodedSerializer();
