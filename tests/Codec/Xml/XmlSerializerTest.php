@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace Smithy\Tests\Codec\Xml;
 
 use PHPUnit\Framework\TestCase;
+use Smithy\Http\Message\StringRequestStream;
 use Smithy\Codec\Exception\SerializationException;
 use Smithy\Core\Serde\Schema;
 use Smithy\Core\Shape\ShapeType;
@@ -67,6 +68,25 @@ final class XmlSerializerTest extends TestCase
             . '18446744073709551616</bigInteger><bigDecimal>123.45'
             . '</bigDecimal><status>open</status><code>7</code>'
             . '</SampleStruct>',
+            $serializer->flush()
+        );
+    }
+
+    public function testSerializeBlobReadsStreamValue(): void
+    {
+        $serializer = $this->createSerializer();
+        $schema = XmlSampleStructFixture::schema();
+
+        $serializer->beginStruct($schema, 0);
+        $serializer->serializeBlob(
+            $schema->getMembersByIndex()[6],
+            new StringRequestStream("\x01\x02"),
+            6
+        );
+        $serializer->endStruct();
+
+        self::assertSame(
+            '<SampleStruct xmlns="urn:test"><data>AQI=</data></SampleStruct>',
             $serializer->flush()
         );
     }

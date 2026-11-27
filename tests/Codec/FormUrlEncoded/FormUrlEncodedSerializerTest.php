@@ -11,6 +11,7 @@ namespace Smithy\Tests\Codec\FormUrlEncoded;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use Smithy\Http\Message\StringRequestStream;
 use Smithy\Codec\Exception\SerializationException;
 use Smithy\Codec\FormUrlEncoded\{
     FormUrlEncodedCodecSettings,
@@ -47,6 +48,21 @@ final class FormUrlEncodedSerializerTest extends TestCase
 
             self::assertSame("name={$name}", $serializer->flush());
         }
+    }
+
+    public function testSerializeBlobReadsStreamValue(): void
+    {
+        $serializer = new FormUrlEncodedSerializer();
+        $schema = FormUrlEncodedSampleStructFixture::schema();
+        $serializer->beginRootStruct($schema);
+
+        $serializer->serializeBlob(
+            $schema->getMembersByIndex()[6],
+            new StringRequestStream("\x01\x02"),
+            6
+        );
+
+        self::assertSame('data=AQI%3D', $serializer->flush());
     }
 
     public function testBeginRootStructSerializesScalarMembers(): void

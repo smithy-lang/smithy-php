@@ -18,6 +18,7 @@ use Smithy\Core\Serde\{
     TimestampFormat
 };
 use Smithy\Core\Shape\ShapeType;
+use Smithy\Http\Message\StringRequestStream;
 use Smithy\Core\Shape\{
     BigDecimal,
     BigInteger,
@@ -48,6 +49,67 @@ final class JsonSerializerTest extends TestCase
 
         $serializer->serializeBigInteger($schema, new BigInteger('2'), 0);
         self::assertSame('2', $serializer->flush());
+    }
+
+    public function testSerializeBlobReadsStreamValue(): void
+    {
+        $serializer = new JsonSerializer();
+
+        $serializer->serializeBlob(
+            new Schema(id: 'smithy.api#Blob', type: ShapeType::Blob),
+            new StringRequestStream('payload'),
+            0
+        );
+
+        self::assertSame('"cGF5bG9hZA=="', $serializer->flush());
+    }
+
+    public function testSerializeMapWithNumericStringKeysWritesObject(): void
+    {
+        $string = new Schema(id: 'smithy.api#String', type: ShapeType::String_);
+        $serializer = new JsonSerializer();
+
+        // PHP stores the keys "0" and "1" as ints, so the array is a list.
+        $serializer->serializeMap(
+            new Schema(
+                id: 'smithy.test#StringMap',
+                type: ShapeType::Map,
+                mapKey: $string,
+                mapValue: $string
+            ),
+            ['0' => 'a', '1' => 'b'],
+            0
+        );
+
+        self::assertSame('{"0":"a","1":"b"}', $serializer->flush());
+    }
+
+    public function testSerializeUntypedMapWithNumericStringKeysWritesObject(): void
+    {
+        $serializer = new JsonSerializer();
+
+        $serializer->serializeMap(
+            new Schema(id: 'smithy.test#UntypedMap', type: ShapeType::Map),
+            ['0' => 'a'],
+            0
+        );
+
+        self::assertSame('{"0":"a"}', $serializer->flush());
+    }
+
+    public function testSerializeUntypedListWithGapsWritesArray(): void
+    {
+        $serializer = new JsonSerializer();
+        // Filtering a list leaves gaps in its keys.
+        $items = \array_filter(['a', 'b', 'c'], static fn ($v) => $v !== 'b');
+
+        $serializer->serializeList(
+            new Schema(id: 'smithy.test#UntypedList', type: ShapeType::List_),
+            $items,
+            0
+        );
+
+        self::assertSame('["a","c"]', $serializer->flush());
     }
 
     public function testSerializeTopLevelBigIntegerNormalizesLeadingZeros(): void

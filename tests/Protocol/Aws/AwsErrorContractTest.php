@@ -13,6 +13,8 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Smithy\Codec\Json\JsonCodec;
 use Smithy\Core\Retry\RetrySafety;
+use Smithy\Core\Serde\Schema;
+use Smithy\Core\Shape\ShapeType;
 use Smithy\Core\Shape\OperationInterface;
 use Smithy\Http\Message\{
     HttpTransportResponse,
@@ -457,6 +459,38 @@ final class AwsErrorContractTest extends TestCase
         $this->assertSame(503, $error->getHttpStatusCode());
         $this->assertSame(3.0, $error->getRetryAfter());
         $this->assertSame(RetrySafety::Yes, $error->getRetrySafety());
+    }
+
+    public function testModeledErrorClassThatIsNotThrowableFallsBack(): void
+    {
+        $operation = $this->createStub(OperationInterface::class);
+        $operation->method('getServiceExceptionClass')
+            ->willReturn(SdkBaseAwsError::class);
+        $operation->method('resolveErrorSchema')->willReturn(new Schema(
+            id: 'smithy.test#NotAnErrorRef',
+            type: ShapeType::Structure,
+            target: new Schema(
+                id: 'smithy.test#NotAnError',
+                type: ShapeType::Structure,
+                targetClass: \stdClass::class
+            )
+        ));
+
+        $error = (new RestJsonErrorDeserializer(new JsonCodec()))
+            ->deserialize($operation, new Response(
+                400,
+                ['x-amzn-errortype' => 'NotAnError'],
+                '{"message":"Nope"}'
+            ));
+
+        $this->assertInstanceOf(SdkBaseAwsError::class, $error);
+        $this->assertSame('NotAnError', $error->getAwsErrorCode());
+        $previous = $error->getPrevious();
+        $this->assertInstanceOf(\UnexpectedValueException::class, $previous);
+        $this->assertSame(
+            'Modeled error class stdClass is not a Throwable.',
+            $previous->getMessage()
+        );
     }
 
     /**

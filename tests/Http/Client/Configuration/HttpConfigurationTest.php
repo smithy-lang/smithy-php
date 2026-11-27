@@ -163,6 +163,30 @@ final class HttpConfigurationTest extends TestCase
         new HTTP2Configuration(maxStreams: 0);
     }
 
+    #[DataProvider('tlsPathParameters')]
+    public function testRejectsEmptyTlsPath(string $parameter): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage("TLS {$parameter} must not be empty.");
+
+        new TLSConfiguration(...[$parameter => '']);
+    }
+
+    /**
+     * Provide the TLS file path parameters.
+     *
+     * @return array<string, array{string}>
+     */
+    public static function tlsPathParameters(): array
+    {
+        return [
+            'certificate' => ['certificate'],
+            'private key' => ['privateKey'],
+            'CA file' => ['caFile'],
+            'CA directory' => ['caDir']
+        ];
+    }
+
     public function testAcceptsCipherSuiteNames(): void
     {
         $configuration = new TLSConfiguration(

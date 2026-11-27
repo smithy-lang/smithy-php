@@ -199,6 +199,39 @@ final class XmlSchemaExtensionTest extends TestCase
         $this->assertSame($mapValue, $info->flattenedMaps['tags']['mapValue']);
     }
 
+    public function testStructInfoDropsXmlNamespaceWithoutUri(): void
+    {
+        $schema = new Schema(
+            id: 'test#NsStruct',
+            type: ShapeType::Structure,
+            members: [],
+            traits: [Schema::T_XML_NAMESPACE => ['prefix' => 'ex']]
+        );
+
+        $this->assertNull($schema->getExtension(self::key())->xmlNamespace);
+    }
+
+    public function testStructInfoKeepsOnlyStringXmlNamespaceFields(): void
+    {
+        $schema = new Schema(
+            id: 'test#NsStruct',
+            type: ShapeType::Structure,
+            members: [],
+            traits: [
+                Schema::T_XML_NAMESPACE => [
+                    'uri' => 'http://example.com',
+                    'prefix' => 7,
+                    'extra' => 'x'
+                ]
+            ]
+        );
+
+        $this->assertSame(
+            ['uri' => 'http://example.com'],
+            $schema->getExtension(self::key())->xmlNamespace
+        );
+    }
+
     public function testStructInfoResolvesXmlNamespace(): void
     {
         $schema = new Schema(

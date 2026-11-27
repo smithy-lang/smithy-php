@@ -1,5 +1,5 @@
 parameters:
-    level: 6
+    level: 7
     # Report dead checks only when native types prove them, so runtime
     # guards on caller input stay in place.
     treatPhpDocTypesAsCertain: false
@@ -8,3 +8,10 @@ parameters:
         # Generated clients use the runtime shape traits; analysing them
         # checks those traits and the code the generator emits.
         - codegen-output
+    ignoreErrors:
+        # phpstan types the CURLOPT_READFUNCTION return as string only.
+        # Remove once https://github.com/phpstan/phpstan-src/pull/7202 is released.
+        -
+            identifier: argument.type
+            path: src/Http/Client/CurlClient.php
+            count: 1

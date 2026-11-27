@@ -1004,6 +1004,27 @@ final class EvaluatorTest extends TestCase
         $this->execute([200]);
     }
 
+    #[DataProvider('functionOpcodeProvider')]
+    public function testThrowsForUnknownFunctionIndex(int $opcode): void
+    {
+        $this->expectException(RulesEvaluationException::class);
+        $this->expectExceptionMessage('Unknown function 9 at pc 0');
+
+        $this->execute([$opcode, 9, 0]);
+    }
+
+    /**
+     * @return iterable<string, array{int}>
+     */
+    public static function functionOpcodeProvider(): iterable
+    {
+        yield 'FN0' => [Opcodes::FN0];
+        yield 'FN1' => [Opcodes::FN1];
+        yield 'FN2' => [Opcodes::FN2];
+        yield 'FN3' => [Opcodes::FN3];
+        yield 'FN' => [Opcodes::FN];
+    }
+
     public function testThrowsWhenProgramRunsOffEnd(): void
     {
         $this->expectException(RulesEvaluationException::class);
