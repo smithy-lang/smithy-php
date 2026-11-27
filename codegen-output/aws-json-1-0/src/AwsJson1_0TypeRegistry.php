@@ -17,8 +17,8 @@ use Smithy\Core\Serde\TypeRegistryInterface;
  * Shape-ID registry for the AwsJson1_0 service.
  *
  * Populated once at codegen time from the service closure. Callers
- * use `schemaFor` for lazy schema resolution, `classFor` for a raw
- * class-string when they need to reflect on the generated type, and
+ * use `schemaFor` for lazy schema resolution, `classFor` for the
+ * class name when they need to reflect on the generated type, and
  * `shapeIdFor` for the inverse lookup keyed by class. `deserialize`
  * builds the registered shape that a document's discriminator names.
  */
@@ -81,10 +81,8 @@ final class AwsJson1_0TypeRegistry implements TypeRegistryInterface
     ];
 
     /**
-     * Return the generated PHP class-string for a Smithy shape ID,
+     * Return the generated class name for a Smithy shape ID,
      * or null when the ID is unknown to this service.
-     *
-     * @return class-string|null
      */
     public function classFor(string $shapeId): ?string
     {
